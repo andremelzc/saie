@@ -1,4 +1,5 @@
-// Prisma schema para SAIE (Sistema de Apoyo a la Integración Escolar)
+// Prisma schema para SAIE (Sistema de Asignación Inteligente de Espacios)
+// Especificación técnica basada en el Documento de Modelo de Datos (DMD) - Grupo 6 FISI UNMSM
 
 generator client {
   provider = "prisma-client-js"
@@ -6,27 +7,363 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// Modelo base inicial del sistema
-enum Role {
-  ADMIN
+// ==========================================
+// ENUMS DEL SISTEMA
+// ==========================================
+
+enum TipoEspacio {
+  AULA_TEORICA
+  LABORATORIO
+}
+
+enum DiaSemana {
+  LUNES
+  MARTES
+  MIERCOLES
+  JUEVES
+  VIERNES
+  SABADO
+  DOMINGO
+}
+
+enum RolCuenta {
+  ALUMNO
   DOCENTE
-  PROFESIONAL
-  FAMILIA
+  COORDINACION_ACADEMICA
+  JEFATURA_LABORATORIOS
 }
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  nombre    String
-  apellido  String
-  rol       Role     @default(DOCENTE)
-  activo    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum EstadoAsignacion {
+  VIGENTE
+  ESCALADA
+  HISTORICA
+}
 
-  @@map("usuarios")
+enum TipoAlerta {
+  SOFTWARE
+  CAPACIDAD
+}
+
+enum EstadoAlerta {
+  PENDIENTE
+  RESUELTA
+}
+
+enum TipoIncidencia {
+  EQUIPO_NO_OPERATIVO
+  SOFTWARE_FALTANTE
+  OTRO
+}
+
+enum PrioridadIncidencia {
+  BAJA
+  MEDIA
+  ALTA
+}
+
+enum EstadoIncidencia {
+  PENDIENTE
+  RESUELTA
+  DESCARTADA
+}
+
+enum CampoHistorialEspacio {
+  SOFTWARE
+  PCS_MALOGRADAS
+}
+
+enum TipoEventoAuditoria {
+  ASIGNACION
+  ESCALAMIENTO
+  ALERTA
+}
+
+// ==========================================
+// MODELOS DE ESPACIOS FÍSICOS
+// ==========================================
+
+model Espacio {
+  id                String      @id @default(uuid())
+  identificador     String      // Código o nombre visible (ej. "Aula 201", "Lab 03")
+  tipo              TipoEspacio // AULA_TEORICA o LABORATORIO
+  pabellon          String      // Ubicación dentro del campus
+  piso              Int         // Usado para regla de accesibilidad (prioridad Piso 1)
+  aforoNominal      Int         @map("aforo_nominal")
+  softwareInstalado String[]    @default([]) @map("software_instalado") // Solo LABORATORIO
+  pcsMalogradas     Int?        @map("pcs_malogradas") // Solo LABORATORIO
+
+  // Relaciones
+  espaciosContiguosA   EspacioContiguo[]       @relation("EspacioContiguoA")
+  espaciosContiguosB   EspacioContiguo[]       @relation("EspacioContiguoB")
+  asignacionesEspacio  AsignacionEspacio[]
+  alertas              Alerta[]
+  incidencias          Incidencia[]
+  historialEspacio     HistorialEspacio[]
+  responsables         EspacioResponsable[]
+
+  @@unique([pabellon, identificador])
+  @@map("espacios")
+}
+
+model EspacioContiguo {
+  espacioIdA String  @map("espacio_id_a")
+  espacioIdB String  @map("espacio_id_b")
+
+  espacioA   Espacio @relation("EspacioContiguoA", fields: [espacioIdA], references: [id], onDelete: Cascade)
+  espacioB   Espacio @relation("EspacioContiguoB", fields: [espacioIdB], references: [id], onDelete: Cascade)
+
+  @@id([espacioIdA, espacioIdB])
+  @@map("espacios_contiguos")
+}
+
+// ==========================================
+// MODELOS ACADÉMICOS Y DE HORARIOS
+// ==========================================
+
+model Curso {
+  id        String    @id @default(uuid())
+  codigo    String    @unique // Código oficial del curso (ej. "2020101")
+  nombre    String
+  secciones Seccion[]
+
+  @@map("cursos")
+}
+
+model Seccion {
+  id                      String      @id @default(uuid())
+  cursoId                 String      @map("curso_id")
+  docenteId               String?     @map("docente_id")
+  codigoSeccion           String      @map("codigo_seccion")
+  periodo                 String      // ej. "2026-1"
+  tipoEspacioRequerido    TipoEspacio @map("tipo_espacio_requerido")
+  stackSoftwareRequerido  String[]    @default([]) @map("stack_software_requerido")
+
+  // Relaciones
+  curso        Curso        @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  docente      Docente?     @relation(fields: [docenteId], references: [id])
+  horarios     Horario[]
+  matriculas   Matricula[]
+  asignaciones Asignacion[]
+
+  @@unique([cursoId, codigoSeccion, periodo])
+  @@map("secciones")
+}
+
+model Horario {
+  id         String    @id @default(uuid())
+  seccionId  String    @map("seccion_id")
+  diaSemana  DiaSemana @map("dia_semana")
+  horaInicio String    @map("hora_inicio") // Formato "HH:mm" (ej. "08:00")
+  horaFin    String    @map("hora_fin")    // Formato "HH:mm" (ej. "10:00")
+
+  seccion    Seccion   @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+
+  @@unique([seccionId, diaSemana, horaInicio])
+  @@map("horarios")
+}
+
+model Matricula {
+  id                String  @id @default(uuid())
+  alumnoId          String  @map("alumno_id")
+  seccionId         String  @map("seccion_id")
+  movilidadReducida Boolean @default(false) @map("movilidad_reducida")
+
+  alumno  Alumno  @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
+  seccion Seccion @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+
+  @@unique([alumnoId, seccionId])
+  @@map("matriculas")
+}
+
+// ==========================================
+// PERSONAS, SALUD Y AUTENTICACIÓN
+// ==========================================
+
+model Alumno {
+  id              String       @id @default(uuid())
+  codigo          String       @unique // Código de matrícula (ej. "22200101")
+  nombre          String
+  correo          String
+  dni             String?
+  fechaNacimiento DateTime?    @map("fecha_nacimiento")
+  telefono        String?
+  direccion       String?
+  cuentaId        String?      @unique @map("cuenta_id")
+
+  // Relaciones
+  cuenta      Cuenta?      @relation(fields: [cuentaId], references: [id])
+  fichaMedica FichaMedica?
+  matriculas  Matricula[]
+
+  @@map("alumnos")
+}
+
+model FichaMedica {
+  alumnoId           String  @id @map("alumno_id")
+  tipoSangre         String? @map("tipo_sangre")
+  alergias           String?
+  condicionEspecial  String? @map("condicion_especial")
+  contactoEmergencia String? @map("contacto_emergencia")
+
+  alumno Alumno @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
+
+  @@map("fichas_medicas")
+}
+
+model Docente {
+  id                  String       @id @default(uuid())
+  codigoDocente       String       @unique @map("codigo_docente")
+  nombre              String
+  correoInstitucional String       @map("correo_institucional")
+  departamento        String
+  cuentaId            String?      @unique @map("cuenta_id")
+
+  // Relaciones
+  cuenta      Cuenta?      @relation(fields: [cuentaId], references: [id])
+  secciones   Seccion[]
+  incidencias Incidencia[]
+
+  @@map("docentes")
+}
+
+model Cuenta {
+  id               String    @id @default(uuid())
+  rol              RolCuenta
+  usuarioLogin     String    @unique @map("usuario_login")
+  claveHash        String    @map("clave_hash")
+  debeCambiarClave Boolean   @default(true) @map("debe_cambiar_clave")
+  fechaCreacion    DateTime  @default(now()) @map("fecha_creacion")
+
+  // Relaciones 1:1 opcionales con personas
+  alumno               Alumno?
+  docente              Docente?
+  historialEspacio     HistorialEspacio[]
+  espaciosResponsables EspacioResponsable[]
+
+  @@map("cuentas")
+}
+
+// ==========================================
+// MOTOR DE ASIGNACIÓN, ALERTAS E INCIDENCIAS
+// ==========================================
+
+model Asignacion {
+  id                 String           @id @default(uuid())
+  seccionId          String           @map("seccion_id")
+  estado             EstadoAsignacion @default(VIGENTE)
+  fechaAsignacion    DateTime         @default(now()) @map("fecha_asignacion")
+  motivoEscalamiento String?          @map("motivo_escalamiento")
+  corridaId          String?          @map("corrida_id")
+  huellaEntrada      String?          @map("huella_entrada")
+
+  // Relaciones
+  seccion             Seccion                   @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+  espacios            AsignacionEspacio[]
+  alertasAfectadas    AlertaAsignacionAfectada[]
+  incidencias         Incidencia[]
+  auditorias          RegistroAuditoria[]
+
+  @@map("asignaciones")
+}
+
+model AsignacionEspacio {
+  asignacionId String @map("asignacion_id")
+  espacioId    String @map("espacio_id")
+
+  asignacion Asignacion @relation(fields: [asignacionId], references: [id], onDelete: Cascade)
+  espacio    Espacio    @relation(fields: [espacioId], references: [id], onDelete: Cascade)
+
+  @@id([asignacionId, espacioId])
+  @@map("asignaciones_espacios")
+}
+
+model Alerta {
+  id             String       @id @default(uuid())
+  tipo           TipoAlerta   // SOFTWARE o CAPACIDAD
+  espacioId      String       @map("espacio_id")
+  motivo         String
+  fechaDeteccion DateTime     @default(now()) @map("fecha_deteccion")
+  estado         EstadoAlerta @default(PENDIENTE)
+
+  espacio               Espacio                    @relation(fields: [espacioId], references: [id], onDelete: Cascade)
+  asignacionesAfectadas AlertaAsignacionAfectada[]
+  auditorias            RegistroAuditoria[]
+
+  @@map("alertas")
+}
+
+model AlertaAsignacionAfectada {
+  alertaId     String @map("alerta_id")
+  asignacionId String @map("asignacion_id")
+
+  alerta     Alerta     @relation(fields: [alertaId], references: [id], onDelete: Cascade)
+  asignacion Asignacion @relation(fields: [asignacionId], references: [id], onDelete: Cascade)
+
+  @@id([alertaId, asignacionId])
+  @@map("alertas_asignaciones_afectadas")
+}
+
+model Incidencia {
+  id                      String              @id @default(uuid())
+  docenteId               String              @map("docente_id")
+  asignacionId            String              @map("asignacion_id")
+  espacioId               String              @map("espacio_id")
+  tipo                    TipoIncidencia
+  descripcion             String
+  prioridad               PrioridadIncidencia @default(MEDIA)
+  evidencia               String?
+  estado                  EstadoIncidencia    @default(PENDIENTE)
+  fechaReporte            DateTime            @default(now()) @map("fecha_reporte")
+  identificadorSeguimiento String             @unique @map("identificador_seguimiento")
+
+  docente    Docente    @relation(fields: [docenteId], references: [id], onDelete: Cascade)
+  asignacion Asignacion @relation(fields: [asignacionId], references: [id], onDelete: Cascade)
+  espacio    Espacio    @relation(fields: [espacioId], references: [id], onDelete: Cascade)
+
+  @@map("incidencias")
+}
+
+model HistorialEspacio {
+  id            String                @id @default(uuid())
+  espacioId     String                @map("espacio_id")
+  campo         CampoHistorialEspacio
+  valorAnterior String?               @map("valor_anterior")
+  valorNuevo    String                @map("valor_nuevo")
+  fechaCambio   DateTime              @default(now()) @map("fecha_cambio")
+  cuentaId      String                @map("cuenta_id")
+
+  espacio Espacio @relation(fields: [espacioId], references: [id], onDelete: Cascade)
+  cuenta  Cuenta  @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
+
+  @@map("historial_espacios")
+}
+
+model EspacioResponsable {
+  cuentaId  String  @map("cuenta_id")
+  espacioId String  @map("espacio_id")
+
+  cuenta  Cuenta  @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
+  espacio Espacio @relation(fields: [espacioId], references: [id], onDelete: Cascade)
+
+  @@id([cuentaId, espacioId])
+  @@map("espacios_responsables")
+}
+
+model RegistroAuditoria {
+  id           String              @id @default(uuid())
+  tipoEvento   TipoEventoAuditoria @map("tipo_evento")
+  asignacionId String?             @map("asignacion_id")
+  alertaId     String?             @map("alerta_id")
+  detalle      String
+  fechaHora    DateTime            @default(now()) @map("fecha_hora")
+
+  asignacion Asignacion? @relation(fields: [asignacionId], references: [id], onDelete: SetNull)
+  alerta     Alerta?     @relation(fields: [alertaId], references: [id], onDelete: SetNull)
+
+  @@map("registros_auditoria")
 }

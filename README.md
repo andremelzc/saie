@@ -1,12 +1,14 @@
-# Sistema de Apoyo a la Integración Escolar (SAIE)
+# Sistema de Asignación Inteligente de Espacios (SAIE)
 
-> Plataforma integral para la gestión, seguimiento y acompañamiento de la integración escolar de estudiantes con necesidades específicas de apoyo educativo.
+> Plataforma integral para la asignación inteligente y óptima de espacios académicos (aulas teóricas y laboratorios), considerando capacidad real, compatibilidad de software, contigüidad física y priorización de accesibilidad e inclusión para estudiantes con movilidad reducida.
+>
+> **Facultad de Ingeniería de Sistemas e Informática — UNMSM (Grupo 6 - 2026)**
 
 ---
 
 ## 1. Tabla del Stack Tecnológico Acordado
 
-A continuación se resume el stack tecnológico del proyecto. Para la justificación y análisis de cada herramienta, remitirse a la [Sección 4 del Documento de Arquitectura](docs/arquitectura.md#4-stack-tecnol%C3%B3gico-acordado-y-justificaci%C3%B3n).
+A continuación se resume el stack tecnológico del proyecto. Para la justificación y análisis de cada herramienta, remitirse a la [Sección 4 del Documento de Arquitectura](docs/arquitectura.md#4-tecnolog%C3%ADas-y-herramientas).
 
 | Área / Componente | Tecnología | Propósito |
 | :--- | :--- | :--- |
@@ -38,7 +40,8 @@ saie/
 ├── docker-compose.yml          # Contenedor de PostgreSQL local para desarrollo
 ├── package.json                # Workspaces de npm y scripts unificados
 ├── docs/                       # Documentación técnica del proyecto
-│   ├── arquitectura.md         # Documento de Arquitectura (Sección 4: Stack)
+│   ├── arquitectura.md         # Documento de Arquitectura (DA)
+│   ├── modelo-datos.md         # Documento de Modelo de Datos (DMD)
 │   └── git-workflow.md         # Convenciones de Commits y Branching
 ├── assets/                     # Recursos estáticos globales
 │   └── planos/                 # Planos vectoriales SVG (Issue 6.10)
@@ -201,10 +204,28 @@ k6 run tests/load/smoke-load-test.js
 
 ---
 
-## 8. Convenciones de Trabajo y Commits
+## 8. Convenciones de Trabajo, Ramas y Commits
 
-Este proyecto sigue rigurosamente el estándar de **Conventional Commits** y una estrategia de ramas basada en **Feature Branching**:
+El proyecto adopta un flujo de trabajo basado en **GitFlow / Feature Branching** y el estándar de **Conventional Commits**:
 
-- Consulta la guía completa en [docs/git-workflow.md](docs/git-workflow.md).
-- Formato de commits: `tipo(ámbito): descripción breve en imperativo` (ej: `feat(api): endpoint de registro de docentes`).
-- Ramas: `feature/<issue-id>-<descripcion>`, `bugfix/...`, `hotfix/...`.
+### 8.1. Estructura de Ramas
+* **`main`**: Producción y entregables estables congelados. Protegida contra pushes directos.
+* **`develop`**: Rama base de integración continua durante cada Sprint.
+* **Ramas de trabajo**: Se ramifican desde `develop` con la nomenclatura:
+  * `feature/<issue-id>-<descripcion>`: Nuevas funcionalidades (ej. `feature/1.2-modelo-datos`).
+  * `docs/<issue-id>-<descripcion>`: Documentación formal (ej. `docs/1.2-6.5-arquitectura-y-modelo-datos`).
+  * `bugfix/<issue-id>-<descripcion>`: Corrección de incidencias.
+  * `chore/<issue-id>-<descripcion>`: Mantenimiento, dependencias y configuración.
+
+### 8.2. Política de Pull Requests (PR)
+1. Los cambios se integran hacia `develop` mediante **Pull Request**.
+2. Cada PR carga automáticamente la plantilla obligatoria ([`.github/pull_request_template.md`](.github/pull_request_template.md)), requiriendo:
+   * Vinculación explícita al issue (`Closes #ID`).
+   * Aprobación mediante revisión de código (*Code Review*).
+   * Verificación de calidad: compilación limpia (`npm run build`), linters (`npm run lint`), formateo (`npm run format:check`) y pruebas (`npm run test`).
+3. Al cierre de cada Sprint, se realiza el PR de integración de `develop` hacia `main`.
+
+### 8.3. Commits
+* Formato: `tipo(ámbito opcional): descripción breve en presente imperativo` (ej: `docs(arquitectura): actualizar diagrama y principios de diseno`).
+* Guía completa y detallada en [docs/git-workflow.md](docs/git-workflow.md).
+
