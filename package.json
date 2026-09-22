@@ -1,0 +1,40 @@
+{
+  "name": "saie-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema de Apoyo a la Integración Escolar (SAIE)",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspace=backend && npm run build --workspace=frontend",
+    "build:backend": "npm run build --workspace=backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "test": "npm run test --workspace=backend",
+    "test:watch": "npm run test:watch --workspace=backend",
+    "test:coverage": "npm run test:coverage --workspace=backend",
+    "test:e2e": "playwright test --config=tests/e2e/playwright.config.ts",
+    "lint": "npm run lint --workspace=backend && npm run lint --workspace=frontend",
+    "format": "npm run format --workspace=backend && npm run format --workspace=frontend",
+    "format:check": "npm run format:check --workspace=backend && npm run format:check --workspace=frontend",
+    "prisma:generate": "npm run prisma:generate --workspace=backend",
+    "prisma:migrate": "npm run prisma:migrate --workspace=backend",
+    "docker:db": "docker compose up -d postgres",
+    "docker:down": "docker compose down"
+  },
+  "keywords": [
+    "saie",
+    "educacion",
+    "react",
+    "express",
+    "prisma"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}

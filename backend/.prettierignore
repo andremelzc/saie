@@ -1,0 +1,9 @@
+dist
+build
+coverage
+node_modules
+package-lock.json
+*.log
+.nyc_output
+.scannerwork
+prisma/
