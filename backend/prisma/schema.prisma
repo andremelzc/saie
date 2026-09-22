@@ -1,0 +1,32 @@
+// Prisma schema para SAIE (Sistema de Apoyo a la Integración Escolar)
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Modelo base inicial del sistema
+enum Role {
+  ADMIN
+  DOCENTE
+  PROFESIONAL
+  FAMILIA
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  nombre    String
+  apellido  String
+  rol       Role     @default(DOCENTE)
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("usuarios")
+}
