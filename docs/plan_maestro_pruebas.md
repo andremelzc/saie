@@ -2,96 +2,102 @@
 
 > **Proyecto:** Sistema de Asignación Inteligente de Espacios (SAIE)
 > **Rol responsable:** Asegurador de Calidad (QA)
-> **Issue de referencia:** #5.12 — Definición formal del plan de pruebas
-> **Versión:** 1.1.0
-> **Fecha:** 2026-09-22
+> **Issue de referencia:** #5.12 — Plan Maestro de Pruebas (Sprint 0 inicio / Sprint 1 cierre)
+> **Documentos fuente:** `01_definicion_y_alcance.md`, `02_requisitos.md`, `03_backlog_issues.md`, `04_cronograma_sprints.md`
+> **Versión:** 2.0.0
+> **Fecha:** 2026-09-27
 
 ---
 
-## Tabla de Contenidos
+## 0. Alcance de este documento
 
-1. [Criterio de Granularidad de Pruebas](#1-criterio-de-granularidad-de-pruebas)
-2. [Escenarios de Carga y Umbrales de Aceptación (k6)](#2-escenarios-de-carga-y-umbrales-de-aceptación-k6)
-3. [Quality Gates y Política de Manejo de Bugs](#3-quality-gates-y-política-de-manejo-de-bugs)
+Este plan es la base de los Issues 5.1 a 5.11 del backlog (épica `epic:calidad`): define **antes de escribir el primer test**
+
+1. el criterio de granularidad de pruebas por tipo (unitaria/paramétrica, integración, E2E, carga) y qué issue de origen valida cada una,
+2. los escenarios de carga (k6) y sus umbrales de aceptación,
+3. los quality gates formales y la política de manejo de bugs.
+
+**Fuera de alcance de este documento:** la definición de entornos (local, CI, Vercel/Render/Supabase) y el origen de los datos de prueba — eso lo define el **Plan de Ambiente Controlado (Issue 5.13)**, que este plan solo referencia. Tampoco define el detalle de accesibilidad WCAG de cada pantalla — eso es responsabilidad de FE (Issues 3.9, RNF-05) y se verifica de forma manual en la validación exploratoria de cierre (Issue 5.15), no como una suite automatizada propia del backlog actual.
+
+**Principio que atraviesa todo el plan:** el SAIE tiene un **motor de reglas único** para aulas teóricas y laboratorios (un campo `tipo` en el modelo de datos determina las reglas aplicables), pero **difieren en dos puntos**: la capacidad real descuenta PCs malogradas solo en laboratorios, y la matriz de software solo aplica a laboratorios (se considera automáticamente cumplida en bloques de aula). Por eso, **todo módulo de prueba del motor debe cubrir ambos tipos de espacio por separado**, y no solo laboratorios como caso "por defecto".
+
+**Aclaración de dominio (para evitar el error de la versión 1.1):** el SAIE **no es un sistema de reservas**. El alumno nunca elige ni confirma un espacio: el motor de reglas asigna automáticamente en una corrida batch o bajo demanda, y el alumno solo **consulta** dónde quedó ubicado (RF-07/RF-08). Cualquier escenario de prueba que hable de "el estudiante reserva un espacio" está fuera del alcance real del sistema.
 
 ---
 
 ## 1. Criterio de Granularidad de Pruebas
 
-Este criterio establece los niveles de prueba aplicables al proyecto SAIE, los módulos que cubre cada nivel y la estrategia de ejecución correspondiente.
+> Los issues 5.1–5.7 y 5.16 se corrigen dentro del mismo sprint en que se implementa su issue de origen (ver §3.2). Los issues 5.8 y 5.9 corren sobre el sistema ya integrado.
 
-### 1.1 Pruebas Unitarias y Parametrizadas
+### 1.1 Pruebas Unitarias y Parametrizadas (Sprints 1–2)
 
-Las pruebas unitarias validan el comportamiento aislado de cada unidad lógica del sistema, sin dependencias externas activas (bases de datos, APIs de terceros, etc.). Se emplean datos parametrizados para maximizar la cobertura de casos borde con el mínimo de código duplicado.
+Validan una función o módulo del motor de reglas de forma aislada, sin base de datos real (mocks/fixtures en memoria). Se usan casos parametrizados para cubrir los bordes de cada regla, **siempre repitiendo el caso para aula teórica y para laboratorio** salvo que la regla sea exclusiva de uno de los dos tipos.
 
-| Módulo | Descripción de cobertura |
-|---|---|
-| **Cálculo de capacidad** | Verificación de la lógica de cálculo de aforo por aula (capacidad física, porcentaje de ocupación máxima permitida, restricciones por modalidad). Se parametrizan escenarios con distintos tamaños de grupo y tipos de espacio. |
-| **Contigüidad** | Validación del algoritmo que determina si dos horarios o salones son contiguos o solapados. Se cubren casos borde: solapamiento exacto, contigüidad de un minuto, bloques idénticos y bloques no relacionados. |
-| **Validación de software** | Pruebas sobre las reglas de negocio aplicadas antes de persistir datos: validación de esquemas de entrada, restricciones de integridad referencial a nivel de servicio y mensajes de error esperados ante entradas inválidas. |
-| **Accesibilidad** | Verificación de que los componentes de interfaz cumplen con los criterios WCAG 2.1 nivel AA relevantes (contraste de color, atributos ARIA, navegabilidad por teclado) mediante herramientas automatizadas integradas a la suite de pruebas. |
-| **Cercanía entre secciones paralelas** | Validación de la función de puntuación que evalúa la proximidad física entre secciones paralelas del mismo curso. Se parametrizan cuatro casos: mismo piso (puntuación máxima), piso adyacente (puntuación media), piso no adyacente (puntuación baja) y puntuación neutra (sin preferencia de piso). Aplica tanto para aulas teóricas como para laboratorios. |
+| Issue de prueba | Valida (issue de origen) | Casos obligatorios |
+|---|---|---|
+| **5.1** — Capacidad real | 2.1 (RF-01) | Laboratorio con 0 PCs malogradas; laboratorio con todas las PCs malogradas; aula teórica (capacidad real = aforo nominal, sin descuento); capacidad justo en el límite de N alumnos |
+| **5.2** — Consulta de contigüidad | 2.3 | Espacio con varios contiguos; espacio sin contiguos; simetría de la relación (si A es contiguo a B, B es contiguo a A); para aulas y laboratorios |
+| **5.3** — Disponibilidad por horario | 2.4 (RF-14) | Sin solape; solape total; solape parcial; espacio sin asignaciones vigentes; para aulas y laboratorios |
+| **5.4** — Búsqueda de bloque contiguo | 2.5 (RF-02) | Bloque de 1 espacio (aforo alto); bloque de 3+ espacios (aforo bajo); capacidad justo en el límite; espacios contiguos pero no disponibles; caso "sin bloque encontrado"; **un caso que verifique que nunca se mezclan aulas y laboratorios en el mismo bloque**; lista de candidatos determinista y sin duplicados |
+| **5.5** — Validación de software | 2.6, 2.7 (RF-03) | Cumplimiento total, cumplimiento parcial y stack requerido vacío, **solo en laboratorios**; caso de bloque de aula teórica donde el control se omite automáticamente sin fallar por ausencia del campo de software |
+| **5.6** — Accesibilidad / priorización Piso 1 | 2.8, 2.9 (RF-04) | Movilidad reducida con Piso 1 disponible; movilidad reducida con Piso 1 no disponible; sin movilidad reducida; para aulas y laboratorios |
+| **5.16** — Cercanía entre secciones paralelas | 2.13 (RF-20) | Curso sin otras secciones paralelas asignadas (puntuación neutra); secciones paralelas en el mismo piso; en piso adyacente; en piso no adyacente; para aulas y laboratorios. (Los casos de desempate del Issue 2.14 se cubren en el Issue 5.7, no aquí) |
 
-**Herramientas sugeridas:** `pytest` con `@pytest.mark.parametrize` (backend), `Jest` / `Vitest` con `test.each` (frontend), `axe-core` (accesibilidad).
+**Herramientas:** `Jest` + `ts-jest` (proyecto en TypeScript/Node.js con Prisma y Zod), usando `test.each` para los casos parametrizados. Sin conexión a PostgreSQL real: se mockea el acceso a datos o se usan fixtures en memoria.
 
----
-
-### 1.2 Pruebas de Integración
-
-Las pruebas de integración validan la interacción correcta entre dos o más módulos del sistema. El foco principal es el **motor de asignación** y sus dependencias internas.
-
-| Escenario de integración | Alcance |
-|---|---|
-| **Flujo del motor de asignación completo** | Prueba de extremo a extremo del pipeline interno de asignación: recepción de la solicitud → consulta de disponibilidad → aplicación de reglas de contigüidad y capacidad → selección del espacio → persistencia del resultado. Se verifica que todos los módulos internos se comunican con los contratos de interfaz correctos. |
-| **Asignación individual** | Integración enfocada en el caso de asignación de un único grupo-horario: se valida la respuesta completa del servicio (código HTTP, cuerpo de respuesta, estado de la base de datos) ante una solicitud bien formada y ante solicitudes con conflictos de disponibilidad. |
-| **Asignación en lote (batch)** | Integración del flujo de procesamiento masivo: carga de un conjunto de solicitudes de asignación, ejecución secuencial o concurrente del motor y verificación de consistencia del estado final (sin asignaciones duplicadas, sin violaciones de capacidad). |
-
-**Herramientas sugeridas:** `pytest` con fixtures de base de datos en contenedor (`testcontainers`), `Supertest` (Node.js), mocks de servicios externos con `responses` o `httpretty`.
+**No forman parte de esta capa (para no duplicar con §1.2/§1.3):** el flujo orquestado completo (feliz/batch/escalamiento) y las pruebas de accesibilidad de UI (WCAG) de las pantallas, que no tienen un issue propio en el backlog actual.
 
 ---
 
-### 1.3 Pruebas End-to-End (E2E)
+### 1.2 Pruebas de Integración (Sprint 3)
 
-Las pruebas E2E simulan el comportamiento real de un usuario interactuando con el sistema completo desplegado, incluyendo frontend, backend y base de datos.
+Validan el **motor completo como una sola unidad**, contra una base PostgreSQL real (de servicio en CI), no contra mocks.
 
-| Escenario E2E | Descripción |
-|---|---|
-| **Flujo completo de consulta del estudiante** | Un estudiante accede al sistema, consulta la disponibilidad de espacios para su horario, visualiza los resultados y confirma una reserva. La prueba automatizada navega por la interfaz real y valida: renderizado correcto de resultados, mensajes de confirmación, actualización visible del estado de disponibilidad y comportamiento ante intentos de reserva en espacios sin cupo. |
+| Issue de prueba | Valida (issue de origen) | Casos obligatorios |
+|---|---|---|
+| **5.7** — Flujo completo (feliz, batch, escalamiento) | 2.10, 2.11, 2.12, 2.14 (RF-05, RF-06, RF-15) | Camino feliz para una sección individual (aula y laboratorio); corrida batch del periodo (teóricas y prácticas); escalamiento cuando ningún bloque cumple capacidad/disponibilidad/contigüidad/software; **idempotencia**: segunda corrida sin cambios mantiene las asignaciones vigentes, y una corrida con una sección modificada pasa la anterior a HISTÓRICA; desempate por cercanía a secciones paralelas, incluido el caso en que solo queda un bloque válido |
 
-**Estrategia de automatización:** Se utiliza **Playwright** como framework de automatización E2E. Los escenarios se ejecutan sobre un entorno de staging con datos de prueba sembrados previamente (`seed data`). Las pruebas corren en el pipeline de CI dentro del Sprint 5, en navegadores Chromium, Firefox y WebKit.
+**Herramientas:** `Jest` + `Supertest` (para los endpoints que disparan la asignación) contra una base de datos PostgreSQL de servicio (Docker, la misma imagen usada en CI vía GitHub Actions).
 
 ---
 
-### 1.4 Pruebas de Carga
+### 1.3 Pruebas End-to-End (Sprint 5)
 
-Las pruebas de carga evalúan el comportamiento del sistema bajo condiciones de tráfico elevado y sostenido, con el objetivo de identificar cuellos de botella y validar la estabilidad del sistema bajo estrés.
+Simulan al usuario real navegando el sistema desplegado (frontend + backend + base de datos), sobre el flujo público de consulta.
 
-| Tipo | Objetivo |
-|---|---|
-| **Carga de pico (spike test)** | Simular el pico de tráfico del primer día de clases sobre los endpoints de consulta de disponibilidad. |
-| **Carga sostenida (soak test)** | Verificar la estabilidad del sistema durante períodos prolongados de carga moderada-alta (mínimo 30 minutos). |
-| **Carga incremental (ramp-up test)** | Identificar el punto de quiebre del sistema aumentando gradualmente la cantidad de usuarios virtuales concurrentes. |
+| Issue de prueba | Valida (issue de origen) | Casos obligatorios |
+|---|---|---|
+| **5.9** — Flujo del estudiante | 3.7 (RF-07 a RF-10) | Ingresar código de alumno o de curso → ver resultado (tipo de espacio, pabellón, piso, identificador, horario, docente); caso de código inexistente → mensaje claro, sin exponer errores técnicos internos |
 
-**Herramienta:** `k6` (ver Sección 2).
+**Aclaración frente a la v1.1:** este flujo es de **consulta**, no de reserva. No existe un paso de "confirmar reserva" ni de "espacio sin cupo" desde la perspectiva del alumno — esas condiciones las resuelve el motor de asignación (§1.2), no la UI de consulta.
+
+**Herramientas:** `Playwright`, ejecutado en el pipeline de CI dentro del Sprint 5, contra el entorno definido en el Plan de Ambiente Controlado (Issue 5.13) con datos del seed (Issue 5.17).
+
+---
+
+### 1.4 Pruebas de Carga (Sprint 4 primera corrida, Sprint 5 validación final)
+
+Ver detalle completo en §2. Corresponden al **Issue 5.8**, que valida específicamente los endpoints de consulta por código de alumno (Issue 3.2) y por código de curso (Issue 3.4) — **no** el proceso de asignación, que es batch/manual y no se dispara por tráfico de alumnos.
 
 ---
 
 ## 2. Escenarios de Carga y Umbrales de Aceptación (k6)
 
-### 2.1 Escenario Principal: Pico del Primer Día de Clases
+### 2.1 Escenario: Pico del Primer Día de Clases
 
-**Objetivo:** Simular el tráfico simultáneo máximo esperado sobre los endpoints de consulta de disponibilidad de espacios durante el primer día del período académico, que representa el momento de mayor demanda del sistema.
+**Objetivo (RNF-01):** verificar que el endpoint público de consulta soporte el pico de tráfico simultáneo del primer día de clases, cuando todos los alumnos consultan su ubicación a la vez, sin degradar el tiempo de respuesta de forma crítica.
 
-**Endpoints bajo carga:**
+**Endpoints bajo carga (los dos que el Issue 5.8 declara que valida):**
 
-- `GET /api/v1/espacios/disponibles` — Consulta general de disponibilidad
-- `GET /api/v1/espacios/{id}/horarios` — Consulta de horarios por espacio
-- `POST /api/v1/asignaciones` — Solicitud de asignación (incluido en el pico)
+- Consulta por código de alumno (Issue 3.2 → RF-07)
+- Consulta por código de curso (Issue 3.4 → RF-08)
+
+**Fuera de esta prueba:** cualquier endpoint de asignación (`Issue 2.11`, `2.15`) o de administración (alertas, panel). No son endpoints públicos de alto tráfico: la asignación es una corrida batch o bajo demanda de Coordinación Académica, no algo que dispare un pico de miles de alumnos.
 
 **Configuración del escenario k6:**
 
 ```javascript
-// k6/scenarios/pico_primer_dia.js
+// tests/load/pico_primer_dia.js
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { Trend, Rate } from 'k6/metrics';
@@ -105,191 +111,137 @@ export const options = {
       executor: 'ramping-vus',
       startVUs: 0,
       stages: [
-        { duration: '2m', target: 100 },   // Rampa de subida
-        { duration: '5m', target: 300 },   // Pico sostenido (300 VUs concurrentes)
-        { duration: '2m', target: 300 },   // Meseta del pico
-        { duration: '1m', target: 0  },    // Rampa de bajada
+        { duration: '1m', target: 50 },   // rampa de subida
+        { duration: '3m', target: 150 },  // pico sostenido
+        { duration: '1m', target: 0 },    // rampa de bajada
       ],
       gracefulRampDown: '30s',
     },
   },
-
-  // ─── Umbrales formales de aceptación ─────────────────────────────────────
   thresholds: {
-    'http_req_duration{scenario:pico_primer_dia}': ['p(95)<2000'],  // p95 < 2 000 ms
-    'tasa_error':                                  ['rate<0.01'],   // Error rate < 1 %
-    'http_req_failed':                             ['rate<0.01'],   // Fallos HTTP < 1 %
+    'http_req_duration{scenario:pico_primer_dia}': ['p(95)<2000'],
+    'tasa_error': ['rate<0.01'],
+    'http_req_failed': ['rate<0.01'],
   },
 };
 
 export default function () {
-  const BASE_URL = __ENV.BASE_URL || 'https://staging.saie.internal';
+  const BASE_URL = __ENV.BASE_URL; // entorno local o de CI (nunca la instancia gratuita desplegada)
 
   const endpoints = [
-    `${BASE_URL}/api/v1/espacios/disponibles`,
-    `${BASE_URL}/api/v1/espacios/1/horarios`,
-    `${BASE_URL}/api/v1/espacios/2/horarios`,
+    `${BASE_URL}/api/v1/consulta/alumno/:codigo`,  // Issue 3.2
+    `${BASE_URL}/api/v1/consulta/curso/:codigo`,   // Issue 3.4
   ];
 
   const url = endpoints[Math.floor(Math.random() * endpoints.length)];
-  const res = http.get(url, { tags: { name: 'consulta_disponibilidad' } });
+  const res = http.get(url, { tags: { name: 'consulta_ubicacion' } });
 
   const ok = check(res, {
-    'status es 200':          (r) => r.status === 200,
-    'respuesta no vacía':     (r) => r.body.length > 0,
-    'latencia aceptable':     (r) => r.timings.duration < 2000,
+    'status es 200 o 404 controlado': (r) => r.status === 200 || r.status === 404,
+    'respuesta no vacía': (r) => r.body.length > 0,
   });
 
   latenciaConsulta.add(res.timings.duration);
   tasaError.add(!ok);
 
-  sleep(Math.random() * 2 + 1); // Think time: 1-3 segundos
+  sleep(Math.random() * 2 + 1);
 }
 ```
 
----
+> **Nota de nomenclatura:** las rutas del ejemplo (`/api/v1/consulta/...`) son ilustrativas — deben ajustarse a las rutas reales que definan BI al implementar los Issues 3.2 y 3.4. Lo que no cambia es **cuáles** endpoints se cargan (consulta de alumno y de curso) y que un `404` controlado (código inexistente, RF-10) es una respuesta válida, no un fallo.
 
-### 2.2 Umbrales Formales de Aceptación Técnica
+**El volumen de VUs (150 concurrentes) es un punto de partida, no un valor fijo definitivo:** debe calibrarse contra el conjunto de volumen que entregue el seed de demostración (**Issue 5.17**), que es la fuente real de cuántos alumnos sintéticos existen en el dataset de prueba. Si el equipo define un tamaño de matrícula distinto en el seed, este número se ajusta antes de la primera corrida en Sprint 4.
 
-Los siguientes umbrales son **obligatorios** para que una ejecución de prueba de carga sea considerada exitosa. El incumplimiento de cualquiera de ellos constituye un **fallo bloqueante** que impide el despliegue a producción.
+### 2.2 Umbrales Formales de Aceptación
 
 | Métrica | Umbral | Justificación |
 |---|---|---|
-| **Latencia p95** (`http_req_duration`) | **< 2 000 ms** | El 95 % de las solicitudes deben resolverse en menos de 2 segundos bajo carga de pico, garantizando una experiencia de usuario aceptable según los estándares de la plataforma. |
-| **Tasa de error máxima** (`tasa_error` / `http_req_failed`) | **< 1 %** | Menos del 1 % de las solicitudes pueden fallar (errores HTTP 5xx o timeouts) durante el escenario de pico. Tasas superiores indican inestabilidad sistémica inaceptable. |
-| **Latencia p99** (`http_req_duration`) | **< 5 000 ms** | Métrica complementaria: el 99 % de las solicitudes deben completarse en menos de 5 segundos (umbral de tolerancia máxima). |
-| **Duración media** (`http_req_duration avg`) | **< 800 ms** | La latencia promedio no debe superar 800 ms para garantizar fluidez percibida en condiciones normales de carga. |
+| **Latencia p95** (`http_req_duration`) | < 2 000 ms | El 95 % de las consultas debe resolverse en menos de 2 s bajo el pico, según RNF-01 ("sin degradar el tiempo de respuesta de forma crítica") |
+| **Tasa de error** (`tasa_error` / `http_req_failed`) | < 1 % | Excluye los `404` controlados de código inexistente (RF-10), que cuentan como respuesta correcta, no como error |
 
-> **Ejecución:** Las pruebas de carga se ejecutan en el entorno de **staging** antes de cada despliegue a producción programado. Los resultados se publican automáticamente como artefactos del pipeline CI/CD y se archivan en el repositorio de evidencias del proyecto.
+**Entorno de ejecución (obligatorio declarar en el reporte, por Issue 5.8):** la prueba corre contra un **entorno local o de CI**, con la misma configuración que producción — **nunca contra la instancia gratuita desplegada** (Vercel/Render/Supabase), porque el cold start de Render y la pausa de Supabase por inactividad invalidarían la medición.
+
+**Ejecución:** primera corrida en **Sprint 4** (Issue 5.8) sobre el motor y los endpoints ya integrados; repetición de validación final en **Sprint 5**, cerrando los issues `bug` abiertos por la primera corrida. El script vive versionado en `/tests/load` (carpeta ya presente en el repositorio) y el reporte (latencia p95, tasa de error, entorno de ejecución) se documenta como artefacto del pipeline.
 
 ---
 
 ## 3. Quality Gates y Política de Manejo de Bugs
 
-### 3.1 Quality Gates del Pipeline CI/CD con SonarCloud
+### 3.1 Quality Gates del Pipeline CI/CD (SonarCloud)
 
-Los Quality Gates son controles automáticos obligatorios integrados en el pipeline de Integración Continua (CI/CD). **Ningún despliegue puede proceder si alguno de estos criterios no se cumple.**
+Los quality gates son los que definen **RNF-02, RNF-03 y el Issue 5.10b** — no se agregan criterios adicionales que el proyecto no pidió.
 
-#### 3.1.1 Criterios de Quality Gate
-
-| Criterio | Umbral requerido | Consecuencia de fallo |
+| Criterio | Umbral | Consecuencia de fallo |
 |---|---|---|
-| **Cobertura de código** (`Coverage`) | **>= 85 %** | El pipeline se detiene; el despliegue queda bloqueado hasta alcanzar el umbral. |
-| **Bugs críticos** (`Bugs` con severidad `CRITICAL` o `BLOCKER`) | **0 bugs** | Bloqueo inmediato del despliegue. No se admiten excepciones sin aprobación explícita del Tech Lead documentada en el issue correspondiente. |
-| **Code Smells** (`Code Smells` con severidad `CRITICAL`) | **0 smells críticos** | Bloqueo del despliegue en ramas de producción (`main`). En ramas de desarrollo se genera una advertencia. |
-| **Vulnerabilidades de seguridad** (`Vulnerabilities`) | **0 de severidad `HIGH` o `CRITICAL`** | Bloqueo del despliegue en cualquier rama. |
-| **Duplicación de código** (`Duplicated Lines`) | **< 10 %** | Advertencia (no bloqueante) en PR; bloqueante si supera el 15 %. |
+| **Cobertura de código** | ≥ 85 % | El pipeline bloquea el merge/deploy hasta alcanzar el umbral (RNF-02) |
+| **Bugs críticos** (SonarCloud, severidad crítica/bloqueante) | 0 | Bloqueo automático del despliegue (RNF-03) |
 
-#### 3.1.2 Configuración del Quality Gate en SonarCloud
+Estos dos gates se activan a partir del **Issue 5.10b (Sprint 3)**, sobre el pipeline base sin gates del **Issue 5.10a (Sprint 1)**. Antes de eso, el pipeline solo corre linter, formato y las pruebas unitarias/paramétricas ya escritas (5.1–5.4), sin bloquear nada.
 
-El Quality Gate se define en el archivo `sonar-project.properties` en la raíz del repositorio:
+Otras métricas que SonarCloud reporta por defecto (code smells, duplicación, vulnerabilidades) **quedan visibles en el dashboard como información de referencia**, pero no son gate bloqueante del proyecto: si el equipo decide más adelante subirlas a gate formal, ese cambio debe registrarse en la tabla de control de cambios de este documento, no asumirse de entrada.
 
-```properties
-# sonar-project.properties
-sonar.projectKey=saie_project
-sonar.organization=saie-org
-sonar.sources=src
-sonar.tests=tests
-sonar.coverage.exclusions=**/migrations/**,**/config/**,**/__init__.py
-
-# Quality Gate mínimo exigido
-sonar.qualitygate.wait=true
-```
-
-El Quality Gate llamado `SAIE Gate` debe configurarse directamente en la interfaz de SonarCloud con los umbrales de la tabla anterior.
+**Revisión final:** en la semana de Cierre, el Issue 5.10b se revisa una última vez antes de la entrega (ver cronograma), y el Issue 5.18 (Sprint 5) atiende específicamente la cobertura de los módulos sin issue de pruebas propio (importadores, autenticación, alertas, endpoints del portal) para asegurar que el gate global de 85 % se sostenga.
 
 ---
 
-### 3.2 Política de Manejo de Defectos (Bug Policy)
+### 3.2 Política de Manejo de Defectos
 
-Esta política establece el tratamiento obligatorio de todos los defectos detectados durante el ciclo de vida del proyecto, diferenciando por el contexto en que son descubiertos.
+La política real del proyecto distingue por **dónde se detecta el defecto**, no por número de sprint fijo — la nota de la épica de calidad en el backlog lo dice de forma explícita:
 
-#### 3.2.1 Defectos en Pruebas Unitarias (Sprints 1–3)
+> "Los issues 5.1–5.7 y 5.16 se corrigen dentro del mismo sprint en que se implementa su issue de origen. Los issues 5.8 y 5.9 corren sobre el sistema ya integrado: cualquier falla ahí se registra como un issue de bug nuevo, no como corrección silenciosa."
 
-- **Alcance:** Bugs encontrados durante la ejecución de pruebas unitarias, parametrizadas o de integración a nivel de componente dentro de los Sprints 1, 2 y 3.
-- **Política:** El defecto **se corrige en el mismo sprint** en que fue detectado, antes del cierre de sprint.
-- **Procedimiento:**
-  1. El desarrollador que detecta el fallo lo reporta en el tablero de sprint como una subtarea del issue que lo originó.
-  2. La corrección se realiza inmediatamente, sin necesidad de crear un issue de bug independiente.
-  3. La cobertura de prueba que detectó el fallo se mantiene como prueba de regresión permanente.
-- **Justificación:** Los defectos en etapas tempranas tienen bajo costo de corrección y contexto de desarrollo fresco. La corrección inmediata previene la acumulación de deuda técnica.
+#### 3.2.1 Defectos en pruebas unitarias, paramétricas e integración (Issues 5.1–5.7, 5.16)
 
-#### 3.2.2 Defectos en Pruebas de Sistema Integradas (Sprint 4 en adelante)
+- **Alcance:** fallos detectados en las suites de las Issues 5.1 a 5.7 y 5.16, siempre dentro del mismo sprint en que se implementa el módulo que validan (Sprints 1 a 3).
+- **Política:** se corrige **en el mismo sprint**, sin necesidad de abrir un issue `bug` independiente — la corrección es parte del ciclo normal de desarrollo del módulo.
+- **Justificación:** el contexto de desarrollo está fresco y el costo de corrección es bajo; abrir un issue formal por cada fallo de una prueba unitaria recién escrita añadiría fricción sin valor de trazabilidad real.
 
-Aplica a los defectos detectados en:
-- Pruebas de carga con k6 (escenarios de pico y sostenidos) — **primera corrida en Sprint 4**
-- Pruebas End-to-End con Playwright
-- Pruebas de sistema en entorno de staging o producción
+#### 3.2.2 Defectos en pruebas de sistema (Issues 5.8 y 5.9)
 
-**Regla obligatoria:** Todo defecto detectado en este contexto **debe registrarse como un issue de bug nuevo y trazable** en el sistema de gestión del proyecto (GitHub Issues). **Las correcciones silenciosas están explícitamente prohibidas.**
+- **Alcance:** fallos detectados por las pruebas de carga con k6 (primera corrida Sprint 4, validación final Sprint 5) y por las pruebas E2E con Playwright (Sprint 5), es decir, sobre el **sistema ya integrado**.
+- **Política obligatoria:** todo defecto detectado aquí **se registra como un issue `bug` nuevo y trazable**, referenciando el issue de la prueba que lo detectó (5.8 o 5.9). **Las correcciones silenciosas están prohibidas** para esta capa.
+- **Quién corrige:** el **Issue 5.19 (Sprint 5, rol BM + BI)** reserva tiempo explícito en el cronograma para atender los bugs de backend y del motor que abran las pruebas E2E y de carga; los bugs de frontend los atiende FE dentro de sus propios issues del Sprint 5.
+- **Verificación:** tras cada corrección, se vuelve a correr la misma prueba que detectó el bug (no una nueva); el issue `bug` se cierra solo cuando esa prueba pasa en verde, o se difiere con una justificación escrita si no bloquea la entrega.
 
-> **Nota de alcance:** Esta política entra en vigencia a partir del **Sprint 4**, cuando se realiza la primera corrida de pruebas de carga con k6. A partir de ese momento, cualquier fallo detectado en pruebas de sistema (carga o E2E) debe seguir el procedimiento de registro obligatorio descrito a continuación.
-
-##### Procedimiento obligatorio para bugs de sistema:
-
-```
-1. DETECCIÓN
-   └─ Se detecta la falla en la ejecución automatizada (k6, Playwright, etc.)
-
-2. REGISTRO OBLIGATORIO
-   └─ Se crea un issue de bug en GitHub con la plantilla bug_report.md
-      ├─ Título: [BUG] <descripción concisa del fallo>
-      ├─ Labels: bug, sprint-4/sprint-5, <tipo: carga | e2e | staging>
-      ├─ Evidencia adjunta: logs de k6, captura de Playwright, stack trace
-      ├─ Pasos para reproducir
-      ├─ Comportamiento esperado vs. observado
-      └─ Issue vinculado al PR que introduce la prueba fallida
-
-3. PRIORIZACIÓN
-   └─ El Tech Lead asigna severidad (CRITICAL / HIGH / MEDIUM / LOW)
-      y sprint de resolución en la siguiente reunión de planificación.
-
-4. CORRECCIÓN TRAZABLE
-   └─ El PR de corrección debe referenciar el issue con Fixes #<número>
-      y contener la prueba de regresión que garantiza la no-recurrencia.
-
-5. VERIFICACIÓN
-   └─ El QA ejecuta nuevamente el escenario de prueba original y confirma
-      el cierre del issue con evidencia documentada.
-```
-
-##### Tabla de clasificación de severidad para bugs de sistema:
-
-| Severidad | Criterio | SLA de resolución |
-|---|---|---|
-| **CRITICAL** | El sistema es inoperable o viola umbrales de k6 bajo carga de pico | Antes del siguiente despliegue |
-| **HIGH** | Flujo E2E falla en happy path; error rate > umbral | Dentro del sprint activo |
-| **MEDIUM** | Flujo E2E falla en camino alternativo; degradación de rendimiento | Próximo sprint |
-| **LOW** | Impacto cosmético o de UX menor; no afecta funcionalidad | Backlog priorizado |
+**Sin tabla de severidad propia:** el proyecto no define niveles CRITICAL/HIGH/MEDIUM/LOW con SLA — eso es responsabilidad de SonarCloud (para bugs críticos del código) y de la clasificación estándar de issues `bug` en GitHub (label `bug`, sin taxonomía adicional). Si el equipo decide adoptar una clasificación de severidad propia, debe registrarse en `06_gestion_cambios` o equivalente, no inventarse aquí sin respaldo.
 
 ---
 
-### 3.3 Resumen Visual del Ciclo de Calidad
+### 3.3 Resumen del ciclo de calidad
 
 ```
-  Sprint 1-3                Sprint 4                      Sprint 5
-  ────────────────────────────────────────────────────────────────────────
-  [Pruebas Unitarias]   [Pruebas Integración]          [E2E]
-  [Pruebas Integración]     [Carga k6]                 [Playwright]
-        │                        │                           │
-        ▼                        ▼                           ▼
-  Bug detectado?          Bug detectado?              Bug detectado?
-        │                        │                           │
-        ▼                        ▼                           ▼
-  Corregir en         Corregir en sprint          REGISTRAR issue GitHub
-  mismo sprint        + regresión                 → Priorizar → Corregir
-                            │                     → Verificar → Cerrar
-                            ▼                           │
-                    REGISTRAR issue GitHub ◄────────────┘
-                    → Priorizar → Corregir
-                    → Verificar → Cerrar
-  ────────────────────────────────────────────────────────────────────────
-                    ↓ Quality Gates SonarCloud ↓
-              Cobertura >= 85% │ 0 Bugs CRITICAL
-              ────────────────────────────────
-                  ✅ PASS → Despliegue permitido
-                  ❌ FAIL → Despliegue bloqueado
+ Sprints 1–3                              Sprint 4                    Sprint 5
+ ─────────────────────────────────────────────────────────────────────────────
+ Unitarias/param. (5.1–5.6, 5.16)      k6 primera corrida (5.8)     E2E (5.9)
+ Integración (5.7)                                                  k6 validación final (5.8)
+      │                                       │                          │
+      ▼                                       ▼                          ▼
+ Bug detectado?                         Bug detectado?             Bug detectado?
+      │                                       │                          │
+      ▼                                       ▼                          ▼
+ Corregir en el mismo sprint          REGISTRAR issue `bug`   REGISTRAR issue `bug`
+ (sin issue independiente)            → 5.19 corrige (BM+BI)  → 5.19 corrige (BM+BI)
+                                       → re-ejecuta 5.8        → re-ejecuta 5.9/5.8
+ ─────────────────────────────────────────────────────────────────────────────
+                    Gate activo desde Sprint 3 (Issue 5.10b)
+                 Cobertura ≥ 85 %   │   0 bugs críticos (SonarCloud)
+                 ──────────────────────────────────────────
+                     ✅ PASS → merge / deploy permitido
+                     ❌ FAIL → bloqueo automático
 ```
+
+---
+
+## 4. Criterios de Salida del Proyecto
+
+Este plan define, además, qué significa "terminado" para efectos del **Informe de Resumen de Pruebas (Issue 5.14)**, que debe concluir explícitamente si se cumplieron:
+
+- Todas las suites de las Issues 5.1 a 5.7 y 5.16 en verde en CI, con cobertura ≥ 85 % por módulo (criterio de cada issue individual).
+- Gate de SonarCloud en verde (cobertura global ≥ 85 %, 0 bugs críticos) — Issue 5.10b.
+- Pruebas de carga (Issue 5.8) dentro de los umbrales de §2.2 en su corrida de validación final (Sprint 5).
+- Pruebas E2E (Issue 5.9) en verde, cubriendo caso feliz y código inexistente.
+- Validación manual y exploratoria (Issue 5.15) completada sobre el flujo integrado (importar → asignación → consulta → alerta → mapa), con hallazgos documentados.
+- Sin issues `bug` críticos abiertos sin justificación escrita de diferimiento.
 
 ---
 
@@ -298,8 +250,9 @@ Aplica a los defectos detectados en:
 | Versión | Fecha | Autor | Descripción |
 |---|---|---|---|
 | 1.0.0 | 2026-09-16 | QA SAIE | Creación inicial del Plan Maestro de Pruebas (Issue #5.12) |
-| 1.1.0 | 2026-09-22 | QA SAIE | Alineación con Backlog v2.0: (1) nuevo módulo «Cercanía entre secciones paralelas» en §1.1; (2) política de bugs de sistema adelantada a Sprint 4 en §3.2.2; (3) diagrama ASCII actualizado en §3.3. |
+| 1.1.0 | 2026-09-22 | QA SAIE | Alineación parcial con Backlog v2.0 |
+| **2.0.0** | **2026-09-27** | **QA SAIE** | **Reescritura alineada al proyecto:** (1) corrige la confusión de dominio — el SAIE no tiene reservas, solo asignación automática + consulta; (2) reemplaza los endpoints y umbrales de k6 inventados por los reales (Issues 3.2/3.4, Issue 5.8), con nota explícita de que la asignación nunca corre bajo carga de alumnos; (3) añade trazabilidad completa a cada issue de prueba (5.1–5.9, 5.16) y su issue de origen; (4) restaura la distinción aula/laboratorio en cada módulo de pruebas unitarias (capacidad real y software); (5) elimina quality gates no solicitados por el proyecto (code smells, duplicación, vulnerabilidades) y la tabla de severidad sin respaldo documental; (6) corrige la política de bugs: la frontera real es "unitarias/integración (mismo sprint)" vs. "pruebas de sistema k6+E2E (issue `bug` trazable)", no un corte fijo por número de sprint; (7) añade sección de criterios de salida del proyecto, ligada al Issue 5.14. |
 
 ---
 
-*Este documento es de carácter normativo para el equipo SAIE. Cualquier modificación debe ser aprobada por el Asegurador de Calidad y el Tech Lead, y registrada en la tabla de control de cambios.*
+*Este documento es de carácter normativo para el equipo SAIE. Cualquier modificación debe ser aprobada por el Asegurador de Calidad y registrada en la tabla de control de cambios.*
