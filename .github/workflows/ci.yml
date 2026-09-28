@@ -1,0 +1,48 @@
+name: CI
+
+# Se dispara en cada push y en cada Pull Request hacia develop o main
+# (cumple el primer criterio de aceptación del Issue 5.10a)
+on:
+  push:
+    branches:
+      - develop
+      - main
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  ci:
+    name: Lint, formato y pruebas unitarias
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js (según .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Instalar dependencias (backend + frontend, workspaces)
+        run: npm ci
+
+      - name: Generar cliente de Prisma
+        # Necesario porque backend/src importa @prisma/client;
+        # sin este paso el tipado y el build fallarían en CI.
+        run: npm run prisma:generate --workspace=backend
+
+      - name: Ejecutar linter (ESLint)
+        run: npm run lint
+
+      - name: Verificar formato (Prettier)
+        run: npm run format:check
+
+      - name: Ejecutar pruebas unitarias y parametrizadas
+        # Nota: este workflow es la base del Issue 5.10a.
+        # El Issue 5.10b (Sprint 3) añade aquí los quality gates
+        # de cobertura ≥85% y 0 bugs críticos vía SonarCloud.
+        run: npm run test
