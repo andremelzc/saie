@@ -18,6 +18,13 @@ jobs:
     name: Lint y formato
     runs-on: ubuntu-latest
 
+    # prisma generate no se conecta a ninguna base real en este job,
+    # pero prisma.config.ts necesita que la variable exista para poder
+    # resolver el archivo de configuración. Un valor de relleno alcanza.
+    env:
+      DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/saie_dev?schema=public
+      DIRECT_URL: postgresql://postgres:postgrespassword@localhost:5432/saie_dev?schema=public
+
     steps:
       - name: Descargar el código del repositorio
         uses: actions/checkout@v4
