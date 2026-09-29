@@ -1,7 +1,21 @@
+// Mock del cliente Prisma para evitar que instancie PrismaClient sin driver adapter
+// en entornos de test sin base de datos configurada (Prisma 7 con prisma.config.ts).
+jest.mock('../../backend/src/lib/prisma', () => ({
+  __esModule: true,
+  prisma: {
+    $connect: jest.fn(),
+    $disconnect: jest.fn(),
+  },
+  default: {
+    $connect: jest.fn(),
+    $disconnect: jest.fn(),
+  },
+}));
+
 import request from 'supertest';
 import { createApp } from '../../backend/src/app';
 
-describe('Integración API - Health Check', () => {
+describe('Integracion API - Health Check', () => {
   const app = createApp();
 
   it('GET /api/health debe responder 200 con status ok', async () => {
