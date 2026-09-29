@@ -1,6 +1,7 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { healthRouter } from './routes/health.routes.js';
+import consultaRouter from './routes/consulta.routes.js';
 
 export const createApp = (): Application => {
   const app = express();
@@ -17,6 +18,7 @@ export const createApp = (): Application => {
 
   // Rutas base
   app.use('/api', healthRouter);
+  app.use('/api/v1/consulta', consultaRouter);
 
   // Manejo de rutas no encontradas (404)
   app.use((_req: Request, res: Response) => {
