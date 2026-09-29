@@ -14,8 +14,12 @@ export const HorarioSchema = z.object({
     DiaSemana.SABADO,
     DiaSemana.DOMINGO,
   ]),
-  horaInicio: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Hora de inicio debe ser formato HH:mm (24h)'),
-  horaFin: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Hora de fin debe ser formato HH:mm (24h)'),
+  horaInicio: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Hora de inicio debe ser formato HH:mm (24h)'),
+  horaFin: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Hora de fin debe ser formato HH:mm (24h)'),
 });
 
 export type HorarioInput = z.infer<typeof HorarioSchema>;
@@ -27,7 +31,7 @@ export interface ResultadoImportacionHorarios {
 
 export async function importarHorarios(
   datos: unknown[],
-  prisma: PrismaClient
+  prisma: PrismaClient,
 ): Promise<ResultadoImportacionHorarios> {
   let horariosProcesados = 0;
   const errores: string[] = [];
@@ -44,7 +48,9 @@ export async function importarHorarios(
 
     // Validación lógica de horas
     if (horaInicio >= horaFin) {
-      errores.push(`Fila ${i + 1}: La hora de inicio (${horaInicio}) debe ser menor a la hora de fin (${horaFin})`);
+      errores.push(
+        `Fila ${i + 1}: La hora de inicio (${horaInicio}) debe ser menor a la hora de fin (${horaFin})`,
+      );
       continue;
     }
 
@@ -70,7 +76,9 @@ export async function importarHorarios(
       });
 
       if (!seccion) {
-        errores.push(`Fila ${i + 1}: No existe la sección ${codigoSeccion} para el curso ${codigoCurso} en el periodo ${periodo}`);
+        errores.push(
+          `Fila ${i + 1}: No existe la sección ${codigoSeccion} para el curso ${codigoCurso} en el periodo ${periodo}`,
+        );
         continue;
       }
 
@@ -95,7 +103,9 @@ export async function importarHorarios(
       horariosProcesados++;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      errores.push(`Fila ${i + 1} (${codigoCurso}-${codigoSeccion} ${diaSemana} ${horaInicio}): ${msg}`);
+      errores.push(
+        `Fila ${i + 1} (${codigoCurso}-${codigoSeccion} ${diaSemana} ${horaInicio}): ${msg}`,
+      );
     }
   }
 

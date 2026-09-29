@@ -37,7 +37,7 @@ describe('Importador Masivo de Docentes y Credenciales (Issue 1.8)', () => {
           rol: 'DOCENTE',
           debeCambiarClave: true,
         }),
-      })
+      }),
     );
 
     expect(mockPrisma.docente.upsert).toHaveBeenCalledWith(
@@ -46,7 +46,7 @@ describe('Importador Masivo de Docentes y Credenciales (Issue 1.8)', () => {
           codigoDocente: 'D001',
           nombre: 'Dr. Carlos Mendoza',
         }),
-      })
+      }),
     );
   });
 });
