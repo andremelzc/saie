@@ -198,6 +198,55 @@ describe('Issue 2.5 / 5.4 - Algoritmo de Búsqueda de Bloque Contiguo con Capaci
     expect(resultado.bloques[0].espacioIds).toEqual(['a101', 'a102']);
   });
 
+  test('Bloque de 3 o más espacios: se expande hasta cubrir la capacidad requerida', () => {
+    // N = 80: ningún par de aulas (60 cada par) alcanza. Se necesita un bloque de 3.
+    // a101 (30) + a102 (30) + a103 (30) = 90 >= 80 ✓
+    const resultado = buscarBloqueContiguo({
+      alumnosRequeridos: 80,
+      tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
+      espaciosDisponibles: espacios,
+      obtenerVecinosContiguos: obtenerVecinos,
+    });
+
+    expect(resultado.encontrado).toBe(true);
+    // Debe existir al menos un bloque con 3 espacios contiguos
+    const bloqueTresEspacios = resultado.bloques.find((b) => b.espacios.length >= 3);
+    expect(bloqueTresEspacios).toBeDefined();
+    expect(bloqueTresEspacios!.capacidadTotal).toBeGreaterThanOrEqual(80);
+    expect(bloqueTresEspacios!.tipo).toBe(TipoEspacio.AULA_TEORICA);
+    // Verifica que los 3 son a101, a102, a103 (la única cadena contigua de 3)
+    expect(bloqueTresEspacios!.espacioIds).toEqual(['a101', 'a102', 'a103']);
+  });
+
+  test('Capacidad justo en el límite: un bloque con capacidad exactamente igual al requerido tiene desperdicio 0', () => {
+    // Lab 102: nominal 30, malogradas 0 → real 30. Pedir exactamente 30.
+    const resultado = buscarBloqueContiguo({
+      alumnosRequeridos: 30,
+      tipoEspacioRequerido: TipoEspacio.LABORATORIO,
+      espaciosDisponibles: [espacios[5]], // solo l102 con capacidad real = 30
+      obtenerVecinosContiguos: obtenerVecinos,
+    });
+
+    expect(resultado.encontrado).toBe(true);
+    expect(resultado.bloques[0].capacidadTotal).toBe(30);
+    expect(resultado.bloques[0].desperdicio).toBe(0);
+  });
+
+  test('Espacios contiguos pero no disponibles: no forman bloque si no están en la lista de disponibles', () => {
+    // a101 y a102 son contiguos, pero solo a103 está disponible.
+    // a103 tiene un solo vecino contiguo (a102) pero a102 no está disponible.
+    // Necesitamos 50 alumnos → a103 (30) solo no alcanza y no puede expandirse.
+    const resultado = buscarBloqueContiguo({
+      alumnosRequeridos: 50,
+      tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
+      espaciosDisponibles: [espacios[2]], // solo a103 disponible
+      obtenerVecinosContiguos: obtenerVecinos,
+    });
+
+    expect(resultado.encontrado).toBe(false);
+    expect(resultado.bloques).toHaveLength(0);
+  });
+
   test('Ordenamiento determinista: idéntico en múltiples corridas', () => {
     const params = {
       alumnosRequeridos: 40,

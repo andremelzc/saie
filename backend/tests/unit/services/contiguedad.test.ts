@@ -48,6 +48,43 @@ describe('Issue 2.3 / 5.2 - Consulta de Espacios Contiguos', () => {
       expect(vecinos).toEqual([]);
     });
 
+    test('simetría de la relación: si A tiene a B como contiguo, B debe tener a A como contiguo', () => {
+      // Relación definida como aula-1 <-> aula-2 <-> aula-3
+      const vecinosDeAula1 = obtenerEspaciosContiguos('aula-1', grafo);
+      const vecinosDeAula2 = obtenerEspaciosContiguos('aula-2', grafo);
+      const vecinosDeAula3 = obtenerEspaciosContiguos('aula-3', grafo);
+
+      // Si aula-1 es contigua a aula-2, entonces aula-2 debe ser contigua a aula-1
+      expect(vecinosDeAula1).toContain('aula-2');
+      expect(vecinosDeAula2).toContain('aula-1');
+
+      // Si aula-2 es contigua a aula-3, entonces aula-3 debe ser contigua a aula-2
+      expect(vecinosDeAula2).toContain('aula-3');
+      expect(vecinosDeAula3).toContain('aula-2');
+
+      // aula-1 y aula-3 NO son directamente contiguas entre sí (solo lo son via aula-2)
+      expect(vecinosDeAula1).not.toContain('aula-3');
+      expect(vecinosDeAula3).not.toContain('aula-1');
+    });
+
+    test('no retorna contiguos de diferente tipo aunque estén en el grafo adyacente', () => {
+      // lab-1 y aula-1 están en el grafo, pero son de tipos distintos.
+      // Agregamos una relación cruzada al grafo para probar el filtro de tipo.
+      const espaciosCruzados = [
+        { id: 'aula-x', tipo: TipoEspacio.AULA_TEORICA, identificador: 'Aula X' },
+        { id: 'lab-x', tipo: TipoEspacio.LABORATORIO, identificador: 'Lab X' },
+      ];
+      const relacionesCruzadas = [{ idA: 'aula-x', idB: 'lab-x' }];
+      const grafoCruzado = construirGrafoContiguedad(espaciosCruzados, relacionesCruzadas);
+
+      // aula-x es adyacente a lab-x, pero lab-x es de distinto tipo → no debe aparecer
+      const vecinosAulaX = obtenerEspaciosContiguos('aula-x', grafoCruzado);
+      expect(vecinosAulaX).toEqual([]);
+
+      const vecinosLabX = obtenerEspaciosContiguos('lab-x', grafoCruzado);
+      expect(vecinosLabX).toEqual([]);
+    });
+
     test('debe lanzar EspacioNoEncontradoError si el ID de espacio no existe', () => {
       expect(() => {
         obtenerEspaciosContiguos('id-inexistente', grafo);
