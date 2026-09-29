@@ -157,6 +157,60 @@ describe('Issue 2.4 / 5.3 - Disponibilidad de Espacios por Horario (No doble res
       expect(disponibles.every((e) => e.tipo === TipoEspacio.LABORATORIO)).toBe(true);
       expect(disponibles.map((e) => e.id)).toEqual(['lab-101', 'lab-102']);
     });
+
+    test('espacio sin ninguna asignación vigente siempre está disponible (aulas y laboratorios)', () => {
+      const horarioConsulta: HorarioSlot = {
+        diaSemana: DiaSemana.MIERCOLES,
+        horaInicio: '10:00',
+        horaFin: '12:00',
+      };
+
+      const disponiblesAulas = calcularEspaciosDisponibles(
+        horarioConsulta,
+        TipoEspacio.AULA_TEORICA,
+        espacios,
+        [],
+      );
+      // Sin asignaciones, todos los espacios del tipo solicitado deben estar disponibles
+      expect(disponiblesAulas.map((e) => e.id)).toEqual(['aula-101', 'aula-102']);
+
+      const disponiblesLabs = calcularEspaciosDisponibles(
+        horarioConsulta,
+        TipoEspacio.LABORATORIO,
+        espacios,
+        [],
+      );
+      expect(disponiblesLabs.map((e) => e.id)).toEqual(['lab-101', 'lab-102']);
+    });
+
+    test('solapamiento de 1 minuto es detectado: el espacio queda ocupado (borde extremo)', () => {
+      // Consulta: 10:00–12:00. Asignación VIGENTE: 11:59–13:00 → solapa 1 minuto.
+      const horarioConsulta: HorarioSlot = {
+        diaSemana: DiaSemana.LUNES,
+        horaInicio: '10:00',
+        horaFin: '12:00',
+      };
+
+      const asignaciones: AsignacionOcupacionInput[] = [
+        {
+          id: 'asig-borde',
+          estado: EstadoAsignacion.VIGENTE,
+          espacioIds: ['aula-101'],
+          horarios: [{ diaSemana: DiaSemana.LUNES, horaInicio: '11:59', horaFin: '13:00' }],
+        },
+      ];
+
+      const disponibles = calcularEspaciosDisponibles(
+        horarioConsulta,
+        TipoEspacio.AULA_TEORICA,
+        espacios,
+        asignaciones,
+      );
+
+      // aula-101 está bloqueada (solapamiento de 1 minuto), solo aula-102 disponible
+      expect(disponibles.map((e) => e.id)).not.toContain('aula-101');
+      expect(disponibles.map((e) => e.id)).toContain('aula-102');
+    });
   });
 
   describe('Consulta de Disponibilidad con Prisma', () => {

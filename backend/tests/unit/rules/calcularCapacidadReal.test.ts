@@ -91,6 +91,51 @@ describe('Issue 2.1 / 5.1 - Cálculo de Capacidad Real de un Espacio', () => {
     });
   });
 
+  describe('Pruebas parametrizadas: distintos aforos nominales de laboratorio', () => {
+    test.each([
+      // [identificador, aforoNominal, pcsMalogradas, capacidadEsperada]
+      ['Lab pequeño', 20, 0, 20],
+      ['Lab mediano', 30, 5, 25],
+      ['Lab grande', 40, 10, 30],
+      ['Lab XL', 50, 50, 0],
+      ['Lab 1 PC sana', 1, 0, 1],
+      ['Lab 1 PC mala', 1, 1, 0],
+      ['Lab aforo 0', 0, 0, 0],
+    ])(
+      'LABORATORIO "%s": nominal=%i, malogradas=%i → capacidad real=%i',
+      (identificador, aforoNominal, pcsMalogradas, capacidadEsperada) => {
+        const lab = {
+          id: `lab-param-${identificador}`,
+          identificador,
+          tipo: TipoEspacio.LABORATORIO,
+          aforoNominal,
+          pcsMalogradas,
+        };
+        expect(calcularCapacidadReal(lab)).toBe(capacidadEsperada);
+      },
+    );
+
+    test.each([
+      // [identificador, aforoNominal, capacidadEsperada]
+      ['Aula pequeña', 20, 20],
+      ['Aula mediana', 40, 40],
+      ['Aula grande', 60, 60],
+      ['Aula aforo 0', 0, 0],
+    ])(
+      'AULA_TEORICA "%s": nominal=%i → capacidad real=%i (nunca descuenta PCs)',
+      (identificador, aforoNominal, capacidadEsperada) => {
+        const aula = {
+          id: `aula-param-${identificador}`,
+          identificador,
+          tipo: TipoEspacio.AULA_TEORICA,
+          aforoNominal,
+          pcsMalogradas: 99, // campo ignorado para aulas
+        };
+        expect(calcularCapacidadReal(aula)).toBe(capacidadEsperada);
+      },
+    );
+  });
+
   describe('Servicio: obtenerCapacidadRealPorEspacioId', () => {
     test('debe consultar el espacio en base de datos y calcular su capacidad real', async () => {
       const mockPrisma = {
