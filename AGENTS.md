@@ -33,6 +33,10 @@
 * Manten la cobertura de código $\ge 85\%$ en las funciones del motor y los servicios.
 * Sigue convenciones de commits semánticos (`feat:`, `fix:`, `docs:`, `test:`, `chore:`).
 
+### 5. Registro de Versiones (CHANGELOG)
+* La actualización de `CHANGELOG.md` y `docs/registro_versiones.md` está **centralizada por el Maintainer (`andremelzc`)** al cierre de cada Sprint o lanzamiento.
+* Las ramas de características (`feat:`, `fix:`) NO deben modificar el CHANGELOG para evitar conflictos de fusión (*merge conflicts*) y colisión de versiones entre desarrolladores.
+
 ---
 
 ## 🚀 Comandos Útiles para el Agente
