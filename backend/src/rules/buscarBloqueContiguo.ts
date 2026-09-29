@@ -6,6 +6,7 @@ export interface EspacioConexo extends EspacioCapacidadInput {
   identificador: string;
   pabellon: string;
   piso: number;
+  softwareInstalado?: string[] | null;
 }
 
 export interface BloqueCandidato {
