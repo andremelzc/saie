@@ -229,3 +229,39 @@ El proyecto adopta un flujo de trabajo basado en **GitFlow / Feature Branching**
 * Formato: `tipo(ámbito opcional): descripción breve en presente imperativo` (ej: `docs(arquitectura): actualizar diagrama y principios de diseno`).
 * Guía completa y detallada en [docs/git-workflow.md](docs/git-workflow.md).
 
+---
+
+## 9. Despliegue y Ambientes (Producción / Demo)
+
+El sistema SAIE se encuentra desplegado y disponible en un entorno de demostración continuo utilizando plataformas en la nube:
+
+### 9.1. URLs Públicas del Sistema
+
+| Servicio / Capa | Plataforma | URL Pública |
+| :--- | :--- | :--- |
+| **Frontend Web** | Vercel | [https://saie-plum.vercel.app/](https://saie-plum.vercel.app/) |
+| **Backend API** | Render | [https://saie-backend.onrender.com/api](https://saie-backend.onrender.com/api) |
+| **Health Check** | Render | [https://saie-backend.onrender.com/api/health](https://saie-backend.onrender.com/api/health) |
+| **Base de Datos** | Supabase | PostgreSQL administrado con RLS y Connection Pooler |
+
+### 9.2. Flujo de Despliegue Continuo (CI/CD)
+
+El despliegue está 100% automatizado y blindado mediante GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
+
+1. **Pull Request:** Al abrir o actualizar un PR hacia `develop`, se ejecutan automáticamente los análisis de calidad (ESLint, Prettier y pruebas Jest). Ningún despliegue se ejecuta en esta etapa.
+2. **Merge a `develop`:** Al integrarse cambios a la rama principal, el pipeline ejecuta primero los quality gates.
+3. **Migración y Despliegue:** **Únicamente si todos los checks pasan en verde**, el job `deploy`:
+   * Aplica las migraciones de Prisma directamente sobre Supabase mediante la conexión directa (`DIRECT_URL`, puerto 5432).
+   * Dispara el webhook seguro de Render (`RENDER_DEPLOY_HOOK_URL`) para compilar y desplegar la nueva versión del backend.
+   * Dispara el webhook de Vercel (`VERCEL_DEPLOY_HOOK_URL`) para actualizar el frontend.
+
+### 9.3. Limitaciones y Notas Operativas (Capa Gratuita)
+
+* **Tiempo de calentamiento en Render (*Cold Start*):** En el tier gratuito de Render, el contenedor entra en estado de suspensión tras 15 minutos sin tráfico. La primera petición posterior puede tardar entre 45 y 60 segundos en responder mientras se inicializa el servidor. Las solicitudes posteriores responden de forma instantánea.
+* **Pausa por inactividad en Supabase:** La base de datos de Supabase entra en pausa automáticamente si transcurren 7 días continuos sin consultas. Para reactivarla, ingresar a [Supabase Dashboard](https://supabase.com/dashboard) y presionar *"Restore project"*.
+* **Reconstrucción de la Base de Datos:** Si se requiere reiniciar o reaplicar el esquema con el dataset semilla del edificio:
+  ```bash
+  npm run prisma:migrate --workspace=backend
+  npm run prisma:seed --workspace=backend
+  ```
+
