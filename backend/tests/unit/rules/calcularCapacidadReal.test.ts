@@ -94,13 +94,13 @@ describe('Issue 2.1 / 5.1 - Cálculo de Capacidad Real de un Espacio', () => {
   describe('Pruebas parametrizadas: distintos aforos nominales de laboratorio', () => {
     test.each([
       // [identificador, aforoNominal, pcsMalogradas, capacidadEsperada]
-      ['Lab pequeño',   20,  0,  20],
-      ['Lab mediano',   30,  5,  25],
-      ['Lab grande',    40, 10,  30],
-      ['Lab XL',        50, 50,   0],
-      ['Lab 1 PC sana',  1,  0,   1],
-      ['Lab 1 PC mala',  1,  1,   0],
-      ['Lab aforo 0',    0,  0,   0],
+      ['Lab pequeño', 20, 0, 20],
+      ['Lab mediano', 30, 5, 25],
+      ['Lab grande', 40, 10, 30],
+      ['Lab XL', 50, 50, 0],
+      ['Lab 1 PC sana', 1, 0, 1],
+      ['Lab 1 PC mala', 1, 1, 0],
+      ['Lab aforo 0', 0, 0, 0],
     ])(
       'LABORATORIO "%s": nominal=%i, malogradas=%i → capacidad real=%i',
       (identificador, aforoNominal, pcsMalogradas, capacidadEsperada) => {
@@ -117,10 +117,10 @@ describe('Issue 2.1 / 5.1 - Cálculo de Capacidad Real de un Espacio', () => {
 
     test.each([
       // [identificador, aforoNominal, capacidadEsperada]
-      ['Aula pequeña',  20,  20],
-      ['Aula mediana',  40,  40],
-      ['Aula grande',   60,  60],
-      ['Aula aforo 0',   0,   0],
+      ['Aula pequeña', 20, 20],
+      ['Aula mediana', 40, 40],
+      ['Aula grande', 60, 60],
+      ['Aula aforo 0', 0, 0],
     ])(
       'AULA_TEORICA "%s": nominal=%i → capacidad real=%i (nunca descuenta PCs)',
       (identificador, aforoNominal, capacidadEsperada) => {
