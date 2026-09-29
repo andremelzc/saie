@@ -50,7 +50,7 @@ describe('Importador de Matrículas y Cuentas de Alumno (Issues 1.5 y 1.7)', () 
           usuarioLogin: '22200101',
           rol: 'ALUMNO',
         }),
-      })
+      }),
     );
 
     expect(mockPrisma.matricula.upsert).toHaveBeenCalledWith(
@@ -58,7 +58,7 @@ describe('Importador de Matrículas y Cuentas de Alumno (Issues 1.5 y 1.7)', () 
         create: expect.objectContaining({
           movilidadReducida: true,
         }),
-      })
+      }),
     );
   });
 });

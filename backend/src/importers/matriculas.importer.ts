@@ -24,7 +24,7 @@ export interface ResultadoImportacionMatriculas {
 
 export async function importarMatriculas(
   datos: unknown[],
-  prisma: PrismaClient
+  prisma: PrismaClient,
 ): Promise<ResultadoImportacionMatriculas> {
   let alumnosProcesados = 0;
   let cuentasCreadas = 0;
@@ -110,7 +110,9 @@ export async function importarMatriculas(
       });
 
       if (!seccion) {
-        errores.push(`Fila ${i + 1}: No existe la sección ${codigoSeccion} para el curso ${codigoCurso} en ${periodo}`);
+        errores.push(
+          `Fila ${i + 1}: No existe la sección ${codigoSeccion} para el curso ${codigoCurso} en ${periodo}`,
+        );
         continue;
       }
 

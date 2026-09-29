@@ -1,7 +1,10 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { obtenerAsignacionPorAlumno, obtenerAsignacionPorCurso } from '../services/consulta.service';
+import {
+  obtenerAsignacionPorAlumno,
+  obtenerAsignacionPorCurso,
+} from '../services/consulta.service';
 
 const CodigoAlumnoParamSchema = z.object({
   codigoAlumno: z.string().min(1, 'El código de alumno es requerido'),

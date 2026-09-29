@@ -7,10 +7,16 @@ describe('Importador de Cursos y Secciones (Issue 1.3)', () => {
   beforeEach(() => {
     mockPrisma = {
       curso: {
-        upsert: jest.fn().mockImplementation(({ where, create }) => Promise.resolve({ id: 'curso-123', ...create })),
+        upsert: jest
+          .fn()
+          .mockImplementation(({ where, create }) =>
+            Promise.resolve({ id: 'curso-123', ...create }),
+          ),
       },
       seccion: {
-        upsert: jest.fn().mockImplementation(({ create }) => Promise.resolve({ id: 'seccion-123', ...create })),
+        upsert: jest
+          .fn()
+          .mockImplementation(({ create }) => Promise.resolve({ id: 'seccion-123', ...create })),
       },
     };
   });
@@ -62,7 +68,7 @@ describe('Importador de Cursos y Secciones (Issue 1.3)', () => {
         create: expect.objectContaining({
           stackSoftwareRequerido: [],
         }),
-      })
+      }),
     );
   });
 

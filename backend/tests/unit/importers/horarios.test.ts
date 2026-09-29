@@ -53,7 +53,9 @@ describe('Importador de Horarios (Issue 1.4)', () => {
 
     expect(resultado.horariosProcesados).toBe(0);
     expect(resultado.errores.length).toBeGreaterThan(0);
-    expect(resultado.errores[0]).toContain('hora de inicio (10:00) debe ser menor a la hora de fin (08:00)');
+    expect(resultado.errores[0]).toContain(
+      'hora de inicio (10:00) debe ser menor a la hora de fin (08:00)',
+    );
   });
 
   it('debe rechazar formatos de hora inválidos', async () => {

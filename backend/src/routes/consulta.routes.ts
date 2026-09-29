@@ -1,5 +1,8 @@
 import { Router } from 'express';
-import { consultarPorCodigoAlumno, consultarPorCodigoCurso } from '../controllers/consulta.controller';
+import {
+  consultarPorCodigoAlumno,
+  consultarPorCodigoCurso,
+} from '../controllers/consulta.controller';
 
 const router = Router();
 

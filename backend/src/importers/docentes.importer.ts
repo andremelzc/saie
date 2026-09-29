@@ -19,7 +19,7 @@ export interface ResultadoImportacionDocentes {
 
 export async function importarDocentes(
   datos: unknown[],
-  prisma: PrismaClient
+  prisma: PrismaClient,
 ): Promise<ResultadoImportacionDocentes> {
   let docentesProcesados = 0;
   let cuentasCreadas = 0;

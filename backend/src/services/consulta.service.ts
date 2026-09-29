@@ -10,7 +10,7 @@ import {
 
 export async function obtenerAsignacionPorAlumno(
   codigoAlumno: string,
-  prisma: PrismaClient
+  prisma: PrismaClient,
 ): Promise<ConsultaAlumnoResponseDTO | null> {
   // 1. Buscar alumno con sus matrículas, ficha médica, secciones, horarios y asignaciones
   const alumno = await prisma.alumno.findUnique({
@@ -106,7 +106,7 @@ export async function obtenerAsignacionPorAlumno(
 
 export async function obtenerAsignacionPorCurso(
   codigoCurso: string,
-  prisma: PrismaClient
+  prisma: PrismaClient,
 ): Promise<ConsultaCursoResponseDTO | null> {
   // Buscar el curso con todas sus secciones
   const curso = await prisma.curso.findUnique({
