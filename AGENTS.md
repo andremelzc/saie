@@ -20,9 +20,9 @@
 * Antes de escribir código para cualquier issue o tarea, **consulta siempre la especificación técnica correspondiente** en `docs/specs/` (revisa `docs/specs/README.md` para el mapeo).
 * Obedece estrictamente las firmas de funciones, contratos DTO y esquemas Zod definidos en las specs.
 
-### 2. Desarrollo Guiado por Pruebas (TDD)
-* Para cada función o regla de negocio construida en el backend (`backend/src/rules/` o `backend/src/services/`), escribe su suite de pruebas correspondiente en `backend/tests/unit/`.
-* Nunca declares completado un issue sin antes ejecutar las pruebas (`npm run test` en backend) y verificar que pasen en verde.
+### 2. Delimitación de Roles y Responsabilidades
+* **Desarrollo (`BI`, `BM`, `FE`):** Enfocado en la construcción del código de producción (`backend/src/` y `frontend/src/`). Valida su código con compilación TypeScript (`npx tsc --noEmit`).
+* **Calidad (`QA` — `Angel14den`):** Responsable de construir, mantener y ejecutar las suites de pruebas formales en `backend/tests/` (unitarias, integración, E2E y carga) correspondientes a la Épica de Calidad (`epic:calidad`).
 
 ### 3. Preservación del Modelo de Datos
 * Respeta la distinción entre **Aulas Teóricas** (sin PCs, capacidad real = aforo nominal) y **Laboratorios** (con PCs malogradas y matriz de software).
