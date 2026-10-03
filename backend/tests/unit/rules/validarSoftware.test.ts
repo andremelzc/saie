@@ -6,8 +6,63 @@ import {
 } from '../../../src/rules/validarSoftware';
 import { BloqueCandidato, EspacioConexo } from '../../../src/rules/buscarBloqueContiguo';
 
-describe('Issue 2.6, 2.7 / 5.5 - Validación de Stack de Software en Laboratorios y Bloques', () => {
-  describe('Issue 2.6: validarSoftwareLaboratorio (Laboratorio Individual)', () => {
+// ---------------------------------------------------------------------------
+// Fixtures compartidos
+// ---------------------------------------------------------------------------
+
+const lab1: EspacioConexo = {
+  id: 'lab-1',
+  identificador: 'Lab 101',
+  tipo: TipoEspacio.LABORATORIO,
+  pabellon: 'Pab A',
+  piso: 1,
+  aforoNominal: 30,
+  softwareInstalado: ['VS Code', 'Node.js', 'PostgreSQL'],
+};
+
+const lab2: EspacioConexo = {
+  id: 'lab-2',
+  identificador: 'Lab 102',
+  tipo: TipoEspacio.LABORATORIO,
+  pabellon: 'Pab A',
+  piso: 1,
+  aforoNominal: 30,
+  softwareInstalado: ['VS Code', 'Node.js'], // No tiene PostgreSQL
+};
+
+const aula1: EspacioConexo = {
+  id: 'aula-1',
+  identificador: 'Aula 101',
+  tipo: TipoEspacio.AULA_TEORICA,
+  pabellon: 'Pab A',
+  piso: 1,
+  aforoNominal: 40,
+};
+
+// ---------------------------------------------------------------------------
+// Helper para construir un BloqueCandidato de laboratorio
+// ---------------------------------------------------------------------------
+function crearBloqueLabConEspacios(espacios: EspacioConexo[]): BloqueCandidato {
+  return {
+    espacios,
+    espacioIds: espacios.map((e) => e.id),
+    capacidadTotal: espacios.reduce((s, e) => s + e.aforoNominal, 0),
+    desperdicio: 0,
+    piso: 1,
+    pabellon: 'Pab A',
+    tipo: TipoEspacio.LABORATORIO,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Suite principal
+// ---------------------------------------------------------------------------
+
+describe('Issue 2.6, 2.7 / 5.5 — Pruebas parametrizadas de validación de software (laboratorio individual y bloque)', () => {
+  // -------------------------------------------------------------------------
+  // Issue 2.6: validarSoftwareLaboratorio — casos básicos
+  // -------------------------------------------------------------------------
+  describe('Issue 2.6: validarSoftwareLaboratorio — funcionalidad básica', () => {
     test('normalización de nombres de software es insensible a mayúsculas y espacios extra', () => {
       expect(normalizarNombreSoftware('  Python  3.12  ')).toBe('python 3.12');
       expect(normalizarNombreSoftware('VS Code')).toBe('vs code');
@@ -66,36 +121,68 @@ describe('Issue 2.6, 2.7 / 5.5 - Validación de Stack de Software en Laboratorio
     });
   });
 
-  describe('Issue 2.7: validarSoftwareBloque (Bloque Completo)', () => {
-    const lab1: EspacioConexo = {
-      id: 'lab-1',
-      identificador: 'Lab 101',
-      tipo: TipoEspacio.LABORATORIO,
-      pabellon: 'Pab A',
-      piso: 1,
-      aforoNominal: 30,
-      softwareInstalado: ['VS Code', 'Node.js', 'PostgreSQL'],
-    };
+  // -------------------------------------------------------------------------
+  // Issue 2.6 / 5.5: Casos parametrizados — los tres escenarios obligatorios
+  // del plan maestro §1.1 para laboratorio individual
+  // -------------------------------------------------------------------------
+  describe('Issue 5.5: test.each — cumplimiento total, parcial y stack vacío en laboratorio individual', () => {
+    interface CasoSoftwareLab {
+      descripcion: string;
+      softwareInstalado: string[] | null;
+      softwareRequerido: string[] | null;
+      cumpleEsperado: boolean;
+      faltanteEsperado: string[];
+    }
 
-    const lab2: EspacioConexo = {
-      id: 'lab-2',
-      identificador: 'Lab 102',
-      tipo: TipoEspacio.LABORATORIO,
-      pabellon: 'Pab A',
-      piso: 1,
-      aforoNominal: 30,
-      softwareInstalado: ['VS Code', 'Node.js'], // No tiene PostgreSQL
-    };
+    const casos: CasoSoftwareLab[] = [
+      {
+        descripcion: 'cumplimiento total — laboratorio con todos los programas requeridos',
+        softwareInstalado: ['VS Code', 'Python 3.12', 'PostgreSQL'],
+        softwareRequerido: ['VS Code', 'Python 3.12'],
+        cumpleEsperado: true,
+        faltanteEsperado: [],
+      },
+      {
+        descripcion: 'cumplimiento parcial — laboratorio sin al menos un programa requerido',
+        softwareInstalado: ['VS Code'],
+        softwareRequerido: ['VS Code', 'Python 3.12', 'Docker'],
+        cumpleEsperado: false,
+        faltanteEsperado: ['Python 3.12', 'Docker'],
+      },
+      {
+        descripcion: 'stack requerido vacío — siempre cumple sin importar lo instalado',
+        softwareInstalado: ['VS Code'],
+        softwareRequerido: [],
+        cumpleEsperado: true,
+        faltanteEsperado: [],
+      },
+      {
+        descripcion: 'stack requerido nulo — equivale a vacío, siempre cumple',
+        softwareInstalado: ['VS Code'],
+        softwareRequerido: null,
+        cumpleEsperado: true,
+        faltanteEsperado: [],
+      },
+      {
+        descripcion: 'stack instalado nulo con requerimiento — no cumple, reporta todo como faltante',
+        softwareInstalado: null,
+        softwareRequerido: ['Python 3.12'],
+        cumpleEsperado: false,
+        faltanteEsperado: ['Python 3.12'],
+      },
+    ];
 
-    const aula1: EspacioConexo = {
-      id: 'aula-1',
-      identificador: 'Aula 101',
-      tipo: TipoEspacio.AULA_TEORICA,
-      pabellon: 'Pab A',
-      piso: 1,
-      aforoNominal: 40,
-    };
+    test.each(casos)('$descripcion', ({ softwareInstalado, softwareRequerido, cumpleEsperado, faltanteEsperado }) => {
+      const resultado = validarSoftwareLaboratorio(softwareInstalado, softwareRequerido);
+      expect(resultado.cumple).toBe(cumpleEsperado);
+      expect(resultado.softwareFaltante).toEqual(faltanteEsperado);
+    });
+  });
 
+  // -------------------------------------------------------------------------
+  // Issue 2.7: validarSoftwareBloque — bloque completo
+  // -------------------------------------------------------------------------
+  describe('Issue 2.7: validarSoftwareBloque — bloque completo (laboratorio y aula teórica)', () => {
     test('AULA_TEORICA: bloque cumple inmediatamente sin evaluar software', () => {
       const bloqueAula: BloqueCandidato = {
         espacios: [aula1],
@@ -112,32 +199,40 @@ describe('Issue 2.6, 2.7 / 5.5 - Validación de Stack de Software en Laboratorio
       expect(resultado.detalles).toHaveLength(0);
     });
 
-    test('LABORATORIO: cumple si todos los laboratorios del bloque tienen el stack', () => {
-      const bloqueLab: BloqueCandidato = {
-        espacios: [lab1],
-        espacioIds: [lab1.id],
-        capacidadTotal: 30,
+    test('AULA_TEORICA: bloque cumple incluso cuando el stack requerido está vacío', () => {
+      const bloqueAula: BloqueCandidato = {
+        espacios: [aula1],
+        espacioIds: [aula1.id],
+        capacidadTotal: 40,
         desperdicio: 0,
         piso: 1,
         pabellon: 'Pab A',
-        tipo: TipoEspacio.LABORATORIO,
+        tipo: TipoEspacio.AULA_TEORICA,
       };
+
+      const resultado = validarSoftwareBloque(bloqueAula, []);
+      expect(resultado.cumple).toBe(true);
+      expect(resultado.detalles).toHaveLength(0);
+    });
+
+    test('LABORATORIO: cumple si todos los laboratorios del bloque tienen el stack', () => {
+      const bloqueLab = crearBloqueLabConEspacios([lab1]);
 
       const resultado = validarSoftwareBloque(bloqueLab, ['VS Code', 'PostgreSQL']);
       expect(resultado.cumple).toBe(true);
       expect(resultado.detalles).toHaveLength(0);
     });
 
+    test('LABORATORIO: cumple cuando el stack requerido es vacío (edge case Issue 2.7)', () => {
+      const bloqueLab = crearBloqueLabConEspacios([lab1, lab2]);
+
+      const resultado = validarSoftwareBloque(bloqueLab, []);
+      expect(resultado.cumple).toBe(true);
+      expect(resultado.detalles).toHaveLength(0);
+    });
+
     test('LABORATORIO: rechaza el bloque si al menos un laboratorio no cumple y registra el detalle', () => {
-      const bloqueMultiLab: BloqueCandidato = {
-        espacios: [lab1, lab2],
-        espacioIds: [lab1.id, lab2.id],
-        capacidadTotal: 60,
-        desperdicio: 10,
-        piso: 1,
-        pabellon: 'Pab A',
-        tipo: TipoEspacio.LABORATORIO,
-      };
+      const bloqueMultiLab = crearBloqueLabConEspacios([lab1, lab2]);
 
       const resultado = validarSoftwareBloque(bloqueMultiLab, ['VS Code', 'PostgreSQL']);
       expect(resultado.cumple).toBe(false);
@@ -151,20 +246,77 @@ describe('Issue 2.6, 2.7 / 5.5 - Validación de Stack de Software en Laboratorio
     });
 
     test('LABORATORIO: registra todos los laboratorios cuando más de uno falla', () => {
-      const bloqueMultiLab: BloqueCandidato = {
-        espacios: [lab1, lab2],
-        espacioIds: [lab1.id, lab2.id],
-        capacidadTotal: 60,
-        desperdicio: 10,
-        piso: 1,
-        pabellon: 'Pab A',
-        tipo: TipoEspacio.LABORATORIO,
-      };
+      const bloqueMultiLab = crearBloqueLabConEspacios([lab1, lab2]);
 
       const resultado = validarSoftwareBloque(bloqueMultiLab, ['Docker']);
       expect(resultado.cumple).toBe(false);
       expect(resultado.detalles).toHaveLength(2);
       expect(resultado.detalles.map((d) => d.identificador)).toEqual(['Lab 101', 'Lab 102']);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Issue 5.5: Casos parametrizados — bloque completo (3 escenarios obligatorios
+  // del plan maestro §1.1 para bloques de laboratorio)
+  // -------------------------------------------------------------------------
+  describe('Issue 5.5: test.each — cumplimiento total, parcial y stack vacío en bloque de laboratorio', () => {
+    interface CasoBloqueLab {
+      descripcion: string;
+      espacios: EspacioConexo[];
+      softwareRequerido: string[] | null;
+      cumpleEsperado: boolean;
+      numDetallesFalloEsperado: number;
+    }
+
+    const labCompleto: EspacioConexo = {
+      id: 'lab-c',
+      identificador: 'Lab C',
+      tipo: TipoEspacio.LABORATORIO,
+      pabellon: 'Pab B',
+      piso: 2,
+      aforoNominal: 25,
+      softwareInstalado: ['Python 3.12', 'VS Code', 'Docker'],
+    };
+
+    const labIncompleto: EspacioConexo = {
+      id: 'lab-i',
+      identificador: 'Lab I',
+      tipo: TipoEspacio.LABORATORIO,
+      pabellon: 'Pab B',
+      piso: 2,
+      aforoNominal: 25,
+      softwareInstalado: ['VS Code'],
+    };
+
+    const casos: CasoBloqueLab[] = [
+      {
+        descripcion: 'cumplimiento total — todos los labs del bloque tienen el stack',
+        espacios: [labCompleto],
+        softwareRequerido: ['Python 3.12', 'Docker'],
+        cumpleEsperado: true,
+        numDetallesFalloEsperado: 0,
+      },
+      {
+        descripcion: 'cumplimiento parcial — al menos un lab del bloque no tiene el stack',
+        espacios: [labCompleto, labIncompleto],
+        softwareRequerido: ['Python 3.12', 'Docker'],
+        cumpleEsperado: false,
+        numDetallesFalloEsperado: 1,
+      },
+      {
+        descripcion: 'stack requerido vacío — bloque de laboratorio siempre cumple',
+        espacios: [labCompleto, labIncompleto],
+        softwareRequerido: [],
+        cumpleEsperado: true,
+        numDetallesFalloEsperado: 0,
+      },
+    ];
+
+    test.each(casos)('$descripcion', ({ espacios, softwareRequerido, cumpleEsperado, numDetallesFalloEsperado }) => {
+      const bloque = crearBloqueLabConEspacios(espacios);
+      const resultado = validarSoftwareBloque(bloque, softwareRequerido);
+      expect(resultado.cumple).toBe(cumpleEsperado);
+      expect(resultado.detalles).toHaveLength(numDetallesFalloEsperado);
     });
   });
 });
