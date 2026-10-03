@@ -263,7 +263,8 @@ describe('Issue 2.8, 2.9 / 5.6 — Accesibilidad y Priorización de Piso 1', () 
         fallbackEsperado: false,
       },
       {
-        descripcion: 'LAB — movilidad reducida, Piso 1 disponible: laboratorio de Piso 1 queda primero',
+        descripcion:
+          'LAB — movilidad reducida, Piso 1 disponible: laboratorio de Piso 1 queda primero',
         pisosBloques: [2, 1, 3],
         tipo: TipoEspacio.LABORATORIO,
         tieneMovilidadReducida: true,

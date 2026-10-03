@@ -53,11 +53,7 @@ function crearBloqueLab(piso: number, pabellon = 'Pabellon A'): BloqueCandidato 
   };
 }
 
-function crearParalela(
-  id: string,
-  pabellon: string,
-  piso: number,
-): AsignacionParalelaUbicacion {
+function crearParalela(id: string, pabellon: string, piso: number): AsignacionParalelaUbicacion {
   return {
     seccionId: id,
     codigoSeccion: id,

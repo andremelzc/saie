@@ -164,7 +164,8 @@ describe('Issue 2.6, 2.7 / 5.5 — Pruebas parametrizadas de validación de soft
         faltanteEsperado: [],
       },
       {
-        descripcion: 'stack instalado nulo con requerimiento — no cumple, reporta todo como faltante',
+        descripcion:
+          'stack instalado nulo con requerimiento — no cumple, reporta todo como faltante',
         softwareInstalado: null,
         softwareRequerido: ['Python 3.12'],
         cumpleEsperado: false,
@@ -172,11 +173,14 @@ describe('Issue 2.6, 2.7 / 5.5 — Pruebas parametrizadas de validación de soft
       },
     ];
 
-    test.each(casos)('$descripcion', ({ softwareInstalado, softwareRequerido, cumpleEsperado, faltanteEsperado }) => {
-      const resultado = validarSoftwareLaboratorio(softwareInstalado, softwareRequerido);
-      expect(resultado.cumple).toBe(cumpleEsperado);
-      expect(resultado.softwareFaltante).toEqual(faltanteEsperado);
-    });
+    test.each(casos)(
+      '$descripcion',
+      ({ softwareInstalado, softwareRequerido, cumpleEsperado, faltanteEsperado }) => {
+        const resultado = validarSoftwareLaboratorio(softwareInstalado, softwareRequerido);
+        expect(resultado.cumple).toBe(cumpleEsperado);
+        expect(resultado.softwareFaltante).toEqual(faltanteEsperado);
+      },
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -312,11 +316,14 @@ describe('Issue 2.6, 2.7 / 5.5 — Pruebas parametrizadas de validación de soft
       },
     ];
 
-    test.each(casos)('$descripcion', ({ espacios, softwareRequerido, cumpleEsperado, numDetallesFalloEsperado }) => {
-      const bloque = crearBloqueLabConEspacios(espacios);
-      const resultado = validarSoftwareBloque(bloque, softwareRequerido);
-      expect(resultado.cumple).toBe(cumpleEsperado);
-      expect(resultado.detalles).toHaveLength(numDetallesFalloEsperado);
-    });
+    test.each(casos)(
+      '$descripcion',
+      ({ espacios, softwareRequerido, cumpleEsperado, numDetallesFalloEsperado }) => {
+        const bloque = crearBloqueLabConEspacios(espacios);
+        const resultado = validarSoftwareBloque(bloque, softwareRequerido);
+        expect(resultado.cumple).toBe(cumpleEsperado);
+        expect(resultado.detalles).toHaveLength(numDetallesFalloEsperado);
+      },
+    );
   });
 });
