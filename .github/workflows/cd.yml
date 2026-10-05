@@ -43,7 +43,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DIRECT_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: npx prisma migrate deploy --schema=backend/prisma/schema.prisma
+        run: npm run prisma:deploy --workspace=backend
 
       - name: Disparar despliegue del Backend en Render
         run: |
