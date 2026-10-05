@@ -246,14 +246,14 @@ El sistema SAIE se encuentra desplegado y disponible en un entorno de demostraci
 
 ### 9.2. Flujo de Despliegue Continuo (CI/CD)
 
-El despliegue está 100% automatizado y blindado mediante GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
+El despliegue está 100% automatizado y blindado mediante GitHub Actions, con dos workflows: la integración continua ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) y el despliegue continuo ([`.github/workflows/cd.yml`](.github/workflows/cd.yml)), que reutiliza el CI como puerta de calidad:
 
 1. **Pull Request:** Al abrir o actualizar un PR hacia `develop`, se ejecutan automáticamente los análisis de calidad (ESLint, Prettier y pruebas Jest). Ningún despliegue se ejecuta en esta etapa.
-2. **Merge a `develop`:** Al integrarse cambios a la rama principal, el pipeline ejecuta primero los quality gates.
-3. **Migración y Despliegue:** **Únicamente si todos los checks pasan en verde**, el job `deploy`:
+2. **Merge a `develop`:** Al integrarse cambios a la rama principal, `cd.yml` ejecuta primero el CI (`ci.yml`) como quality gate.
+3. **Migración y Despliegue:** **Únicamente si todos los checks pasan en verde**, el job `deploy` de `cd.yml`:
    * Aplica las migraciones de Prisma directamente sobre Supabase mediante la conexión directa (`DIRECT_URL`, puerto 5432).
    * Dispara el webhook seguro de Render (`RENDER_DEPLOY_HOOK_URL`) para compilar y desplegar la nueva versión del backend.
-   * Dispara el webhook de Vercel (`VERCEL_DEPLOY_HOOK_URL`) para actualizar el frontend.
+   * Construye y despliega el frontend en Vercel con la CLI (`vercel pull`, `vercel build` y `vercel deploy --prebuilt`), autenticada con los secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` y `VERCEL_PROJECT_ID`.
 
 ### 9.3. Limitaciones y Notas Operativas (Capa Gratuita)
 
