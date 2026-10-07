@@ -256,14 +256,12 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
         update: jest.fn().mockResolvedValue({ ...alumnoCompleto, telefono: '911222333' }),
       },
       fichaMedica: {
-        upsert: jest
-          .fn()
-          .mockResolvedValue({
-            tipoSangre: 'A+',
-            alergias: null,
-            condicionEspecial: null,
-            contactoEmergencia: null,
-          }),
+        upsert: jest.fn().mockResolvedValue({
+          tipoSangre: 'A+',
+          alergias: null,
+          condicionEspecial: null,
+          contactoEmergencia: null,
+        }),
         findUnique: jest.fn(),
       },
     };
