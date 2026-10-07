@@ -1,0 +1,63 @@
+name: CD
+
+# Despliegue continuo hacia Supabase, Render y Vercel (cumple los criterios
+# de aceptación del Issue 1.10). Se dispara solo tras el merge a develop y
+# únicamente despliega si el CI (ci.yml) pasa.
+on:
+  push:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+
+jobs:
+  # Puerta de calidad: reutiliza ci.yml sobre el mismo commit del push
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Despliegue continuo (CD)
+    runs-on: ubuntu-latest
+    needs: ci
+    # Evita que dos despliegues (y sus migraciones) corran a la vez
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js (según .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Instalar dependencias (backend + frontend, workspaces)
+        run: npm ci
+
+      - name: Aplicar migraciones en Supabase (conexión directa)
+        env:
+          DATABASE_URL: ${{ secrets.DIRECT_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: npm run prisma:deploy --workspace=backend
+
+      - name: Disparar despliegue del Backend en Render
+        run: |
+          echo "Disparando deploy hook de Render..."
+          curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+
+      - name: Desplegar Frontend en Vercel (CLI)
+        # El Root Directory del proyecto en Vercel es `frontend`,
+        # por eso los comandos corren desde la raíz del repo.
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
+          npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"

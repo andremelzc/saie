@@ -22,6 +22,7 @@
     "format:check": "npm run format:check --workspace=backend && npm run format:check --workspace=frontend",
     "prisma:generate": "npm run prisma:generate --workspace=backend",
     "prisma:migrate": "npm run prisma:migrate --workspace=backend",
+    "prisma:deploy": "npm run prisma:deploy --workspace=backend",
     "prisma:seed": "npm run prisma:seed --workspace=backend",
     "docker:db": "docker compose up -d postgres",
     "docker:down": "docker compose down"
