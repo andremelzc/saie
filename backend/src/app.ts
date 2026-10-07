@@ -2,6 +2,10 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { healthRouter } from './routes/health.routes.js';
 import consultaRouter from './routes/consulta.routes.js';
+import authRouter from './routes/auth.routes.js';
+import adminRouter from './routes/admin.routes.js';
+import estudianteRouter from './routes/estudiante.routes.js';
+import docenteRouter from './routes/docente.routes.js';
 
 export const createApp = (): Application => {
   const app = express();
@@ -19,6 +23,10 @@ export const createApp = (): Application => {
   // Rutas base
   app.use('/api', healthRouter);
   app.use('/api/v1/consulta', consultaRouter);
+  app.use('/api/v1/auth', authRouter);
+  app.use('/api/v1/admin', adminRouter);
+  app.use('/api/v1/estudiante', estudianteRouter);
+  app.use('/api/v1/docente', docenteRouter);
 
   // Manejo de rutas no encontradas (404)
   app.use((_req: Request, res: Response) => {
