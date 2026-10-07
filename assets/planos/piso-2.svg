@@ -72,7 +72,7 @@
     <g id="espacios-antiguo">
       <rect id="ANT-comedor" class="espacio servicio" data-pabellon="antiguo" data-clase="servicio" x="85" y="270" width="140" height="140"><title>Comedor de la facultad — pabellón antiguo</title></rect>
       <rect id="ANT-sin-codigo-1" class="espacio servicio" data-pabellon="antiguo" data-clase="servicio" x="85" y="432" width="100" height="46"><title>Sin etiqueta en el plano — pabellón antiguo</title></rect>
-      <rect id="ANT-bano-2" class="espacio bano" data-pabellon="antiguo" data-clase="bano" x="85" y="478" width="100" height="62"><title>Baño de segunda planta 1° — pabellón antiguo</title></rect>
+      <rect id="ANT-bano-2" class="espacio servicio" data-pabellon="antiguo" data-clase="servicio" x="85" y="478" width="100" height="62"><title>Baño de segunda planta 1° — pabellón antiguo</title></rect>
       <rect id="ANT-aula-administrativa" class="espacio administrativo" data-pabellon="antiguo" data-clase="administrativo" x="131" y="570" width="54" height="36"><title>Aula administrativa — pabellón antiguo</title></rect>
       <rect id="ANT-espacio-administrativo" class="espacio administrativo" data-pabellon="antiguo" data-clase="administrativo" x="131" y="606" width="54" height="74"><title>Espacio administrativo — pabellón antiguo</title></rect>
       <rect id="ANT-banos-administracion" class="espacio bano" data-pabellon="antiguo" data-clase="bano" x="131" y="680" width="54" height="30"><title>Baños de administración — pabellón antiguo</title></rect>
@@ -82,15 +82,15 @@
       <rect id="ANT-201" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="366" y="548" width="66" height="52"><title>Salón 201 — pabellón antiguo</title></rect>
       <rect id="ANT-202" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="432" y="548" width="66" height="52"><title>Salón 202 — pabellón antiguo</title></rect>
       <rect id="ANT-203" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="498" y="548" width="66" height="52"><title>Salón 203 — pabellón antiguo</title></rect>
-      <rect id="ANT-tercio-estudiantil" class="espacio administrativo" data-pabellon="antiguo" data-clase="administrativo" x="564" y="492" width="56" height="108"><title>Tercio Estudiantil — pabellón antiguo</title></rect>
-      <rect id="ANT-204" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="620" y="548" width="72" height="52"><title>Salón 204 — pabellón antiguo</title></rect>
+      <rect id="ANT-tercio-estudiantil" class="espacio administrativo" data-pabellon="antiguo" data-clase="administrativo" x="564" y="520" width="56" height="80"><title>Tercio Estudiantil — pabellón antiguo</title></rect>
+      <rect id="ANT-204" class="espacio laboratorio" data-pabellon="antiguo" data-clase="laboratorio" x="620" y="548" width="72" height="52"><title>Salón 204 — pabellón antiguo</title></rect>
       <rect id="ANT-aula-magna" class="espacio servicio" data-pabellon="antiguo" data-clase="servicio" x="692" y="548" width="108" height="52"><title>Aula Magna — pabellón antiguo</title></rect>
       <rect id="ANT-sin-codigo-3" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="692" y="646" width="108" height="52"><title>Sin etiqueta en el plano — pabellón antiguo</title></rect>
-      <rect id="ANT-210" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="300" y="646" width="68" height="52"><title>Salón 210 — pabellón antiguo</title></rect>
-      <rect id="ANT-209" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="368" y="646" width="68" height="52"><title>Salón 209 — pabellón antiguo</title></rect>
+      <rect id="ANT-210" class="espacio laboratorio" data-pabellon="antiguo" data-clase="laboratorio" x="300" y="646" width="68" height="52"><title>Salón 210 — pabellón antiguo</title></rect>
+      <rect id="ANT-209" class="espacio laboratorio" data-pabellon="antiguo" data-clase="laboratorio" x="368" y="646" width="68" height="52"><title>Salón 209 — pabellón antiguo</title></rect>
       <rect id="ANT-208" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="436" y="646" width="68" height="52"><title>Salón 208 — pabellón antiguo</title></rect>
       <rect id="ANT-207" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="504" y="646" width="68" height="52"><title>Salón 207 — pabellón antiguo</title></rect>
-      <rect id="ANT-206" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="572" y="646" width="68" height="52"><title>Salón 206 — pabellón antiguo</title></rect>
+      <rect id="ANT-206" class="espacio laboratorio" data-pabellon="antiguo" data-clase="laboratorio" x="572" y="646" width="68" height="52"><title>Salón 206 — pabellón antiguo</title></rect>
     </g>
   </g>
   <g id="escaleras">
@@ -243,7 +243,7 @@
     <text class="etiqueta" x="399" y="577"><tspan x="399" dy="0">Salón 201</tspan></text>
     <text class="etiqueta" x="465" y="577"><tspan x="465" dy="0">Salón 202</tspan></text>
     <text class="etiqueta" x="531" y="577"><tspan x="531" dy="0">Salón 203</tspan></text>
-    <text class="etiqueta" x="592" y="544"><tspan x="592" dy="0">Tercio</tspan><tspan x="592" dy="10">Estud.</tspan></text>
+    <text class="etiqueta" x="592" y="558"><tspan x="592" dy="0">Tercio</tspan><tspan x="592" dy="10">Estud.</tspan></text>
     <text class="etiqueta" x="656" y="577"><tspan x="656" dy="0">Salón 204</tspan></text>
     <text class="etiqueta" x="746" y="577"><tspan x="746" dy="0">Aula Magna</tspan></text>
     <text class="etiqueta" x="334" y="675"><tspan x="334" dy="0">Salón 210</tspan></text>
