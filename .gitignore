@@ -30,6 +30,9 @@ blob-report/
 # Base de datos y contenedores
 postgres_data/
 
+# Vercel CLI (vínculo local con el proyecto)
+.vercel/
+
 # Configuración y archivos de editores / SO
 .vscode/
 .idea/
