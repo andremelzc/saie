@@ -54,7 +54,7 @@ export function buscarBloqueContiguo(input: BuscarBloqueInput): ResultadoBusqued
     maxEspaciosPorBloque = 4,
   } = input;
 
-  if (alumnosRequeridos <= 0) {
+  if (alumnosRequeridos < 0) {
     return { encontrado: false, bloques: [] };
   }
 
