@@ -71,9 +71,7 @@ describe('Regla de Escalamiento a Revisión Manual (Issue 2.12)', () => {
         periodo: '2026-1',
         tipoEspacioRequerido: TipoEspacio.LABORATORIO,
         alumnosMatriculados: 100, // Total labs en mock = 30 + 25 = 55
-        horarios: [
-          { diaSemana: DiaSemana.LUNES, horaInicio: '08:00', horaFin: '10:00' },
-        ],
+        horarios: [{ diaSemana: DiaSemana.LUNES, horaInicio: '08:00', horaFin: '10:00' }],
       };
 
       const resultado = clasificarMotivoEscalamiento({
@@ -94,9 +92,7 @@ describe('Regla de Escalamiento a Revisión Manual (Issue 2.12)', () => {
         periodo: '2026-1',
         tipoEspacioRequerido: TipoEspacio.LABORATORIO,
         alumnosMatriculados: 35,
-        horarios: [
-          { diaSemana: DiaSemana.LUNES, horaInicio: '08:00', horaFin: '10:00' },
-        ],
+        horarios: [{ diaSemana: DiaSemana.LUNES, horaInicio: '08:00', horaFin: '10:00' }],
       };
 
       // Solo lab-102 (capacidad 25) disponible en la franja
@@ -107,7 +103,9 @@ describe('Regla de Escalamiento a Revisión Manual (Issue 2.12)', () => {
       });
 
       expect(resultado.tipo).toBe(MotivoEscalamientoTipo.CAPACIDAD_INSUFICIENTE);
-      expect(resultado.descripcion).toContain('Capacidad disponible acumulada (25 vacantes) es insuficiente');
+      expect(resultado.descripcion).toContain(
+        'Capacidad disponible acumulada (25 vacantes) es insuficiente',
+      );
     });
   });
 
@@ -120,9 +118,7 @@ describe('Regla de Escalamiento a Revisión Manual (Issue 2.12)', () => {
         periodo: '2026-1',
         tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
         alumnosMatriculados: 20,
-        horarios: [
-          { diaSemana: DiaSemana.MARTES, horaInicio: '14:00', horaFin: '16:00' },
-        ],
+        horarios: [{ diaSemana: DiaSemana.MARTES, horaInicio: '14:00', horaFin: '16:00' }],
       };
 
       const resultado = clasificarMotivoEscalamiento({
@@ -146,9 +142,7 @@ describe('Regla de Escalamiento a Revisión Manual (Issue 2.12)', () => {
         tipoEspacioRequerido: TipoEspacio.LABORATORIO,
         stackSoftwareRequerido: ['Matlab', 'Simulink'],
         alumnosMatriculados: 25,
-        horarios: [
-          { diaSemana: DiaSemana.MIERCOLES, horaInicio: '10:00', horaFin: '12:00' },
-        ],
+        horarios: [{ diaSemana: DiaSemana.MIERCOLES, horaInicio: '10:00', horaFin: '12:00' }],
       };
 
       const resultado = clasificarMotivoEscalamiento({
@@ -172,9 +166,7 @@ describe('Regla de Escalamiento a Revisión Manual (Issue 2.12)', () => {
         periodo: '2026-1',
         tipoEspacioRequerido: TipoEspacio.LABORATORIO,
         alumnosMatriculados: 50,
-        horarios: [
-          { diaSemana: DiaSemana.JUEVES, horaInicio: '10:00', horaFin: '12:00' },
-        ],
+        horarios: [{ diaSemana: DiaSemana.JUEVES, horaInicio: '10:00', horaFin: '12:00' }],
       };
 
       const labPiso1: EspacioConexo = {

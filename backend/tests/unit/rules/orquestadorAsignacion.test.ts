@@ -87,9 +87,7 @@ describe('Orquestador de Asignación Individual (Issue 2.10 & 2.14)', () => {
         periodo: '2026-1',
         tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
         alumnosMatriculados: 28,
-        horarios: [
-          { diaSemana: DiaSemana.LUNES, horaInicio: '08:00', horaFin: '10:00' },
-        ],
+        horarios: [{ diaSemana: DiaSemana.LUNES, horaInicio: '08:00', horaFin: '10:00' }],
       };
 
       const resultado = orquestarAsignacionSeccion({
@@ -113,9 +111,7 @@ describe('Orquestador de Asignación Individual (Issue 2.10 & 2.14)', () => {
         periodo: '2026-1',
         tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
         alumnosMatriculados: 55, // 30 + 30 = 60
-        horarios: [
-          { diaSemana: DiaSemana.MARTES, horaInicio: '10:00', horaFin: '12:00' },
-        ],
+        horarios: [{ diaSemana: DiaSemana.MARTES, horaInicio: '10:00', horaFin: '12:00' }],
       };
 
       const resultado = orquestarAsignacionSeccion({
@@ -139,9 +135,7 @@ describe('Orquestador de Asignación Individual (Issue 2.10 & 2.14)', () => {
         tipoEspacioRequerido: TipoEspacio.LABORATORIO,
         stackSoftwareRequerido: ['Docker', 'PostgreSQL'],
         alumnosMatriculados: 20,
-        horarios: [
-          { diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '16:00' },
-        ],
+        horarios: [{ diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '16:00' }],
       };
 
       const resultado = orquestarAsignacionSeccion({
@@ -166,9 +160,7 @@ describe('Orquestador de Asignación Individual (Issue 2.10 & 2.14)', () => {
         tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
         alumnosMatriculados: 25,
         movilidadReducida: true,
-        horarios: [
-          { diaSemana: DiaSemana.JUEVES, horaInicio: '08:00', horaFin: '10:00' },
-        ],
+        horarios: [{ diaSemana: DiaSemana.JUEVES, horaInicio: '08:00', horaFin: '10:00' }],
       };
 
       const resultado = orquestarAsignacionSeccion({
@@ -192,9 +184,7 @@ describe('Orquestador de Asignación Individual (Issue 2.10 & 2.14)', () => {
         tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
         alumnosMatriculados: 35, // En piso 1 solo hay aulas de 30 individualmente
         movilidadReducida: true,
-        horarios: [
-          { diaSemana: DiaSemana.JUEVES, horaInicio: '08:00', horaFin: '10:00' },
-        ],
+        horarios: [{ diaSemana: DiaSemana.JUEVES, horaInicio: '08:00', horaFin: '10:00' }],
       };
 
       // Ocupamos piso 1 completamente
@@ -239,9 +229,7 @@ describe('Orquestador de Asignación Individual (Issue 2.10 & 2.14)', () => {
         periodo: '2026-1',
         tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
         alumnosMatriculados: 25,
-        horarios: [
-          { diaSemana: DiaSemana.VIERNES, horaInicio: '08:00', horaFin: '10:00' },
-        ],
+        horarios: [{ diaSemana: DiaSemana.VIERNES, horaInicio: '08:00', horaFin: '10:00' }],
       };
 
       const resultado = orquestarAsignacionSeccion({
@@ -310,9 +298,7 @@ describe('Orquestador de Asignación Individual (Issue 2.10 & 2.14)', () => {
         periodo: '2026-1',
         tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
         alumnosMatriculados: 25,
-        horarios: [
-          { diaSemana: DiaSemana.LUNES, horaInicio: '08:00', horaFin: '10:00' },
-        ],
+        horarios: [{ diaSemana: DiaSemana.LUNES, horaInicio: '08:00', horaFin: '10:00' }],
       };
 
       const huella = calcularHuellaEntradaSeccion(seccion);
@@ -384,9 +370,7 @@ describe('Orquestador de Asignación Individual (Issue 2.10 & 2.14)', () => {
         periodo: '2026-1',
         tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
         alumnosMatriculados: 0, // 0 matriculados
-        horarios: [
-          { diaSemana: DiaSemana.LUNES, horaInicio: '08:00', horaFin: '10:00' },
-        ],
+        horarios: [{ diaSemana: DiaSemana.LUNES, horaInicio: '08:00', horaFin: '10:00' }],
       };
 
       const resultado = orquestarAsignacionSeccion({
@@ -445,9 +429,7 @@ describe('Orquestador de Asignación Individual (Issue 2.10 & 2.14)', () => {
         periodo: '2026-1',
         tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
         alumnosMatriculados: 25,
-        horarios: [
-          { diaSemana: DiaSemana.VIERNES, horaInicio: '10:00', horaFin: '12:00' },
-        ],
+        horarios: [{ diaSemana: DiaSemana.VIERNES, horaInicio: '10:00', horaFin: '12:00' }],
       };
 
       // Previamente estaba ESCALADA

@@ -41,9 +41,7 @@ export function clasificarMotivoEscalamiento(
   }
 
   // Filtrar todos los espacios del tipo requerido
-  const espaciosTipoTotal = todosLosEspacios.filter(
-    (e) => e.tipo === seccion.tipoEspacioRequerido,
-  );
+  const espaciosTipoTotal = todosLosEspacios.filter((e) => e.tipo === seccion.tipoEspacioRequerido);
 
   if (espaciosTipoTotal.length === 0) {
     return {

@@ -1,25 +1,14 @@
 import crypto from 'crypto';
 import { EstadoAsignacion, TipoEspacio } from '@prisma/client';
-import {
-  BloqueCandidato,
-  buscarBloqueContiguo,
-  EspacioConexo,
-} from './buscarBloqueContiguo';
+import { BloqueCandidato, buscarBloqueContiguo, EspacioConexo } from './buscarBloqueContiguo';
 import {
   calcularEspaciosDisponibles,
-  HorarioSlot,
   AsignacionOcupacionInput,
 } from '../services/disponibilidad.service';
 import { validarSoftwareBloque } from './validarSoftware';
 import { priorizarBloquesPiso1 } from './accesibilidad';
-import {
-  AsignacionParalelaUbicacion,
-  evaluarCercaniaParalelas,
-} from './cercaniaParalelas';
-import {
-  clasificarMotivoEscalamiento,
-  formatearMotivoEscalamiento,
-} from './escalamiento';
+import { AsignacionParalelaUbicacion, evaluarCercaniaParalelas } from './cercaniaParalelas';
+import { clasificarMotivoEscalamiento, formatearMotivoEscalamiento } from './escalamiento';
 import {
   AsignacionExistenteContexto,
   ResultadoOrquestacion,
@@ -77,9 +66,7 @@ export function calcularHuellaEntradaSeccion(seccion: SeccionInputMotor): string
  *
  * Si no es factible satisfacer las reglas, escala automáticamente a revisión manual (Issue 2.12).
  */
-export function orquestarAsignacionSeccion(
-  input: OrquestarAsignacionInput,
-): ResultadoOrquestacion {
+export function orquestarAsignacionSeccion(input: OrquestarAsignacionInput): ResultadoOrquestacion {
   const {
     seccion,
     todosLosEspacios,

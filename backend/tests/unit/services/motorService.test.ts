@@ -40,9 +40,7 @@ describe('Motor Service con Prisma (Issue 2.10 & 2.11 & 2.15)', () => {
     tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
     stackSoftwareRequerido: [],
     curso: { codigo: '20201', nombre: 'Algoritmos' },
-    horarios: [
-      { diaSemana: 'LUNES', horaInicio: '08:00', horaFin: '10:00' },
-    ],
+    horarios: [{ diaSemana: 'LUNES', horaInicio: '08:00', horaFin: '10:00' }],
     matriculas: [{ id: 'mat-1', movilidadReducida: false }],
   };
 

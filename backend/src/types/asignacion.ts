@@ -1,7 +1,6 @@
-import { DiaSemana, EstadoAsignacion, TipoEspacio } from '@prisma/client';
-import { BloqueCandidato, EspacioConexo } from '../rules/buscarBloqueContiguo';
+import { EstadoAsignacion, TipoEspacio } from '@prisma/client';
+import { BloqueCandidato } from '../rules/buscarBloqueContiguo';
 import { HorarioSlot } from '../services/disponibilidad.service';
-import { AsignacionParalelaUbicacion } from '../rules/cercaniaParalelas';
 
 export enum MotivoEscalamientoTipo {
   CAPACIDAD_INSUFICIENTE = 'CAPACIDAD_INSUFICIENTE',
@@ -15,7 +14,7 @@ export enum MotivoEscalamientoTipo {
 export interface DetalleEscalamiento {
   tipo: MotivoEscalamientoTipo;
   descripcion: string;
-  detallesTecnicos?: Record<string, any>;
+  detallesTecnicos?: Record<string, unknown>;
 }
 
 export interface SeccionInputMotor {

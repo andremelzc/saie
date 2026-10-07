@@ -3,10 +3,7 @@ import { EstadoAsignacion, TipoEspacio } from '@prisma/client';
 import { EspacioConexo } from './buscarBloqueContiguo';
 import { AsignacionOcupacionInput } from '../services/disponibilidad.service';
 import { AsignacionParalelaUbicacion } from './cercaniaParalelas';
-import {
-  orquestarAsignacionSeccion,
-  calcularHuellaEntradaSeccion,
-} from './orquestadorAsignacion';
+import { orquestarAsignacionSeccion, calcularHuellaEntradaSeccion } from './orquestadorAsignacion';
 import {
   AsignacionExistenteContexto,
   ResultadoCorridaBatch,

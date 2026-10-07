@@ -1,8 +1,4 @@
-import {
-  EstadoAsignacion,
-  PrismaClient,
-  TipoEventoAuditoria,
-} from '@prisma/client';
+import { EstadoAsignacion, PrismaClient, TipoEventoAuditoria } from '@prisma/client';
 import { EspacioConexo } from '../rules/buscarBloqueContiguo';
 import { construirGrafoContiguedad, obtenerEspaciosContiguos } from './contiguedad.service';
 import { orquestarAsignacionSeccion } from '../rules/orquestadorAsignacion';
