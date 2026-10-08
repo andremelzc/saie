@@ -6,6 +6,7 @@ import authRouter from './routes/auth.routes.js';
 import adminRouter from './routes/admin.routes.js';
 import estudianteRouter from './routes/estudiante.routes.js';
 import docenteRouter from './routes/docente.routes.js';
+import asignacionRouter from './routes/asignacion.routes.js';
 
 export const createApp = (): Application => {
   const app = express();
@@ -27,6 +28,7 @@ export const createApp = (): Application => {
   app.use('/api/v1/admin', adminRouter);
   app.use('/api/v1/estudiante', estudianteRouter);
   app.use('/api/v1/docente', docenteRouter);
+  app.use('/api/v1/asignaciones', asignacionRouter);
 
   // Manejo de rutas no encontradas (404)
   app.use((_req: Request, res: Response) => {
