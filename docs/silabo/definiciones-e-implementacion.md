@@ -3,6 +3,8 @@
 > **Curso:** Automatización y Control de Software (202W0801) — UNMSM, Ingeniería de Software, 2026-2.
 > **Qué es este documento:** para cada tema de las semanas 2 a 8, su definición, cómo se aplica en el proyecto SAIE y dónde se puede comprobar. Es la base de la presentación.
 > **Registro asociado:** [`registro-cobertura.md`](registro-cobertura.md) lista los 45 temas con su estado.
+> **Semanas 9 a 16:** [`definiciones-e-implementacion-semanas-9-16.md`](definiciones-e-implementacion-semanas-9-16.md).
+> Cada tema cierra con **"Qué se podría mejorar"**.
 > **Fecha:** 2026-10-07 · **Rama revisada:** `develop` más la rama `feature/1.6-endpoint-importacion`
 
 ## Estados
@@ -51,6 +53,8 @@ Los procesos 1, 3 y 4 son los de mayor valor: sustituyen una decisión que antes
 
 **Evidencia.** `docs/arquitectura.md` §2.2; `backend/src/rules/orquestadorAsignacion.ts`, `corridaBatch.ts`.
 
+**Qué se podría mejorar.** Hoy cada proceso aún necesita al menos un disparo humano. El encadenado completo (importar, asignar y avisar) sin pasos intermedios se logra con el endpoint de importación (#248) y el bus de eventos (#249). Además, cuando aparece una alerta el sistema avisa pero no propone qué sección reubicar.
+
 ### 1.2. Concepto de control — Aplicado
 
 **Definición.** Controlar es medir el resultado de un proceso, compararlo con lo esperado y corregir o avisar cuando se desvía. Un control necesita tres cosas: una referencia, una medición y una acción correctiva.
@@ -65,6 +69,8 @@ Los procesos 1, 3 y 4 son los de mayor valor: sustituyen una decisión que antes
 
 **Evidencia.** `backend/src/rules/`; `backend/src/services/deteccionAlertas.service.ts`; `.github/workflows/ci.yml`.
 
+**Qué se podría mejorar.** El control actúa solo cuando alguien registra un cambio por el endpoint: si un dato cambia por otra vía, nadie lo detecta. Una revisión periódica (temporizador) cerraría ese hueco. Tampoco se verifica de forma continua que se cumplan las métricas de éxito del proyecto.
+
 ### 1.3. Automatización versus control — Aplicado
 
 **Definición.** La automatización *ejecuta*; el control *verifica y corrige*. Un sistema puede automatizar sin controlar (ejecuta a ciegas) o controlar sin automatizar (una persona mide y decide).
@@ -77,6 +83,8 @@ Los procesos 1, 3 y 4 son los de mayor valor: sustituyen una decisión que antes
 | Código | `ejecutarCorridaBatch`, `orquestarAsignacionSeccion` | `detectarIncompatibilidadesSoftware`, `detectarCapacidadInsuficiente` |
 
 La asignación se decide una vez; el control vigila que esa decisión siga siendo correcta.
+
+**Qué se podría mejorar.** La detección vive dentro de los servicios de laboratorio; separarla como una capa de control explícita, suscrita a eventos, haría visible la distinción. Falta medir la tasa de escalamiento por corrida como indicador de control.
 
 ### 1.4. Sistemas automatizados y sistemas controlados — Aplicado
 
@@ -92,6 +100,8 @@ La asignación se decide una vez; el control vigila que esa decisión siga siend
 
 SAIE es un **sistema automatizado y controlado, basado en reglas**.
 
+**Qué se podría mejorar.** Hacer visible el carácter "controlado" con un panel de estado (alertas, secciones escaladas, última corrida). Hoy esa información solo se consulta directamente en la base de datos.
+
 ### 1.5. Entrada → proceso → decisión → acción → retroalimentación — Aplicado
 
 **Definición.** Ciclo básico de un sistema de control: recibe una entrada, la procesa, decide, actúa y devuelve información sobre el resultado.
@@ -103,6 +113,8 @@ SAIE es un **sistema automatizado y controlado, basado en reglas**.
 | Alerta por capacidad (BPMN 4) | PCs malogradas o reparadas | Recalcular capacidad real | ¿La capacidad queda bajo los matriculados? | Crear alerta `CAPACIDAD` | Idem |
 | Consulta (BPMN 2) | Código de alumno o de curso | Buscar asignación | ¿El código existe? | Mostrar el resultado o "código inexistente" | Ninguna hacia el sistema |
 | Carga de datos (BPMN 0) | Archivo CSV o JSON | Validar y persistir | ¿Hay filas rechazadas? ¿El periodo está completo? | Informar el reporte y, si corresponde, disparar la asignación | Reporte de filas aceptadas y rechazadas |
+
+**Qué se podría mejorar.** La retroalimentación se queda en la base de datos: ni el operador ni el alumno la reciben si no consultan. El panel de alertas (issues 4.9 y 4.10) y los avisos por Telegram (#252) harían que llegue.
 
 ### 1.6. Lazo abierto y lazo cerrado — Aplicado
 
@@ -117,6 +129,8 @@ SAIE es un **sistema automatizado y controlado, basado en reglas**.
 
 **Matiz.** El lazo de SAIE es cerrado *con una persona en el lazo*: el sistema detecta y avisa, pero la corrección la hace Jefatura o Coordinación. Hoy están implementados la detección y el registro de la alerta; listarla y resolverla (issues 4.6 y 4.7) está pendiente.
 
+**Qué se podría mejorar.** Listar y resolver alertas (issues 4.6 y 4.7) aún no existe, así que el lazo depende de que Jefatura vuelva a registrar el cambio. Falta también reevaluar automáticamente las asignaciones al resolver una alerta.
+
 ### 1.7. Sistemas físicos versus procesos de software — Aplicado
 
 **Definición.** En un sistema físico (un termostato) el control actúa sobre una magnitud medida por sensores, de forma continua. En un proceso de software lo controlado son datos y decisiones, y el control actúa por eventos.
@@ -129,6 +143,8 @@ SAIE es un **sistema automatizado y controlado, basado en reglas**.
 | Actuador | Calefactor | Registro de alerta y reasignación |
 | Corrección | Continua | Discreta, por evento |
 
+**Qué se podría mejorar.** Es un tema conceptual. La mejora sería reemplazar el "sensor" manual (el registro de Jefatura) por una lectura automática del estado de las PCs; ver IoT en el documento de las semanas 9 a 16.
+
 ### 1.8. Casos de aplicación en Ingeniería de Software — Aplicado
 
 **Definición.** Ejemplos donde la automatización y el control se aplican al propio ciclo de desarrollo y operación de software.
@@ -136,6 +152,8 @@ SAIE es un **sistema automatizado y controlado, basado en reglas**.
 **En SAIE.** El pipeline del proyecto: integración continua en cada pull request (linter, formato y más de 390 pruebas unitarias y parametrizadas), puerta de calidad antes de desplegar, migraciones de base de datos automáticas y despliegue a Vercel, Render y Supabase tras fusionar en `develop`. Se tratará con más detalle en la Unidad 4 del sílabo.
 
 **Evidencia.** `.github/workflows/ci.yml`, `.github/workflows/cd.yml`; `README.md` §9.
+
+**Qué se podría mejorar.** Cerrar las brechas del propio pipeline: compilación en el CI, cobertura y SonarCloud, un E2E real y una verificación posterior al despliegue. Ver los hallazgos H1 a H9 en `registro-cobertura-semanas-9-16.md`.
 
 ---
 
@@ -146,6 +164,8 @@ SAIE es un **sistema automatizado y controlado, basado en reglas**.
 **Definición.** Un evento es un hecho identificable que ocurre en un instante y que puede disparar una decisión automática. Un evento *informa* que algo pasó; la reacción es otra cosa.
 
 **En SAIE.** Los eventos son las acciones puntuales de los actores (subir un archivo, pedir una asignación, registrar un cambio en un laboratorio, reportar una incidencia) y los hechos que produce el propio sistema (una sección queda escalada, una asignación deja de cumplir un requisito). Los que se registran tienen tipo propio: `ASIGNACION`, `ESCALAMIENTO` y `ALERTA` (`TipoEventoAuditoria` en `backend/prisma/schema.prisma`).
+
+**Qué se podría mejorar.** Los eventos no son objetos explícitos: viven como llamadas dentro de los servicios, y el tipo `ALERTA` de auditoría existe pero no se registra. El bus de eventos (#249) los haría explícitos.
 
 ### 2.2. Fuentes de eventos — Aplicado
 
@@ -159,6 +179,8 @@ SAIE es un **sistema automatizado y controlado, basado en reglas**.
 | Motor de asignación | Sección escalada; asignación cambiada |
 | Detección de alertas | Una asignación vigente deja de cumplir un requisito |
 | El tiempo (planificado) | Vence el intervalo del resumen diario (§6) |
+
+**Qué se podría mejorar.** La auditoría no guarda quién originó el evento (`RegistroAuditoria` no tiene cuenta). Agregar la cuenta y la fuente (persona, sistema o tiempo).
 
 ### 2.3. Eventos internos y externos — Aplicado
 
@@ -176,6 +198,8 @@ SAIE es un **sistema automatizado y controlado, basado en reglas**.
 
 Hoy los eventos internos se resuelven como llamadas directas entre servicios dentro de la misma transacción. El bus de eventos del §6 los convertiría en mensajes.
 
+**Qué se podría mejorar.** Los eventos internos son llamadas directas dentro de una transacción; no se puede agregar una reacción sin modificar al emisor. El bus de eventos lo resuelve.
+
 ### 2.4. Modelo Evento–Condición–Acción (ECA) — Aplicado
 
 **Definición.** Una regla ECA dice: *cuando ocurre un evento, si se cumple una condición, se ejecuta una acción.* Separa qué dispara la regla, qué debe cumplirse y qué se hace.
@@ -192,6 +216,8 @@ Hoy los eventos internos se resuelven como llamadas directas entre servicios den
 | Alerta creada | Siempre | Registrar auditoría de tipo `ALERTA` | — | Planificado (§6) |
 | Vence el intervalo diario | El alumno tiene clase ese día | Enviar el resumen de clases | — | Planificado (§6) |
 
+**Qué se podría mejorar.** Las reglas ECA están dispersas en el código; solo la tabla de triggers de `docs/arquitectura.md` §7 las documenta, sin columna de condición. Incorporar la tabla ECA a la arquitectura (issue 6.13) y mantenerla junto al código.
+
 ### 2.5. Reglas de negocio — Aplicado
 
 **Definición.** Políticas de la organización expresadas como condiciones verificables. Se distinguen de la lógica técnica porque las define el negocio y pueden cambiar sin cambiar la arquitectura.
@@ -200,11 +226,15 @@ Hoy los eventos internos se resuelven como llamadas directas entre servicios den
 
 **Evidencia.** `backend/src/rules/` (`calcularCapacidadReal.ts`, `buscarBloqueContiguo.ts`, `validarSoftware.ts`, `accesibilidad.ts`, `cercaniaParalelas.ts`); pruebas en `backend/tests/unit/rules/`.
 
+**Qué se podría mejorar.** Hay una discrepancia entre R-07 y RF-10 y el código: la documentación habla de elegir el espacio "más cercano al ascensor" (`Espacio.distancia_ascensor`), pero ese campo no existe y el código solo prioriza el Piso 1, con alternativa a otros pisos. Alinear una u otra (hallazgo H6).
+
 ### 2.6. Condiciones y decisiones automáticas — Aplicado
 
 **Definición.** Evaluar condiciones y elegir una acción sin intervención humana. En un sistema automatizado las decisiones deben ser repetibles y explicables.
 
 **En SAIE.** `orquestarAsignacionSeccion` decide entre asignar y escalar; `clasificarMotivoEscalamiento` determina qué regla eliminó a los últimos candidatos; las funciones de detección deciden si una asignación vigente queda afectada. El motor es **determinista** (D-05) y usa una huella de entrada (`calcularHuellaEntradaSeccion`) para conservar asignaciones cuyos datos no cambiaron.
+
+**Qué se podría mejorar.** El motor limita los bloques a 4 espacios por defecto (`maxEspaciosPorBloque`), un tope que no aparece en las reglas documentadas. Documentarlo o hacerlo configurable, y medir cuántas secciones se escalan por ese tope.
 
 ### 2.7. Triggers — Aplicado
 
@@ -221,6 +251,8 @@ Hoy los eventos internos se resuelven como llamadas directas entre servicios den
 
 El endpoint de importación está en la rama `feature/1.6-endpoint-importacion`.
 
+**Qué se podría mejorar.** La importación ya tiene endpoint (#248) pero no pantalla (issue 1.9). Faltan protecciones: no hay límite de intentos de inicio de sesión (H8) ni limitación de frecuencia en los endpoints que disparan procesos costosos. El candado de corrida está en memoria, válido solo con una instancia.
+
 ### 2.8. Casos de automatización basados en eventos — Aplicado
 
 **Caso 1: alerta por cambio de software** (BPMN 3).
@@ -235,6 +267,8 @@ El caso de **capacidad** (BPMN 4) es análogo y además rechaza un conteo de PCs
 
 **Caso 2: importación que dispara la asignación** (BPMN 0). Una carga sin filas rechazadas, con el periodo ya completo, dispara la corrida batch. Está detallado en el §3.10.
 
+**Qué se podría mejorar.** La alerta se guarda pero no notifica a nadie: la lectura y la resolución están pendientes (issues 4.6 y 4.7) y la notificación está planificada (#252). Registrar además la auditoría del evento de alerta (issue 5.11).
+
 ---
 
 ## 3. Semanas 5–6: Diseño de soluciones de automatización y control
@@ -245,11 +279,15 @@ El caso de **capacidad** (BPMN 4) es análogo y además rechaza un conteo de PCs
 
 **En SAIE** (`.md/01_definicion_y_alcance.md` §1): la asignación de espacios no cruza la matrícula con la capacidad real; los cursos grandes terminan fraccionados en espacios separados; se asignan laboratorios sin el software requerido; no se prioriza la accesibilidad; y el estudiante no sabe dónde le toca clase.
 
+**Qué se podría mejorar.** Falta una línea base cuantitativa del problema (cuántos conflictos o reclamos había con el proceso manual); sin ella no se puede demostrar la mejora.
+
 ### 3.2. Procesos susceptibles de automatización — Aplicado
 
 **Definición.** Los procesos candidatos a automatizar son repetitivos, se rigen por reglas claras, manejan datos estructurados y consumen tiempo humano.
 
 **En SAIE.** Se automatizaron la asignación de espacios, la detección de alertas, la consulta y la carga de datos. Los siete procesos y su grado de automatización están en el §0.
+
+**Qué se podría mejorar.** Agregar el BPMN del estado actual (*as-is*) junto al de SAIE (*to-be*) para mostrar qué pasos se eliminan.
 
 ### 3.3. Definición de objetivos — Aplicado
 
@@ -257,17 +295,23 @@ El caso de **capacidad** (BPMN 4) es análogo y además rechaza un conteo de PCs
 
 **En SAIE.** Objetivo (§2 de la definición): automatizar la asignación de espacios con un motor único de reglas, un portal de consulta y un panel de alertas, con pruebas automatizadas y CI/CD. Métricas (§8): 0 casos de doble reserva, 0 de capacidad insuficiente, 100 % de software cumplido, 0 incidentes de accesibilidad y cobertura ≥ 85 %.
 
+**Qué se podría mejorar.** Las métricas de éxito (0 doble reserva, 0 capacidad insuficiente, 100 % de software) no se verifican automáticamente. Una consulta o prueba que las compruebe tras cada corrida las convertiría en evidencia.
+
 ### 3.4. Requisitos funcionales — Aplicado
 
 **Definición.** Lo que el sistema debe hacer.
 
 **En SAIE.** RF-01 a RF-24 (`docs/02_requisitos.md`): importación, cuentas y autenticación, motor de asignación, consulta, portal docente, alertas y auditoría. Cada uno se traza a una historia de usuario (`docs/01_historias_usuario.md`).
 
+**Qué se podría mejorar.** RF-14 (asignación manual de secciones escaladas) contradice la definición del proyecto, que la excluye; resolver la contradicción. Completar también los requisitos sin implementación visible (mapa, ruta).
+
 ### 3.5. Requisitos no funcionales — Aplicado
 
 **Definición.** Las cualidades que debe cumplir el sistema: rendimiento, seguridad, usabilidad, etc.
 
 **En SAIE.** RNF-01 a RNF-10: latencia p95 < 2 s con 300 usuarios, error < 1 %, uso desde móvil, claves con bcrypt y control por rol, cobertura ≥ 85 %, idempotencia, trazabilidad, explicabilidad, privacidad de la ficha médica y mantenibilidad.
+
+**Qué se podría mejorar.** RNF-01 y RNF-02 (300 usuarios, p95 < 2 s, error < 1 %) no se han probado: el k6 actual es un humo de `/api/health` (H4). RNF-05 (cobertura ≥ 85 %) no se hace cumplir (H3).
 
 ### 3.6. Identificación de entradas y salidas — Aplicado
 
@@ -281,11 +325,15 @@ El caso de **capacidad** (BPMN 4) es análogo y además rechaza un conteo de PCs
 | Consulta del estudiante | Código de alumno o de curso | Espacio, pabellón, piso, horario y docente (sin ficha médica, RNF-09) |
 | Reporte de incidencia | Espacio, descripción, docente autenticado | Incidencia registrada |
 
+**Qué se podría mejorar.** Las entradas y salidas viven en tablas de texto y en DTOs de TypeScript. Un contrato formal (OpenAPI o esquemas Zod compartidos) evitaría que se desalineen, como ya ocurrió con la spec de importación.
+
 ### 3.7. Eventos, reglas, decisiones y acciones — Aplicado
 
 **Definición.** Los cuatro elementos que describen el comportamiento de un proceso automatizado: qué lo dispara, qué lo gobierna, qué se decide y qué se ejecuta.
 
 **En SAIE.** Eventos (§2.2 y §2.3), reglas (R-01 a R-11), decisiones (§2.6) y acciones (tabla ECA del §2.4). El orden de evaluación del motor está en `docs/03_alcance_y_reglas.md` §2.3.
+
+**Qué se podría mejorar.** El orden de evaluación documentado (`docs/03_alcance_y_reglas.md` §2.3) no coincide del todo con el del código: "menos espacios" y "menor piso" aparecen solo en el código. Actualizar la documentación.
 
 ### 3.8. Casos de uso — Aplicado
 
@@ -310,6 +358,8 @@ El caso de **capacidad** (BPMN 4) es análogo y además rechaza un conteo de PCs
 
 ![Casos de uso de SAIE](diagramas/casos-de-uso.png)
 
+**Qué se podría mejorar.** Cada caso de uso tiene solo su endpoint y su estado; falta su especificación (precondiciones, flujo básico y flujos alternos). Actualizar la tabla y el diagrama cuando se construyan las pantallas.
+
 ### 3.9. Diagramas de actividad (UML) y BPMN — Aplicado
 
 **Definición.** Los **diagramas de actividad** (UML) modelan el flujo de un proceso: acciones, decisiones y bifurcaciones. **BPMN** modela procesos de negocio con carriles por actor, eventos de inicio y fin, tareas y compuertas, y está pensado para que lo lea tanto el negocio como el equipo técnico.
@@ -317,6 +367,8 @@ El caso de **capacidad** (BPMN 4) es análogo y además rechaza un conteo de PCs
 **En SAIE.** Siete diagramas BPMN con carriles (`SAIE_Diagramas (2).pdf`): carga de datos maestros (0), gestión de espacios (0b), asignación (1), consulta del estudiante (2), alerta por software (3), alerta por capacidad (4) y ocupación por piso (5). Cada carril es un actor (Coordinación, Jefatura, Estudiante, Sistema). Los BPMN modelan los **procesos de negocio**. Además se incluye un **diagrama UML de actividad** que modela otro nivel: el **algoritmo interno** con el que el motor asigna una sección (`orquestarAsignacionSeccion`, `backend/src/rules/orquestadorAsignacion.ts`), con sus puntos de escalamiento, el ciclo sobre las franjas horarias y los seis criterios de ordenamiento. Código PlantUML en [`diagramas/actividad-orquestacion-asignacion.puml`](diagramas/actividad-orquestacion-asignacion.puml).
 
 ![Actividad: orquestación de la asignación de una sección](diagramas/actividad-orquestacion-asignacion.png)
+
+**Qué se podría mejorar.** Los BPMN están fuera del repositorio; versionarlos junto al código. Agregar los de los procesos 6 y 7 (issue 6.13) y las rutas de error (por ejemplo, filas rechazadas), que hoy no se dibujan.
 
 ### 3.10. Diseño de la arquitectura de la solución — Aplicado
 
@@ -331,11 +383,15 @@ El caso de **capacidad** (BPMN 4) es análogo y además rechaza un conteo de PCs
 3. El importador valida cada fila, guarda de forma idempotente y reporta las rechazadas.
 4. Si no hubo filas rechazadas y el periodo vigente ya tiene secciones, horarios y matrículas, `importacion.service.ts` dispara la corrida batch; si faltan datos, informa cuáles; si hay una corrida en curso, lo informa. La importación nunca se pierde por un fallo del motor.
 
+**Qué se podría mejorar.** El diagrama de arquitectura es ASCII; un diagrama C4 o PlantUML sería más mantenible. Documentar las decisiones (por qué reglas y no IA, por qué un solo motor). Limitaciones por documentar: el candado y el bus en memoria no escalan a varias instancias; no hay limitación de frecuencia ni cabeceras de seguridad (`helmet`); el contrato de la API que la línea base de diseño prevé aún no existe.
+
 ### 3.11. Formulación del proyecto del curso — Aplicado
 
 **Definición.** Delimitar qué entra y qué no entra en el proyecto, con decisiones justificadas.
 
 **En SAIE.** Alcance del MVP y exclusiones justificadas (`docs/03_alcance_y_reglas.md`), decisiones D-01 a D-05, plan de línea base con control de cambios (`docs/04_plan_linea_base.md`) y acta de aprobación (`docs/acta-lb-funcional-01.md`).
+
+**Qué se podría mejorar.** La línea base funcional nunca se formalizó (no hay tags ni acta firmada). Cerrar el acta LB-F-01 y aplicar el control de cambios desde entonces.
 
 ---
 
@@ -354,6 +410,8 @@ El caso de **capacidad** (BPMN 4) es análogo y además rechaza un conteo de PCs
 | Base de datos (PostgreSQL) | Supabase | Backend, con pooler y conexión directa para migraciones |
 
 El despliegue de las tres está automatizado (`cd.yml`). Con los **sistemas externos** la integración es **por archivo**: los datos del sistema de matrícula entran como CSV por el endpoint de importación. Es una decisión de alcance (`docs/03_alcance_y_reglas.md` §3.2). La integración con Telegram (§6) sería la primera con un servicio externo mediante API.
+
+**Qué se podría mejorar.** La primera integración externa (Telegram) debe tratar sus fallos: reintentos, tiempos de espera y desvinculación si el alumno bloquea el bot. Documentar todos los puntos de integración en un solo lugar.
 
 ### 4.2. Concepto de API — Aplicado
 
@@ -374,6 +432,8 @@ El despliegue de las tres está automatizado (`cd.yml`). Con los **sistemas exte
 
 Los errores usan un formato uniforme `{ success: false, message }` y nunca exponen el detalle interno. Los datos de salud del alumno solo se entregan en su propio perfil autenticado (RNF-09). No hay contrato OpenAPI; el sílabo no lo exige.
 
+**Qué se podría mejorar.** No hay contrato OpenAPI. Faltan paginación en los listados y limitación de frecuencia; el inicio de sesión hoy no limita intentos (H8).
+
 ---
 
 ## 5. Semana 7: automatización de tareas y datos (aplicada por API)
@@ -386,6 +446,8 @@ Los cinco temas siguientes pertenecen al bloque de RPA del sílabo, pero son con
 
 **En SAIE.** Dos tareas repetitivas que se hacían a mano: cargar los datos de cada periodo (cursos, horarios, matrículas, docentes) y asignar cientos de secciones. Los importadores y la corrida batch las ejecutan por API, con idempotencia (repetirlas no duplica nada).
 
+**Qué se podría mejorar.** Las importaciones procesan fila por fila con varias consultas cada una; 20 000 filas pueden tardar minutos. Procesar por lotes y dentro de una transacción mejoraría la velocidad y evitaría guardados parciales.
+
 ### 5.2. Manipulación de datos — Aplicado
 
 **Definición.** Leer, transformar, validar y almacenar datos durante una tarea automatizada.
@@ -394,11 +456,15 @@ Los cinco temas siguientes pertenecen al bloque de RPA del sílabo, pero son con
 
 **Evidencia.** `backend/src/lib/archivoImportacion.ts`; `backend/src/importers/`.
 
+**Qué se podría mejorar.** Las filas válidas se guardan aunque otras fallen, contra lo que piden los issues 1.3 a 1.5 (rechazar el archivo completo). Decidir una política (todo o nada, o parcial documentado) y probarla.
+
 ### 5.3. Control de flujo — Aplicado
 
 **Definición.** Condicionales, bucles y reintentos que determinan qué se hace según el resultado de cada paso.
 
 **En SAIE.** El flujo de importación decide según el resultado: si hubo filas rechazadas no dispara la asignación; si el periodo está incompleto informa qué falta; si hay una corrida en curso lo informa en lugar de lanzar otra; si el motor falla, la importación ya guardada se conserva. El motor decide entre asignar y escalar.
+
+**Qué se podría mejorar.** El candado de corrida está en memoria y no sirve con varias instancias del backend; uno en la base de datos (*advisory lock*) lo resolvería. Los reintentos son manuales.
 
 ### 5.4. Reglas y excepciones — Aplicado
 
@@ -414,11 +480,15 @@ Los cinco temas siguientes pertenecen al bloque de RPA del sílabo, pero son con
 | Importación repetida | No duplica datos (idempotencia, RNF-06) |
 | Error interno | Se registra solo el tipo de error; no se devuelve el detalle (RNF-09) |
 
+**Qué se podría mejorar.** Los errores de fila son texto libre; un código de error estructurado por tipo permitiría que el frontend muestre mensajes propios y agrupe los errores.
+
 ### 5.5. Diseño de un flujo automatizado — Aplicado
 
 **Definición.** Modelar el flujo completo de una automatización con una notación formal: pasos, decisiones, responsables y finales.
 
 **En SAIE.** Los BPMN 0 (carga de datos maestros) y 1 (asignación de espacios) modelan los dos flujos automatizados principales, con sus compuertas ("¿Validación correcta?", "¿Importación completa?", "¿Existe bloque válido?", "¿Cumple capacidad real final?") y sus finales (datos cargados, sin corrida automática, revisión manual).
+
+**Qué se podría mejorar.** Los BPMN 0 y 1 muestran el camino normal y varios finales, pero no las excepciones (archivo inválido, corrida en curso, fallo del motor) que el código sí trata.
 
 ---
 
@@ -432,6 +502,8 @@ Los cinco temas siguientes pertenecen al bloque de RPA del sílabo, pero son con
 
 **En SAIE.** Hoy el motor, las alertas y la auditoría se llaman directamente. Se propone un **bus de eventos interno** (`EventEmitter` de Node): el motor emite `asignacion.cambiada` y la detección emite `alerta.creada`; los suscriptores reaccionan. Es una versión ligera, dentro del mismo proceso, apropiada para el tamaño del sistema. Los eventos se emitirían **después de confirmar la transacción**, para no avisar de algo que luego se revierte.
 
+**Qué se podría mejorar.** Un `EventEmitter` no cruza procesos: con más de una instancia habría que pasar a una cola (por ejemplo, Redis). Documentar ese límite.
+
 ### 6.2. Programación orientada a eventos — Planificado
 
 **Definición.** Estilo de programación en el que el flujo lo determinan eventos y sus manejadores (*handlers*), no una secuencia fija de llamadas.
@@ -443,11 +515,15 @@ Los cinco temas siguientes pertenecen al bloque de RPA del sílabo, pero son con
 | `asignacion.cambiada` | Notificador de Telegram | Avisa a los alumnos matriculados que tengan Telegram vinculado |
 | `alerta.creada` | Auditoría de alertas | Registra una fila `ALERTA` en `RegistroAuditoria`, hoy ausente (issue 5.11) |
 
+**Qué se podría mejorar.** Los manejadores deben ser idempotentes (un aviso no debe repetirse si el evento se emite dos veces) y registrar su resultado.
+
 ### 6.3. Temporizadores — Planificado
 
 **Definición.** Disparadores basados en el paso del tiempo: un intervalo, una hora fija o un vencimiento.
 
 **En SAIE.** Un **resumen diario** de clases a primera hora: "Hoy tienes INF101 en el laboratorio L-201 a las 08:00". Un temporizador evita depender de que alguien dispare el aviso. En Render gratuito el contenedor se suspende tras 15 minutos sin tráfico, por lo que no conviene un temporizador interno; se dispararía desde fuera con una tarea programada (`schedule`) de GitHub Actions que llame a un endpoint protegido.
+
+**Qué se podría mejorar.** Vigilar que la tarea programada realmente corrió y alertar si no lo hizo; hoy un fallo silencioso de la tarea pasaría desapercibido.
 
 ### 6.4. Bots de software — Planificado
 
@@ -472,6 +548,8 @@ Los cinco temas siguientes pertenecen al bloque de RPA del sílabo, pero son con
 
 **Procesos nuevos (§0):** 6, aviso de cambio de aula, y 7, resumen diario.
 
+**Qué se podría mejorar.** Además de avisar, el bot podría responder a comandos (`/horario`, `/aula`) reutilizando los endpoints de consulta. Agregar también un límite de intentos de vinculación.
+
 ---
 
 ## 7. RPA: análisis y justificación (6 temas)
@@ -483,6 +561,8 @@ Los cinco temas siguientes pertenecen al bloque de RPA del sílabo, pero son con
 **Definición.** La Automatización Robótica de Procesos (RPA) usa *bots* que imitan las acciones de una persona sobre las interfaces de usuario de otras aplicaciones (clics, escritura, copiar y pegar) para ejecutar tareas repetitivas, sin modificar los sistemas subyacentes. Su valor está en integrar sistemas que no ofrecen una API.
 
 **En SAIE.** No se usa. El sistema se integra por API y por archivo, que son más estables que operar una pantalla.
+
+**Qué se podría mejorar.** Si el equipo obtuviera acceso a un sistema institucional sin API, reevaluar RPA con el análisis del §7.2.
 
 ### 7.2. Procesos candidatos a RPA — Justificado
 
@@ -499,17 +579,23 @@ Los cinco temas siguientes pertenecen al bloque de RPA del sílabo, pero son con
 
 Ningún proceso cumple el criterio decisivo. El único borde es el **origen** de los datos: el sistema de matrícula de la universidad solo entrega archivos exportados a mano. Un bot que operara ese portal sería un candidato real, pero ese sistema está fuera del alcance del proyecto, no se tiene acceso a él y no habría cómo probarlo.
 
+**Qué se podría mejorar.** Mantener la tabla de candidatos actualizada si cambia el contexto (por ejemplo, acceso al portal de matrícula).
+
 ### 7.3. Automatización de interfaces — Justificado
 
 **Definición.** El bot reproduce la operación de una persona sobre una pantalla: iniciar sesión, completar campos, pulsar botones, leer resultados. Se apoya en herramientas como Selenium o Playwright, o en plataformas de RPA.
 
 **En SAIE.** No hay una interfaz ajena que operar. La única automatización de interfaz del proyecto es Playwright en las pruebas end-to-end (`tests/e2e/`), que verifica el sistema, no ejecuta procesos de negocio.
 
+**Qué se podría mejorar.** Playwright ya está en el stack, pero hoy se usa solo en una prueba que comprueba una plantilla de otro proyecto (H1). Aprovecharlo para flujos E2E reales.
+
 ### 7.4. Automatización atendida y desatendida — Justificado
 
 **Definición.** La **atendida** trabaja junto a una persona y se dispara desde su escritorio; la asiste en una tarea. La **desatendida** corre sola, en un servidor y programada, sin intervención.
 
 **En SAIE.** Si hubiera un bot, sería **desatendido** (la carga de un periodo es periódica y no necesita decisión humana). Lo más cercano que tiene el sistema es desatendido: la corrida de asignación y el resumen diario planificado (§6.3). No se construye un bot.
+
+**Qué se podría mejorar.** No aplica; si hubiera un bot, la modalidad desatendida sería la adecuada.
 
 ### 7.5. Ventajas y limitaciones de RPA — Justificado
 
@@ -520,11 +606,15 @@ Ningún proceso cumple el criterio decisivo. El único borde es el **origen** de
 
 **Aplicación.** Para SAIE la automatización por API es superior en estabilidad y verificabilidad. RPA sería el recurso para integrar un sistema institucional sin API.
 
+**Qué se podría mejorar.** Es un análisis comparativo; no tiene mejora propia.
+
 ### 7.6. Casos empresariales y de gestión pública — Justificado
 
 **Definición.** Usos típicos de RPA en organizaciones: conciliación de facturas o pagos, altas de personal en sistemas de recursos humanos, migración de datos entre sistemas heredados, transferencia de datos entre portales sin integración, y trámites administrativos con formularios repetitivos.
 
 **En SAIE.** El contexto es la gestión universitaria (pública), donde ocurren casos típicos: transferir datos de matrícula entre portales institucionales sin integración y capturar altas de docentes. SAIE resuelve el equivalente por archivo y API, y la carga masiva es el punto donde un bot institucional encajaría si existiera el acceso.
+
+**Qué se podría mejorar.** Si la profesora lo pide, agregar referencias concretas de casos reales de RPA en universidades, con su fuente.
 
 ---
 
@@ -536,4 +626,4 @@ Ningún proceso cumple el criterio decisivo. El único borde es el **origen** de
 | Arquitectura | Aplicado | `docs/arquitectura.md`, `docs/modelo-datos.md`. |
 | Prototipo de diseño | Aplicado (sin verificar) | Figma del equipo. El enlace es privado y no pudo revisarse. |
 | Prototipo funcional, backend | Aplicado | Motor de asignación completo (los 15 issues de la épica cerrados), alertas, autenticación por rol, consulta, endpoints de alumno, docente e importación, con más de 390 pruebas y CI/CD. |
-| Prototipo funcional, frontend | Pendiente | Solo existe `frontend/src/pages/Home.tsx`; se hará. |
+| Prototipo funcional, frontend | Pendiente | Solo existe `frontend/src/pages/Home.tsx`, que además es una plantilla de otro proyecto ("Sistema de Apoyo a la Integración Escolar", con portales de Familias y Profesional que SAIE no tiene). Se hará. |

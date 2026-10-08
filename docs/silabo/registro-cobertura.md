@@ -3,6 +3,7 @@
 > **Curso:** Automatización y Control de Software (202W0801) — UNMSM, Ingeniería de Software, 2026-2.
 > **Qué es este documento:** el registro de los 45 temas de las semanas 2 a 8 y el tratamiento que cada uno recibe en SAIE.
 > **Documento complementario:** [`definiciones-e-implementacion.md`](definiciones-e-implementacion.md) define cada tema en detalle, explica cómo se aplica y cuenta los procesos que SAIE automatiza.
+> **Semanas 9 a 16:** [`registro-cobertura-semanas-9-16.md`](registro-cobertura-semanas-9-16.md). Cada tema de las semanas 1 a 8 tiene ahora su apartado "Qué se podría mejorar" en el documento de definiciones.
 > **Criterio:** no hay examen escrito; todo tema debe estar tratado en el proyecto, ya sea construido, planificado con un diseño concreto, o analizado y justificado.
 > **Fecha:** 2026-10-07 · **Rama revisada:** `develop` más la rama `feature/1.6-endpoint-importacion`
 
@@ -129,4 +130,7 @@ Todos de RPA. **RPA no calza en SAIE**: se usa cuando un sistema no ofrece API y
 | :--- | :--- | :--- |
 | Asignación manual de secciones escaladas | `docs/02_requisitos.md` (RF-14) y `docs/03_alcance_y_reglas.md` §2.5 vs `.md/01_definicion_y_alcance.md` §3 | Los dos primeros la incluyen; la definición la declara fuera de alcance. |
 | Cobertura de specs del portal docente | `docs/specs/README.md` | `05-portal-docente.md` cubre #7.8 a #7.12 y deja sin spec a #7.1 a #7.7. |
+| Accesibilidad: cercanía al ascensor | `docs/03_alcance_y_reglas.md` (R-07) y `docs/02_requisitos.md` (RF-10) vs `backend/src/rules/accesibilidad.ts` | La documentación elige el espacio "más cercano al ascensor" con `Espacio.distancia_ascensor`; ese campo no existe y el código solo prioriza el Piso 1, con alternativa a otros pisos. |
+| Plantilla de otro proyecto | `frontend/src/pages/Home.tsx` y `tests/e2e/home.spec.ts` | La página de inicio y la única prueba E2E hablan de "Sistema de Apoyo a la Integración Escolar" y de portales de Familias y Profesional, que SAIE no tiene. |
+| Orden de evaluación del motor | `docs/03_alcance_y_reglas.md` §2.3 vs `backend/src/rules/orquestadorAsignacion.ts` | El código ordena además por "menos espacios" y "menor piso", que la documentación no menciona. |
 | Criterio de aceptación de los issues 1.3 a 1.5 | Issues de GitHub vs importadores | El issue pide rechazar el archivo completo ante filas inválidas; los importadores guardan las filas válidas y reportan las inválidas. El endpoint sigue el comportamiento de los importadores. |
