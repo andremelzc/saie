@@ -287,7 +287,7 @@ El caso de **capacidad** (BPMN 4) es análogo y además rechaza un conteo de PCs
 
 **En SAIE.** Eventos (§2.2 y §2.3), reglas (R-01 a R-11), decisiones (§2.6) y acciones (tabla ECA del §2.4). El orden de evaluación del motor está en `docs/03_alcance_y_reglas.md` §2.3.
 
-### 3.8. Casos de uso — Aplicado (falta el diagrama UML)
+### 3.8. Casos de uso — Aplicado
 
 **Definición.** Un caso de uso describe una interacción entre un actor y el sistema para lograr un objetivo observable.
 
@@ -306,13 +306,17 @@ El caso de **capacidad** (BPMN 4) es análogo y además rechaza un conteo de PCs
 | Coordinación | Ver el mapa de ocupación | — | Pendiente (issues 4.11 a 4.14) |
 | Estudiante | Recibir avisos de cambio de aula por Telegram | — | Planificado (§6) |
 
-Falta el **diagrama UML**: esta tabla es su especificación y puede generarse como código con PlantUML.
+**Diagrama UML** (código PlantUML en [`diagramas/casos-de-uso.puml`](diagramas/casos-de-uso.puml)): cuatro actores del sistema más Telegram como servicio externo, 16 casos de uso agrupados por módulo, relaciones `<<include>>` (inicio de sesión; detección de alertas) y `<<extend>>` (la asignación extiende la importación cuando el periodo está completo). Los colores distinguen lo implementado, lo pendiente y lo planificado.
 
-### 3.9. Diagramas de actividad y BPMN — Aplicado
+![Casos de uso de SAIE](diagramas/casos-de-uso.png)
+
+### 3.9. Diagramas de actividad (UML) y BPMN — Aplicado
 
 **Definición.** Los **diagramas de actividad** (UML) modelan el flujo de un proceso: acciones, decisiones y bifurcaciones. **BPMN** modela procesos de negocio con carriles por actor, eventos de inicio y fin, tareas y compuertas, y está pensado para que lo lea tanto el negocio como el equipo técnico.
 
-**En SAIE.** Siete diagramas BPMN con carriles (`SAIE_Diagramas (2).pdf`): carga de datos maestros (0), gestión de espacios (0b), asignación (1), consulta del estudiante (2), alerta por software (3), alerta por capacidad (4) y ocupación por piso (5). Cada carril es un actor (Coordinación, Jefatura, Estudiante, Sistema). Los dos formatos expresan el mismo flujo; queda por confirmar con la profesora si además se exige UML de actividad.
+**En SAIE.** Siete diagramas BPMN con carriles (`SAIE_Diagramas (2).pdf`): carga de datos maestros (0), gestión de espacios (0b), asignación (1), consulta del estudiante (2), alerta por software (3), alerta por capacidad (4) y ocupación por piso (5). Cada carril es un actor (Coordinación, Jefatura, Estudiante, Sistema). Los BPMN modelan los **procesos de negocio**. Además se incluye un **diagrama UML de actividad** que modela otro nivel: el **algoritmo interno** con el que el motor asigna una sección (`orquestarAsignacionSeccion`, `backend/src/rules/orquestadorAsignacion.ts`), con sus puntos de escalamiento, el ciclo sobre las franjas horarias y los seis criterios de ordenamiento. Código PlantUML en [`diagramas/actividad-orquestacion-asignacion.puml`](diagramas/actividad-orquestacion-asignacion.puml).
+
+![Actividad: orquestación de la asignación de una sección](diagramas/actividad-orquestacion-asignacion.png)
 
 ### 3.10. Diseño de la arquitectura de la solución — Aplicado
 

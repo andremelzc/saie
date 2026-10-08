@@ -1,0 +1,111 @@
+@startuml actividad-orquestacion-asignacion
+' SAIE — Diagrama UML de actividad: orquestación de la asignación de UNA sección
+' Modela el algoritmo de backend/src/rules/orquestadorAsignacion.ts (orquestarAsignacionSeccion),
+' no el proceso de negocio (ese está en el BPMN "Proceso 1 — Asignación de espacios").
+' Render: java -jar plantuml.jar -tpng docs/silabo/diagramas/actividad-orquestacion-asignacion.puml
+
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #444444
+skinparam activity {
+  BackgroundColor #E8F1FA
+  BorderColor #1F4E79
+}
+skinparam activityDiamond {
+  BackgroundColor #FFF4D6
+  BorderColor #B8860B
+}
+skinparam note {
+  BackgroundColor #F2F2F2
+  BorderColor #7F7F7F
+}
+
+title SAIE — Actividad: orquestación de la asignación de una sección
+
+start
+
+:Calcular la huella SHA-256 de la sección
+(curso, sección, periodo, tipo de espacio, matriculados,
+movilidad reducida, horarios y software requerido);
+
+if (¿Existe una asignación previa **VIGENTE**\ncon la misma huella y con espacios?) then (sí)
+  :Conservar la asignación
+  (idempotencia);
+  stop
+else (no)
+endif
+
+if (¿La sección tiene horarios?) then (no)
+  :Clasificar el motivo de escalamiento
+  **SIN_HORARIOS_DEFINIDOS**;
+  :Estado **ESCALADA**
+  (revisión manual); <<#FDE9E7>>
+  stop
+else (sí)
+endif
+
+:Espacios disponibles := todos los espacios;
+
+repeat
+  :Tomar la siguiente franja horaria de la sección;
+  :Calcular los espacios libres del tipo requerido
+  en esa franja (sin solapamiento, R-02);
+  :Conservar solo los espacios libres
+  en **todas** las franjas procesadas;
+repeat while (¿Quedan franjas?) is (sí) not (no)
+
+:Buscar bloques contiguos conexos con capacidad real suficiente
+(R-03, R-04, R-05; máximo 4 espacios por bloque);
+
+if (¿Se encontró al menos un bloque?) then (no)
+  :Clasificar el motivo de escalamiento
+  (capacidad insuficiente, horario bloqueado,
+  contigüidad no alcanzada o sin espacios);
+  :Estado **ESCALADA**
+  (revisión manual); <<#FDE9E7>>
+  stop
+else (sí)
+endif
+
+if (¿Es laboratorio con software requerido?) then (sí)
+  :Conservar solo los bloques en los que cada sala
+  tiene todo el software requerido (R-06);
+  if (¿Quedan bloques?) then (no)
+    :Clasificar el motivo de escalamiento
+    **SOFTWARE_FALTANTE**;
+    :Estado **ESCALADA**
+    (revisión manual); <<#FDE9E7>>
+    stop
+  else (sí)
+  endif
+else (no)
+endif
+
+if (¿Algún matriculado tiene movilidad reducida?) then (sí)
+  :Poner primero los bloques del Piso 1;
+  note right
+    Si no hay ningún bloque en Piso 1 se usan los de
+    otros pisos y se registra el fallback aplicado.
+  end note
+else (no)
+endif
+
+:Calcular el puntaje de cercanía de cada bloque
+con las secciones paralelas ya asignadas (R-08);
+
+:Ordenar los bloques por:
+1) Piso 1 (si hay movilidad reducida)
+2) mayor cercanía a paralelas
+3) menos espacios
+4) menor desperdicio de aforo (R-09)
+5) menor número de piso
+6) identificador (desempate determinista);
+
+:Seleccionar el primer bloque;
+
+:Estado **VIGENTE**
+(espacios, puntaje de cercanía y huella); <<#E3F4E3>>
+
+stop
+
+@enduml

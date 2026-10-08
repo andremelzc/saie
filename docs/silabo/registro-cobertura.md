@@ -59,8 +59,8 @@ Los 45 temas tienen un tratamiento definido. Se distinguen tres estados, que no 
 | 21 | Requisitos no funcionales | 5–6 | RNF-01 a RNF-10. |
 | 22 | Identificación de entradas y salidas | 5–6 | Tabla de entradas y salidas por proceso. |
 | 23 | Eventos, reglas, decisiones y acciones | 5–6 | Reglas, triggers, tabla ECA. |
-| 24 | Casos de uso | 5–6 | Especificación en tabla (falta el diagrama UML, ver §5). |
-| 25 | Diagramas de actividad | 5–6 | 7 BPMN con carriles (`SAIE_Diagramas (2).pdf`). |
+| 24 | Casos de uso | 5–6 | Especificación en tabla y diagrama UML (`diagramas/casos-de-uso.puml`). |
+| 25 | Diagramas de actividad | 5–6 | Diagrama UML de la orquestación de la asignación (`diagramas/actividad-orquestacion-asignacion.puml`) y 7 BPMN con carriles (`SAIE_Diagramas (2).pdf`). |
 | 26 | Introducción a BPMN aplicada a automatización | 5–6 | Los mismos 7 diagramas BPMN. |
 | 27 | Diseño de la arquitectura de la solución | 5–6 | `docs/arquitectura.md`, `docs/modelo-datos.md`. |
 | 28 | Formulación del proyecto del curso | 5–6 | Alcance, decisiones D-01 a D-05, línea base. |
@@ -114,11 +114,11 @@ Todos de RPA. **RPA no calza en SAIE**: se usa cuando un sistema no ofrece API y
 | P2 | **Pantalla de importación** (issue 1.9) | Abierto. |
 | P3 | **Frontend del prototipo** | Solo existe `frontend/src/pages/Home.tsx`. Se hará. |
 | P4 | **Auditoría de alertas** | `TipoEventoAuditoria.ALERTA` existe, pero `alerta.service.ts` no escribe auditoría (issue 5.11, abierto). Se resolvería con un suscriptor del bus de eventos. |
-| P5 | **Diagrama UML de casos de uso** | Falta el diagrama; la especificación ya está. Se puede generar como código (PlantUML). |
-| P6 | **Confirmar con la profesora** | Si los BPMN bastan como diagramas de actividad. |
+| P5 | **Diagrama UML de casos de uso** | **Hecho** en PlantUML (`docs/silabo/diagramas/`), con su imagen. |
+| P6 | **Diagrama de actividad UML** | **Hecho**: algoritmo interno de la asignación, distinto de los BPMN de proceso. Falta confirmar con la profesora si además exige UML por cada proceso. |
 | P7 | **Figma** | Enlace privado; no se pudo revisar. |
 | P8 | **Evidencia en el repo** | Copiar los BPMN (PDF) a `docs/silabo/`. |
-| P9 | **Cambio de alcance** | Registrar la decisión D-06 (notificaciones, eventos, temporizador) y seguir `docs/04_plan_linea_base.md` §5. |
+| P9 | **Cambio de alcance** | Borrador de la solicitud listo en [`solicitud-cambio-notificaciones.md`](solicitud-cambio-notificaciones.md) (decisión D-06). Falta abrirla como issue `[CAMBIO-LB]` y que el CCC decida. No existe tag `lb-*`: la línea base aún no se formalizó. |
 | P10 | **Issue 1.6** | Estaba cerrado sin cumplirse; el endpoint de este PR lo cumple. |
 
 ---
