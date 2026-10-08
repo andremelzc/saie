@@ -1,0 +1,110 @@
+@startuml casos-de-uso
+' SAIE — Diagrama UML de casos de uso (Semanas 5–6 del sílabo)
+' Fuente de verdad de la especificación: docs/silabo/definiciones-e-implementacion.md §3.8
+' Render: java -jar plantuml.jar -tpng docs/silabo/diagramas/casos-de-uso.puml
+' El pragma smetana evita depender de Graphviz.
+!pragma layout smetana
+
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam defaultFontName Arial
+skinparam ArrowColor #444444
+skinparam ActorBorderColor #1F4E79
+skinparam usecase {
+  BackgroundColor #E8F1FA
+  BorderColor #1F4E79
+  BackgroundColor<<pendiente>> #F2F2F2
+  BorderColor<<pendiente>> #7F7F7F
+  FontColor<<pendiente>> #595959
+  BackgroundColor<<planificado>> #FFF4D6
+  BorderColor<<planificado>> #B8860B
+}
+
+title SAIE — Casos de uso
+
+actor "Estudiante" as EST
+actor "Docente" as DOC
+actor "Coordinación\nAcadémica" as COO
+actor "Jefatura de\nLaboratorios" as JEF
+actor "Telegram\n(servicio externo)" as TG
+
+rectangle "SAIE" {
+
+  usecase "Iniciar sesión\n(JWT por rol)" as CU00
+
+  package "Consulta y portales" {
+    usecase "Consultar espacio por\ncódigo de alumno" as CU01
+    usecase "Consultar por\ncódigo de curso" as CU02
+    usecase "Ver horario, cursos\ny perfil" as CU03
+    usecase "Ver horario y explorar\nespacios" as CU04
+    usecase "Reportar incidencia" as CU05
+  }
+
+  package "Datos maestros y asignación" {
+    usecase "Importar datos\nmaestros" as CU06
+    usecase "Ejecutar asignación\n(batch o por sección)" as CU07
+    usecase "Ver mapa de\nocupación por piso" as CU08 <<pendiente>>
+  }
+
+  package "Operación de laboratorios" {
+    usecase "Registrar cambio\nde software" as CU09
+    usecase "Registrar PCs\nmalogradas o reparadas" as CU10
+    usecase "Detectar incompatibilidad\no capacidad insuficiente\ny registrar la alerta" as CU11
+    usecase "Atender y resolver\nalertas" as CU12 <<pendiente>>
+    usecase "Resolver incidencias" as CU13 <<pendiente>>
+  }
+
+  package "Avisos (planificado)" {
+    usecase "Vincular Telegram" as CU14 <<planificado>>
+    usecase "Recibir aviso de cambio\nde aula" as CU15 <<planificado>>
+    usecase "Recibir resumen\ndiario de clases" as CU16 <<planificado>>
+  }
+}
+
+' Asociaciones actor — caso de uso
+EST --> CU01
+EST --> CU02
+EST --> CU03
+EST --> CU14
+EST --> CU15
+EST --> CU16
+
+DOC --> CU04
+DOC --> CU05
+
+COO --> CU06
+COO --> CU07
+COO --> CU08
+
+JEF --> CU09
+JEF --> CU10
+JEF --> CU12
+JEF --> CU13
+
+CU15 <-- TG
+CU16 <-- TG
+
+' Relaciones entre casos de uso
+CU03 ..> CU00 : <<include>>
+CU04 ..> CU00 : <<include>>
+CU05 ..> CU00 : <<include>>
+CU06 ..> CU00 : <<include>>
+CU07 ..> CU00 : <<include>>
+CU09 ..> CU00 : <<include>>
+CU10 ..> CU00 : <<include>>
+
+CU09 ..> CU11 : <<include>>
+CU10 ..> CU11 : <<include>>
+CU14 ..> CU00 : <<include>>
+
+CU07 ..> CU06 : <<extend>>\n[periodo completo]
+CU15 ..> CU07 : <<extend>>\n[la asignación cambió]
+
+legend right
+  |= Color |= Estado |
+  | <back:#E8F1FA>     </back> | Implementado en el backend |
+  | <back:#F2F2F2>     </back> | Pendiente (issue abierto) |
+  | <back:#FFF4D6>     </back> | Planificado (no construido) |
+endlegend
+
+@enduml

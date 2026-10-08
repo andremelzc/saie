@@ -7,6 +7,7 @@ import adminRouter from './routes/admin.routes.js';
 import estudianteRouter from './routes/estudiante.routes.js';
 import docenteRouter from './routes/docente.routes.js';
 import asignacionRouter from './routes/asignacion.routes.js';
+import importRouter from './routes/import.routes.js';
 
 export const createApp = (): Application => {
   const app = express();
@@ -18,6 +19,9 @@ export const createApp = (): Application => {
       credentials: true,
     }),
   );
+  // La importación lee su propio cuerpo (CSV o JSON de hasta 10 mb), con autenticación previa:
+  // va antes de los parsers globales, que limitan el cuerpo a 100 kb.
+  app.use('/api/v1/import', importRouter);
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
