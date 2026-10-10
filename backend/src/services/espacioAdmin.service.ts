@@ -109,7 +109,7 @@ function esConflictoUnico(error: unknown): boolean {
 
 async function contiguosDe(espacioId: string, db: Pick<Db, 'espacioContiguo'>): Promise<string[]> {
   const relaciones = await db.espacioContiguo.findMany({ where: { espacioIdA: espacioId } });
-  return relaciones.map((r) => r.espacioIdB).sort();
+  return relaciones.map((r) => r.espacioIdB).sort((a, b) => a.localeCompare(b));
 }
 
 async function aEspacioDTO(
