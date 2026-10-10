@@ -1,16 +1,11 @@
-import { timingSafeEqual } from 'crypto';
 import { Request, Response } from 'express';
+import { responderError } from '../lib/http';
+import { igualesEnTiempoConstante } from '../lib/comparacion';
 import { prisma } from '../lib/prisma';
 import { ActualizacionTelegram, procesarActualizacion } from '../telegram/bot.service';
 import { ClienteTelegram, crearClienteTelegram } from '../telegram/cliente';
 import { limitadorIntentos } from '../telegram/limitador';
-
-/** Comparación en tiempo constante; si la longitud difiere ya no son iguales. */
-function igualesEnTiempoConstante(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
-}
+import { enviarResumenesDiarios } from '../telegram/resumenDiario.service';
 
 let cliente: ClienteTelegram | null = null;
 
@@ -49,4 +44,20 @@ export async function recibirActualizacion(req: Request, res: Response): Promise
   }
 
   res.status(200).json({ success: true });
+}
+
+/**
+ * Issue 3.27 — POST /api/v1/telegram/resumen-diario
+ *
+ * Lo invoca la tarea programada de GitHub Actions cada mañana, autenticada con el token de
+ * servicio (no con un JWT de usuario). Responde con el resumen de lo enviado.
+ */
+export async function enviarResumenDiario(_req: Request, res: Response): Promise<void> {
+  try {
+    cliente ??= crearClienteTelegram();
+    const data = await enviarResumenesDiarios({ prisma, cliente });
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
 }
