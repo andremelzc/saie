@@ -371,14 +371,12 @@ describe('Issue 5.11 — Registro de auditoría: Corrida batch del periodo', () 
 describe('Issue 5.11 — Registro de auditoría: Alertas persistidas', () => {
   it('4a. registrarAlerta crea una alerta con fecha/hora automática (DEFAULT now())', async () => {
     const alertaMock = {
-      create: jest
-        .fn()
-        .mockResolvedValue({
-          id: 'alert-1',
-          tipo: 'SOFTWARE',
-          espacioId: 'lab-1',
-          motivo: 'Software faltante',
-        }),
+      create: jest.fn().mockResolvedValue({
+        id: 'alert-1',
+        tipo: 'SOFTWARE',
+        espacioId: 'lab-1',
+        motivo: 'Software faltante',
+      }),
     };
     const mockDb = {
       alerta: {
