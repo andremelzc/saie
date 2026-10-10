@@ -7,6 +7,12 @@ import { filtrosDeMapa, MapaOcupacionQuerySchema } from '../lib/franja';
 import { obtenerOcupacionPorPiso } from '../services/ocupacion.service';
 import { listarSeccionesEscaladas } from '../services/revision.service';
 import {
+  AltaAlumnoSchema,
+  AltaDocenteSchema,
+  crearAlumno,
+  crearDocente,
+} from '../services/usuario.service';
+import {
   cerrarIncidencia,
   CerrarIncidenciaSchema,
   listarIncidencias,
@@ -157,6 +163,28 @@ export async function resolverIncidencia(req: Request, res: Response): Promise<v
     const entrada = CerrarIncidenciaSchema.parse(req.body);
     const data = await cerrarIncidencia(id, entrada, req.auth!, prisma);
     res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.17 — POST /api/v1/admin/alumnos (solo Coordinación Académica) */
+export async function altaAlumno(req: Request, res: Response): Promise<void> {
+  try {
+    const entrada = AltaAlumnoSchema.parse(req.body);
+    const data = await crearAlumno(entrada, prisma);
+    res.status(201).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.18 — POST /api/v1/admin/docentes (solo Coordinación Académica) */
+export async function altaDocente(req: Request, res: Response): Promise<void> {
+  try {
+    const entrada = AltaDocenteSchema.parse(req.body);
+    const data = await crearDocente(entrada, prisma);
+    res.status(201).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);
   }

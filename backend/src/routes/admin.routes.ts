@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { RolCuenta } from '@prisma/client';
 import {
+  altaAlumno,
+  altaDocente,
   consultarMapaOcupacion,
   listarAlertas,
   listarEscaladas,
@@ -39,5 +41,10 @@ router.get('/secciones-escaladas', listarEscaladas);
 // GET /api/v1/admin/incidencias y PATCH /api/v1/admin/incidencias/:id/resolver (Issue 7.6)
 router.get('/incidencias', listarIncidenciasReportadas);
 router.patch('/incidencias/:id/resolver', resolverIncidencia);
+
+// Alta individual de usuarios: solo Coordinación Académica (Issues 4.17 y 4.18)
+const soloCoordinacion = roleGuard(RolCuenta.COORDINACION_ACADEMICA);
+router.post('/alumnos', soloCoordinacion, altaAlumno);
+router.post('/docentes', soloCoordinacion, altaDocente);
 
 export default router;
