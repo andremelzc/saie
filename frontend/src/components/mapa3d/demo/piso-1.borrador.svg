@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 599 654" role="img" data-piso="1">
+  <title>Plano del piso 1</title>
+  <style>
+    .espacio, .administrativo, .biblioteca, .auditorio, .bano, .escalera, .ascensor { stroke: #222; stroke-width: 1; }
+    .aula { fill: #b2d9ff; } .laboratorio { fill: #d3c8ff; } .auditorio { fill: #802323; }
+    .administrativo { fill: #efe7cb; } .biblioteca { fill: #faff93; } .bano { fill: #ff86e4; }
+    .escalera { fill: #ffbdbd; } .ascensor { fill: #d3c8ff; } .patio { fill: #d0ffaf; stroke: none; }
+    .muro { fill: none; stroke: #4a4a44; stroke-width: 2; }
+  </style>
+  <g id="patios">
+    <rect id="FIG-16" class="patio" data-clase="patio" x="31.39" y="138.04" width="104.08" height="57.3"/>
+    <rect id="FIG-17" class="patio" data-clase="patio" x="284.68" y="154.53" width="51.89" height="215.86"/>
+    <rect id="FIG-18" class="patio" data-clase="patio" x="348.27" y="154.53" width="136.32" height="232.7"/>
+    <rect id="FIG-27" class="patio" data-clase="patio" x="284.68" y="407.36" width="51.89" height="65.67"/>
+  </g>
+  <g id="espacios">
+    <rect id="FIG-02" class="espacio aula" data-clase="aula" x="31.39" y="33.85" width="52.09" height="41.67"/>
+    <rect id="FIG-03" class="espacio aula" data-clase="aula" x="83.48" y="33.85" width="52.09" height="41.67"/>
+    <rect id="FIG-05" class="espacio aula" data-clase="aula" x="198.08" y="33.85" width="52.1" height="41.67"/>
+    <rect id="FIG-06" class="espacio aula" data-clase="aula" x="250.18" y="33.85" width="52.09" height="41.67"/>
+    <rect id="FIG-07" class="espacio aula" data-clase="aula" x="302.27" y="33.85" width="52.09" height="41.67"/>
+    <rect id="FIG-08" class="espacio aula" data-clase="aula" x="354.36" y="33.85" width="52.09" height="41.67"/>
+    <rect id="FIG-10" class="espacio aula" data-clase="aula" x="31.39" y="96.36" width="52.09" height="41.68"/>
+    <rect id="FIG-11" class="espacio aula" data-clase="aula" x="83.48" y="96.36" width="52.09" height="41.68"/>
+    <rect id="FIG-12" class="bano" data-clase="bano" x="192.88" y="96.36" width="57.3" height="41.68"/>
+    <rect id="FIG-13" class="espacio aula" data-clase="aula" x="250.18" y="96.36" width="52.09" height="41.68"/>
+    <rect id="FIG-14" class="espacio aula" data-clase="aula" x="302.27" y="96.36" width="52.09" height="41.68"/>
+    <rect id="FIG-15" class="espacio aula" data-clase="aula" x="354.36" y="96.36" width="52.09" height="41.68"/>
+    <rect id="FIG-19" class="administrativo" data-clase="administrativo" x="31.39" y="195.34" width="104.15" height="21.01"/>
+    <rect id="FIG-20" class="auditorio" data-clase="auditorio" x="31.39" y="216.18" width="114.46" height="78.13"/>
+    <rect id="FIG-21" class="bano" data-clase="bano" x="31.39" y="304.73" width="67.76" height="31.26"/>
+    <rect id="FIG-24" class="bano" data-clase="bano" x="31.39" y="346.41" width="67.76" height="31.25"/>
+    <rect id="FIG-26" class="administrativo" data-clase="administrativo" x="31.39" y="414.13" width="67.76" height="31.25"/>
+    <rect id="FIG-28" class="administrativo" data-clase="administrativo" x="31.39" y="445.38" width="67.76" height="31.26"/>
+    <rect id="FIG-29" class="administrativo" data-clase="administrativo" x="354.36" y="445.38" width="57.26" height="36.47"/>
+    <rect id="FIG-30" class="biblioteca" data-clase="biblioteca" x="484.59" y="461.01" width="93.77" height="130.4"/>
+    <rect id="FIG-31" class="administrativo" data-clase="administrativo" x="31.39" y="476.64" width="67.76" height="31.25"/>
+    <rect id="FIG-32" class="espacio aula" data-clase="aula" x="182.46" y="481.85" width="57.25" height="36.46"/>
+    <rect id="FIG-33" class="espacio aula" data-clase="aula" x="239.76" y="481.85" width="57.26" height="36.46"/>
+    <rect id="FIG-34" class="espacio aula" data-clase="aula" x="297.06" y="481.85" width="57.26" height="36.46"/>
+    <rect id="FIG-35" class="espacio aula" data-clase="aula" x="354.36" y="481.85" width="57.26" height="36.46"/>
+    <rect id="FIG-36" class="espacio laboratorio" data-clase="laboratorio" x="411.66" y="481.85" width="72.93" height="36.46"/>
+    <rect id="FIG-37" class="administrativo" data-clase="administrativo" x="31.39" y="507.89" width="67.76" height="31.26"/>
+    <rect id="FIG-38" class="administrativo" data-clase="administrativo" x="20.97" y="539.15" width="36.5" height="31.26"/>
+    <rect id="FIG-39" class="espacio aula" data-clase="aula" x="182.46" y="533.94" width="57.25" height="36.47"/>
+    <rect id="FIG-40" class="espacio aula" data-clase="aula" x="239.76" y="533.94" width="57.26" height="36.47"/>
+    <rect id="FIG-41" class="espacio aula" data-clase="aula" x="297.06" y="533.94" width="57.26" height="36.47"/>
+    <rect id="FIG-42" class="espacio aula" data-clase="aula" x="354.36" y="533.94" width="57.26" height="36.47"/>
+    <rect id="FIG-43" class="administrativo" data-clase="administrativo" x="88.69" y="570.41" width="46.88" height="31.25"/>
+  </g>
+  <g id="escaleras">
+    <rect id="FIG-01" class="escalera" data-clase="escalera" x="135.57" y="20" width="46.89" height="41.67"/>
+    <rect id="FIG-09" class="escalera" data-clase="escalera" x="406.45" y="33.85" width="46.89" height="41.67"/>
+    <rect id="FIG-23" class="escalera" data-clase="escalera" x="31.39" y="335.99" width="67.72" height="10.42"/>
+    <rect id="FIG-25" class="escalera" data-clase="escalera" x="31.39" y="377.66" width="46.86" height="36.47"/>
+    <rect id="FIG-44" class="escalera" data-clase="escalera" x="135.57" y="559.99" width="46.89" height="41.67"/>
+    <rect id="FIG-45" class="escalera" data-clase="escalera" x="453.34" y="591.24" width="46.88" height="41.68"/>
+  </g>
+  <g id="ascensores">
+    <rect id="FIG-04" class="ascensor" data-clase="ascensor" x="182.46" y="33.85" width="15.62" height="41.69"/>
+    <rect id="FIG-22" class="ascensor" data-clase="ascensor" x="186.69" y="312.3" width="15.63" height="15.63"/>
+  </g>
+  <g id="muros">
+    <polyline id="muro-1" class="muro" fill="none" stroke="#4a4a44" stroke-width="2" points="577.28,407.63 577.28,591.52 499.44,591.52 499.44,633.68 410.46,633.68 410.46,571.2 181.49,571.2 181.49,602.06 20,602.06 20,539.43 30.1,539.43 30.1,33.58 134.39,33.58 134.39,20.14 181.49,20.14 181.49,33.58 452.41,33.58 452.41,138.23 499.44,138.23 499.44,406.62 577.28,406.62 577.28,410.8"/>
+    <polyline id="muro-2" class="muro" fill="none" stroke="#4a4a44" stroke-width="2" points="577.39,461.29 483.92,461.29 483.92,482.38 410.46,482.38 410.46,445.97 353.52,445.97 353.52,482.38 181.49,482.38 181.49,327.41 201.79,327.41 201.79,312.83 187.28,312.83 187.28,213.66 169.33,213.66 169.33,138.23 452.41,138.23 452.41,138.31 405.48,138.31"/>
+  </g>
+</svg>
