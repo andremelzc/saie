@@ -4,9 +4,11 @@ import {
   consultarMapaOcupacion,
   listarAlertas,
   listarEscaladas,
+  listarIncidenciasReportadas,
   registrarPcsMalogradasLaboratorio,
   registrarSoftwareLaboratorio,
   resolverAlertaPendiente,
+  resolverIncidencia,
 } from '../controllers/admin.controller';
 import { authGuard, roleGuard } from '../middlewares/auth.middleware';
 
@@ -33,5 +35,9 @@ router.get('/mapa-ocupacion', consultarMapaOcupacion);
 
 // GET /api/v1/admin/secciones-escaladas (Issue 4.22)
 router.get('/secciones-escaladas', listarEscaladas);
+
+// GET /api/v1/admin/incidencias y PATCH /api/v1/admin/incidencias/:id/resolver (Issue 7.6)
+router.get('/incidencias', listarIncidenciasReportadas);
+router.patch('/incidencias/:id/resolver', resolverIncidencia);
 
 export default router;

@@ -320,6 +320,8 @@ model Incidencia {
   estado                  EstadoIncidencia    @default(PENDIENTE)
   fechaReporte            DateTime            @default(now()) @map("fecha_reporte")
   identificadorSeguimiento String             @unique @map("identificador_seguimiento")
+  comentarioCierre         String?             @map("comentario_cierre")
+  fechaCierre              DateTime?           @map("fecha_cierre")
 
   docente    Docente    @relation(fields: [docenteId], references: [id], onDelete: Cascade)
   asignacion Asignacion @relation(fields: [asignacionId], references: [id], onDelete: Cascade)

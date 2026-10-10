@@ -1,11 +1,16 @@
 import { Request, Response } from 'express';
-import { TipoAlerta } from '@prisma/client';
+import { EstadoIncidencia, PrioridadIncidencia, TipoAlerta } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { responderError } from '../lib/http';
 import { filtrosDeMapa, MapaOcupacionQuerySchema } from '../lib/franja';
 import { obtenerOcupacionPorPiso } from '../services/ocupacion.service';
 import { listarSeccionesEscaladas } from '../services/revision.service';
+import {
+  cerrarIncidencia,
+  CerrarIncidenciaSchema,
+  listarIncidencias,
+} from '../services/incidenciaAdmin.service';
 import { listarAlertasActivas, resolverAlerta } from '../services/alerta.service';
 import {
   registrarCambioPcsMalogradas,
@@ -120,6 +125,37 @@ export async function listarEscaladas(req: Request, res: Response): Promise<void
   try {
     const { periodo } = EscaladasQuerySchema.parse(req.query);
     const data = await listarSeccionesEscaladas(periodo, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+const IncidenciasQuerySchema = z.object({
+  estado: z.enum(EstadoIncidencia, { error: 'El estado no es válido' }).optional(),
+  prioridad: z.enum(PrioridadIncidencia, { error: 'La prioridad no es válida' }).optional(),
+  espacioId: z.string().trim().min(1).optional(),
+});
+
+/** Issue 7.6 — GET /api/v1/admin/incidencias[?estado=&prioridad=&espacioId=] */
+export async function listarIncidenciasReportadas(req: Request, res: Response): Promise<void> {
+  try {
+    const filtros = IncidenciasQuerySchema.parse(req.query);
+    const data = await listarIncidencias(filtros, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 7.6 — PATCH /api/v1/admin/incidencias/:id/resolver */
+export async function resolverIncidencia(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = z
+      .object({ id: z.string().min(1, 'El id de la incidencia es requerido') })
+      .parse(req.params);
+    const entrada = CerrarIncidenciaSchema.parse(req.body);
+    const data = await cerrarIncidencia(id, entrada, req.auth!, prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);
