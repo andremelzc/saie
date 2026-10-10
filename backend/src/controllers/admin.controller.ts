@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma';
 import { responderError } from '../lib/http';
 import { filtrosDeMapa, MapaOcupacionQuerySchema } from '../lib/franja';
 import { obtenerOcupacionPorPiso } from '../services/ocupacion.service';
+import { listarSeccionesEscaladas } from '../services/revision.service';
 import { listarAlertasActivas, resolverAlerta } from '../services/alerta.service';
 import {
   registrarCambioPcsMalogradas,
@@ -100,6 +101,25 @@ export async function consultarMapaOcupacion(req: Request, res: Response): Promi
   try {
     const q = MapaOcupacionQuerySchema.parse(req.query);
     const data = await obtenerOcupacionPorPiso(filtrosDeMapa(q), prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+const EscaladasQuerySchema = z.object({
+  periodo: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d+$/, 'El periodo debe tener formato AAAA-N (ej. 2026-1)')
+    .optional(),
+});
+
+/** Issue 4.22 — GET /api/v1/admin/secciones-escaladas[?periodo=2026-1] */
+export async function listarEscaladas(req: Request, res: Response): Promise<void> {
+  try {
+    const { periodo } = EscaladasQuerySchema.parse(req.query);
+    const data = await listarSeccionesEscaladas(periodo, prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);

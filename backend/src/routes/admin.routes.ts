@@ -3,6 +3,7 @@ import { RolCuenta } from '@prisma/client';
 import {
   consultarMapaOcupacion,
   listarAlertas,
+  listarEscaladas,
   registrarPcsMalogradasLaboratorio,
   registrarSoftwareLaboratorio,
   resolverAlertaPendiente,
@@ -29,5 +30,8 @@ router.patch('/alertas/:id/resolver', resolverAlertaPendiente);
 
 // GET /api/v1/admin/mapa-ocupacion (Issue 4.12)
 router.get('/mapa-ocupacion', consultarMapaOcupacion);
+
+// GET /api/v1/admin/secciones-escaladas (Issue 4.22)
+router.get('/secciones-escaladas', listarEscaladas);
 
 export default router;
