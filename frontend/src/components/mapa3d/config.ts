@@ -12,6 +12,12 @@ export const CLASES_RESERVABLES: ReadonlySet<string> = new Set([
   'auditorio',
 ]);
 
+/**
+ * Clases que conectan pisos. Una escalera o un ascensor es el mismo en todos los pisos si su
+ * figura lleva el mismo `id` en cada plano (convención de `tools/planos`).
+ */
+export const CLASES_CONEXION: ReadonlySet<string> = new Set(['escalera', 'ascensor']);
+
 /** Id de la capa de muros en el SVG. */
 export const CAPA_MUROS = 'muros';
 
@@ -20,6 +26,8 @@ export const ALTURA = {
   aula: 10,
   laboratorio: 16,
   contexto: 3,
+  /** Escaleras y ascensores: algo más altos que el contexto para que se lean como "usables". */
+  conexion: 6,
   muro: 6,
   losa: 1,
   /** Cuánto se eleva una figura seleccionada o resaltada. */

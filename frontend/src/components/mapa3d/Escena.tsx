@@ -8,6 +8,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import {
   ALTURA,
   CAMARA,
+  CLASES_CONEXION,
   CLASES_RESERVABLES,
   COLOR_ACENTO_LABORATORIO,
   COLOR_BORDE,
@@ -38,13 +39,28 @@ interface FiguraProps {
   resaltada: boolean;
   seleccionada: boolean;
   onSeleccionar: (id: string) => void;
+  onConector: (id: string) => void;
 }
 
-function Figura({ figura, datos, resaltada, seleccionada, onSeleccionar }: FiguraProps) {
+function Figura({
+  figura,
+  datos,
+  resaltada,
+  seleccionada,
+  onSeleccionar,
+  onConector,
+}: FiguraProps) {
   const reservable = CLASES_RESERVABLES.has(figura.clase);
+  const esConexion = CLASES_CONEXION.has(figura.clase);
   const esLaboratorio = datos ? datos.tipo === 'LABORATORIO' : figura.clase === 'laboratorio';
-  const altura = reservable ? (esLaboratorio ? ALTURA.laboratorio : ALTURA.aula) : ALTURA.contexto;
-  const interactiva = reservable && datos !== undefined;
+  const altura = reservable
+    ? esLaboratorio
+      ? ALTURA.laboratorio
+      : ALTURA.aula
+    : esConexion
+      ? ALTURA.conexion
+      : ALTURA.contexto;
+  const interactiva = esConexion || (reservable && datos !== undefined);
 
   const geometria = useMemo(
     () => new ExtrudeGeometry(figura.shapes, { depth: altura, bevelEnabled: false }),
@@ -63,7 +79,8 @@ function Figura({ figura, datos, resaltada, seleccionada, onSeleccionar }: Figur
     // Un arrastre de la cámara no cuenta como clic.
     if (!interactiva || e.delta > 4) return;
     e.stopPropagation();
-    onSeleccionar(figura.id);
+    if (esConexion) onConector(figura.id);
+    else onSeleccionar(figura.id);
   };
 
   const sobreFigura = (e: ThreeEvent<PointerEvent>, dentro: boolean) => {
@@ -141,9 +158,18 @@ interface PisoProps {
   resaltados: ReadonlySet<string>;
   seleccionado: string | null;
   onSeleccionar: (id: string) => void;
+  onConector: (id: string) => void;
 }
 
-function Piso({ plano, y, espacios, resaltados, seleccionado, onSeleccionar }: PisoProps) {
+function Piso({
+  plano,
+  y,
+  espacios,
+  resaltados,
+  seleccionado,
+  onSeleccionar,
+  onConector,
+}: PisoProps) {
   const muros = useMemo(() => construirMuros(plano.muros), [plano.muros]);
   useLiberar(muros);
   const { x, y: z, ancho, alto } = plano.caja;
@@ -165,6 +191,7 @@ function Piso({ plano, y, espacios, resaltados, seleccionado, onSeleccionar }: P
             resaltada={resaltados.has(figura.id)}
             seleccionada={seleccionado === figura.id}
             onSeleccionar={onSeleccionar}
+            onConector={onConector}
           />
         ))}
       </group>
@@ -228,7 +255,44 @@ export interface EscenaProps {
   espacios: Map<string, EspacioMapa>;
   resaltados: ReadonlySet<string>;
   seleccionado: string | null;
+  /** Escalera o ascensor activo: si hay varios pisos visibles, se dibuja la columna que los une. */
+  conector: string | null;
   onSeleccionar: (id: string) => void;
+  onConector: (id: string) => void;
+}
+
+/** Columna translúcida que atraviesa los pisos visibles por donde pasa una escalera o ascensor. */
+function ColumnaConexion({
+  planos,
+  pisos,
+  separacionPisos,
+  id,
+}: {
+  planos: Record<number, PlanoGeometria>;
+  pisos: number[];
+  separacionPisos: number;
+  id: string;
+}) {
+  const enPisos = pisos.filter((p) => planos[p].figuras.some((f) => f.id === id));
+  const figura = planos[enPisos[0]]?.figuras.find((f) => f.id === id);
+  if (enPisos.length < 2 || !figura) return null;
+
+  const puntos = figura.shapes.flatMap((sh) => sh.getPoints());
+  const xs = puntos.map((p) => p.x);
+  const zs = puntos.map((p) => p.y);
+  const ancho = Math.max(...xs) - Math.min(...xs);
+  const fondo = Math.max(...zs) - Math.min(...zs);
+  const desde = pisos.indexOf(enPisos[0]) * separacionPisos;
+  const hasta = pisos.indexOf(enPisos[enPisos.length - 1]) * separacionPisos + ALTURA.conexion;
+
+  return (
+    <mesh
+      position={[Math.min(...xs) + ancho / 2, (desde + hasta) / 2, Math.min(...zs) + fondo / 2]}
+    >
+      <boxGeometry args={[ancho, hasta - desde, fondo]} />
+      <meshStandardMaterial color={COLOR_RESALTE} transparent opacity={0.35} depthWrite={false} />
+    </mesh>
+  );
 }
 
 export default function Escena({
@@ -238,7 +302,9 @@ export default function Escena({
   espacios,
   resaltados,
   seleccionado,
+  conector,
   onSeleccionar,
+  onConector,
 }: EscenaProps) {
   const base = planos[pisos[0]];
   const { x, y: z, ancho, alto } = base.caja;
@@ -268,10 +334,26 @@ export default function Escena({
           resaltados={resaltados}
           seleccionado={seleccionado}
           onSeleccionar={onSeleccionar}
+          onConector={onConector}
         />
       ))}
 
-      <Controles centro={centro} tamano={tamano} encuadre={pisos.join(',')} />
+      {conector && (
+        <ColumnaConexion
+          planos={planos}
+          pisos={pisos}
+          separacionPisos={separacionPisos}
+          id={conector}
+        />
+      )}
+
+      {/* Cambiar de piso con una escalera conserva el ángulo de cámara: solo se reencuadra al
+          pasar entre un piso y la vista de edificio. */}
+      <Controles
+        centro={centro}
+        tamano={tamano}
+        encuadre={pisos.length > 1 ? 'edificio' : 'piso'}
+      />
     </>
   );
 }

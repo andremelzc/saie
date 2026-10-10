@@ -1,7 +1,7 @@
 import { Component, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { CLASES_RESERVABLES, SEPARACION_PISOS } from './config';
+import { CLASES_CONEXION, CLASES_RESERVABLES, SEPARACION_PISOS } from './config';
 import Escena from './Escena';
 import { leerPlano } from './geometria';
 import type { PlanoGeometria } from './geometria';
@@ -96,6 +96,7 @@ export default function Mapa3D({
   const { cargando, estado } = usePlanos(urls);
   const [pisoElegido, setPisoElegido] = useState<number | 'todos' | undefined>(pisoInicial);
   const [seleccionInterna, setSeleccionInterna] = useState<string | null>(null);
+  const [conector, setConector] = useState<string | null>(null);
   const avisados = useRef(new Set<string>());
 
   const planos = estado.planos;
@@ -109,8 +110,27 @@ export default function Mapa3D({
   const piso = pisoElegido ?? pisos[0];
   const pisosVisibles = piso === 'todos' || piso === undefined ? pisos : [piso];
 
+  // Escaleras y ascensores: el mismo id en varios planos es la misma escalera o ascensor.
+  const conexiones = useMemo(() => {
+    const mapa = new Map<string, { clase: string; pisos: number[] }>();
+    for (const [numero, plano] of Object.entries(planos ?? {})) {
+      for (const figura of plano.figuras) {
+        if (!CLASES_CONEXION.has(figura.clase)) continue;
+        const actual = mapa.get(figura.id) ?? { clase: figura.clase, pisos: [] };
+        actual.pisos.push(Number(numero));
+        mapa.set(figura.id, actual);
+      }
+    }
+    return mapa;
+  }, [planos]);
+  const infoConector = conector ? conexiones.get(conector) : undefined;
+  const destinos = (infoConector?.pisos ?? []).filter((p) => p !== piso).sort((a, b) => a - b);
+
   const mapaEspacios = useMemo(() => new Map(espacios.map((e) => [e.id, e])), [espacios]);
-  const setResaltados = useMemo(() => new Set(resaltados), [resaltados]);
+  const setResaltados = useMemo(
+    () => new Set(conector ? [...resaltados, conector] : resaltados),
+    [resaltados, conector],
+  );
   const seleccionado =
     seleccionadoControlado !== undefined ? seleccionadoControlado : seleccionInterna;
 
@@ -142,6 +162,7 @@ export default function Mapa3D({
 
   const alSeleccionar = (id: string | null) => {
     setSeleccionInterna(id);
+    setConector(null);
     onSeleccionar?.(id);
   };
 
@@ -183,7 +204,9 @@ export default function Mapa3D({
                 espacios={mapaEspacios}
                 resaltados={setResaltados}
                 seleccionado={seleccionado}
+                conector={conector}
                 onSeleccionar={alSeleccionar}
+                onConector={setConector}
               />
             </Canvas>
           </LimiteError>
@@ -216,6 +239,44 @@ export default function Mapa3D({
                 </button>
               )}
             </div>
+          )}
+
+          {conector && infoConector && (
+            <section
+              aria-label={`${infoConector.clase === 'ascensor' ? 'Ascensor' : 'Escalera'} ${conector}`}
+              className="absolute bottom-3 left-3 flex max-w-xs flex-col gap-2 rounded-lg bg-white/95 p-3 text-sm shadow"
+            >
+              <p className="font-medium text-indigo-950">
+                {infoConector.clase === 'ascensor' ? 'Ascensor' : 'Escalera'} {conector}
+              </p>
+              {destinos.length === 0 ? (
+                <p className="text-slate-600">No conecta con otros pisos en los planos cargados.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  {destinos.map((destino) => (
+                    <button
+                      key={destino}
+                      type="button"
+                      onClick={() => setPisoElegido(destino)}
+                      className="rounded-md bg-indigo-900 px-3 py-1 text-white hover:bg-indigo-800"
+                    >
+                      {typeof piso !== 'number'
+                        ? `Ir al piso ${destino}`
+                        : destino > piso
+                          ? `Subir al piso ${destino}`
+                          : `Bajar al piso ${destino}`}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setConector(null)}
+                className="self-start text-slate-600 underline"
+              >
+                Cerrar
+              </button>
+            </section>
           )}
         </>
       )}

@@ -41,8 +41,12 @@ const FRACCION_ASCENSOR = 0.4;
 /** Tolerancia (unidades del plano) para reconocer la misma figura entre dos exportaciones. */
 const TOLERANCIA_POSICION = 4;
 
-/** Clases que son espacios reservables (llevan código de la base de datos). */
-const CLASES_CON_CODIGO = new Set(['aula', 'laboratorio', 'auditorio']);
+/**
+ * Clases que llevan código: los espacios reservables (código de la base de datos) y las
+ * escaleras y ascensores, que deben tener el MISMO código en cada piso para que el mapa 3D
+ * sepa que son la misma y permita subir y bajar entre pisos.
+ */
+const CLASES_CON_CODIGO = new Set(['aula', 'laboratorio', 'auditorio', 'escalera', 'ascensor']);
 
 // ---------------------------------------------------------------------------
 // Geometría

@@ -23,7 +23,7 @@ Sin dependencias; requiere Node 18 o superior.
    - `piso-N.codigos.json`: la tabla figura → código.
    - `piso-N.svg`: el plano limpio.
 3. Completar `codigo` en la tabla para los espacios reservables (aula, laboratorio y auditorio),
-   por ejemplo `NUE-101`.
+   por ejemplo `NUE-101`, y para las escaleras y ascensores (ver más abajo).
 4. Volver a ejecutar el script: el `id` de cada figura pasa a ser su código.
 5. Copiar `piso-N.svg` a `assets/planos/`.
 
@@ -56,3 +56,10 @@ El script clasifica por color de relleno. Si se cambia un color, hay que actuali
 
 Se ignoran el título, la nota adhesiva y las etiquetas. Los trazos sin relleno que no son
 rectángulos se conservan como muros (perímetro y muros interiores).
+
+## Escaleras y ascensores entre pisos
+
+El mapa 3D permite subir y bajar entre pisos desde una escalera o un ascensor. Para saber que la
+escalera del piso 1 es la misma que la del piso 2, **su figura debe llevar el mismo código en
+cada plano** (por ejemplo `NUE-escalera-1` en `piso-1.svg`, `piso-2.svg` y `piso-3.svg`). Si el
+código difiere entre pisos, el mapa los trata como escaleras distintas y no ofrece subir.
