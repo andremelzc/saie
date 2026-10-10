@@ -3,10 +3,14 @@ import { RolCuenta } from '@prisma/client';
 import {
   altaAlumno,
   altaDocente,
+  altaEspacio,
   consultarMapaOcupacion,
+  editarEspacio,
   listarAlertas,
   listarEscaladas,
+  listarEspaciosAdmin,
   listarIncidenciasReportadas,
+  obtenerEspacio,
   registrarPcsMalogradasLaboratorio,
   registrarSoftwareLaboratorio,
   resolverAlertaPendiente,
@@ -42,8 +46,16 @@ router.get('/secciones-escaladas', listarEscaladas);
 router.get('/incidencias', listarIncidenciasReportadas);
 router.patch('/incidencias/:id/resolver', resolverIncidencia);
 
-// Alta individual de usuarios: solo Coordinación Académica (Issues 4.17 y 4.18)
 const soloCoordinacion = roleGuard(RolCuenta.COORDINACION_ACADEMICA);
+
+// Gestión de espacios con campos acotados por rol (Issue 4.15): el alta es solo de
+// Coordinación; la edición la restringe el servicio según el rol y el tipo de espacio.
+router.get('/espacios', listarEspaciosAdmin);
+router.get('/espacios/:id', obtenerEspacio);
+router.post('/espacios', soloCoordinacion, altaEspacio);
+router.patch('/espacios/:id', editarEspacio);
+
+// Alta individual de usuarios: solo Coordinación Académica (Issues 4.17 y 4.18)
 router.post('/alumnos', soloCoordinacion, altaAlumno);
 router.post('/docentes', soloCoordinacion, altaDocente);
 

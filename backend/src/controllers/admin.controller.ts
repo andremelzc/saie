@@ -1,11 +1,19 @@
 import { Request, Response } from 'express';
-import { EstadoIncidencia, PrioridadIncidencia, TipoAlerta } from '@prisma/client';
+import { EstadoIncidencia, PrioridadIncidencia, TipoAlerta, TipoEspacio } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { responderError } from '../lib/http';
 import { filtrosDeMapa, MapaOcupacionQuerySchema } from '../lib/franja';
 import { obtenerOcupacionPorPiso } from '../services/ocupacion.service';
 import { listarSeccionesEscaladas } from '../services/revision.service';
+import {
+  actualizarEspacio,
+  ActualizarEspacioSchema,
+  crearEspacio,
+  CrearEspacioSchema,
+  listarEspacios,
+  obtenerEspacioAdmin,
+} from '../services/espacioAdmin.service';
 import {
   AltaAlumnoSchema,
   AltaDocenteSchema,
@@ -185,6 +193,61 @@ export async function altaDocente(req: Request, res: Response): Promise<void> {
     const entrada = AltaDocenteSchema.parse(req.body);
     const data = await crearDocente(entrada, prisma);
     res.status(201).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+const EspaciosQuerySchema = z.object({
+  tipo: z.enum(TipoEspacio, { error: 'El tipo de espacio no es válido' }).optional(),
+  pabellon: z.string().trim().min(1).optional(),
+  piso: z.coerce.number().int('El piso debe ser un entero').optional(),
+});
+
+const EspacioParamSchema = z.object({
+  id: z.string().min(1, 'El id del espacio es requerido'),
+});
+
+/** Issue 4.15 — GET /api/v1/admin/espacios[?tipo=&pabellon=&piso=] */
+export async function listarEspaciosAdmin(req: Request, res: Response): Promise<void> {
+  try {
+    const filtros = EspaciosQuerySchema.parse(req.query);
+    const data = await listarEspacios(filtros, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.15 — GET /api/v1/admin/espacios/:id */
+export async function obtenerEspacio(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = EspacioParamSchema.parse(req.params);
+    const data = await obtenerEspacioAdmin(id, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.15 — POST /api/v1/admin/espacios (solo Coordinación Académica) */
+export async function altaEspacio(req: Request, res: Response): Promise<void> {
+  try {
+    const entrada = CrearEspacioSchema.parse(req.body);
+    const data = await crearEspacio(entrada, req.auth!, prisma);
+    res.status(201).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.15 — PATCH /api/v1/admin/espacios/:id (campos acotados por rol) */
+export async function editarEspacio(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = EspacioParamSchema.parse(req.params);
+    const entrada = ActualizarEspacioSchema.parse(req.body);
+    const data = await actualizarEspacio(id, entrada, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);
   }
