@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
+import { TipoAlerta } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { responderError } from '../lib/http';
+import { listarAlertasActivas, resolverAlerta } from '../services/alerta.service';
 import {
   registrarCambioPcsMalogradas,
   registrarCambioSoftware,
@@ -9,6 +11,15 @@ import {
 
 const LaboratorioParamSchema = z.object({
   id: z.string().min(1, 'El id del laboratorio es requerido'),
+});
+
+const AlertaParamSchema = z.object({
+  id: z.string().min(1, 'El id de la alerta es requerido'),
+});
+
+const AlertasQuerySchema = z.object({
+  tipo: z.enum(TipoAlerta, { error: 'El tipo de alerta no es válido' }).optional(),
+  espacioId: z.string().trim().min(1).optional(),
 });
 
 const CambioSoftwareSchema = z.object({
@@ -52,6 +63,28 @@ export async function registrarPcsMalogradasLaboratorio(
     const { pcsMalogradas } = CambioPcsSchema.parse(req.body);
     const resultado = await registrarCambioPcsMalogradas(id, pcsMalogradas, req.auth!, prisma);
     res.status(200).json({ success: true, data: resultado });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.6 — GET /api/v1/admin/alertas[?tipo=SOFTWARE|CAPACIDAD&espacioId=...] */
+export async function listarAlertas(req: Request, res: Response): Promise<void> {
+  try {
+    const filtros = AlertasQuerySchema.parse(req.query);
+    const data = await listarAlertasActivas(filtros, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.7 — PATCH /api/v1/admin/alertas/:id/resolver */
+export async function resolverAlertaPendiente(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = AlertaParamSchema.parse(req.params);
+    const data = await resolverAlerta(id, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);
   }
