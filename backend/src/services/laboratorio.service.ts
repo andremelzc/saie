@@ -1,5 +1,6 @@
 import { CampoHistorialEspacio, PrismaClient, TipoAlerta, TipoEspacio } from '@prisma/client';
 import { HttpError } from '../lib/http';
+import { emitirAlertasCreadas } from '../events/emisores';
 import { AlertaRegistradaDTO } from '../types/alertas';
 import { TokenPayload } from '../types/auth';
 import { verificarAccesoEspacio } from './acceso.service';
@@ -70,7 +71,7 @@ export async function registrarCambioSoftware(
   auth: TokenPayload,
   prisma: PrismaClient,
 ): Promise<ResultadoCambioLaboratorio> {
-  return prisma.$transaction(async (tx) => {
+  const resultado = await prisma.$transaction(async (tx) => {
     const lab = await obtenerLaboratorio(laboratorioId, tx);
     await verificarAccesoEspacio(auth, lab.id, tx);
 
@@ -124,6 +125,10 @@ export async function registrarCambioSoftware(
       alertas: alerta ? [alerta] : [],
     };
   });
+
+  // Issue 2.16: el evento sale una vez confirmada la transacción, nunca dentro de ella.
+  emitirAlertasCreadas(resultado.alertas);
+  return resultado;
 }
 
 /**
@@ -139,7 +144,7 @@ export async function registrarCambioPcsMalogradas(
   auth: TokenPayload,
   prisma: PrismaClient,
 ): Promise<ResultadoCambioLaboratorio> {
-  return prisma.$transaction(async (tx) => {
+  const resultado = await prisma.$transaction(async (tx) => {
     const lab = await obtenerLaboratorio(laboratorioId, tx);
     await verificarAccesoEspacio(auth, lab.id, tx);
 
@@ -198,4 +203,8 @@ export async function registrarCambioPcsMalogradas(
       alertas: alerta ? [alerta] : [],
     };
   });
+
+  // Issue 2.16: el evento sale una vez confirmada la transacción, nunca dentro de ella.
+  emitirAlertasCreadas(resultado.alertas);
+  return resultado;
 }
