@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { RolCuenta } from '@prisma/client';
 import {
+  consultarMapaOcupacion,
   listarAlertas,
   registrarPcsMalogradasLaboratorio,
   registrarSoftwareLaboratorio,
@@ -25,5 +26,8 @@ router.get('/alertas', listarAlertas);
 
 // PATCH /api/v1/admin/alertas/:id/resolver (Issue 4.7)
 router.patch('/alertas/:id/resolver', resolverAlertaPendiente);
+
+// GET /api/v1/admin/mapa-ocupacion (Issue 4.12)
+router.get('/mapa-ocupacion', consultarMapaOcupacion);
 
 export default router;

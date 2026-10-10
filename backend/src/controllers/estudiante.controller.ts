@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { responderError } from '../lib/http';
 import { normalizarDia } from '../lib/horario';
+import { filtrosDeMapa, MapaOcupacionQuerySchema } from '../lib/franja';
+import { obtenerMapaLectura } from '../services/ocupacion.service';
 import {
   ActualizarPerfilSchema,
   actualizarPerfilAlumno,
@@ -69,6 +71,17 @@ export async function actualizarPerfil(req: Request, res: Response): Promise<voi
     const entrada = ActualizarPerfilSchema.parse(req.body);
     const data = await actualizarPerfilAlumno(req.auth!.sub, entrada, prisma);
     sinCache(res);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 3.13 — GET /api/v1/estudiante/mapa-ocupacion?pabellon=A&piso=1 (solo libre/ocupado) */
+export async function consultarMapaOcupacion(req: Request, res: Response): Promise<void> {
+  try {
+    const q = MapaOcupacionQuerySchema.parse(req.query);
+    const data = await obtenerMapaLectura(filtrosDeMapa(q), prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);

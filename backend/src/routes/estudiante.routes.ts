@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { RolCuenta } from '@prisma/client';
 import {
   actualizarPerfil,
+  consultarMapaOcupacion,
   listarCursos,
   obtenerHorario,
   obtenerPerfil,
@@ -17,5 +18,6 @@ router.get('/horario', obtenerHorario); // Issue 3.10
 router.get('/cursos', listarCursos); // Issue 3.11
 router.get('/perfil', obtenerPerfil); // Issue 3.12
 router.patch('/perfil', actualizarPerfil); // Issue 3.12
+router.get('/mapa-ocupacion', consultarMapaOcupacion); // Issue 3.13
 
 export default router;

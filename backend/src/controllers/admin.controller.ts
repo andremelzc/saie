@@ -3,6 +3,8 @@ import { TipoAlerta } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { responderError } from '../lib/http';
+import { filtrosDeMapa, MapaOcupacionQuerySchema } from '../lib/franja';
+import { obtenerOcupacionPorPiso } from '../services/ocupacion.service';
 import { listarAlertasActivas, resolverAlerta } from '../services/alerta.service';
 import {
   registrarCambioPcsMalogradas,
@@ -84,6 +86,20 @@ export async function resolverAlertaPendiente(req: Request, res: Response): Prom
   try {
     const { id } = AlertaParamSchema.parse(req.params);
     const data = await resolverAlerta(id, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/**
+ * Issue 4.12 — GET /api/v1/admin/mapa-ocupacion?pabellon=A&piso=1[&dia=&horaInicio=&horaFin=]
+ * Sin franja se usa el momento actual (hora de Lima).
+ */
+export async function consultarMapaOcupacion(req: Request, res: Response): Promise<void> {
+  try {
+    const q = MapaOcupacionQuerySchema.parse(req.query);
+    const data = await obtenerOcupacionPorPiso(filtrosDeMapa(q), prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);
