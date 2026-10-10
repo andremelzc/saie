@@ -12,9 +12,9 @@
 // Sin dependencias. Detecta las figuras por color de relleno y descarta el título, la nota
 // y las etiquetas (que Canva exporta como trazos, no como texto).
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // ---------------------------------------------------------------------------
 // Convención de colores del dibujo (acordada con quien dibuja el plano)
@@ -22,24 +22,18 @@ import { fileURLToPath } from "node:url";
 
 /** Color de relleno -> clase del espacio. El lila es ambiguo y se resuelve por tamaño. */
 const COLOR_A_CLASE = {
-  "#b2d9ff": "aula",
-  "#ffbdbd": "escalera",
-  "#ff86e4": "bano",
-  "#efe7cb": "administrativo",
-  "#d3c8ff": "laboratorio-o-ascensor",
-  "#d0ffaf": "patio",
-  "#802323": "auditorio",
-  "#faff93": "biblioteca",
+  '#b2d9ff': 'aula',
+  '#ffbdbd': 'escalera',
+  '#ff86e4': 'bano',
+  '#efe7cb': 'administrativo',
+  '#d3c8ff': 'laboratorio-o-ascensor',
+  '#d0ffaf': 'patio',
+  '#802323': 'auditorio',
+  '#faff93': 'biblioteca',
 };
 
 /** Colores que se descartan: la nota adhesiva y el fondo. */
-const COLORES_IGNORADOS = new Set([
-  "#fdf9b4",
-  "#ffffff",
-  "#000000",
-  "#11171d",
-  "#394c60",
-]);
+const COLORES_IGNORADOS = new Set(['#fdf9b4', '#ffffff', '#000000', '#11171d', '#394c60']);
 
 /** Un ascensor mide menos de esta fracción del área de un salón (la nota dice 30x30 frente a 100x80). */
 const FRACCION_ASCENSOR = 0.4;
@@ -48,7 +42,7 @@ const FRACCION_ASCENSOR = 0.4;
 const TOLERANCIA_POSICION = 4;
 
 /** Clases que son espacios reservables (llevan código de la base de datos). */
-const CLASES_CON_CODIGO = new Set(["aula", "laboratorio", "auditorio"]);
+const CLASES_CON_CODIGO = new Set(['aula', 'laboratorio', 'auditorio']);
 
 // ---------------------------------------------------------------------------
 // Geometría
@@ -70,16 +64,13 @@ function componer(p, c) {
 function parsearTransform(valor) {
   if (!valor) return IDENTIDAD;
   let m = IDENTIDAD;
-  for (const [, tipo, args] of valor.matchAll(
-    /(matrix|translate|scale)\(([^)]*)\)/g,
-  )) {
+  for (const [, tipo, args] of valor.matchAll(/(matrix|translate|scale)\(([^)]*)\)/g)) {
     const n = args
       .split(/[\s,]+/)
       .filter(Boolean)
       .map(Number);
-    if (tipo === "matrix") m = componer(m, n);
-    else if (tipo === "translate")
-      m = componer(m, [1, 0, 0, 1, n[0], n[1] ?? 0]);
+    if (tipo === 'matrix') m = componer(m, n);
+    else if (tipo === 'translate') m = componer(m, [1, 0, 0, 1, n[0], n[1] ?? 0]);
     else m = componer(m, [n[0], 0, 0, n[1] ?? n[0], 0, 0]);
   }
   return m;
@@ -91,23 +82,22 @@ function aplicar(m, [x, y]) {
 
 /** Puntos de un path hecho solo de M/L/H/V/Z absolutos; `null` si trae curvas (letras). */
 function puntosDePath(d) {
-  const tokens =
-    d.match(/[MLHVZCSQTAmlhvzcsqta]|-?\d*\.?\d+(?:e-?\d+)?/g) ?? [];
+  const tokens = d.match(/[MLHVZCSQTAmlhvzcsqta]|-?\d*\.?\d+(?:e-?\d+)?/g) ?? [];
   const puntos = [];
-  let cmd = "";
+  let cmd = '';
   let x = 0;
   let y = 0;
   for (let i = 0; i < tokens.length;) {
     if (/[A-Za-z]/.test(tokens[i])) cmd = tokens[i++];
-    if (cmd === "Z" || cmd === "z") continue;
-    if (cmd === "M" || cmd === "L") {
+    if (cmd === 'Z' || cmd === 'z') continue;
+    if (cmd === 'M' || cmd === 'L') {
       x = Number(tokens[i++]);
       y = Number(tokens[i++]);
       puntos.push([x, y]);
-    } else if (cmd === "H") {
+    } else if (cmd === 'H') {
       x = Number(tokens[i++]);
       puntos.push([x, y]);
-    } else if (cmd === "V") {
+    } else if (cmd === 'V') {
       y = Number(tokens[i++]);
       puntos.push([x, y]);
     } else {
@@ -130,14 +120,11 @@ const redondear = (n) => Math.round(n * 100) / 100;
 /** Quita el cierre repetido (M ... L al punto inicial) y los puntos duplicados consecutivos. */
 function simplificar(puntos) {
   const salida = puntos.filter(
-    (p, i) =>
-      i === 0 ||
-      Math.hypot(p[0] - puntos[i - 1][0], p[1] - puntos[i - 1][1]) > 0.01,
+    (p, i) => i === 0 || Math.hypot(p[0] - puntos[i - 1][0], p[1] - puntos[i - 1][1]) > 0.01,
   );
   const a = salida[0];
   const b = salida[salida.length - 1];
-  if (salida.length > 1 && Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.01)
-    salida.pop();
+  if (salida.length > 1 && Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.01) salida.pop();
   return salida;
 }
 
@@ -153,7 +140,7 @@ function atributos(texto) {
 
 /** Recorre el SVG acumulando transformaciones y devuelve cada path con su matriz absoluta. */
 function leerElementos(svg) {
-  const inicio = svg.indexOf("</defs>");
+  const inicio = svg.indexOf('</defs>');
   const cuerpo = inicio >= 0 ? svg.slice(inicio + 7) : svg;
   const pila = [IDENTIDAD];
   const elementos = [];
@@ -162,18 +149,15 @@ function leerElementos(svg) {
     /<(\/?)([a-zA-Z]+)([^>]*?)(\/?)>/g,
   )) {
     if (cierre) {
-      if (etiqueta === "g") pila.pop();
+      if (etiqueta === 'g') pila.pop();
       continue;
     }
     const attrs = atributos(resto);
-    const matriz = componer(
-      pila[pila.length - 1],
-      parsearTransform(attrs.transform),
-    );
+    const matriz = componer(pila[pila.length - 1], parsearTransform(attrs.transform));
 
-    if (etiqueta === "g") {
+    if (etiqueta === 'g') {
       if (!autocierre) pila.push(matriz);
-    } else if (etiqueta === "path" || etiqueta === "rect") {
+    } else if (etiqueta === 'path' || etiqueta === 'rect') {
       elementos.push({ etiqueta, attrs, matriz });
     }
   }
@@ -182,7 +166,7 @@ function leerElementos(svg) {
 
 function aPuntosAbsolutos(el) {
   let locales;
-  if (el.etiqueta === "rect") {
+  if (el.etiqueta === 'rect') {
     const x = Number(el.attrs.x ?? 0);
     const y = Number(el.attrs.y ?? 0);
     const w = Number(el.attrs.width);
@@ -194,7 +178,7 @@ function aPuntosAbsolutos(el) {
       [x, y + h],
     ];
   } else {
-    locales = puntosDePath(el.attrs.d ?? "");
+    locales = puntosDePath(el.attrs.d ?? '');
   }
   return locales ? locales.map((p) => aplicar(el.matriz, p)) : null;
 }
@@ -210,19 +194,19 @@ function extraerFiguras(elementos) {
   const muros = [];
 
   for (const el of elementos) {
-    const fill = (el.attrs.fill ?? "").toLowerCase();
+    const fill = (el.attrs.fill ?? '').toLowerCase();
     const puntos = aPuntosAbsolutos(el);
     if (!puntos || puntos.length < 3) continue;
 
     // Muros: líneas de trazo sin relleno. Los contornos de los espacios son rectángulos
     // de 4 vértices y se descartan; quedan el perímetro y los muros interiores.
-    if (fill === "none" && el.attrs.stroke) {
+    if (fill === 'none' && el.attrs.stroke) {
       const simples = simplificar(puntos);
       if (simples.length > 4) muros.push(simples);
       continue;
     }
 
-    if (COLORES_IGNORADOS.has(fill) || !fill.startsWith("#")) continue;
+    if (COLORES_IGNORADOS.has(fill) || !fill.startsWith('#')) continue;
 
     const clase = COLOR_A_CLASE[fill];
     if (!clase) {
@@ -245,17 +229,14 @@ function extraerFiguras(elementos) {
 /** Resuelve el lila (laboratorio o ascensor) comparando el área con la de un salón típico. */
 function resolverAmbiguos(figuras) {
   const areas = figuras
-    .filter((f) => f.clase === "aula")
+    .filter((f) => f.clase === 'aula')
     .map((f) => f.w * f.h)
     .sort((a, b) => a - b);
   const areaSalon = areas.length ? areas[Math.floor(areas.length / 2)] : 0;
 
   for (const f of figuras) {
-    if (f.clase !== "laboratorio-o-ascensor") continue;
-    f.clase =
-      areaSalon && f.w * f.h < areaSalon * FRACCION_ASCENSOR
-        ? "ascensor"
-        : "laboratorio";
+    if (f.clase !== 'laboratorio-o-ascensor') continue;
+    f.clase = areaSalon && f.w * f.h < areaSalon * FRACCION_ASCENSOR ? 'ascensor' : 'laboratorio';
   }
 }
 
@@ -278,10 +259,7 @@ function ordenarLectura(figuras) {
 function normalizar(figuras, muros, margen = 20) {
   const todos = [...figuras.flatMap((f) => f.poligono), ...muros.flat()];
   const c = caja(todos);
-  const mover = ([x, y]) => [
-    redondear(x - c.x + margen),
-    redondear(y - c.y + margen),
-  ];
+  const mover = ([x, y]) => [redondear(x - c.x + margen), redondear(y - c.y + margen)];
 
   for (const f of figuras) {
     f.poligono = f.poligono.map(mover);
@@ -296,7 +274,7 @@ function normalizar(figuras, muros, margen = 20) {
 
 function cargarTabla(ruta) {
   if (!existsSync(ruta)) return { figuras: [], sinFigura: [] };
-  const tabla = JSON.parse(readFileSync(ruta, "utf-8"));
+  const tabla = JSON.parse(readFileSync(ruta, 'utf-8'));
   return { figuras: tabla.figuras ?? [], sinFigura: tabla.sinFigura ?? [] };
 }
 
@@ -324,13 +302,11 @@ function asignarCodigos(figuras, tablaPrevia, piso) {
     );
 
     n += 1;
-    f.figura = `FIG-${String(n).padStart(2, "0")}`;
-    f.codigo = previa?.codigo ?? "";
+    f.figura = `FIG-${String(n).padStart(2, '0')}`;
+    f.codigo = previa?.codigo ?? '';
     f.id = f.codigo || f.figura;
     if (!previa && CLASES_CON_CODIGO.has(f.clase)) {
-      avisos.push(
-        `${f.figura} (${f.clase}) no tiene código asignado: usa el id provisional`,
-      );
+      avisos.push(`${f.figura} (${f.clase}) no tiene código asignado: usa el id provisional`);
     }
   }
 
@@ -352,11 +328,7 @@ function asignarCodigos(figuras, tablaPrevia, piso) {
   return { avisos, sinFigura };
 }
 
-const esc = (s) =>
-  String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;");
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
 function esRectangulo(f) {
   return (
@@ -370,45 +342,33 @@ function esRectangulo(f) {
 }
 
 function figuraSvg(f) {
-  const atributosComunes = `id="${esc(f.id)}" class="${f.clase === "aula" || f.clase === "laboratorio" ? `espacio ${f.clase}` : f.clase}" data-clase="${f.clase}"`;
+  const atributosComunes = `id="${esc(f.id)}" class="${f.clase === 'aula' || f.clase === 'laboratorio' ? `espacio ${f.clase}` : f.clase}" data-clase="${f.clase}"`;
   if (esRectangulo(f)) {
     return `<rect ${atributosComunes} x="${redondear(f.x)}" y="${redondear(f.y)}" width="${redondear(f.w)}" height="${redondear(f.h)}"/>`;
   }
-  const puntos = f.poligono.map((p) => p.join(",")).join(" ");
+  const puntos = f.poligono.map((p) => p.join(',')).join(' ');
   return `<polygon ${atributosComunes} points="${puntos}"/>`;
 }
 
 const GRUPOS = [
-  ["patios", ["patio"]],
-  [
-    "espacios",
-    [
-      "aula",
-      "laboratorio",
-      "auditorio",
-      "administrativo",
-      "biblioteca",
-      "bano",
-    ],
-  ],
-  ["escaleras", ["escalera"]],
-  ["ascensores", ["ascensor"]],
+  ['patios', ['patio']],
+  ['espacios', ['aula', 'laboratorio', 'auditorio', 'administrativo', 'biblioteca', 'bano']],
+  ['escaleras', ['escalera']],
+  ['ascensores', ['ascensor']],
 ];
 
 function generarSvgLimpio(figuras, geometria, piso) {
   const capas = GRUPOS.map(([nombre, clases]) => {
-    const items = figuras
-      .filter((f) => clases.includes(f.clase))
-      .map(figuraSvg);
-    return `  <g id="${nombre}">\n${items.map((i) => `    ${i}`).join("\n")}\n  </g>`;
-  }).join("\n");
+    const items = figuras.filter((f) => clases.includes(f.clase)).map(figuraSvg);
+    return `  <g id="${nombre}">\n${items.map((i) => `    ${i}`).join('\n')}\n  </g>`;
+  }).join('\n');
   const lineas = geometria.muros
     .map(
       (m, i) =>
-        `    <polyline id="muro-${i + 1}" class="muro" points="${m.map((p) => p.join(",")).join(" ")}"/>`,
+        `    <polyline id="muro-${i + 1}" class="muro" fill="none" stroke="#4a4a44" stroke-width="2" points="${m.map((p) => p.join(',')).join(' ')}"/>`,
     )
-    .join("\n");
-  const muros = lineas ? `  <g id="muros">\n${lineas}\n  </g>\n` : "";
+    .join('\n');
+  const muros = lineas ? `  <g id="muros">\n${lineas}\n  </g>\n` : '';
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${geometria.ancho} ${geometria.alto}" role="img" data-piso="${piso}">
@@ -426,17 +386,14 @@ ${muros}</svg>
 }
 
 function generarPreview(figuras, geometria, piso) {
-  const base = generarSvgLimpio(figuras, geometria, piso).replace(
-    "</svg>\n",
-    "",
-  );
+  const base = generarSvgLimpio(figuras, geometria, piso).replace('</svg>\n', '');
   const etiquetas = figuras
-    .filter((f) => f.clase !== "patio")
+    .filter((f) => f.clase !== 'patio')
     .map(
       (f) =>
         `<text x="${redondear(f.x + f.w / 2)}" y="${redondear(f.y + f.h / 2)}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="7" fill="#000">${esc(f.codigo || f.figura)}</text>`,
     )
-    .join("\n    ");
+    .join('\n    ');
   return `${base}  <g id="rotulos">\n    ${etiquetas}\n  </g>\n</svg>\n`;
 }
 
@@ -446,29 +403,25 @@ function generarPreview(figuras, geometria, piso) {
 
 function main() {
   const args = process.argv.slice(2);
-  const entrada = args.find((a) => !a.startsWith("--"));
+  const entrada = args.find((a) => !a.startsWith('--'));
   const opcion = (nombre) => {
     const i = args.indexOf(`--${nombre}`);
     return i >= 0 ? args[i + 1] : undefined;
   };
-  const piso = opcion("piso");
+  const piso = opcion('piso');
 
   if (!entrada || !piso) {
-    console.error(
-      "Uso: node convertir-plano.mjs <exportacion.svg> --piso N [--out carpeta]",
-    );
+    console.error('Uso: node convertir-plano.mjs <exportacion.svg> --piso N [--out carpeta]');
     process.exit(1);
   }
 
   const aqui = path.dirname(fileURLToPath(import.meta.url));
-  const salida = path.resolve(
-    opcion("out") ?? path.join(aqui, "salida", `piso-${piso}`),
-  );
+  const salida = path.resolve(opcion('out') ?? path.join(aqui, 'salida', `piso-${piso}`));
   mkdirSync(salida, { recursive: true });
   const rutaTabla = path.join(salida, `piso-${piso}.codigos.json`);
 
   const { figuras, muros, advertencias } = extraerFiguras(
-    leerElementos(readFileSync(entrada, "utf-8")),
+    leerElementos(readFileSync(entrada, 'utf-8')),
   );
   resolverAmbiguos(figuras);
   const geometria = normalizar(figuras, muros);
@@ -511,20 +464,17 @@ function main() {
       },
       null,
       2,
-    ) + "\n",
+    ) + '\n',
   );
 
   const porClase = Object.entries(
-    ordenadas.reduce(
-      (acc, f) => ({ ...acc, [f.clase]: (acc[f.clase] ?? 0) + 1 }),
-      {},
-    ),
+    ordenadas.reduce((acc, f) => ({ ...acc, [f.clase]: (acc[f.clase] ?? 0) + 1 }), {}),
   )
     .map(([c, n]) => `${c}: ${n}`)
-    .join(", ");
+    .join(', ');
   console.log(`Figuras detectadas (${ordenadas.length}): ${porClase}`);
   console.log(
-    `Muros: ${muros.length} (${muros.map((m) => `${m.length} vértices`).join(", ") || "ninguno"})`,
+    `Muros: ${muros.length} (${muros.map((m) => `${m.length} vértices`).join(', ') || 'ninguno'})`,
   );
   console.log(`Salida en ${salida}`);
   for (const a of avisos) console.warn(`AVISO: ${a}`);
