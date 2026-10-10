@@ -7,6 +7,7 @@ import { normalizarDia } from '../lib/horario';
 import {
   CrearIncidenciaSchema,
   explorarEspacios,
+  obtenerEstadoLaboratorioDocente,
   obtenerHorarioDocente,
   registrarIncidencia,
 } from '../services/docente.service';
@@ -98,6 +99,19 @@ export async function crearIncidencia(req: Request, res: Response): Promise<void
     const entrada = CrearIncidenciaSchema.parse(req.body);
     const data = await registrarIncidencia(req.auth!.sub, entrada, prisma);
     res.status(201).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 7.4 — GET /api/v1/docente/laboratorio-estado/:espacioId */
+export async function obtenerEstadoLaboratorio(req: Request, res: Response): Promise<void> {
+  try {
+    const { espacioId } = z
+      .object({ espacioId: z.string().min(1, 'El id del laboratorio es requerido') })
+      .parse(req.params);
+    const data = await obtenerEstadoLaboratorioDocente(req.auth!.sub, espacioId, prisma);
+    res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);
   }
