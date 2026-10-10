@@ -104,10 +104,7 @@ describe('Issue 5.11 — Registro de auditoría: Asignación individual exitosa'
       $transaction: jest.fn().mockImplementation(async (cb) => cb(mockTx)),
     };
 
-    const resultado = await procesarAsignacionSeccionIndividual(
-      'sec-audit-1',
-      mockPrisma as any,
-    );
+    const resultado = await procesarAsignacionSeccionIndividual('sec-audit-1', mockPrisma as any);
 
     // La asignación fue exitosa
     expect(resultado.estado).toBe(EstadoAsignacion.VIGENTE);
@@ -185,10 +182,7 @@ describe('Issue 5.11 — Registro de auditoría: Escalamiento a revisión manual
       $transaction: jest.fn().mockImplementation(async (cb) => cb(mockTx)),
     };
 
-    const resultado = await procesarAsignacionSeccionIndividual(
-      'sec-audit-esc',
-      mockPrisma as any,
-    );
+    const resultado = await procesarAsignacionSeccionIndividual('sec-audit-esc', mockPrisma as any);
 
     // La sección escaló
     expect(resultado.estado).toBe(EstadoAsignacion.ESCALADA);
@@ -279,10 +273,9 @@ describe('Issue 5.11 — Registro de auditoría: Corrida batch del periodo', () 
 
     // Todos los registros deben tener tipoEvento válido
     for (const call of registroAuditoriaMock.create.mock.calls) {
-      expect([
-        TipoEventoAuditoria.ASIGNACION,
-        TipoEventoAuditoria.ESCALAMIENTO,
-      ]).toContain(call[0].data.tipoEvento);
+      expect([TipoEventoAuditoria.ASIGNACION, TipoEventoAuditoria.ESCALAMIENTO]).toContain(
+        call[0].data.tipoEvento,
+      );
     }
   });
 
@@ -359,9 +352,7 @@ describe('Issue 5.11 — Registro de auditoría: Corrida batch del periodo', () 
       espacioContiguo: { findMany: jest.fn().mockResolvedValue(mockContiguos) },
       seccion: { findMany: jest.fn().mockResolvedValue([mockSeccionAula]) },
       asignacion: {
-        findMany: jest
-          .fn()
-          .mockResolvedValue([asignacionPreviaDb]),
+        findMany: jest.fn().mockResolvedValue([asignacionPreviaDb]),
       },
       $transaction: jest.fn().mockImplementation(async (cb) => cb(mockTx)),
     };
@@ -379,7 +370,16 @@ describe('Issue 5.11 — Registro de auditoría: Corrida batch del periodo', () 
 
 describe('Issue 5.11 — Registro de auditoría: Alertas persistidas', () => {
   it('4a. registrarAlerta crea una alerta con fecha/hora automática (DEFAULT now())', async () => {
-    const alertaMock = { create: jest.fn().mockResolvedValue({ id: 'alert-1', tipo: 'SOFTWARE', espacioId: 'lab-1', motivo: 'Software faltante' }) };
+    const alertaMock = {
+      create: jest
+        .fn()
+        .mockResolvedValue({
+          id: 'alert-1',
+          tipo: 'SOFTWARE',
+          espacioId: 'lab-1',
+          motivo: 'Software faltante',
+        }),
+    };
     const mockDb = {
       alerta: {
         findMany: jest.fn().mockResolvedValue([]), // Sin alertas previas

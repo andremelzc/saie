@@ -17,10 +17,7 @@ import { DiaSemana, EstadoAsignacion, TipoEspacio } from '@prisma/client';
 import { EspacioConexo } from '../../../src/rules/buscarBloqueContiguo';
 import { ejecutarCorridaBatch, CorridaBatchInput } from '../../../src/rules/corridaBatch';
 import { orquestarAsignacionSeccion } from '../../../src/rules/orquestadorAsignacion';
-import {
-  AsignacionExistenteContexto,
-  SeccionInputMotor,
-} from '../../../src/types/asignacion';
+import { AsignacionExistenteContexto, SeccionInputMotor } from '../../../src/types/asignacion';
 
 // ============================================================
 // FIXTURES COMPARTIDOS
@@ -138,9 +135,7 @@ describe('Issue 5.7 — Flujo completo: Caso Feliz Individual', () => {
       stackSoftwareRequerido: ['VS Code', 'Node.js'],
       alumnosMatriculados: 15,
       movilidadReducida: false,
-      horarios: [
-        { diaSemana: DiaSemana.VIERNES, horaInicio: '08:00', horaFin: '11:00' },
-      ],
+      horarios: [{ diaSemana: DiaSemana.VIERNES, horaInicio: '08:00', horaFin: '11:00' }],
     };
 
     const resultado = orquestarAsignacionSeccion({
@@ -646,9 +641,7 @@ describe('Issue 5.7 — Flujo completo: Corrida batch integrada (todos los escen
     expect(escaladas[0].motivoEscalamiento).toBeDefined();
 
     // Sin colisiones de espacios entre vigentes en el mismo horario
-    const vigentes = resultado.resultados.filter(
-      (r) => r.estado === EstadoAsignacion.VIGENTE,
-    );
+    const vigentes = resultado.resultados.filter((r) => r.estado === EstadoAsignacion.VIGENTE);
     const espaciosEnLunes8a10 = vigentes
       .filter((r) => {
         const sec = secciones.find((s) => s.id === r.seccionId);
@@ -663,10 +656,8 @@ describe('Issue 5.7 — Flujo completo: Corrida batch integrada (todos los escen
     expect(unicos.size).toBe(espaciosEnLunes8a10.length);
 
     // Los totales del desglose son consistentes
-    const totalAulas =
-      resultado.desglosePorTipoEspacio[TipoEspacio.AULA_TEORICA].total;
-    const totalLabs =
-      resultado.desglosePorTipoEspacio[TipoEspacio.LABORATORIO].total;
+    const totalAulas = resultado.desglosePorTipoEspacio[TipoEspacio.AULA_TEORICA].total;
+    const totalLabs = resultado.desglosePorTipoEspacio[TipoEspacio.LABORATORIO].total;
     expect(totalAulas + totalLabs).toBe(4);
   });
 });
