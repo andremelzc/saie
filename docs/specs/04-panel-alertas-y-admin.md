@@ -63,8 +63,11 @@ Todas las rutas de `/api/v1/admin/*` exigen JWT válido de `COORDINACION_ACADEMI
   * Alumno: `{ codigo, nombre, correo, dni?, telefono?, direccion?, fechaNacimiento? }`. Docente: `{ codigoDocente, nombre, correoInstitucional, departamento }`.
 * `POST /api/v1/auth/cambiar-clave` (Issue 4.21, los 4 roles, JWT)
   * `{ claveActual, claveNueva }` con la nueva de 8 a 72 caracteres, distinta de la actual y del código de acceso. La cuenta sale del token. Baja la marca `debe_cambiar_clave`. 400 si la clave actual es incorrecta.
-* `POST /api/v1/admin/usuarios/restablecer-clave` (Issue 4.26, **pendiente**)
-  * Permite a Coordinación Académica restablecer la clave de cualquier alumno o docente.
+* `POST /api/v1/admin/usuarios/restablecer-clave` (Issue 4.26, solo Coordinación Académica)
+  * Cuerpo: `{ usuario }`, el **código** del alumno o docente o su **correo**. El código se busca primero; si no coincide y parece un correo, se busca por correo sin distinguir mayúsculas.
+  * Genera una clave inicial **aleatoria** (10 caracteres sin ambiguos como 0/O o 1/l, con generador criptográfico), guarda solo su hash bcrypt y pone `debe_cambiar_clave = true`. Respuesta: `{ codigo, nombre, rol, claveInicial, debeCambiarClave }`. La clave inicial se muestra **una sola vez** (la respuesta lleva `Cache-Control: no-store`) y Coordinación se la entrega al usuario, que debe cambiarla en su próximo ingreso con `POST /auth/cambiar-clave` (Issue 4.21).
+  * Errores: 404 si no existe; 409 si el correo corresponde a más de una persona (debe usarse el código); 403 si es una cuenta de Coordinación o Jefatura (cuentas de sistema); 422 si el alumno o docente no tiene cuenta de acceso; 400 si falta `usuario` o se envían campos desconocidos. Jefatura, alumno y docente reciben 403 y sin token 401.
+  * Limitaciones: no queda registro en `RegistroAuditoria` (no tiene referencia a cuentas) y los JWT ya emitidos siguen siendo válidos hasta que expiren.
 
 ---
 
