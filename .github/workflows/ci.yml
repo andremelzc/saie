@@ -94,8 +94,13 @@ jobs:
       - name: Generar cliente de Prisma
         run: npm run prisma:generate --workspace=backend
 
-      - name: Ejecutar pruebas unitarias y parametrizadas
-        # Nota: este workflow es la base del Issue 5.10a.
-        # El Issue 5.10b (Sprint 3) añade aquí los quality gates
-        # de cobertura ≥85% y 0 bugs críticos vía SonarCloud.
-        run: npm run test
+      - name: Ejecutar pruebas unitarias y parametrizadas con cobertura
+        # Issue 5.10b: Usar cobertura para el análisis de SonarCloud
+        run: npm run test:coverage --workspace=backend
+
+      - name: Analisis en SonarCloud
+        # Issue 5.10b: Quality Gate (cobertura >= 85%, 0 bugs)
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
