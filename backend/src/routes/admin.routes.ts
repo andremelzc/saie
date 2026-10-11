@@ -15,6 +15,7 @@ import {
   registrarSoftwareLaboratorio,
   resolverAlertaPendiente,
   resolverIncidencia,
+  restablecerClaveUsuario,
 } from '../controllers/admin.controller';
 import { authGuard, roleGuard } from '../middlewares/auth.middleware';
 
@@ -58,5 +59,8 @@ router.patch('/espacios/:id', editarEspacio);
 // Alta individual de usuarios: solo Coordinación Académica (Issues 4.17 y 4.18)
 router.post('/alumnos', soloCoordinacion, altaAlumno);
 router.post('/docentes', soloCoordinacion, altaDocente);
+
+// Restablecer la clave de un alumno o docente (Issue 4.26): solo Coordinación Académica.
+router.post('/usuarios/restablecer-clave', soloCoordinacion, restablecerClaveUsuario);
 
 export default router;

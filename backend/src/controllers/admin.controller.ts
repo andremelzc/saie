@@ -26,6 +26,7 @@ import {
   listarIncidencias,
 } from '../services/incidenciaAdmin.service';
 import { listarAlertasActivas, resolverAlerta } from '../services/alerta.service';
+import { restablecerClave, RestablecerClaveSchema } from '../services/restablecerClave.service';
 import {
   registrarCambioPcsMalogradas,
   registrarCambioSoftware,
@@ -247,6 +248,21 @@ export async function editarEspacio(req: Request, res: Response): Promise<void> 
     const { id } = EspacioParamSchema.parse(req.params);
     const entrada = ActualizarEspacioSchema.parse(req.body);
     const data = await actualizarEspacio(id, entrada, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/**
+ * Issue 4.26 — POST /api/v1/admin/usuarios/restablecer-clave (solo Coordinación Académica)
+ * Responde con la clave inicial en claro una sola vez; por eso la respuesta no se guarda en cachés.
+ */
+export async function restablecerClaveUsuario(req: Request, res: Response): Promise<void> {
+  try {
+    const entrada = RestablecerClaveSchema.parse(req.body);
+    const data = await restablecerClave(entrada, prisma);
+    res.setHeader('Cache-Control', 'no-store');
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);
