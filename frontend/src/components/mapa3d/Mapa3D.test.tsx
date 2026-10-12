@@ -18,7 +18,22 @@ vi.mock('@react-three/fiber', () => ({
 }));
 
 vi.mock('./Escena', () => ({
-  default: () => <div data-testid="escena-3d-mock" />,
+  default: ({
+    onConector,
+    onSeleccionar,
+  }: {
+    onConector: (id: string) => void;
+    onSeleccionar: (id: string | null) => void;
+  }) => (
+    <div data-testid="escena-3d-mock">
+      <button data-testid="btn-disparar-conector" onClick={() => onConector('NUE-ESC-1')}>
+        Conectar Escalera
+      </button>
+      <button data-testid="btn-disparar-seleccion" onClick={() => onSeleccionar('NUE-101')}>
+        Seleccionar Espacio
+      </button>
+    </div>
+  ),
 }));
 
 const SVG_MOCK_PISO_1 = `
@@ -182,6 +197,76 @@ describe('Mapa3D (Mapa3D.tsx) - Issue #269 / 5.23', () => {
           expect.stringContaining('El espacio NUE-999 no tiene figura en ningún plano'),
         );
       });
+    });
+
+    it('abre el panel de conector y permite subir de piso o cerrar el panel', async () => {
+      globalThis.fetch = vi.fn().mockImplementation((url) => {
+        if (String(url).includes('piso-1')) {
+          return Promise.resolve({
+            ok: true,
+            text: async () => SVG_MOCK_PISO_1,
+          } as unknown as Response);
+        }
+        return Promise.resolve({
+          ok: true,
+          text: async () => SVG_MOCK_PISO_2,
+        } as unknown as Response);
+      });
+
+      render(
+        <Mapa3D
+          planos={{ 1: '/planos/piso-1.svg', 2: '/planos/piso-2.svg' }}
+          espacios={[]}
+          fallback={<div>Fallback</div>}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('btn-disparar-conector')).toBeInTheDocument();
+      });
+
+      // Disparar clic en conector (escalera común a piso 1 y 2)
+      fireEvent.click(screen.getByTestId('btn-disparar-conector'));
+
+      // Verificar que se abre el panel con la opción "Subir al piso 2"
+      const btnSubir = await screen.findByRole('button', { name: /Subir al piso 2/i });
+      expect(btnSubir).toBeInTheDocument();
+
+      // Hacer clic en subir
+      fireEvent.click(btnSubir);
+      expect(screen.getByRole('button', { name: 'Piso 2' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+
+      // Cerrar el panel
+      const btnCerrar = screen.getByRole('button', { name: 'Cerrar' });
+      fireEvent.click(btnCerrar);
+      expect(screen.queryByText(/Escalera NUE-ESC-1/i)).not.toBeInTheDocument();
+    });
+
+    it('dispara onSeleccionar al hacer clic en un espacio de la escena', async () => {
+      const onSeleccionarMock = vi.fn();
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => SVG_MOCK_PISO_1,
+      } as unknown as Response);
+
+      render(
+        <Mapa3D
+          planos={{ 1: '/planos/piso-1.svg' }}
+          espacios={[{ id: 'NUE-101', tipo: 'AULA_TEORICA', estado: 'DISPONIBLE' }]}
+          onSeleccionar={onSeleccionarMock}
+          fallback={<div>Fallback</div>}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('btn-disparar-seleccion')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId('btn-disparar-seleccion'));
+      expect(onSeleccionarMock).toHaveBeenCalledWith('NUE-101');
     });
   });
 });

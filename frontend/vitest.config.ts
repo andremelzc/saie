@@ -19,6 +19,7 @@ export default defineConfig({
         'src/test/**',
         'src/**/*.d.ts',
         'src/components/mapa3d/demo/**',
+        'src/components/mapa3d/Escena.tsx',
       ],
     },
   },
