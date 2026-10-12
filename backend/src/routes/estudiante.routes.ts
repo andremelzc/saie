@@ -5,6 +5,7 @@ import {
   listarCursos,
   obtenerHorario,
   obtenerPerfil,
+  obtenerRuta,
 } from '../controllers/estudiante.controller';
 import { authGuard, roleGuard } from '../middlewares/auth.middleware';
 
@@ -17,5 +18,6 @@ router.get('/horario', obtenerHorario); // Issue 3.10
 router.get('/cursos', listarCursos); // Issue 3.11
 router.get('/perfil', obtenerPerfil); // Issue 3.12
 router.patch('/perfil', actualizarPerfil); // Issue 3.12
+router.get('/ruta/:asignacionId', obtenerRuta); // Issue 3.14 / 3.15
 
 export default router;
