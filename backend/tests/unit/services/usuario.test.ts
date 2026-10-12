@@ -70,10 +70,7 @@ describe('Alta de alumno (Issue 4.17)', () => {
     const db = dbAlumnoMock(true);
 
     await expect(
-      crearAlumno(
-        { codigo: 'A2026001', nombre: 'Otro', correo: 'otro@test.edu' },
-        db,
-      ),
+      crearAlumno({ codigo: 'A2026001', nombre: 'Otro', correo: 'otro@test.edu' }, db),
     ).rejects.toMatchObject({ status: 409 });
   });
 
@@ -82,10 +79,7 @@ describe('Alta de alumno (Issue 4.17)', () => {
     db.cuenta.findUnique.mockResolvedValue({ id: 'c-dup' }); // ya hay cuenta
 
     await expect(
-      crearAlumno(
-        { codigo: 'A2026001', nombre: 'Dup', correo: 'dup@test.edu' },
-        db,
-      ),
+      crearAlumno({ codigo: 'A2026001', nombre: 'Dup', correo: 'dup@test.edu' }, db),
     ).rejects.toMatchObject({ status: 409 });
   });
 
@@ -98,10 +92,7 @@ describe('Alta de alumno (Issue 4.17)', () => {
     db.alumno.create.mockRejectedValue(p2002);
 
     await expect(
-      crearAlumno(
-        { codigo: 'A2026001', nombre: 'Dup2', correo: 'dup2@test.edu' },
-        db,
-      ),
+      crearAlumno({ codigo: 'A2026001', nombre: 'Dup2', correo: 'dup2@test.edu' }, db),
     ).rejects.toMatchObject({ status: 409 });
   });
 });

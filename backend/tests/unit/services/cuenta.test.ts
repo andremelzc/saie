@@ -1,6 +1,5 @@
 import bcrypt from 'bcrypt';
 import { cambiarClave, CambiarClaveSchema } from '../../../src/services/cuenta.service';
-import { HttpError } from '../../../src/lib/http';
 
 /* ── helpers ─────────────────────────────────────────────── */
 
@@ -30,10 +29,14 @@ describe('Cambio de contraseña (Issue 4.21)', () => {
     const cuenta = await cuentaMock('OldPass123');
     const db = dbMock(cuenta);
 
-    const res = await cambiarClave('cuenta1', {
-      claveActual: 'OldPass123',
-      claveNueva: 'NewPass456',
-    }, db);
+    const res = await cambiarClave(
+      'cuenta1',
+      {
+        claveActual: 'OldPass123',
+        claveNueva: 'NewPass456',
+      },
+      db,
+    );
 
     expect(res).toEqual({ debeCambiarClave: false });
     expect(db.cuenta.update).toHaveBeenCalledWith(
@@ -95,9 +98,7 @@ describe('CambiarClaveSchema', () => {
   });
 
   it('rechaza clave nueva con menos de 8 caracteres', () => {
-    expect(() =>
-      CambiarClaveSchema.parse({ claveActual: 'ok', claveNueva: 'short' }),
-    ).toThrow();
+    expect(() => CambiarClaveSchema.parse({ claveActual: 'ok', claveNueva: 'short' })).toThrow();
   });
 
   it('rechaza campos desconocidos (strict)', () => {

@@ -4,7 +4,6 @@ import {
   generarClaveInicial,
   RestablecerClaveSchema,
 } from '../../../src/services/restablecerClave.service';
-import { HttpError } from '../../../src/lib/http';
 
 /* ── helpers ─────────────────────────────────────────────── */
 
@@ -88,9 +87,9 @@ describe('Restablecimiento de clave (Issue 4.26)', () => {
   it('404 si no existe el usuario', async () => {
     const db = dbMock();
 
-    await expect(
-      restablecerClave({ usuario: 'FANTASMA' }, db),
-    ).rejects.toMatchObject({ status: 404 });
+    await expect(restablecerClave({ usuario: 'FANTASMA' }, db)).rejects.toMatchObject({
+      status: 404,
+    });
   });
 
   it('403 si la cuenta es de Coordinación (cuenta de sistema)', async () => {
@@ -98,9 +97,7 @@ describe('Restablecimiento de clave (Issue 4.26)', () => {
       cuenta: { id: 'sys', rol: RolCuenta.COORDINACION_ACADEMICA, usuarioLogin: 'admin' },
     });
 
-    await expect(
-      restablecerClave({ usuario: 'admin' }, db),
-    ).rejects.toMatchObject({ status: 403 });
+    await expect(restablecerClave({ usuario: 'admin' }, db)).rejects.toMatchObject({ status: 403 });
   });
 
   it('403 si la cuenta es de Jefatura (cuenta de sistema)', async () => {
@@ -108,9 +105,9 @@ describe('Restablecimiento de clave (Issue 4.26)', () => {
       cuenta: { id: 'sys2', rol: RolCuenta.JEFATURA_LABORATORIOS, usuarioLogin: 'jeflab' },
     });
 
-    await expect(
-      restablecerClave({ usuario: 'jeflab' }, db),
-    ).rejects.toMatchObject({ status: 403 });
+    await expect(restablecerClave({ usuario: 'jeflab' }, db)).rejects.toMatchObject({
+      status: 403,
+    });
   });
 
   it('422 si el usuario existe pero no tiene cuenta de acceso', async () => {
@@ -118,9 +115,7 @@ describe('Restablecimiento de clave (Issue 4.26)', () => {
       alumno: { codigo: 'A002', nombre: 'Juan', cuentaId: null },
     });
 
-    await expect(
-      restablecerClave({ usuario: 'A002' }, db),
-    ).rejects.toMatchObject({ status: 422 });
+    await expect(restablecerClave({ usuario: 'A002' }, db)).rejects.toMatchObject({ status: 422 });
   });
 
   it('409 si un correo corresponde a más de una persona', async () => {
@@ -131,9 +126,9 @@ describe('Restablecimiento de clave (Issue 4.26)', () => {
       ],
     });
 
-    await expect(
-      restablecerClave({ usuario: 'compartido@uni.edu' }, db),
-    ).rejects.toMatchObject({ status: 409 });
+    await expect(restablecerClave({ usuario: 'compartido@uni.edu' }, db)).rejects.toMatchObject({
+      status: 409,
+    });
   });
 });
 

@@ -54,7 +54,7 @@ function closeDbMock(incidencia: any | null, responsable: any | null = null) {
     : null;
 
   return {
-    $transaction: jest.fn().mockImplementation(async (fn: Function) => {
+    $transaction: jest.fn().mockImplementation(async (fn: (tx: any) => Promise<any>) => {
       return fn({
         incidencia: {
           findUnique: jest.fn().mockResolvedValue(incidencia),
@@ -190,7 +190,7 @@ describe('Cierre de incidencia (Issue 7.6)', () => {
   it('Coordinación puede cerrar cualquier incidencia pendiente', async () => {
     const inc = incidenciaCompleta({ estado: 'PENDIENTE' });
     const db = {
-      $transaction: jest.fn().mockImplementation(async (fn: Function) =>
+      $transaction: jest.fn().mockImplementation(async (fn: (tx: any) => Promise<any>) =>
         fn({
           incidencia: {
             findUnique: jest.fn().mockResolvedValue(inc),
@@ -237,15 +237,11 @@ describe('CerrarIncidenciaSchema', () => {
   });
 
   it('rechaza estado inválido', () => {
-    expect(() =>
-      CerrarIncidenciaSchema.parse({ estado: 'ABIERTA', comentario: 'Hola' }),
-    ).toThrow();
+    expect(() => CerrarIncidenciaSchema.parse({ estado: 'ABIERTA', comentario: 'Hola' })).toThrow();
   });
 
   it('rechaza comentario menor a 3 caracteres', () => {
-    expect(() =>
-      CerrarIncidenciaSchema.parse({ estado: 'RESUELTA', comentario: 'AB' }),
-    ).toThrow();
+    expect(() => CerrarIncidenciaSchema.parse({ estado: 'RESUELTA', comentario: 'AB' })).toThrow();
   });
 
   it('rechaza comentario mayor a 1000 caracteres', () => {

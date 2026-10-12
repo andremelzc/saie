@@ -4,6 +4,7 @@ import {
   explorarEspacios,
   generarIdentificadorSeguimiento,
   obtenerHorarioDocente,
+  obtenerEstadoLaboratorioDocente,
   registrarIncidencia,
 } from '../../../src/services/docente.service';
 
@@ -337,5 +338,70 @@ describe('Registrar incidencia (Issue 7.5)', () => {
       'db caída',
     );
     expect(create).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('obtenerEstadoLaboratorioDocente (Issue 7.4)', () => {
+  it('404 si la cuenta no tiene docente', async () => {
+    const db = { docente: { findUnique: jest.fn().mockResolvedValue(null) } } as any;
+    await expect(obtenerEstadoLaboratorioDocente('c-x', 'lab-1', db)).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+
+  it('404 si el docente no tiene asignación vigente en el laboratorio', async () => {
+    const db = {
+      docente: { findUnique: jest.fn().mockResolvedValue({ id: 'doc-1' }) },
+      asignacion: { findMany: jest.fn().mockResolvedValue([]) },
+    } as any;
+    await expect(obtenerEstadoLaboratorioDocente('c-d', 'lab-1', db)).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+
+  it('devuelve estado del laboratorio con cursos, software y últimos cambios', async () => {
+    const lab = {
+      id: 'lab-1',
+      identificador: 'L101',
+      tipo: 'LABORATORIO',
+      pabellon: 'B',
+      piso: 1,
+      aforoNominal: 20,
+      pcsMalogradas: 2,
+      softwareInstalado: ['Docker', 'Node.js'],
+    };
+    const asignacion = {
+      id: 'asig-1',
+      espacios: [{ espacioId: 'lab-1', espacio: lab }],
+      seccion: {
+        codigoSeccion: '01',
+        stackSoftwareRequerido: ['Docker', 'Python'],
+        curso: { codigo: 'CC101', nombre: 'Programación' },
+      },
+    };
+    const historial = [
+      {
+        campo: 'PCS_MALOGRADAS',
+        valorAnterior: '0',
+        valorNuevo: '2',
+        fechaCambio: new Date(),
+        cuentaId: 'c1',
+      },
+    ];
+
+    const db = {
+      docente: { findUnique: jest.fn().mockResolvedValue({ id: 'doc-1' }) },
+      asignacion: { findMany: jest.fn().mockResolvedValue([asignacion]) },
+      historialEspacio: { findMany: jest.fn().mockResolvedValue(historial) },
+    } as any;
+
+    const res = await obtenerEstadoLaboratorioDocente('c-d', 'lab-1', db);
+
+    expect(res.laboratorio.identificador).toBe('L101');
+    expect(res.laboratorio.pcsOperativas).toBe(18); // 20 - 2
+    expect(res.cursos).toHaveLength(1);
+    expect(res.cursos[0].cumple).toBe(false);
+    expect(res.cursos[0].softwareFaltante).toEqual(['Python']);
+    expect(res.historial).toHaveLength(1);
   });
 });

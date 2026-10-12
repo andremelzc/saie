@@ -5,10 +5,10 @@ import {
   ActualizarEspacioSchema,
   crearEspacio,
   listarEspacios,
+  obtenerEspacioAdmin,
   actualizarEspacio,
 } from '../../../src/services/espacioAdmin.service';
 import { TokenPayload } from '../../../src/types/auth';
-import { HttpError } from '../../../src/lib/http';
 
 /* ── helpers ─────────────────────────────────────────────── */
 
@@ -140,9 +140,7 @@ describe('CrearEspacioSchema', () => {
 
 describe('ActualizarEspacioSchema', () => {
   it('acepta al menos un campo', () => {
-    expect(() =>
-      ActualizarEspacioSchema.parse({ aforoNominal: 60 }),
-    ).not.toThrow();
+    expect(() => ActualizarEspacioSchema.parse({ aforoNominal: 60 })).not.toThrow();
   });
 
   it('rechaza si no se envía ningún campo (refine)', () => {
@@ -224,7 +222,7 @@ describe('crearEspacio — validaciones de contigüidad (Issue 4.15)', () => {
     });
 
     return {
-      $transaction: jest.fn().mockImplementation(async (fn: Function) => {
+      $transaction: jest.fn().mockImplementation(async (fn: (tx: any) => Promise<any>) => {
         return fn({
           espacio: {
             create: throwOnCreate
@@ -246,9 +244,7 @@ describe('crearEspacio — validaciones de contigüidad (Issue 4.15)', () => {
   }
 
   it('422 si un espacio contiguo es de tipo distinto al nuevo', async () => {
-    const db = createDb([
-      { id: 'vecino', tipo: TipoEspacio.AULA_TEORICA },
-    ]);
+    const db = createDb([{ id: 'vecino', tipo: TipoEspacio.AULA_TEORICA }]);
 
     await expect(
       crearEspacio(
@@ -300,6 +296,110 @@ describe('crearEspacio — validaciones de contigüidad (Issue 4.15)', () => {
         authCoord,
         db,
       ),
+    ).rejects.toMatchObject({ status: 409 });
+  });
+});
+
+/* ── suite: obtener y listar espacios ─────────────────────── */
+
+describe('obtenerEspacioAdmin y listarEspacios (Issue 4.15)', () => {
+  it('obtenerEspacioAdmin devuelve el espacio con sus contiguos ordenados', async () => {
+    const db = {
+      espacio: {
+        findUnique: jest.fn().mockResolvedValue(espacioDB({ id: 'e1', identificador: 'Lab 01' })),
+      },
+      espacioResponsable: { findUnique: jest.fn().mockResolvedValue({ id: 'r1' }) },
+      espacioContiguo: {
+        findMany: jest.fn().mockResolvedValue([{ espacioIdB: 'e3' }, { espacioIdB: 'e2' }]),
+      },
+    } as any;
+
+    const res = await obtenerEspacioAdmin('e1', authCoord, db);
+    expect(res.id).toBe('e1');
+    expect(res.contiguos).toEqual(['e2', 'e3']);
+  });
+
+  it('obtenerEspacioAdmin lanza 404 si el espacio no existe', async () => {
+    const db = {
+      espacio: { findUnique: jest.fn().mockResolvedValue(null) },
+    } as any;
+
+    await expect(obtenerEspacioAdmin('inexistente', authCoord, db)).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+
+  it('listarEspacios lista espacios y los transforma a DTO', async () => {
+    const db = {
+      espacio: {
+        findMany: jest.fn().mockResolvedValue([espacioDB({ id: 'e1', identificador: 'Lab 01' })]),
+      },
+      espacioContiguo: { findMany: jest.fn().mockResolvedValue([]) },
+    } as any;
+
+    const res = await listarEspacios({}, authCoord, db);
+    expect(res).toHaveLength(1);
+    expect(res[0].id).toBe('e1');
+  });
+});
+
+/* ── suite: actualizar espacio ────────────────────────────── */
+
+describe('actualizarEspacio (Issue 4.15)', () => {
+  function updateDb({
+    actual = espacioDB({ id: 'e1', aforoNominal: 30, pcsMalogradas: 2 }),
+    throwP2002 = false,
+  } = {}) {
+    const p2002 = new Prisma.PrismaClientKnownRequestError('', {
+      code: 'P2002',
+      clientVersion: '1',
+    });
+
+    const txMock = {
+      espacio: {
+        update: throwP2002
+          ? jest.fn().mockRejectedValue(p2002)
+          : jest.fn().mockImplementation(async ({ data }: any) => ({ ...actual, ...data })),
+      },
+      espacioContiguo: {
+        findMany: jest.fn().mockResolvedValue([]),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      asignacion: { findMany: jest.fn().mockResolvedValue([]) },
+      alerta: { findMany: jest.fn().mockResolvedValue([]), create: jest.fn() },
+    };
+
+    return {
+      espacio: {
+        findUnique: jest.fn().mockResolvedValue(actual),
+      },
+      espacioResponsable: { findUnique: jest.fn().mockResolvedValue({ id: 'r1' }) },
+      espacioContiguo: { findMany: jest.fn().mockResolvedValue([]) },
+      $transaction: jest
+        .fn()
+        .mockImplementation(async (fn: (tx: any) => Promise<any>) => fn(txMock)),
+    } as any;
+  }
+
+  it('Coordinación actualiza campos propios con éxito', async () => {
+    const db = updateDb();
+    const res = await actualizarEspacio(
+      'e1',
+      { identificador: 'Lab 01 Mod', aforoNominal: 35 },
+      authCoord,
+      db,
+    );
+
+    expect(res.espacio).toBeDefined();
+    expect(res.alertas).toEqual([]);
+  });
+
+  it('409 si el identificador en actualización causa un P2002', async () => {
+    const db = updateDb({ throwP2002: true });
+
+    await expect(
+      actualizarEspacio('e1', { identificador: 'Lab Ocupado' }, authCoord, db),
     ).rejects.toMatchObject({ status: 409 });
   });
 });

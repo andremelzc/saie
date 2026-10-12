@@ -23,7 +23,15 @@ jest.mock('../../src/lib/prisma', () => ({
 }));
 
 import request from 'supertest';
-import { RolCuenta, TipoEspacio, EstadoAlerta, TipoAlerta, EstadoIncidencia, PrioridadIncidencia, TipoIncidencia } from '@prisma/client';
+import {
+  RolCuenta,
+  TipoEspacio,
+  EstadoAlerta,
+  TipoAlerta,
+  EstadoIncidencia,
+  PrioridadIncidencia,
+  TipoIncidencia,
+} from '@prisma/client';
 import { createApp } from '../../src/app';
 import { firmarToken } from '../../src/services/auth.service';
 
@@ -62,7 +70,13 @@ describe('Endpoints Sprint 4 (Issue #267)', () => {
       const resEspacio = await request(app)
         .post('/api/v1/admin/espacios')
         .set('Authorization', tokenJefatura)
-        .send({ identificador: 'A101', tipo: 'AULA_TEORICA', pabellon: 'A', piso: 1, aforoNominal: 30 });
+        .send({
+          identificador: 'A101',
+          tipo: 'AULA_TEORICA',
+          pabellon: 'A',
+          piso: 1,
+          aforoNominal: 30,
+        });
       expect(resEspacio.status).toBe(403);
 
       const resAlumno = await request(app)
@@ -74,7 +88,12 @@ describe('Endpoints Sprint 4 (Issue #267)', () => {
       const resDocente = await request(app)
         .post('/api/v1/admin/docentes')
         .set('Authorization', tokenJefatura)
-        .send({ codigoDocente: 'D2026', nombre: 'Test', correoInstitucional: 't@test.com', departamento: 'Sistemas' });
+        .send({
+          codigoDocente: 'D2026',
+          nombre: 'Test',
+          correoInstitucional: 't@test.com',
+          departamento: 'Sistemas',
+        });
       expect(resDocente.status).toBe(403);
 
       const resReset = await request(app)

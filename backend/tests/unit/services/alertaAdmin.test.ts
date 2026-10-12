@@ -1,8 +1,5 @@
 import { RolCuenta } from '@prisma/client';
-import {
-  listarAlertasActivas,
-  resolverAlerta,
-} from '../../../src/services/alerta.service';
+import { listarAlertasActivas, resolverAlerta } from '../../../src/services/alerta.service';
 import { TokenPayload } from '../../../src/types/auth';
 import { HttpError } from '../../../src/lib/http';
 
@@ -53,7 +50,7 @@ function resolverDbMock(alerta: any | null, responsable: any | null = null) {
     : null;
 
   return {
-    $transaction: jest.fn().mockImplementation(async (fn: Function) =>
+    $transaction: jest.fn().mockImplementation(async (fn: (tx: any) => Promise<any>) =>
       fn({
         alerta: {
           findUnique: jest.fn().mockResolvedValue(alerta),
@@ -145,33 +142,27 @@ describe('Resolución de alertas (Issue 4.7)', () => {
   it('404 si la alerta no existe', async () => {
     const db = resolverDbMock(null);
 
-    await expect(
-      resolverAlerta('fake-id', authCoord, db),
-    ).rejects.toMatchObject({ status: 404 });
+    await expect(resolverAlerta('fake-id', authCoord, db)).rejects.toMatchObject({ status: 404 });
   });
 
   it('403 si Jefatura no es responsable del espacio', async () => {
     const al = { id: 'al1', estado: 'PENDIENTE', espacioId: 'e1' };
     const db = resolverDbMock(al, null); // sin responsable
 
-    await expect(
-      resolverAlerta('al1', authJefatura, db),
-    ).rejects.toMatchObject({ status: 403 });
+    await expect(resolverAlerta('al1', authJefatura, db)).rejects.toMatchObject({ status: 403 });
   });
 
   it('409 si la alerta ya estaba resuelta', async () => {
     const al = { id: 'al1', estado: 'RESUELTA', espacioId: 'e1' };
     const db = resolverDbMock(al);
 
-    await expect(
-      resolverAlerta('al1', authCoord, db),
-    ).rejects.toMatchObject({ status: 409 });
+    await expect(resolverAlerta('al1', authCoord, db)).rejects.toMatchObject({ status: 409 });
   });
 
   it('Coordinación resuelve y deja RegistroAuditoria de tipo ALERTA', async () => {
     const al = alertaConDetalle({ estado: 'PENDIENTE', espacioId: 'e1' });
     const db = {
-      $transaction: jest.fn().mockImplementation(async (fn: Function) => {
+      $transaction: jest.fn().mockImplementation(async (fn: (tx: any) => Promise<any>) => {
         const tx = {
           alerta: {
             findUnique: jest.fn().mockResolvedValue(al),

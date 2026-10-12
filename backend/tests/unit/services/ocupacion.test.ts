@@ -55,11 +55,7 @@ function alerta(id: string, espacioId: string) {
   };
 }
 
-function dbMock(
-  espacios: any[] = [],
-  asignaciones: any[] = [],
-  alertas: any[] = [],
-) {
+function dbMock(espacios: any[] = [], asignaciones: any[] = [], alertas: any[] = []) {
   return {
     espacio: {
       findMany: jest.fn().mockResolvedValue(espacios),
@@ -86,10 +82,7 @@ describe('Mapa de ocupación por piso (Issues 4.11, 4.12)', () => {
     const e1 = espacio('e1');
     const db = dbMock([e1], [], []);
 
-    const res = await obtenerOcupacionPorPiso(
-      { pabellon: 'A', piso: 1, franja: FRANJA },
-      db,
-    );
+    const res = await obtenerOcupacionPorPiso({ pabellon: 'A', piso: 1, franja: FRANJA }, db);
 
     expect(res.espacios).toHaveLength(1);
     expect(res.espacios[0].estado).toBe('DISPONIBLE');
@@ -108,10 +101,7 @@ describe('Mapa de ocupación por piso (Issues 4.11, 4.12)', () => {
     });
     const db = dbMock([e1], [a1], []);
 
-    const res = await obtenerOcupacionPorPiso(
-      { pabellon: 'A', piso: 1, franja: FRANJA },
-      db,
-    );
+    const res = await obtenerOcupacionPorPiso({ pabellon: 'A', piso: 1, franja: FRANJA }, db);
 
     expect(res.espacios[0].estado).toBe('OCUPADO');
     expect(res.espacios[0].asignacion).not.toBeNull();
@@ -128,10 +118,7 @@ describe('Mapa de ocupación por piso (Issues 4.11, 4.12)', () => {
     });
     const db = dbMock([e1], [a1], []);
 
-    const res = await obtenerOcupacionPorPiso(
-      { pabellon: 'A', piso: 1, franja: FRANJA },
-      db,
-    );
+    const res = await obtenerOcupacionPorPiso({ pabellon: 'A', piso: 1, franja: FRANJA }, db);
 
     expect(res.espacios[0].estado).toBe('DISPONIBLE');
   });
@@ -146,10 +133,7 @@ describe('Mapa de ocupación por piso (Issues 4.11, 4.12)', () => {
     const al1 = alerta('al1', 'e1');
     const db = dbMock([e1], [a1], [al1]);
 
-    const res = await obtenerOcupacionPorPiso(
-      { pabellon: 'A', piso: 1, franja: FRANJA },
-      db,
-    );
+    const res = await obtenerOcupacionPorPiso({ pabellon: 'A', piso: 1, franja: FRANJA }, db);
 
     expect(res.espacios[0].estado).toBe('ALERTA_ACTIVA');
     expect(res.espacios[0].alertas).toHaveLength(1);
@@ -159,10 +143,7 @@ describe('Mapa de ocupación por piso (Issues 4.11, 4.12)', () => {
     const lab = espacio('lab1', TipoEspacio.LABORATORIO, 40, 5);
     const db = dbMock([lab], [], []);
 
-    const res = await obtenerOcupacionPorPiso(
-      { pabellon: 'A', piso: 1, franja: FRANJA },
-      db,
-    );
+    const res = await obtenerOcupacionPorPiso({ pabellon: 'A', piso: 1, franja: FRANJA }, db);
 
     expect(res.espacios[0].aforoNominal).toBe(40);
     expect(res.espacios[0].capacidadReal).toBe(35);
@@ -172,10 +153,7 @@ describe('Mapa de ocupación por piso (Issues 4.11, 4.12)', () => {
     const aula = espacio('a1', TipoEspacio.AULA_TEORICA, 50);
     const db = dbMock([aula], [], []);
 
-    const res = await obtenerOcupacionPorPiso(
-      { pabellon: 'A', piso: 1, franja: FRANJA },
-      db,
-    );
+    const res = await obtenerOcupacionPorPiso({ pabellon: 'A', piso: 1, franja: FRANJA }, db);
 
     expect(res.espacios[0].capacidadReal).toBe(50);
   });
@@ -183,10 +161,7 @@ describe('Mapa de ocupación por piso (Issues 4.11, 4.12)', () => {
   it('un piso sin espacios devuelve resultado vacío sin consultar asignaciones ni alertas', async () => {
     const db = dbMock([], [], []);
 
-    const res = await obtenerOcupacionPorPiso(
-      { pabellon: 'Z', piso: 99, franja: FRANJA },
-      db,
-    );
+    const res = await obtenerOcupacionPorPiso({ pabellon: 'Z', piso: 99, franja: FRANJA }, db);
 
     expect(res.espacios).toHaveLength(0);
     expect(res.resumen).toEqual({ disponibles: 0, ocupados: 0, conAlerta: 0 });
@@ -197,10 +172,7 @@ describe('Mapa de ocupación por piso (Issues 4.11, 4.12)', () => {
 
   it('devuelve pabellón, piso y franja consultados en la respuesta', async () => {
     const db = dbMock([], [], []);
-    const res = await obtenerOcupacionPorPiso(
-      { pabellon: 'B', piso: 2, franja: FRANJA },
-      db,
-    );
+    const res = await obtenerOcupacionPorPiso({ pabellon: 'B', piso: 2, franja: FRANJA }, db);
     expect(res.pabellon).toBe('B');
     expect(res.piso).toBe(2);
     expect(res.franja).toEqual(FRANJA);
@@ -215,10 +187,7 @@ describe('Mapa de ocupación por piso (Issues 4.11, 4.12)', () => {
     });
     const db = dbMock([e1], [a1], []);
 
-    const res = await obtenerOcupacionPorPiso(
-      { pabellon: 'A', piso: 1, franja: FRANJA },
-      db,
-    );
+    const res = await obtenerOcupacionPorPiso({ pabellon: 'A', piso: 1, franja: FRANJA }, db);
 
     expect(res.espacios[0].estado).toBe('DISPONIBLE');
   });
@@ -235,10 +204,7 @@ describe('Mapa de solo lectura del alumno (Issue 3.13)', () => {
     const al1 = alerta('al1', 'e1');
     const db = dbMock([e1], [a1], [al1]);
 
-    const res = await obtenerMapaLectura(
-      { pabellon: 'A', piso: 1, franja: FRANJA },
-      db,
-    );
+    const res = await obtenerMapaLectura({ pabellon: 'A', piso: 1, franja: FRANJA }, db);
 
     expect(res.espacios).toHaveLength(1);
     // ALERTA_ACTIVA en el panel, pero el alumno ve OCUPADO porque tiene asignación
@@ -253,10 +219,7 @@ describe('Mapa de solo lectura del alumno (Issue 3.13)', () => {
     const e1 = espacio('e1');
     const db = dbMock([e1], [], []);
 
-    const res = await obtenerMapaLectura(
-      { pabellon: 'A', piso: 1, franja: FRANJA },
-      db,
-    );
+    const res = await obtenerMapaLectura({ pabellon: 'A', piso: 1, franja: FRANJA }, db);
 
     expect(res.espacios[0].estado).toBe('DISPONIBLE');
   });
@@ -266,10 +229,7 @@ describe('Mapa de solo lectura del alumno (Issue 3.13)', () => {
     const al1 = alerta('al1', 'e1');
     const db = dbMock([e1], [], [al1]);
 
-    const res = await obtenerMapaLectura(
-      { pabellon: 'A', piso: 1, franja: FRANJA },
-      db,
-    );
+    const res = await obtenerMapaLectura({ pabellon: 'A', piso: 1, franja: FRANJA }, db);
 
     // Sin asignación -> DISPONIBLE incluso con alerta (el alumno no ve alertas)
     expect(res.espacios[0].estado).toBe('DISPONIBLE');
