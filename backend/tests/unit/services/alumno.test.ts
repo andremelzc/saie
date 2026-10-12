@@ -4,7 +4,9 @@ import {
   listarCursosAlumno,
   obtenerHorarioAlumno,
   obtenerPerfilAlumno,
+  obtenerRutaAlumnoPorAsignacionId,
 } from '../../../src/services/alumno.service';
+
 import { obtenerAsignacionPorAlumno } from '../../../src/services/consulta.service';
 
 const lima = (iso: string) => new Date(`${iso}-05:00`);
@@ -322,5 +324,72 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
     expect(serializado).not.toContain('fichaMedica');
     expect(serializado).not.toContain('12345678'); // DNI
     expect(serializado).not.toContain('987654321'); // teléfono
+  });
+
+  describe('Ruta hacia espacio asignado (Issues 3.14 y 3.15)', () => {
+    it('obtiene la ruta si el alumno está matriculado en la sección de la asignación', async () => {
+      const prisma: any = {
+        alumno: { findUnique: jest.fn().mockResolvedValue({ id: 'alu-1' }) },
+        asignacion: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'asig-1',
+            seccion: {
+              matriculas: [{ movilidadReducida: true }],
+            },
+            espacios: [
+              {
+                espacio: {
+                  id: 'lab-201',
+                  identificador: 'Lab 201',
+                  pabellon: 'Pabellon A',
+                  piso: 2,
+                  tipo: 'LABORATORIO',
+                },
+              },
+            ],
+          }),
+        },
+        espacio: { findMany: jest.fn().mockResolvedValue([]) },
+        espacioContiguo: { findMany: jest.fn().mockResolvedValue([]) },
+      };
+
+      const ruta = await obtenerRutaAlumnoPorAsignacionId('cuenta-1', 'asig-1', prisma);
+
+      expect(ruta.estado).toBe('DISPONIBLE');
+      expect(ruta.movilidadReducida).toBe(true);
+      expect(ruta.pabellon).toBe('Pabellon A');
+      expect(ruta.pisoDestino).toBe(2);
+      expect(ruta.tramos.length).toBe(3);
+    });
+
+    it('lanza 404 si la asignación no existe', async () => {
+      const prisma: any = {
+        alumno: { findUnique: jest.fn().mockResolvedValue({ id: 'alu-1' }) },
+        asignacion: { findUnique: jest.fn().mockResolvedValue(null) },
+      };
+
+      await expect(
+        obtenerRutaAlumnoPorAsignacionId('cuenta-1', 'asig-no-existe', prisma),
+      ).rejects.toThrow('La asignación solicitada no existe');
+    });
+
+    it('lanza 403 si el alumno no está matriculado en la sección', async () => {
+      const prisma: any = {
+        alumno: { findUnique: jest.fn().mockResolvedValue({ id: 'alu-1' }) },
+        asignacion: {
+          findUnique: jest.fn().mockResolvedValue({
+            id: 'asig-1',
+            seccion: {
+              matriculas: [], // No matriculado
+            },
+            espacios: [],
+          }),
+        },
+      };
+
+      await expect(obtenerRutaAlumnoPorAsignacionId('cuenta-1', 'asig-1', prisma)).rejects.toThrow(
+        'No tienes permiso para ver la ruta',
+      );
+    });
   });
 });
