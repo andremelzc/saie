@@ -199,6 +199,7 @@ model Alumno {
   cuenta      Cuenta?      @relation(fields: [cuentaId], references: [id])
   fichaMedica FichaMedica?
   matriculas  Matricula[]
+  vinculacionTelegram VinculacionTelegram?
 
   @@map("alumnos")
 }
@@ -368,4 +369,26 @@ model RegistroAuditoria {
   alerta     Alerta?     @relation(fields: [alertaId], references: [id], onDelete: SetNull)
 
   @@map("registros_auditoria")
+}
+
+// ==========================================
+// AVISOS POR TELEGRAM
+// ==========================================
+
+// Telegram no permite escribir a un número: el alumno inicia la conversación con el bot y el
+// bot recibe un chat_id que se guarda aquí. Una fila por alumno; la baja la desactiva y una
+// nueva vinculación la reactiva (así un alumno nunca tiene dos vinculaciones activas).
+model VinculacionTelegram {
+  id                 String    @id @default(uuid())
+  alumnoId           String    @unique @map("alumno_id")
+  chatId             String    @unique @map("chat_id")
+  activo             Boolean   @default(true)
+  fechaVinculacion   DateTime  @default(now()) @map("fecha_vinculacion")
+  fechaBaja          DateTime? @map("fecha_baja")
+  // Día (hora de Lima) del último resumen diario enviado; evita duplicarlo si la tarea corre dos veces.
+  fechaUltimoResumen DateTime? @map("fecha_ultimo_resumen") @db.Date
+
+  alumno Alumno @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
+
+  @@map("vinculaciones_telegram")
 }

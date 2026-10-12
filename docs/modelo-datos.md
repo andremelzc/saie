@@ -318,6 +318,23 @@ Registro inmutable para trazabilidad de eventos críticos del motor y de segurid
 
 ---
 
+### 4.19. `VinculacionTelegram`
+Vinculación voluntaria de un alumno con el bot de Telegram para recibir avisos de cambio de aula y el resumen diario. Telegram no permite escribir a un número de teléfono: el alumno inicia la conversación con el bot y el bot recibe un `chat_id`, que se guarda aquí. Tiene Row Level Security habilitado, como el resto de tablas.
+
+| Campo | Tipo | Nulable | Descripción / Regla de Negocio |
+| :--- | :--- | :---: | :--- |
+| `id` | UUID / PK | No | Identificador único de la vinculación. |
+| `alumno_id` | UUID / FK | No | Alumno vinculado (`Alumno.id`). **Único**: una fila por alumno. |
+| `chat_id` | VARCHAR | No | Identificador de la conversación en Telegram. **Único**: un chat no puede estar vinculado a dos alumnos. |
+| `activo` | BOOLEAN | No | `true` mientras la vinculación está vigente. Por defecto `true`. |
+| `fecha_vinculacion` | TIMESTAMP | No | Fecha y hora de la (última) vinculación. |
+| `fecha_baja` | TIMESTAMP | Sí | Fecha y hora de la baja; nulo mientras esté activa. |
+| `fecha_ultimo_resumen` | DATE | Sí | Día (hora de Lima) del último resumen diario enviado; evita duplicarlo si la tarea programada corre dos veces el mismo día. |
+
+> **Regla:** como `alumno_id` es único, un alumno nunca tiene dos vinculaciones activas. La baja desactiva la fila (`activo = false`, `fecha_baja`) y una nueva vinculación la reactiva. Si la baja se debe a que el alumno bloqueó el bot, la vinculación se desactiva igual.
+
+---
+
 ## 5. Reglas de Integridad y Restricciones del Negocio
 
 1. **No doble reserva de un espacio:** Un espacio no puede tener dos asignaciones con estado `VIGENTE` cuyos horarios se solapen en día y rango temporal (`hora_inicio` – `hora_fin`).

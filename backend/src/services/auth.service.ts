@@ -48,6 +48,23 @@ export function verificarToken(token: string): TokenPayload | null {
 }
 
 /**
+ * Verifica usuario y clave contra el hash bcrypt de la cuenta y devuelve la cuenta, o `null`
+ * si algo falla (usuario inexistente, clave errónea o rol no permitido), sin distinguir cuál.
+ * Compara siempre contra un hash, exista o no la cuenta, para no revelar tiempos distintos.
+ * Lo usan el login (Issue 4.8) y la vinculación del bot de Telegram (Issue 3.25).
+ */
+export async function verificarCredenciales(
+  usuarioLogin: string,
+  clave: string,
+  rolesPermitidos: RolCuenta[],
+  prisma: Pick<PrismaClient, 'cuenta'>,
+) {
+  const cuenta = await prisma.cuenta.findUnique({ where: { usuarioLogin } });
+  const claveCorrecta = await bcrypt.compare(clave, cuenta?.claveHash ?? HASH_RELLENO);
+  return cuenta && claveCorrecta && rolesPermitidos.includes(cuenta.rol) ? cuenta : null;
+}
+
+/**
  * Issue 4.8: mecanismo único de login para los 4 roles (los Issues 3.21 y 7.1 lo reutilizan).
  *
  * - Compara la clave contra el hash bcrypt de la cuenta.
@@ -63,11 +80,9 @@ export async function iniciarSesion(
   rolesPermitidos: RolCuenta[],
   prisma: Pick<PrismaClient, 'cuenta'>,
 ): Promise<LoginResponseDTO> {
-  const cuenta = await prisma.cuenta.findUnique({ where: { usuarioLogin } });
+  const cuenta = await verificarCredenciales(usuarioLogin, clave, rolesPermitidos, prisma);
 
-  const claveCorrecta = await bcrypt.compare(clave, cuenta?.claveHash ?? HASH_RELLENO);
-
-  if (!cuenta || !claveCorrecta || !rolesPermitidos.includes(cuenta.rol)) {
+  if (!cuenta) {
     throw new HttpError(401, MENSAJE_CREDENCIALES_INVALIDAS);
   }
 

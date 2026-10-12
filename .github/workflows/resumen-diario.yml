@@ -1,0 +1,39 @@
+name: Resumen diario por Telegram
+
+# Invoca cada mañana el endpoint que envía a los alumnos con Telegram vinculado el resumen de
+# sus clases del día (Issue 3.27). El disparo viene de fuera porque el contenedor gratuito de
+# Render se suspende tras 15 minutos sin tráfico y un temporizador interno no sería confiable.
+#
+# Secretos del repositorio necesarios:
+#   BACKEND_URL           URL pública del backend, sin barra final (p. ej. https://saie.onrender.com)
+#   RESUMEN_DIARIO_TOKEN  mismo valor que la variable de entorno del backend
+on:
+  schedule:
+    # El cron de GitHub usa UTC; Lima es UTC-5 y no tiene horario de verano.
+    # 12:30 UTC = 07:30 en Lima, de lunes a sábado.
+    - cron: '30 12 * * 1-6'
+  # Permite probarlo a mano desde la pestaña Actions.
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  enviar-resumen:
+    name: Enviar resumen diario
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Invocar el endpoint del resumen diario
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          RESUMEN_DIARIO_TOKEN: ${{ secrets.RESUMEN_DIARIO_TOKEN }}
+        run: |
+          # Tolera el arranque en frío de Render (45 a 60 s): espera hasta 90 s por conexión y
+          # reintenta. Es seguro reintentar: el endpoint no duplica los resúmenes del día.
+          curl --fail-with-body --silent --show-error \
+            --retry 4 --retry-delay 20 --retry-all-errors \
+            --connect-timeout 90 --max-time 600 \
+            -X POST \
+            -H "Authorization: Bearer ${RESUMEN_DIARIO_TOKEN}" \
+            "${BACKEND_URL}/api/v1/telegram/resumen-diario"
