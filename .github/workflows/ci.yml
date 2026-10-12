@@ -94,9 +94,13 @@ jobs:
       - name: Generar cliente de Prisma
         run: npm run prisma:generate --workspace=backend
 
-      - name: Ejecutar pruebas unitarias y parametrizadas con cobertura
+      - name: Ejecutar pruebas unitarias y parametrizadas con cobertura (Backend)
         # Issue 5.10b: Usar cobertura para el análisis de SonarCloud
         run: npm run test:coverage --workspace=backend
+
+      - name: Ejecutar pruebas unitarias con cobertura (Frontend)
+        # Issue 5.22 (#268): Generar frontend/coverage/lcov.info para SonarCloud
+        run: npm run test:coverage --workspace=frontend
 
       - name: Analisis en SonarCloud
         # Issue 5.10b: Quality Gate (cobertura >= 85%, 0 bugs)
