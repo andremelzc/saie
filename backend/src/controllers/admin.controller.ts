@@ -1,7 +1,32 @@
 import { Request, Response } from 'express';
+import { EstadoIncidencia, PrioridadIncidencia, TipoAlerta, TipoEspacio } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { responderError } from '../lib/http';
+import { filtrosDeMapa, MapaOcupacionQuerySchema } from '../lib/franja';
+import { obtenerOcupacionPorPiso } from '../services/ocupacion.service';
+import { listarSeccionesEscaladas } from '../services/revision.service';
+import {
+  actualizarEspacio,
+  ActualizarEspacioSchema,
+  crearEspacio,
+  CrearEspacioSchema,
+  listarEspacios,
+  obtenerEspacioAdmin,
+} from '../services/espacioAdmin.service';
+import {
+  AltaAlumnoSchema,
+  AltaDocenteSchema,
+  crearAlumno,
+  crearDocente,
+} from '../services/usuario.service';
+import {
+  cerrarIncidencia,
+  CerrarIncidenciaSchema,
+  listarIncidencias,
+} from '../services/incidenciaAdmin.service';
+import { listarAlertasActivas, resolverAlerta } from '../services/alerta.service';
+import { restablecerClave, RestablecerClaveSchema } from '../services/restablecerClave.service';
 import {
   registrarCambioPcsMalogradas,
   registrarCambioSoftware,
@@ -9,6 +34,15 @@ import {
 
 const LaboratorioParamSchema = z.object({
   id: z.string().min(1, 'El id del laboratorio es requerido'),
+});
+
+const AlertaParamSchema = z.object({
+  id: z.string().min(1, 'El id de la alerta es requerido'),
+});
+
+const AlertasQuerySchema = z.object({
+  tipo: z.enum(TipoAlerta, { error: 'El tipo de alerta no es válido' }).optional(),
+  espacioId: z.string().trim().min(1).optional(),
 });
 
 const CambioSoftwareSchema = z.object({
@@ -52,6 +86,184 @@ export async function registrarPcsMalogradasLaboratorio(
     const { pcsMalogradas } = CambioPcsSchema.parse(req.body);
     const resultado = await registrarCambioPcsMalogradas(id, pcsMalogradas, req.auth!, prisma);
     res.status(200).json({ success: true, data: resultado });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.6 — GET /api/v1/admin/alertas[?tipo=SOFTWARE|CAPACIDAD&espacioId=...] */
+export async function listarAlertas(req: Request, res: Response): Promise<void> {
+  try {
+    const filtros = AlertasQuerySchema.parse(req.query);
+    const data = await listarAlertasActivas(filtros, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.7 — PATCH /api/v1/admin/alertas/:id/resolver */
+export async function resolverAlertaPendiente(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = AlertaParamSchema.parse(req.params);
+    const data = await resolverAlerta(id, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/**
+ * Issue 4.12 — GET /api/v1/admin/mapa-ocupacion?pabellon=A&piso=1[&dia=&horaInicio=&horaFin=]
+ * Sin franja se usa el momento actual (hora de Lima).
+ */
+export async function consultarMapaOcupacion(req: Request, res: Response): Promise<void> {
+  try {
+    const q = MapaOcupacionQuerySchema.parse(req.query);
+    const data = await obtenerOcupacionPorPiso(filtrosDeMapa(q), prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+const EscaladasQuerySchema = z.object({
+  periodo: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d+$/, 'El periodo debe tener formato AAAA-N (ej. 2026-1)')
+    .optional(),
+});
+
+/** Issue 4.22 — GET /api/v1/admin/secciones-escaladas[?periodo=2026-1] */
+export async function listarEscaladas(req: Request, res: Response): Promise<void> {
+  try {
+    const { periodo } = EscaladasQuerySchema.parse(req.query);
+    const data = await listarSeccionesEscaladas(periodo, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+const IncidenciasQuerySchema = z.object({
+  estado: z.enum(EstadoIncidencia, { error: 'El estado no es válido' }).optional(),
+  prioridad: z.enum(PrioridadIncidencia, { error: 'La prioridad no es válida' }).optional(),
+  espacioId: z.string().trim().min(1).optional(),
+});
+
+/** Issue 7.6 — GET /api/v1/admin/incidencias[?estado=&prioridad=&espacioId=] */
+export async function listarIncidenciasReportadas(req: Request, res: Response): Promise<void> {
+  try {
+    const filtros = IncidenciasQuerySchema.parse(req.query);
+    const data = await listarIncidencias(filtros, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 7.6 — PATCH /api/v1/admin/incidencias/:id/resolver */
+export async function resolverIncidencia(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = z
+      .object({ id: z.string().min(1, 'El id de la incidencia es requerido') })
+      .parse(req.params);
+    const entrada = CerrarIncidenciaSchema.parse(req.body);
+    const data = await cerrarIncidencia(id, entrada, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.17 — POST /api/v1/admin/alumnos (solo Coordinación Académica) */
+export async function altaAlumno(req: Request, res: Response): Promise<void> {
+  try {
+    const entrada = AltaAlumnoSchema.parse(req.body);
+    const data = await crearAlumno(entrada, prisma);
+    res.status(201).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.18 — POST /api/v1/admin/docentes (solo Coordinación Académica) */
+export async function altaDocente(req: Request, res: Response): Promise<void> {
+  try {
+    const entrada = AltaDocenteSchema.parse(req.body);
+    const data = await crearDocente(entrada, prisma);
+    res.status(201).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+const EspaciosQuerySchema = z.object({
+  tipo: z.enum(TipoEspacio, { error: 'El tipo de espacio no es válido' }).optional(),
+  pabellon: z.string().trim().min(1).optional(),
+  piso: z.coerce.number().int('El piso debe ser un entero').optional(),
+});
+
+const EspacioParamSchema = z.object({
+  id: z.string().min(1, 'El id del espacio es requerido'),
+});
+
+/** Issue 4.15 — GET /api/v1/admin/espacios[?tipo=&pabellon=&piso=] */
+export async function listarEspaciosAdmin(req: Request, res: Response): Promise<void> {
+  try {
+    const filtros = EspaciosQuerySchema.parse(req.query);
+    const data = await listarEspacios(filtros, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.15 — GET /api/v1/admin/espacios/:id */
+export async function obtenerEspacio(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = EspacioParamSchema.parse(req.params);
+    const data = await obtenerEspacioAdmin(id, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.15 — POST /api/v1/admin/espacios (solo Coordinación Académica) */
+export async function altaEspacio(req: Request, res: Response): Promise<void> {
+  try {
+    const entrada = CrearEspacioSchema.parse(req.body);
+    const data = await crearEspacio(entrada, req.auth!, prisma);
+    res.status(201).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.15 — PATCH /api/v1/admin/espacios/:id (campos acotados por rol) */
+export async function editarEspacio(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = EspacioParamSchema.parse(req.params);
+    const entrada = ActualizarEspacioSchema.parse(req.body);
+    const data = await actualizarEspacio(id, entrada, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/**
+ * Issue 4.26 — POST /api/v1/admin/usuarios/restablecer-clave (solo Coordinación Académica)
+ * Responde con la clave inicial en claro una sola vez; por eso la respuesta no se guarda en cachés.
+ */
+export async function restablecerClaveUsuario(req: Request, res: Response): Promise<void> {
+  try {
+    const entrada = RestablecerClaveSchema.parse(req.body);
+    const data = await restablecerClave(entrada, prisma);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);
   }

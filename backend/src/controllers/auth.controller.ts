@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { responderError } from '../lib/http';
 import { iniciarSesion, ROLES_ADMIN } from '../services/auth.service';
+import { cambiarClave, CambiarClaveSchema } from '../services/cuenta.service';
 
 // Alumno y docente inician sesión con su código; el panel usa un nombre de usuario.
 const LoginSchema = z
@@ -39,3 +40,14 @@ export const loginAlumno = crearLogin([RolCuenta.ALUMNO]);
 
 /** POST /api/v1/auth/docente/login — Docente (Issue 7.1) */
 export const loginDocente = crearLogin([RolCuenta.DOCENTE]);
+
+/** POST /api/v1/auth/cambiar-clave — cualquier rol autenticado (Issue 4.21) */
+export async function cambiarClaveCuenta(req: Request, res: Response): Promise<void> {
+  try {
+    const entrada = CambiarClaveSchema.parse(req.body);
+    const data = await cambiarClave(req.auth!.sub, entrada, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}

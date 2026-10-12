@@ -272,6 +272,8 @@ Reportes manuales emitidos por docentes sobre incidencias en espacios o equipos 
 | `estado` | ENUM | No | `PENDIENTE`, `RESUELTA`, `DESCARTADA`. Gestionado por Jefatura. |
 | `fecha_reporte` | TIMESTAMP | No | Fecha y hora del reporte. |
 | `identificador_seguimiento`| VARCHAR(20) | No | Código público para consulta y seguimiento docente. |
+| `comentario_cierre` | TEXT | Sí | Comentario con el que Jefatura resolvió o descartó la incidencia. |
+| `fecha_cierre` | TIMESTAMP | Sí | Fecha y hora en que se resolvió o descartó. |
 
 ---
 
