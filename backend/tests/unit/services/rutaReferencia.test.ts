@@ -189,5 +189,47 @@ describe('Algoritmo de Ruta de Referencia (Issue 3.14)', () => {
       expect(ruta.tramos[2].identificador).toBe('Aula 102');
       expect(ruta.tramos[3].identificador).toBe('Aula 103');
     });
+
+    it('Caso borde: ordenarEspaciosPorContiguedad con lista de 1 o sin grafo', () => {
+      const unico = [{ id: 'esp-1', identificador: 'A1' }];
+      expect(ordenarEspaciosPorContiguedad(unico, grafoMock)).toHaveLength(1);
+
+      const sinGrafo = [
+        { id: 'esp-2', identificador: 'B1' },
+        { id: 'esp-1', identificador: 'A1' },
+      ];
+      const res = ordenarEspaciosPorContiguedad(sinGrafo);
+      expect(res[0].identificador).toBe('A1');
+      expect(res[1].identificador).toBe('B1');
+    });
+
+    it('Caso borde: espacio sin identificador usa fallback Espacio <id>', () => {
+      const ruta = calcularRutaReferencia({
+        espacios: [{ id: 'uuid-1', identificador: null, pabellon: 'Pab 1', piso: 1 }],
+      });
+      expect(ruta.estado).toBe('DISPONIBLE');
+      expect(ruta.tramos[1].titulo).toContain('Espacio uuid-1');
+    });
+
+    it('Caso borde: espacio no encontrado en grafo o con vecinos no contiguos en el bloque', () => {
+      const espaciosConDesconectado = [
+        {
+          id: 'esp-no-en-grafo',
+          identificador: 'Z9',
+          pabellon: 'Pab 1',
+          piso: 1,
+          tipo: TipoEspacio.AULA_TEORICA,
+        },
+        {
+          id: 'aula-101',
+          identificador: 'Aula 101',
+          pabellon: 'Pab 1',
+          piso: 1,
+          tipo: TipoEspacio.AULA_TEORICA,
+        },
+      ];
+      const ordenados = ordenarEspaciosPorContiguedad(espaciosConDesconectado, grafoMock);
+      expect(ordenados).toHaveLength(2);
+    });
   });
 });
