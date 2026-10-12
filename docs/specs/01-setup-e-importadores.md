@@ -1,7 +1,7 @@
 # Spec 01: Setup del Proyecto e Importadores de Datos
 
 > **Épica:** `epic:setup`  
-> **Issues Cubiertos:** #1.1, #1.2, #1.3, #1.4, #1.5, #1.6, #1.7, #1.8, #1.9, #1.10  
+> **Issues Cubiertos:** #1.1, #1.2, #1.3, #1.4, #1.5, #1.6, #1.7, #1.8, #1.9, #1.10, #1.11  
 > **Roles:** BM, BI, QA, FE, LP  
 > **Documentos de Referencia:** [`docs/modelo-datos.md`](../modelo-datos.md), [`docs/arquitectura.md`](../arquitectura.md), [`backend/prisma/schema.prisma`](../../backend/prisma/schema.prisma)
 
@@ -47,7 +47,8 @@ Este módulo cubre la configuración base de la infraestructura del monorepo (ba
   export async function importarMatriculas(datos: unknown[], prisma: PrismaClient): Promise<{ alumnosProcesados: number; cuentasCreadas: number; matriculasProcesadas: number; errores: string[] }>;
   ```
 
-### 2.6 Issue 1.6 — Endpoint HTTP de Importación y Asignación Encadenada
+### 2.6 Issues 1.6 y 1.11 — Endpoint HTTP de Importación y Asignación Encadenada
+> El Issue 1.11 da trazabilidad a este mismo endpoint: se construyó en el PR #246 y el 1.6 se había cerrado sin que su criterio estuviera en `develop`.
 * **Ubicación:** `backend/src/routes/import.routes.ts`, `backend/src/controllers/import.controller.ts`, `backend/src/services/importacion.service.ts` y `backend/src/lib/archivoImportacion.ts`.
 * **Ruta:** `POST /api/v1/import/:tipo`, con `:tipo` ∈ `cursos-secciones` | `horarios` | `matriculas` | `docentes`. Cada tipo es un flujo independiente (Issue 1.9): no se asume que los archivos se suben juntos. Un tipo desconocido responde 404.
 * **Acceso:** solo `COORDINACION_ACADEMICA` (JWT). La autenticación se evalúa antes de leer el cuerpo.

@@ -9,8 +9,10 @@ const prismaMock: any = {
   espacio: { findUnique: jest.fn(), findMany: jest.fn(), update: jest.fn() },
   espacioResponsable: { findUnique: jest.fn() },
   historialEspacio: { create: jest.fn() },
-  asignacion: { findMany: jest.fn(), findFirst: jest.fn() },
+  espacioContiguo: { findMany: jest.fn() },
+  asignacion: { findUnique: jest.fn(), findMany: jest.fn(), findFirst: jest.fn() },
   alerta: { findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
+
   incidencia: { create: jest.fn() },
   $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn(prismaMock)),
 };
@@ -180,6 +182,7 @@ describe('Portal del alumno: solo rol ALUMNO (Issues 3.10–3.12)', () => {
     '/api/v1/estudiante/horario',
     '/api/v1/estudiante/cursos',
     '/api/v1/estudiante/perfil',
+    '/api/v1/estudiante/ruta/asig-1',
   ];
 
   it.each(rutas)('GET %s rechaza sin token (401) y con rol docente/admin (403)', async (ruta) => {
@@ -237,6 +240,39 @@ describe('Portal del alumno: solo rol ALUMNO (Issues 3.10–3.12)', () => {
       .get('/api/v1/estudiante/horario?dia=someday')
       .set('Authorization', bearer(RolCuenta.ALUMNO));
     expect(res.status).toBe(400);
+  });
+
+  it('GET /api/v1/estudiante/ruta/:asignacionId retorna la ruta calculada', async () => {
+    prismaMock.alumno.findUnique.mockResolvedValue({ id: 'alu-1' });
+    prismaMock.asignacion.findUnique.mockResolvedValue({
+      id: 'asig-1',
+      seccion: {
+        matriculas: [{ movilidadReducida: false }],
+      },
+      espacios: [
+        {
+          espacio: {
+            id: 'esp-1',
+            identificador: 'Aula 201',
+            pabellon: 'Pabellon A',
+            piso: 2,
+            tipo: 'AULA_TEORICA',
+          },
+        },
+      ],
+    });
+    prismaMock.espacio.findMany.mockResolvedValue([]);
+    prismaMock.espacioContiguo.findMany.mockResolvedValue([]);
+
+    const res = await request(app)
+      .get('/api/v1/estudiante/ruta/asig-1')
+      .set('Authorization', bearer(RolCuenta.ALUMNO, 'cuenta-1'));
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.estado).toBe('DISPONIBLE');
+    expect(res.body.data.pisoDestino).toBe(2);
+    expect(res.body.data.tramos.length).toBe(3);
   });
 
   it('la consulta pública por código sigue sin exigir login', async () => {
