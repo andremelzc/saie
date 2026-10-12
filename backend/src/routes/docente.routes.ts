@@ -3,6 +3,7 @@ import { RolCuenta } from '@prisma/client';
 import {
   crearIncidencia,
   explorarEspaciosDocente,
+  obtenerEstadoLaboratorio,
   obtenerHorario,
 } from '../controllers/docente.controller';
 import { authGuard, roleGuard } from '../middlewares/auth.middleware';
@@ -14,6 +15,7 @@ router.use(authGuard, roleGuard(RolCuenta.DOCENTE));
 
 router.get('/horario', obtenerHorario); // Issue 7.2
 router.get('/espacios/explorador', explorarEspaciosDocente); // Issue 7.3
+router.get('/laboratorio-estado/:espacioId', obtenerEstadoLaboratorio); // Issue 7.4
 router.post('/incidencias', crearIncidencia); // Issue 7.5
 
 export default router;

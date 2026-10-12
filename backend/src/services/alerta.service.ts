@@ -1,5 +1,21 @@
-import { EstadoAlerta, Prisma, TipoAlerta } from '@prisma/client';
-import { AlertaRegistradaDTO, AsignacionAfectadaDTO, EntradaAlerta } from '../types/alertas';
+import {
+  EstadoAlerta,
+  Prisma,
+  PrismaClient,
+  RolCuenta,
+  TipoAlerta,
+  TipoEventoAuditoria,
+} from '@prisma/client';
+import { HttpError } from '../lib/http';
+import {
+  AlertaDTO,
+  AlertaRegistradaDTO,
+  AsignacionAfectadaDTO,
+  EntradaAlerta,
+  FiltrosAlertas,
+} from '../types/alertas';
+import { TokenPayload } from '../types/auth';
+import { verificarAccesoEspacio } from './acceso.service';
 
 type Db = Prisma.TransactionClient;
 
@@ -108,4 +124,108 @@ export async function registrarAlertaDesdeDeteccion(
     },
     db,
   );
+}
+
+const INCLUIR_ALERTA = {
+  espacio: true,
+  asignacionesAfectadas: {
+    include: { asignacion: { include: { seccion: { include: { curso: true } } } } },
+  },
+} satisfies Prisma.AlertaInclude;
+
+type AlertaConDetalle = Prisma.AlertaGetPayload<{ include: typeof INCLUIR_ALERTA }>;
+
+function aAlertaDTO(alerta: AlertaConDetalle): AlertaDTO {
+  return {
+    id: alerta.id,
+    tipo: alerta.tipo,
+    estado: alerta.estado,
+    motivo: alerta.motivo,
+    fechaDeteccion: alerta.fechaDeteccion,
+    espacio: {
+      id: alerta.espacio.id,
+      identificador: alerta.espacio.identificador,
+      pabellon: alerta.espacio.pabellon,
+      piso: alerta.espacio.piso,
+    },
+    asignacionesAfectadas: alerta.asignacionesAfectadas
+      .map((x) => ({
+        asignacionId: x.asignacionId,
+        codigoCurso: x.asignacion.seccion.curso.codigo,
+        nombreCurso: x.asignacion.seccion.curso.nombre,
+        codigoSeccion: x.asignacion.seccion.codigoSeccion,
+      }))
+      .sort(
+        (a, b) =>
+          a.codigoCurso.localeCompare(b.codigoCurso) ||
+          a.codigoSeccion.localeCompare(b.codigoSeccion),
+      ),
+  };
+}
+
+/**
+ * Issue 4.6: alertas activas (PENDIENTES), de la más reciente a la más antigua. Coordinación
+ * ve todas; Jefatura solo las de los laboratorios que tiene a su cargo (EspacioResponsable).
+ */
+export async function listarAlertasActivas(
+  filtros: FiltrosAlertas,
+  auth: TokenPayload,
+  db: Pick<PrismaClient, 'alerta'>,
+): Promise<AlertaDTO[]> {
+  const soloResponsable =
+    auth.rol === RolCuenta.JEFATURA_LABORATORIOS
+      ? { espacio: { responsables: { some: { cuentaId: auth.sub } } } }
+      : {};
+
+  const alertas = await db.alerta.findMany({
+    where: {
+      estado: EstadoAlerta.PENDIENTE,
+      ...(filtros.tipo && { tipo: filtros.tipo }),
+      ...(filtros.espacioId && { espacioId: filtros.espacioId }),
+      ...soloResponsable,
+    },
+    include: INCLUIR_ALERTA,
+    orderBy: { fechaDeteccion: 'desc' },
+  });
+
+  return alertas.map(aAlertaDTO);
+}
+
+/**
+ * Issue 4.7: marca una alerta como resuelta y deja constancia en la auditoría. Jefatura solo
+ * puede resolver las de sus laboratorios (403); una alerta ya resuelta responde 409.
+ */
+export async function resolverAlerta(
+  alertaId: string,
+  auth: TokenPayload,
+  prisma: Pick<PrismaClient, '$transaction'>,
+): Promise<AlertaDTO> {
+  return prisma.$transaction(async (tx) => {
+    const alerta = await tx.alerta.findUnique({ where: { id: alertaId } });
+    if (!alerta) {
+      throw new HttpError(404, `La alerta con ID '${alertaId}' no existe`);
+    }
+
+    await verificarAccesoEspacio(auth, alerta.espacioId, tx);
+
+    if (alerta.estado === EstadoAlerta.RESUELTA) {
+      throw new HttpError(409, 'La alerta ya fue resuelta');
+    }
+
+    const resuelta = await tx.alerta.update({
+      where: { id: alerta.id },
+      data: { estado: EstadoAlerta.RESUELTA },
+      include: INCLUIR_ALERTA,
+    });
+
+    await tx.registroAuditoria.create({
+      data: {
+        tipoEvento: TipoEventoAuditoria.ALERTA,
+        alertaId: alerta.id,
+        detalle: `Alerta ${alerta.tipo} resuelta por la cuenta ${auth.sub}`,
+      },
+    });
+
+    return aAlertaDTO(resuelta);
+  });
 }

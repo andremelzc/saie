@@ -92,3 +92,39 @@ export interface ExploradorEspaciosDTO {
   franja: { diaSemana: DiaSemana; horaInicio: string; horaFin: string };
   espacios: EspacioExploradorDTO[];
 }
+
+// ---------------- Docente: estado de equipos (Issue 7.4) ----------------
+
+export interface CambioHistorialLaboratorioDTO {
+  campo: 'SOFTWARE' | 'PCS_MALOGRADAS';
+  valorAnterior: string | null;
+  valorNuevo: string;
+  fechaCambio: Date;
+}
+
+export interface SoftwareRequeridoCursoDTO {
+  asignacionId: string;
+  codigoCurso: string;
+  nombreCurso: string;
+  codigoSeccion: string;
+  softwareRequerido: string[];
+  softwareFaltante: string[];
+  cumple: boolean;
+}
+
+export interface EstadoLaboratorioDocenteDTO {
+  laboratorio: {
+    id: string;
+    identificador: string;
+    pabellon: string;
+    piso: number;
+    aforoNominal: number;
+    pcsMalogradas: number;
+    pcsOperativas: number;
+    softwareInstalado: string[];
+  };
+  /** Stack que exige cada curso del docente en este laboratorio frente a lo instalado. */
+  cursos: SoftwareRequeridoCursoDTO[];
+  /** Últimos cambios de software y PCs, del más reciente al más antiguo. */
+  historial: CambioHistorialLaboratorioDTO[];
+}
