@@ -64,3 +64,7 @@ export type TipoCodigoConsulta = 'ALUMNO' | 'CURSO';
 export type ResultadoConsulta =
   | { tipo: 'ALUMNO'; datos: ConsultaAlumnoResponseDTO }
   | { tipo: 'CURSO'; datos: ConsultaCursoResponseDTO };
+
+export type ItemConsultaAsignacion =
+  | AsignacionConsultaItemDTO
+  | (SeccionCursoConsultaDTO & { codigoCurso?: string; nombreCurso?: string });
