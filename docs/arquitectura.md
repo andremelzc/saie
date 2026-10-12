@@ -29,6 +29,8 @@ El motor de asignación es unificado para aulas teóricas y laboratorios. Se sus
 Los triggers del sistema (carga de archivos maestros, ejecución de asignación, actualización de PCs o software) son acciones puntuales disparadas por usuarios autorizados (un botón o acción administrativa en la interfaz), en vez de listeners automáticos o integraciones complejas en tiempo real.  
 La automatización se concentra en lo que ocurre inmediatamente después de esa acción: el motor evalúa las reglas complejas y decide sin sesgo humano, y el pipeline de calidad verifica el sistema sin intervención manual.
 
+El principio admite dos piezas de infraestructura mínima, ambas acordadas en el cambio de alcance aprobado (decisión D-06): un **bus de eventos interno** al mismo proceso, con el que el motor y las alertas avisan de lo ocurrido sin conocer a quien escucha, y una **tarea programada externa** (GitHub Actions) para el resumen diario. No se incorporan colas, brokers ni listeners de infraestructura, ni integraciones en tiempo real con sistemas institucionales.
+
 ---
 
 ## 3. Vista General de Componentes
@@ -55,6 +57,8 @@ La automatización se concentra en lo que ocurre inmediatamente después de esa 
  |  |  - Importación Masiva (CSV / JSON)                                | |
  |  |  - Detección de Alertas e Incidencias                            | |
  |  |  - Trazabilidad y Registro de Auditoría                          | |
+ |  |  - Bus de Eventos interno (asignacion.cambiada, alerta.creada)   | |
+ |  |  - Notificador de Telegram (vinculación, avisos, resumen diario) | |
  |  +---------------------------------+--------------------------------+ |
  |                                    |                                  |
  |  +---------------------------------v--------------------------------+ |
@@ -73,6 +77,12 @@ La automatización se concentra en lo que ocurre inmediatamente después de esa 
  |                     Base de Datos PostgreSQL (Supabase)               |
  |   Espacios | Secciones | Matrículas | Cuentas | Asignaciones | Alertas|
  +-----------------------------------------------------------------------+
+
+ +-----------------------------------------------------------------------+
+ | Servicios externos                                                    |
+ |   * Telegram Bot API: webhook de la vinculación y envío de mensajes   |
+ |   * GitHub Actions: tarea programada que invoca el resumen diario     |
+ +-----------------------------------------------------------------------+
 ```
 
 ### 3.2. Responsabilidades por Componente
@@ -85,8 +95,10 @@ La automatización se concentra en lo que ocurre inmediatamente después de esa 
 | **Autenticación (JWT)** | Emisión y verificación de tokens firmados para los 4 roles. Control del flag `debe_cambiar_clave`. |
 | **Detección de Alertas e Incidencias** | Detección automática de discrepancias tras cambios de software o fallas de PCs en asignaciones vigentes; gestión del ciclo de vida de incidencias reportadas por docentes. |
 | **Capa de Persistencia (Prisma)** | Mapeo objeto-relacional tipado estricto contra PostgreSQL, gestión de migraciones y constraints relacionales. |
+| **Bus de Eventos** | Canal interno al proceso, tipado, con los eventos `asignacion.cambiada` y `alerta.creada`. El emisor (motor o detección de alertas) publica **después** de confirmar la transacción y no conoce a los manejadores; un manejador que falla se captura y no afecta al emisor ni a los demás (ver §6.3). |
+| **Notificador de Telegram** | Bot de vinculación por webhook (código y clave del alumno, con baja voluntaria), aviso de cambio de aula a los matriculados vinculados y resumen diario de clases. Sin datos de salud ni de movilidad reducida en los mensajes (RNF-11). |
 | **Registro de Auditoría** | Registro inmutable de eventos críticos (asignaciones, escalamientos y alertas) para trazabilidad institucional. |
-| **Clientes (Frontend SPA)** | Portal público de consulta del alumno, portal del docente (horarios, incidencias) y panel administrativo unificado (Coordinación y Jefatura) con planos interactivos SVG por piso. |
+| **Clientes (Frontend SPA)** | Portal público de consulta del alumno, portal del docente (horarios, incidencias) y panel administrativo unificado (Coordinación y Jefatura) con planos interactivos SVG por piso y maqueta 3D navegable del mapa de ocupación. |
 
 ---
 
@@ -100,6 +112,8 @@ La automatización se concentra en lo que ocurre inmediatamente después de esa 
 * **Zod:** Validación estricta en tiempo de ejecución de payloads y archivos importados.
 * **jsonwebtoken & bcrypt:** Autenticación stateless y hash seguro de contraseñas.
 * **csv-parse:** Motor de streaming y parseo de archivos CSV masivos.
+* **Telegram Bot API (HTTPS, `fetch` nativo):** Canal de avisos al alumno. Sin librería de terceros: el cliente solo usa `sendMessage` y `deleteMessage`, y el webhook recibe las actualizaciones.
+* **`EventEmitter` tipado propio:** Bus de eventos interno; no se usa un broker externo.
 
 ### 4.2. Frontend
 * **React 19 + TypeScript + Vite:** SPA reactiva y modular con tipado estricto.
@@ -107,6 +121,8 @@ La automatización se concentra en lo que ocurre inmediatamente después de esa 
 * **React Router v7:** Gestión declarativa de rutas protegidas por roles.
 * **Axios:** Cliente HTTP con interceptores para inyección de JWT y manejo unificado de errores.
 * **Planos SVG Interactivos por Piso:** Visualización gráfica bidimensional por pabellón/piso donde cada aula/laboratorio se mapea con `Espacio.identificador`, indicando disponibilidad, alertas y accesibilidad.
+* **three.js + @react-three/fiber:** Maqueta 3D del mapa de ocupación que extruye los mismos planos SVG, con cámara orbital, selector de piso y paso entre pisos por escaleras y ascensores. Se carga de forma diferida para no aumentar el bundle inicial; sin WebGL se muestra el mapa 2D.
+* **`tools/planos`:** Conversor que convierte la exportación de Canva de cada piso en un SVG limpio con un `id` por espacio (ver [Spec 07](specs/07-ui-ux-y-activos.md)).
 
 ### 4.3. Calidad y Pruebas
 * **Jest + ts-jest:** Pruebas unitarias y suites parametrizadas de las funciones puras del motor de reglas.
@@ -120,13 +136,28 @@ La automatización se concentra en lo que ocurre inmediatamente después de esa 
 ## 5. Modelo de Seguridad y Control de Acceso
 
 ### 5.1. Roles del Sistema
-1. **ALUMNO:** Consulta de asignación de espacios por código de alumno o curso, visualización de rutas accesibles y plano interactivo del campus. Acceso restringido a su propia ficha médica.
+1. **ALUMNO:** Consulta de asignación de espacios por código de alumno o curso, visualización de rutas accesibles y plano interactivo del campus. Acceso restringido a su propia ficha médica. Puede vincular y desvincular su cuenta con el bot de Telegram para recibir avisos de cambio de aula y el resumen diario.
 2. **DOCENTE:** Visualización de horario institucional, espacios y laboratorios asignados, estado operativo de equipos y reporte de incidencias con identificador de seguimiento.
-3. **COORDINACION_ACADEMICA:** Importación masiva de datos maestros, ejecución de asignaciones (individual y batch), revisión de secciones escaladas, alta/restablecimiento de cuentas.
-4. **JEFATURA_LABORATORIOS:** Actualización del estado de PCs y software de laboratorios asignados, atención de alertas del sistema y resolución/descarte de incidencias reportadas.
+3. **COORDINACION_ACADEMICA:** Importación masiva de datos maestros, ejecución de asignaciones (individual y batch), revisión de secciones escaladas, alta individual de alumnos y docentes, gestión de espacios (todos los campos) y restablecimiento de cuentas.
+4. **JEFATURA_LABORATORIOS:** Actualización del estado de PCs y software de laboratorios asignados, atención de alertas del sistema y resolución/descarte de incidencias reportadas, con comentario de cierre. Solo opera sobre los laboratorios que tiene a su cargo (`EspacioResponsable`); en la gestión de espacios solo edita PCs y software.
 
 ### 5.2. Aislamiento de Datos Sensibles (RNF-09)
-Los datos de salud y condiciones especiales del estudiante residen exclusivamente en la tabla [`FichaMédica`](modelo-datos.md#48-fichamédica). Los endpoints de consulta pública del estudiante jamás exponen esta información.
+Los datos de salud y condiciones especiales del estudiante residen exclusivamente en la tabla [`FichaMédica`](modelo-datos.md#48-fichamédica). Los endpoints de consulta pública del estudiante jamás exponen esta información. Tampoco la exponen los mensajes de Telegram, que solo incluyen curso, sección, aulas y horario (RNF-11).
+
+### 5.3. Autenticación de Llamadas que No Son de Usuario
+Dos rutas no usan el JWT de un usuario y tienen su propio mecanismo, siempre **fallando cerrado** (sin secreto configurado, rechazan todo):
+
+| Ruta | Quién la invoca | Autenticación |
+| :--- | :--- | :--- |
+| `POST /api/v1/telegram/webhook` | Telegram | Encabezado `X-Telegram-Bot-Api-Secret-Token` comparado en tiempo constante con `TELEGRAM_WEBHOOK_SECRET`. Sin el secreto correcto responde 401; con él siempre responde 200, para que Telegram no reintente por errores propios. |
+| `POST /api/v1/telegram/resumen-diario` | GitHub Actions | `Authorization: Bearer <RESUMEN_DIARIO_TOKEN>`, comparado en tiempo constante. Sin token 401, incorrecto 403, variable sin configurar 503. Un JWT de usuario no sirve. |
+
+### 5.4. Vinculación con Telegram
+Consultar por código de alumno es público (D-04), por lo que vincular solo con el código permitiría suscribirse a los avisos de otra persona. El bot exige **código y clave** de SAIE, verificados con bcrypt igual que el login (`verificarCredenciales`), y:
+* responde un mensaje genérico ante cualquier fallo, sin revelar si el código existe;
+* tras 5 intentos fallidos en 15 minutos bloquea el chat por 15 minutos (en memoria: se reinicia si el contenedor se reinicia);
+* borra del chat el mensaje que contiene la clave, haya o no éxito;
+* guarda el `chat_id` en `VinculacionTelegram` (una fila por alumno y un chat por alumno), con baja voluntaria con `/baja`.
 
 ---
 
@@ -148,6 +179,18 @@ Los datos de salud y condiciones especiales del estudiante residen exclusivament
 ### 6.2. Asignación en Lote (Modo Batch)
 Ordena las secciones del periodo aplicando heurísticas de optimización (secciones con alumnos con movilidad reducida primero, luego mayor demanda de aforo y requerimientos de software especializado) y ejecuta la orquestación individual generando un informe global de asignadas vs escaladas bajo un mismo `corrida_id`.
 
+### 6.3. Flujo de Eventos y Avisos
+El bus de eventos desacopla a quien produce un cambio de quien reacciona a él.
+
+1. **Emisión después de confirmar.** El motor y la detección de alertas publican el evento **solo después** de confirmar la transacción, nunca dentro de ella: no se avisa de algo que luego se revierte.
+2. **`asignacion.cambiada`** se emite cuando una sección con asignación `VIGENTE` pasa a un conjunto de espacios **distinto** y también `VIGENTE` (la anterior queda `HISTORICA`). No se emite en la primera asignación, si la sección estaba `ESCALADA`, si pasa a `ESCALADA` (no hay aula nueva que informar) ni si la asignación se conserva por idempotencia. Lleva la sección, el curso, los espacios anteriores y nuevos (id e identificador) y los horarios.
+3. **`alerta.creada`** se emite solo cuando se **crea** una alerta nueva; no cuando solo se actualiza una pendiente idéntica.
+4. **Aislamiento de fallos.** Un manejador que lanza un error o rechaza su promesa se captura y se registra únicamente el tipo de error (no el mensaje, que podría traer datos sensibles). No afecta a la asignación, a la alerta ni a los demás manejadores.
+5. **Manejador de Telegram** (`asignacion.cambiada`): busca los matriculados de la sección con vinculación activa y les envía el aviso. Un 403 de Telegram (el alumno bloqueó el bot) desactiva su vinculación; los errores transitorios (red, 429, 5xx) se reintentan hasta 3 veces. Todos los envíos pasan por una **cola global** con 40 ms entre mensajes (~25 por segundo, bajo el límite de ~30 de Telegram) sin importar cuántos manejadores corran.
+6. **Resumen diario.** Una tarea programada de GitHub Actions invoca cada mañana el endpoint protegido; el día de la semana se calcula en hora de Lima. Es **idempotente**: reclama el día en `fecha_ultimo_resumen` con una actualización condicional antes de enviar y lo libera si el envío falla, así que correrlo dos veces el mismo día no duplica mensajes.
+
+Los manejadores se conectan una sola vez al arrancar el servidor (`registrarManejadores`); `createApp` no los conecta, de modo que probar las rutas no dispara envíos. Sin `TELEGRAM_BOT_TOKEN` el sistema funciona igual y simplemente no avisa.
+
 ---
 
 ## 7. Triggers del Sistema
@@ -159,3 +202,27 @@ Ordena las secciones del periodo aplicando heurísticas de optimización (seccio
 | **Actualización de PCs Malogradas** | Manual (Jefatura) | Recálculo de capacidad real y emisión de alerta `CAPACIDAD` si afecta vigentes. |
 | **Modificación de Software en Lab** | Manual (Jefatura) | Verificación de stacks de secciones vigentes y emisión de alerta `SOFTWARE`. |
 | **Reporte de Incidencia Docente** | Manual (Docente) | Generación de ticket con seguimiento y notificación a Jefatura de Laboratorios. |
+| **Edición del aforo de un espacio** | Manual (Coordinación) | Evaluación de capacidad insuficiente sobre las asignaciones vigentes y emisión de alerta `CAPACIDAD`. |
+| **Cambio de asignación de una sección** | Automático (evento `asignacion.cambiada`) | Aviso por Telegram a los matriculados con vinculación activa. |
+| **Mensaje al bot de Telegram** | Externo (webhook de Telegram) | Vinculación o baja de la cuenta del alumno. |
+| **Resumen diario** | Programado (GitHub Actions, 07:30 hora de Lima, lunes a sábado) | Resumen de las clases del día por Telegram a quienes tengan clase y vinculación activa. |
+
+---
+
+## 8. Configuración y Secretos del Canal de Telegram
+
+El token del bot y los secretos **nunca** van en el repositorio. `backend/.env.example` documenta cada variable; el valor real se define solo donde corre quien lo usa:
+
+| Variable / secreto | Quién lo usa | Dónde se define |
+| :--- | :--- | :--- |
+| `TELEGRAM_BOT_TOKEN` | Backend (enviar y borrar mensajes) | `backend/.env` local y variables de entorno de **Render** |
+| `TELEGRAM_WEBHOOK_SECRET` | Backend (validar el webhook) y el registro del webhook en Telegram | `backend/.env` local y **Render** |
+| `TELEGRAM_BOT_USERNAME` | Portal (enlace `https://t.me/<usuario>`) | `backend/.env` local y **Render** |
+| `RESUMEN_DIARIO_TOKEN` | Backend (valida) y el workflow (envía) | `backend/.env` local, **Render** y secreto del repositorio de **GitHub** |
+| `BACKEND_URL` | Workflow `resumen-diario.yml` | Solo secreto del repositorio de **GitHub** |
+
+GitHub solo necesita lo que el workflow usa (`RESUMEN_DIARIO_TOKEN` y `BACKEND_URL`); el token del bot y el secreto del webhook no deben ir a GitHub.
+
+**Puesta en marcha:** crear el bot con @BotFather y obtener su token; definir las variables en Render; registrar el webhook una vez por despliegue (`setWebhook` con la URL pública `/api/v1/telegram/webhook` y el `secret_token`; el comando está en `.env.example`); y definir los dos secretos en GitHub para que corra la tarea programada. En desarrollo local no hay URL pública para el webhook: se prueba con un túnel o simulando las actualizaciones.
+
+**Riesgo operativo:** el contenedor gratuito de Render se suspende tras 15 minutos sin tráfico. Por eso se prefiere el webhook al sondeo (Telegram reintenta las entregas) y el resumen diario lo dispara una tarea externa que tolera el arranque en frío de 45 a 60 segundos.
