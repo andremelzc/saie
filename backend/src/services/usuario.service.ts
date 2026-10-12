@@ -10,8 +10,8 @@ const opcional = z
   .string()
   .trim()
   .max(200)
-  .optional()
-  .transform((v) => (v ? v : undefined));
+  .transform((v) => (v ? v : undefined))
+  .optional();
 
 export const AltaAlumnoSchema = z
   .object({
