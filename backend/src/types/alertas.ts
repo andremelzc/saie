@@ -1,4 +1,4 @@
-import { TipoAlerta } from '@prisma/client';
+import { EstadoAlerta, TipoAlerta } from '@prisma/client';
 
 /** Asignación vigente que quedó incompatible o sin capacidad tras un cambio en un espacio. */
 export interface AsignacionAfectadaDTO {
@@ -34,4 +34,27 @@ export interface AlertaRegistradaDTO {
   asignacionesAfectadas: number;
   /** `false` cuando se actualizó una alerta pendiente idéntica en lugar de crear otra. */
   creada: boolean;
+}
+
+/** Asignación afectada por una alerta, con los datos del curso para mostrarla en el panel. */
+export interface AsignacionAlertaDTO {
+  asignacionId: string;
+  codigoCurso: string;
+  nombreCurso: string;
+  codigoSeccion: string;
+}
+
+export interface AlertaDTO {
+  id: string;
+  tipo: TipoAlerta;
+  estado: EstadoAlerta;
+  motivo: string;
+  fechaDeteccion: Date;
+  espacio: { id: string; identificador: string; pabellon: string; piso: number };
+  asignacionesAfectadas: AsignacionAlertaDTO[];
+}
+
+export interface FiltrosAlertas {
+  tipo?: TipoAlerta;
+  espacioId?: string;
 }

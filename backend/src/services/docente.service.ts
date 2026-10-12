@@ -19,6 +19,7 @@ import {
   mapearEspacios,
 } from '../lib/horario';
 import { calcularCapacidadReal } from '../rules/calcularCapacidadReal';
+import { validarSoftwareLaboratorio } from '../rules/validarSoftware';
 import {
   AsignacionOcupacionInput,
   calcularEspaciosDisponibles,
@@ -27,6 +28,7 @@ import {
 import { obtenerPeriodoVigente } from './periodo.service';
 import {
   AsignacionActivaDocenteDTO,
+  EstadoLaboratorioDocenteDTO,
   EspacioExploradorDTO,
   ExploradorEspaciosDTO,
   HorarioDocenteDTO,
@@ -275,4 +277,93 @@ export async function registrarIncidencia(
 
   // Inalcanzable: el bucle devuelve o lanza.
   throw new HttpError(500, 'No se pudo generar el identificador de seguimiento');
+}
+
+// ---------------------------------------------------------------------------
+// Issue 7.4 — Estado de equipos del laboratorio del docente
+// ---------------------------------------------------------------------------
+
+const MAX_CAMBIOS_HISTORIAL = 20;
+
+/**
+ * Issue 7.4: antes de su clase, el docente consulta cuántas PCs están operativas, qué software
+ * hay instalado, si cubre el stack de su curso y los últimos cambios del laboratorio.
+ *
+ * Solo accede a laboratorios donde tiene una asignación VIGENTE (404 en cualquier otro caso,
+ * para no revelar qué espacios existen).
+ */
+export async function obtenerEstadoLaboratorioDocente(
+  cuentaId: string,
+  espacioId: string,
+  prisma: Pick<PrismaClient, 'docente' | 'asignacion' | 'historialEspacio'>,
+): Promise<EstadoLaboratorioDocenteDTO> {
+  const docente = await obtenerDocenteDeCuenta(cuentaId, prisma);
+
+  const asignaciones = await prisma.asignacion.findMany({
+    where: {
+      estado: EstadoAsignacion.VIGENTE,
+      seccion: { docenteId: docente.id },
+      espacios: { some: { espacioId, espacio: { tipo: TipoEspacio.LABORATORIO } } },
+    },
+    include: {
+      espacios: { include: { espacio: true } },
+      seccion: { include: { curso: true } },
+    },
+  });
+
+  const laboratorio = asignaciones[0]?.espacios.find((ae) => ae.espacioId === espacioId)?.espacio;
+  if (!laboratorio) {
+    throw new HttpError(404, 'No tienes una asignación vigente en ese laboratorio');
+  }
+
+  const historial = await prisma.historialEspacio.findMany({
+    where: { espacioId },
+    orderBy: { fechaCambio: 'desc' },
+    take: MAX_CAMBIOS_HISTORIAL,
+  });
+
+  const cursos = asignaciones
+    .map((a) => {
+      const requerido = a.seccion.stackSoftwareRequerido;
+      const { cumple, softwareFaltante } = validarSoftwareLaboratorio(
+        laboratorio.softwareInstalado,
+        requerido,
+      );
+      return {
+        asignacionId: a.id,
+        codigoCurso: a.seccion.curso.codigo,
+        nombreCurso: a.seccion.curso.nombre,
+        codigoSeccion: a.seccion.codigoSeccion,
+        softwareRequerido: requerido,
+        softwareFaltante,
+        cumple,
+      };
+    })
+    .sort(
+      (a, b) =>
+        a.codigoCurso.localeCompare(b.codigoCurso) ||
+        a.codigoSeccion.localeCompare(b.codigoSeccion),
+    );
+
+  const pcsMalogradas = laboratorio.pcsMalogradas ?? 0;
+
+  return {
+    laboratorio: {
+      id: laboratorio.id,
+      identificador: laboratorio.identificador,
+      pabellon: laboratorio.pabellon,
+      piso: laboratorio.piso,
+      aforoNominal: laboratorio.aforoNominal,
+      pcsMalogradas,
+      pcsOperativas: calcularCapacidadReal(laboratorio),
+      softwareInstalado: laboratorio.softwareInstalado,
+    },
+    cursos,
+    historial: historial.map((h) => ({
+      campo: h.campo,
+      valorAnterior: h.valorAnterior,
+      valorNuevo: h.valorNuevo,
+      fechaCambio: h.fechaCambio,
+    })),
+  };
 }
