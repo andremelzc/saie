@@ -11,6 +11,8 @@ import {
 } from '../lib/horario';
 import { CursoMatriculadoDTO, HorarioSemanalDTO, PerfilAlumnoDTO } from '../types/portal';
 import { obtenerPeriodoVigente } from './periodo.service';
+import { construirGrafoContiguedad } from './contiguedad.service';
+import { calcularRutaReferencia } from './rutaReferencia.service';
 
 /**
  * Resuelve el alumno dueño de la cuenta del token. Todas las consultas del portal parten de
@@ -259,5 +261,78 @@ export async function actualizarPerfilAlumno(
       : await tx.fichaMedica.findUnique({ where: { alumnoId: alumno.id } });
 
     return armarPerfil(alumnoActualizado, ficha);
+  });
+}
+
+/**
+ * Issue 3.14 / 3.15: Obtiene la ruta de referencia hacia el espacio asignado de una asignación.
+ * Verifica que la asignación pertenezca a una sección donde el alumno autenticado esté matriculado,
+ * o que sea una asignación activa del periodo si se consulta directamente.
+ */
+export async function obtenerRutaAlumnoPorAsignacionId(
+  cuentaId: string,
+  asignacionId: string,
+  prisma: PrismaClient,
+) {
+  const alumno = await obtenerAlumnoDeCuenta(cuentaId, prisma);
+
+  // Buscar la asignación con sus espacios y sección
+  const asignacion = await prisma.asignacion.findUnique({
+    where: { id: asignacionId },
+    include: {
+      seccion: {
+        include: {
+          matriculas: {
+            where: { alumnoId: alumno.id },
+          },
+        },
+      },
+      espacios: {
+        include: {
+          espacio: true,
+        },
+      },
+    },
+  });
+
+  if (!asignacion) {
+    throw new HttpError(404, 'La asignación solicitada no existe');
+  }
+
+  // Verificar que el alumno esté matriculado en la sección asignada
+  const matricula = asignacion.seccion.matriculas[0];
+  if (!matricula) {
+    throw new HttpError(
+      403,
+      'No tienes permiso para ver la ruta de una sección en la que no estás matriculado',
+    );
+  }
+
+  const movilidadReducida = matricula.movilidadReducida;
+
+  // Construir grafo de contigüidad si existen relaciones de contigüidad
+  const [espaciosDb, contiguosDb] = await Promise.all([
+    prisma.espacio.findMany({ select: { id: true, tipo: true, identificador: true } }),
+    prisma.espacioContiguo.findMany({ select: { espacioIdA: true, espacioIdB: true } }),
+  ]);
+
+  const grafo = construirGrafoContiguedad(
+    espaciosDb || [],
+    (contiguosDb || []).map((c) => ({ idA: c.espacioIdA, idB: c.espacioIdB })),
+  );
+
+  const espaciosParaRuta = asignacion.espacios.map((ae) => ({
+    id: ae.espacio.id,
+    identificador: ae.espacio.identificador,
+    pabellon: ae.espacio.pabellon,
+    piso: ae.espacio.piso,
+    tipo: ae.espacio.tipo,
+  }));
+
+  return calcularRutaReferencia({
+    asignacionId: asignacion.id,
+    espacios: espaciosParaRuta,
+    grafoContiguedad: grafo,
+    movilidadReducida,
   });
 }
