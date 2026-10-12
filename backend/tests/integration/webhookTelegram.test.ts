@@ -36,12 +36,12 @@ jest.mock('../../src/telegram/cliente', () => {
 import request from 'supertest';
 import { createApp } from '../../src/app';
 
-const WEBHOOK_SECRET = 'secreto-webhook-de-prueba-123';
-const RESUMEN_TOKEN = 'token-resumen-diario-secreto-xyz';
+const WEBHOOK_SECRET = 'test-webhook-secret';
+const RESUMEN_TOKEN = 'test-resumen-token';
 
 process.env.TELEGRAM_WEBHOOK_SECRET = WEBHOOK_SECRET;
 process.env.RESUMEN_DIARIO_TOKEN = RESUMEN_TOKEN;
-process.env.TELEGRAM_BOT_TOKEN = '123456:ABC-DEF-bot-token';
+process.env.TELEGRAM_BOT_TOKEN = 'test-bot-token';
 
 const app = createApp();
 
