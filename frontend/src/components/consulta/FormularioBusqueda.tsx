@@ -13,7 +13,6 @@ export interface FormularioBusquedaProps {
   onError?: (mensaje: string) => void;
   onCargando?: (cargando: boolean) => void;
   className?: string;
-  autoFocus?: boolean;
 }
 
 export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
@@ -21,7 +20,6 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
   onError,
   onCargando,
   className = '',
-  autoFocus = false,
 }) => {
   const [codigo, setCodigo] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -157,7 +155,6 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
               onChange={handleChange}
               onBlur={handleBlur}
               placeholder="Ej. 20200001 o CC-101"
-              autoFocus={autoFocus}
               disabled={cargando}
               aria-required="true"
               aria-invalid={tieneError}

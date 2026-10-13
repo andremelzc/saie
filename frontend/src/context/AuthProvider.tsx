@@ -45,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSesion(null);
       // RutaProtegida también redirige al quedar sin sesión; esta marca hace que conserve el aviso.
       setSesionVencida(motivo === 'vencida');
-      navigate(rutaLoginDeRol(actual?.rol), {
+      void navigate(rutaLoginDeRol(actual?.rol), {
         replace: true,
         state: motivo === 'vencida' ? { motivo } : null,
       });

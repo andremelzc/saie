@@ -126,7 +126,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
             className="inline-flex items-center gap-2 h-11 px-3 rounded-lg text-sm font-medium no-underline text-white hover:bg-white/10 lg:text-saie-primary lg:hover:bg-saie-primary/10 transition-colors"
           >
             <span aria-hidden="true">&larr;</span>
-            Volver al inicio
+            <span>Volver al inicio</span>
           </Link>
         </header>
 
