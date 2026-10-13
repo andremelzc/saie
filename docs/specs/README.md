@@ -15,6 +15,7 @@ Este directorio contiene las especificaciones técnicas completas y detalladas d
 | [`05-portal-docente.md`](./05-portal-docente.md) | `epic:portal-docente` | #7.8 — #7.12 | Portal docente: consulta de horarios/asignaciones, exploración de espacios, reporte de incidencias y revisión/resolución por Jefatura. |
 | [`06-estrategia-calidad-y-testing.md`](./06-estrategia-calidad-y-testing.md) | `epic:calidad` | #5.1 — #5.20 | Pruebas unitarias/parametrizadas (Jest), integración, E2E (Playwright), carga (k6), pipeline CI/CD (GitHub Actions), SonarCloud y Seed. |
 | [`07-ui-ux-y-activos.md`](./07-ui-ux-y-activos.md) | `epic:docs` | #6.6, #6.7, #6.10 | Diseño UI/UX, tokens de estilos, componentes base React y maquetación de planos SVG por piso/pabellón. |
+| [`08-catalogo-software.md`](./08-catalogo-software.md) | `epic:panel-alertas` | _por asignar_ | **Borrador.** Entidad `Software` como catálogo único (nombre, versión, categoría, licencia) y relaciones con espacios y secciones. |
 
 ---
 
