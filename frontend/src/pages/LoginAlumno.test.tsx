@@ -1,5 +1,7 @@
+import type React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { LoginAlumno } from './LoginAlumno';
 import api from '../services/api';
 import type { LoginResponseDTO } from '../types/auth';
@@ -13,13 +15,18 @@ vi.mock('../services/api', () => ({
   },
 }));
 
+/** Los logins incluyen enlaces del router (volver al inicio, otros portales). */
+function renderizar(ui: React.ReactElement) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
+
 describe('LoginAlumno (Issue #151 / 3.22)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('renderiza el formulario con código de alumno y clave, sin opción de crear cuenta', () => {
-    render(<LoginAlumno />);
+    renderizar(<LoginAlumno />);
 
     expect(screen.getByRole('heading', { name: /Portal del Estudiante/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/Código de alumno/i)).toBeInTheDocument();
@@ -36,7 +43,7 @@ describe('LoginAlumno (Issue #151 / 3.22)', () => {
   });
 
   it('permite alternar la visibilidad de la contraseña con el botón de ojo', () => {
-    render(<LoginAlumno />);
+    renderizar(<LoginAlumno />);
 
     const inputClave = screen.getByLabelText(/^Contraseña/i, { selector: 'input' });
     const botonToggle = screen.getByRole('button', { name: /Mostrar contraseña/i });
@@ -52,7 +59,7 @@ describe('LoginAlumno (Issue #151 / 3.22)', () => {
   });
 
   it('habilita el botón solo cuando ambos campos están completos', () => {
-    render(<LoginAlumno />);
+    renderizar(<LoginAlumno />);
 
     const inputCodigo = screen.getByLabelText(/Código de alumno/i);
     const inputClave = screen.getByLabelText(/^Contraseña/i, { selector: 'input' });
@@ -86,7 +93,7 @@ describe('LoginAlumno (Issue #151 / 3.22)', () => {
     });
 
     const onLoginExitosoMock = vi.fn();
-    render(<LoginAlumno onLoginExitoso={onLoginExitosoMock} />);
+    renderizar(<LoginAlumno onLoginExitoso={onLoginExitosoMock} />);
 
     fireEvent.change(screen.getByLabelText(/Código de alumno/i), {
       target: { value: '20200001' },
@@ -119,7 +126,7 @@ describe('LoginAlumno (Issue #151 / 3.22)', () => {
       },
     });
 
-    render(<LoginAlumno />);
+    renderizar(<LoginAlumno />);
 
     fireEvent.change(screen.getByLabelText(/Código de alumno/i), {
       target: { value: '20200001' },

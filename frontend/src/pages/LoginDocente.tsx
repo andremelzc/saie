@@ -1,5 +1,6 @@
-﻿import React from 'react';
+import React from 'react';
 import LoginFormBase from '../components/auth/LoginFormBase';
+import LoginLayout from '../components/auth/LoginLayout';
 import type { LoginResponseDTO } from '../types/auth';
 
 /**
@@ -13,20 +14,25 @@ import type { LoginResponseDTO } from '../types/auth';
  * "codigo" del LoginSchema; enviar un correo resultaría en credenciales
  * inválidas (401). Esta desviación queda registrada en el resumen del issue.
  *
- * Esta pantalla NO guarda el token ni maneja sesión; eso corresponde
- * al Issue #217 (4.25 — Gestión de sesión y persistencia).
+ * Esta pantalla NO guarda el token ni maneja sesión; eso lo hace LoginRoute (Issue #217).
  */
 
 export interface LoginDocenteProps {
   onLoginExitoso?: (resultado: LoginResponseDTO) => void;
+  avisoSesion?: string;
   className?: string;
 }
 
-export const LoginDocente: React.FC<LoginDocenteProps> = ({ onLoginExitoso, className = '' }) => {
+export const LoginDocente: React.FC<LoginDocenteProps> = ({
+  onLoginExitoso,
+  avisoSesion,
+  className = '',
+}) => {
   return (
-    <main
-      className={`min-h-screen bg-[#FAF6ED] text-[#222222] flex flex-col justify-center items-center px-4 py-8 sm:py-12 ${className}`}
-      aria-label="Página de inicio de sesión de docente"
+    <LoginLayout
+      portal="docente"
+      ariaLabel="Página de inicio de sesión de docente"
+      className={className}
     >
       <LoginFormBase
         rol="DOCENTE"
@@ -38,8 +44,9 @@ export const LoginDocente: React.FC<LoginDocenteProps> = ({ onLoginExitoso, clas
         endpoint="/v1/auth/docente/login"
         campoIdentificador="codigo"
         onLoginExitoso={onLoginExitoso}
+        avisoSesion={avisoSesion}
       />
-    </main>
+    </LoginLayout>
   );
 };
 

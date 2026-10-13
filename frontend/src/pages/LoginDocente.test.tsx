@@ -1,5 +1,7 @@
-﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type React from 'react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { LoginDocente } from './LoginDocente';
 import api from '../services/api';
 import type { LoginResponseDTO } from '../types/auth';
@@ -13,13 +15,18 @@ vi.mock('../services/api', () => ({
   },
 }));
 
+/** Los logins incluyen enlaces del router (volver al inicio, otros portales). */
+function renderizar(ui: React.ReactElement) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
+
 describe('LoginDocente (Issue #204 / 7.7)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('renderiza el formulario con código de docente y clave, sin opción de crear cuenta', () => {
-    render(<LoginDocente />);
+    renderizar(<LoginDocente />);
 
     expect(screen.getByRole('heading', { name: /Portal del Docente/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/Código de docente/i)).toBeInTheDocument();
@@ -36,14 +43,14 @@ describe('LoginDocente (Issue #204 / 7.7)', () => {
   });
 
   it('muestra el label "Código de docente" y el placeholder con ejemplo ficticio D001', () => {
-    render(<LoginDocente />);
+    renderizar(<LoginDocente />);
 
     const inputCodigo = screen.getByLabelText(/Código de docente/i);
     expect(inputCodigo).toHaveAttribute('placeholder', 'Ej. D001');
   });
 
   it('permite alternar la visibilidad de la contraseña con el botón de ojo', () => {
-    render(<LoginDocente />);
+    renderizar(<LoginDocente />);
 
     const inputClave = screen.getByLabelText(/^Contraseña/i, { selector: 'input' });
     const botonToggle = screen.getByRole('button', { name: /Mostrar contraseña/i });
@@ -59,7 +66,7 @@ describe('LoginDocente (Issue #204 / 7.7)', () => {
   });
 
   it('habilita el botón solo cuando ambos campos están completos', () => {
-    render(<LoginDocente />);
+    renderizar(<LoginDocente />);
 
     const inputCodigo = screen.getByLabelText(/Código de docente/i);
     const inputClave = screen.getByLabelText(/^Contraseña/i, { selector: 'input' });
@@ -93,7 +100,7 @@ describe('LoginDocente (Issue #204 / 7.7)', () => {
     });
 
     const onLoginExitosoMock = vi.fn();
-    render(<LoginDocente onLoginExitoso={onLoginExitosoMock} />);
+    renderizar(<LoginDocente onLoginExitoso={onLoginExitosoMock} />);
 
     fireEvent.change(screen.getByLabelText(/Código de docente/i), {
       target: { value: 'D001' },
@@ -127,7 +134,7 @@ describe('LoginDocente (Issue #204 / 7.7)', () => {
       },
     });
 
-    render(<LoginDocente />);
+    renderizar(<LoginDocente />);
 
     fireEvent.change(screen.getByLabelText(/Código de docente/i), {
       target: { value: 'D001' },
@@ -155,7 +162,7 @@ describe('LoginDocente (Issue #204 / 7.7)', () => {
     // Promesa que nunca resuelve para mantener el estado cargando
     vi.mocked(api.post).mockReturnValueOnce(new Promise(() => {}));
 
-    render(<LoginDocente />);
+    renderizar(<LoginDocente />);
 
     fireEvent.change(screen.getByLabelText(/Código de docente/i), {
       target: { value: 'D001' },

@@ -1,17 +1,24 @@
 import React from 'react';
 import LoginFormBase from '../components/auth/LoginFormBase';
+import LoginLayout from '../components/auth/LoginLayout';
 import type { LoginResponseDTO } from '../types/auth';
 
 export interface LoginAlumnoProps {
   onLoginExitoso?: (resultado: LoginResponseDTO) => void;
+  avisoSesion?: string;
   className?: string;
 }
 
-export const LoginAlumno: React.FC<LoginAlumnoProps> = ({ onLoginExitoso, className = '' }) => {
+export const LoginAlumno: React.FC<LoginAlumnoProps> = ({
+  onLoginExitoso,
+  avisoSesion,
+  className = '',
+}) => {
   return (
-    <main
-      className={`min-h-screen bg-[#FAF6ED] text-[#222222] flex flex-col justify-center items-center px-4 py-8 sm:py-12 ${className}`}
-      aria-label="Página de inicio de sesión de estudiante"
+    <LoginLayout
+      portal="estudiante"
+      ariaLabel="Página de inicio de sesión de estudiante"
+      className={className}
     >
       <LoginFormBase
         rol="ALUMNO"
@@ -23,8 +30,9 @@ export const LoginAlumno: React.FC<LoginAlumnoProps> = ({ onLoginExitoso, classN
         endpoint="/v1/auth/alumno/login"
         campoIdentificador="codigo"
         onLoginExitoso={onLoginExitoso}
+        avisoSesion={avisoSesion}
       />
-    </main>
+    </LoginLayout>
   );
 };
 
