@@ -107,7 +107,14 @@ export async function obtenerOcupacionPorPiso(
       tipo: espacio.tipo,
       aforoNominal: espacio.aforoNominal,
       capacidadReal: calcularCapacidadReal(espacio),
-      estado: alertasEspacio.length > 0 ? 'ALERTA_ACTIVA' : ocupacion ? 'OCUPADO' : 'DISPONIBLE',
+      estado: !espacio.habilitado
+        ? 'DESHABILITADO'
+        : alertasEspacio.length > 0
+          ? 'ALERTA_ACTIVA'
+          : ocupacion
+            ? 'OCUPADO'
+            : 'DISPONIBLE',
+      descripcionUso: espacio.descripcionUso,
       asignacion: ocupacion,
       alertas: alertasEspacio,
     };
@@ -122,6 +129,7 @@ export async function obtenerOcupacionPorPiso(
       disponibles: resultado.filter((e) => e.estado === 'DISPONIBLE').length,
       ocupados: resultado.filter((e) => e.estado === 'OCUPADO').length,
       conAlerta: resultado.filter((e) => e.estado === 'ALERTA_ACTIVA').length,
+      deshabilitados: resultado.filter((e) => e.estado === 'DESHABILITADO').length,
     },
   };
 }
@@ -140,11 +148,14 @@ export async function obtenerMapaLectura(
     pabellon: mapa.pabellon,
     piso: mapa.piso,
     franja: mapa.franja,
-    espacios: mapa.espacios.map((e) => ({
-      id: e.id,
-      identificador: e.identificador,
-      tipo: e.tipo,
-      estado: e.asignacion ? 'OCUPADO' : 'DISPONIBLE',
-    })),
+    // El alumno no ve los espacios fuera de servicio: no se le puede asignar ni consultar uno.
+    espacios: mapa.espacios
+      .filter((e) => e.estado !== 'DESHABILITADO')
+      .map((e) => ({
+        id: e.id,
+        identificador: e.identificador,
+        tipo: e.tipo,
+        estado: e.asignacion ? ('OCUPADO' as const) : ('DISPONIBLE' as const),
+      })),
   };
 }

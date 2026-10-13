@@ -111,7 +111,7 @@ export async function consultarEspaciosDisponibles(
 ): Promise<any[]> {
   const [todosLosEspacios, asignacionesVigentes] = await Promise.all([
     prisma.espacio.findMany({
-      where: { tipo: tipoEspacioRequerido },
+      where: { tipo: tipoEspacioRequerido, habilitado: true },
     }),
     prisma.asignacion.findMany({
       where: { estado: EstadoAsignacion.VIGENTE },

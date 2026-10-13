@@ -38,6 +38,7 @@ El **Panel de Alertas y Administración** es la consola de gestión para Coordin
 * **Mapa 3D (Three.js):** Maqueta extruida navegable basada en los planos SVG.
 
 ### 2.3 Gestión de Espacios y Secciones Escaladas (#4.15, #4.16, #4.17, #4.18, #4.20, #4.21, #4.22, #4.25, #4.26)
+* **Espacios deshabilitados:** `Espacio.habilitado` (por defecto `true`). Un espacio con `habilitado = false` está fuera de servicio: el motor no lo asigna (queda fuera del grafo de contigüidad y de la consulta de disponibilidad), el explorador del docente y la vista del alumno no lo muestran, y el mapa del panel lo marca como `DESHABILITADO` (con `resumen.deshabilitados`). Solo Coordinación lo cambia, con `habilitado` en `POST` y `PATCH /api/v1/admin/espacios`. Las asignaciones vigentes de un espacio que se deshabilita después no se reubican automáticamente. `Espacio.descripcionUso` (texto opcional, máx. 120) es un rótulo visual (ej. "Sala de investigación") que el mapa muestra aunque el espacio esté deshabilitado; `PATCH` con `null` lo borra. **Aforo:** `aforoNominal` puede omitirse o ser `0` ("sin definir") solo si el espacio está deshabilitado; habilitar un espacio con aforo 0 responde 422.
 * `GET /api/v1/admin/secciones-escaladas`
   * Lista las secciones que no pudieron ser asignadas en la corrida batch y requieren revisión manual.
 * `POST /api/v1/admin/usuarios/restablecer-clave`
