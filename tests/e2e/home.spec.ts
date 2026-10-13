@@ -5,18 +5,21 @@ test.describe('Portal SAIE - Pruebas E2E', () => {
     await page.goto('/');
 
     await expect(page.getByRole('heading', { name: 'SAIE' })).toBeVisible();
-    await expect(page.getByText('Sistema de Apoyo a la Integración Escolar')).toBeVisible();
-    await expect(
-      page.getByRole('heading', { name: 'Plataforma de Integración y Acompañamiento Escolar' }),
-    ).toBeVisible();
+    await expect(page.getByText('Sistema de Asignación Inteligente de Espacios')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Bienvenido a SAIE' })).toBeVisible();
   });
 
-  test('debe desplegar las tarjetas de los 4 portales del sistema', async ({ page }) => {
+  test('debe desplegar las tarjetas de los 3 portales del sistema', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByText('Portal Directivo / Admin')).toBeVisible();
+    await expect(page.getByText('Portal del Estudiante')).toBeVisible();
     await expect(page.getByText('Portal Docente')).toBeVisible();
-    await expect(page.getByText('Portal Profesional')).toBeVisible();
-    await expect(page.getByText('Portal Familias')).toBeVisible();
+    await expect(page.getByText('Portal Administrativo')).toBeVisible();
+  });
+
+  test('cada tarjeta lleva a su pantalla de login', async ({ page }) => {
+    await page.goto('/');
+    await page.getByTestId('portal-docente').click();
+    await expect(page).toHaveURL(/\/login\/docente$/);
   });
 });
