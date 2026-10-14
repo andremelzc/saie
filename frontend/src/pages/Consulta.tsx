@@ -150,27 +150,17 @@ const QueVeras: React.FC = () => (
   </section>
 );
 
-/**
- * Issue #136 — 3.7: Vista de consulta de espacios. Une el formulario de búsqueda (3.5), los
- * endpoints de consulta (3.2 y 3.4) y la tarjeta de resultado (3.6): el alumno ingresa su código
- * (o el de un curso) y ve dónde es la clase, en qué piso, con quién y a qué hora.
- *
- * Issue #137 — 3.8: mobile-first. Una sola columna de ancho acotado, sin anchos fijos, con texto
- * que envuelve; el formulario apila campo y botón en pantallas angostas.
- * Issue #138 — 3.9: accesibilidad. Un solo <h1>, regiones con nombre, avisos con role="status",
- * foco visible en los enlaces, contraste AA y texto de 14 px como mínimo.
- *
- * Es pública (no requiere sesión). Maneja carga, "sin resultado" (404 o lista vacía) y error de
- * red; el mensaje concreto del error lo muestra el propio formulario bajo el campo.
- */
 export const Consulta: React.FC = () => {
   const [fase, setFase] = useState<Fase>({ tipo: 'inicial' });
 
   return (
     <div className="min-h-screen bg-saie-canvas text-saie-text">
-      <header className="bg-gradient-to-br from-saie-primary to-saie-primary-dark text-white">
-        <div className="mx-auto max-w-xl px-4 py-4 flex items-center justify-between gap-3">
-          <img src={logoBlanco} alt="SAIE" className="h-10 w-auto shrink-0" />
+      {/* Header fijo con ancho extendido de 1200px para separar el logo y el enlace de retorno */}
+      <header className="sticky top-0 z-10 bg-saie-primary text-white shadow-[0_2px_8px_rgba(34,34,34,0.08)]">
+        <div className="max-w-[1200px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 text-white no-underline">
+            <img src={logoBlanco} alt="SAIE" className="h-10 w-auto shrink-0" />
+          </Link>
           <Link
             to="/"
             className="inline-flex items-center gap-2 min-h-11 px-3 rounded-lg text-sm font-medium no-underline text-white hover:bg-white/10 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-white transition-colors"
@@ -219,8 +209,6 @@ export const Consulta: React.FC = () => {
           <FormularioBusqueda
             mostrarErrorServidor={false}
             onCambio={() =>
-              // Al editar el campo se quitan los avisos de la búsqueda anterior (error o sin
-              // resultado), pero no una lista de clases que la persona todavía está leyendo.
               setFase((actual) =>
                 actual.tipo === 'error' || actual.tipo === 'sinResultado'
                   ? { tipo: 'inicial' }

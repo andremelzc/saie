@@ -4,6 +4,9 @@ import Home from './pages/Home';
 import Consulta from './pages/Consulta';
 import AreaPrivadaPlaceholder from './pages/AreaPrivadaPlaceholder';
 import CambiarClavePlaceholder from './pages/CambiarClavePlaceholder';
+import InicioEstudiante from './pages/InicioEstudiante';
+import HorarioMisCursosPage from './pages/HorarioMisCursosPage';
+import PerfilAlumnoPage from './pages/PerfilAlumnoPage';
 import LoginRoute from './components/auth/LoginRoute';
 import RutaProtegida from './components/auth/RutaProtegida';
 import { ROLES_ADMIN, RUTAS, TODOS_LOS_ROLES } from './config/rutas';
@@ -14,7 +17,7 @@ export const AppRoutes: React.FC = () => {
     <Routes>
       <Route path="/" element={<Home />} />
 
-      {/* Consulta pública de espacios por código de alumno o de curso (Issue 3.7) */}
+      {/* Consulta pública de espacios (Issue 3.7) */}
       <Route path={RUTAS.consulta} element={<Consulta />} />
 
       {/* Login de cada rol (Issues 3.22, 7.7 y 4.25) */}
@@ -22,12 +25,28 @@ export const AppRoutes: React.FC = () => {
       <Route path={RUTAS.loginDocente} element={<LoginRoute rol="DOCENTE" />} />
       <Route path={RUTAS.loginAdmin} element={<LoginRoute rol="ADMIN" />} />
 
-      {/* Áreas privadas: placeholders temporales hasta que existan los portales reales */}
+      {/* Áreas privadas */}
       <Route
         path={RUTAS.inicioAlumno}
         element={
           <RutaProtegida rolesPermitidos={['ALUMNO']} rutaLogin={RUTAS.loginAlumno}>
-            <AreaPrivadaPlaceholder titulo="Área del estudiante" />
+            <InicioEstudiante />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.horarioAlumno}
+        element={
+          <RutaProtegida rolesPermitidos={['ALUMNO']} rutaLogin={RUTAS.loginAlumno}>
+            <HorarioMisCursosPage />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.perfilAlumno}
+        element={
+          <RutaProtegida rolesPermitidos={['ALUMNO']} rutaLogin={RUTAS.loginAlumno}>
+            <PerfilAlumnoPage />
           </RutaProtegida>
         }
       />
@@ -48,7 +67,7 @@ export const AppRoutes: React.FC = () => {
         }
       />
 
-      {/* Destino temporal de la redirección por clave inicial (pantalla real: Issue 4.21) */}
+      {/* Destino temporal de la redirección por clave inicial */}
       <Route
         path={RUTAS.cambiarClave}
         element={
