@@ -114,8 +114,8 @@ export const InicioEstudiante: React.FC = () => {
             Área del estudiante
           </h1>
           <p className="m-0 mt-3 max-w-2xl text-base text-saie-muted">
-            Bienvenido a tu portal académico. Consulta la programación de tus clases y la
-            ubicación exacta de tus aulas y laboratorios en tiempo real.
+            Bienvenido a tu portal académico. Consulta la programación de tus clases y la ubicación
+            exacta de tus aulas y laboratorios en tiempo real.
           </p>
         </section>
 

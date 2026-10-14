@@ -60,16 +60,15 @@ export const AreaPrivadaPlaceholder: React.FC<AreaPrivadaPlaceholderProps> = ({
               {titulo}
             </h1>
             <p className="text-xs sm:text-base text-[#666666] leading-relaxed">
-              Bienvenido a tu portal académico. Consulta la programación de tus clases y la ubicación exacta de tus aulas y laboratorios en tiempo real.
+              Bienvenido a tu portal académico. Consulta la programación de tus clases y la
+              ubicación exacta de tus aulas y laboratorios en tiempo real.
             </p>
           </div>
         </section>
 
         {/* Módulos Principales del Estudiante */}
         <section className="space-y-4">
-          <h2 className="text-base sm:text-lg font-bold text-[#222222]">
-            Servicios disponibles
-          </h2>
+          <h2 className="text-base sm:text-lg font-bold text-[#222222]">Servicios disponibles</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
             {/* Tarjeta Activa: Mi Horario y Mis Cursos */}
@@ -82,8 +81,17 @@ export const AreaPrivadaPlaceholder: React.FC<AreaPrivadaPlaceholderProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="w-10 h-10 rounded-xl bg-[#7B1113] text-white flex items-center justify-center shadow-xs">
-                      <svg className="w-5 h-5 stroke-current" fill="none" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3M4 11h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z" />
+                      <svg
+                        className="w-5 h-5 stroke-current"
+                        fill="none"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M8 7V3m8 4V3M4 11h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z"
+                        />
                       </svg>
                     </div>
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-[#7B1113] bg-[#7B1113]/10 px-2.5 py-1 rounded-full">
@@ -95,15 +103,26 @@ export const AreaPrivadaPlaceholder: React.FC<AreaPrivadaPlaceholderProps> = ({
                       {enlace.etiqueta}
                     </h3>
                     <p className="text-xs sm:text-sm text-[#666666] mt-1">
-                      Visualiza tu horario semanal (vista día y semana), tus asignaturas matriculadas, horarios y pabellones.
+                      Visualiza tu horario semanal (vista día y semana), tus asignaturas
+                      matriculadas, horarios y pabellones.
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-end font-medium text-xs sm:text-sm text-[#7B1113] group-hover:translate-x-1 transition-transform">
                   <span>Ir a mi horario</span>
-                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  <svg
+                    className="w-4 h-4 ml-1"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M14 5l7 7m0 0l-7 7m7-7H3"
+                    />
                   </svg>
                 </div>
               </Link>
@@ -114,8 +133,17 @@ export const AreaPrivadaPlaceholder: React.FC<AreaPrivadaPlaceholderProps> = ({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="w-10 h-10 rounded-xl bg-[#666666]/10 text-[#666666] flex items-center justify-center">
-                    <svg className="w-5 h-5 stroke-current" fill="none" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    <svg
+                      className="w-5 h-5 stroke-current"
+                      fill="none"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      />
                     </svg>
                   </div>
                   <span className="text-[11px] font-semibold text-[#666666] bg-[#E6DFD0]/50 px-2.5 py-1 rounded-full">
@@ -123,9 +151,12 @@ export const AreaPrivadaPlaceholder: React.FC<AreaPrivadaPlaceholderProps> = ({
                   </span>
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-bold text-[#222222]">Perfil y Telegram</h3>
+                  <h3 className="text-base sm:text-lg font-bold text-[#222222]">
+                    Perfil y Telegram
+                  </h3>
                   <p className="text-xs sm:text-sm text-[#666666] mt-1">
-                    Gestión de datos personales, ficha médica sensible y vinculación directa con el bot de notificaciones.
+                    Gestión de datos personales, ficha médica sensible y vinculación directa con el
+                    bot de notificaciones.
                   </p>
                 </div>
               </div>

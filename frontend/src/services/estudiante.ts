@@ -24,9 +24,10 @@ export async function obtenerCursos(): Promise<{
   periodo: string | null;
   cursos: CursoMatriculadoDTO[];
 }> {
-  const { data } = await api.get<
-    Respuesta<{ periodo: string | null; cursos: CursoMatriculadoDTO[] }>
-  >('/v1/estudiante/cursos');
+  const { data } =
+    await api.get<Respuesta<{ periodo: string | null; cursos: CursoMatriculadoDTO[] }>>(
+      '/v1/estudiante/cursos',
+    );
   return data.data;
 }
 

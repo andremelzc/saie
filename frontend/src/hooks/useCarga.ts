@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { mensajeDeError } from '../services/estudiante';
 
 export interface EstadoCarga<T> {
@@ -8,38 +8,56 @@ export interface EstadoCarga<T> {
   recargar: () => void;
 }
 
+interface ResultadoCarga<T> {
+  /** Petición a la que corresponde este resultado. */
+  cargador: () => Promise<T>;
+  intento: number;
+  datos: T | null;
+  error: string | null;
+}
+
 /**
  * Ejecuta `cargador` al montar (y cada vez que se llama a `recargar`) y expone su estado.
  * `cargador` debe ser estable (función de módulo o `useCallback`).
  */
 export function useCarga<T>(cargador: () => Promise<T>): EstadoCarga<T> {
-  const [datos, setDatos] = useState<T | null>(null);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [intento, setIntento] = useState(0);
-  const ultimo = useRef(0);
+  const [resultado, setResultado] = useState<ResultadoCarga<T> | null>(null);
 
   useEffect(() => {
-    const idPeticion = ++ultimo.current;
-    setCargando(true);
-    setError(null);
+    // Si el efecto se vuelve a ejecutar o el componente se desmonta, se ignora la petición en vuelo.
+    let vigente = true;
+
     cargador()
-      .then((resultado) => {
-        if (idPeticion === ultimo.current) setDatos(resultado);
+      .then((datos) => {
+        if (vigente) setResultado({ cargador, intento, datos, error: null });
       })
       .catch((e: unknown) => {
-        if (idPeticion === ultimo.current) setError(mensajeDeError(e));
-      })
-      .finally(() => {
-        if (idPeticion === ultimo.current) setCargando(false);
+        if (vigente) {
+          setResultado((previo) => ({
+            cargador,
+            intento,
+            datos: previo?.datos ?? null,
+            error: mensajeDeError(e),
+          }));
+        }
       });
+
     return () => {
-      // Invalida la petición en vuelo si el componente se desmonta o se recarga.
-      ultimo.current++;
+      vigente = false;
     };
   }, [cargador, intento]);
 
+  // Está cargando mientras el último resultado no corresponda a la petición actual.
+  const cargando =
+    resultado === null || resultado.cargador !== cargador || resultado.intento !== intento;
+
   const recargar = useCallback(() => setIntento((n) => n + 1), []);
 
-  return { datos, cargando, error, recargar };
+  return {
+    datos: resultado?.datos ?? null,
+    cargando,
+    error: cargando ? null : (resultado?.error ?? null),
+    recargar,
+  };
 }
