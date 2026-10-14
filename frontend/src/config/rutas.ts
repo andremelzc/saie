@@ -41,5 +41,10 @@ export function rutaDestinoTrasLogin(sesion: {
   rol: RolCuenta;
   debeCambiarClave: boolean;
 }): string {
-  return sesion.debeCambiarClave ? RUTAS.cambiarClave : rutaInicioDeRol(sesion.rol);
+  // Solo en desarrollo y solo si lo activas en tu .env.development.local (no se sube a git).
+  const omitirCambioClave =
+    import.meta.env.DEV && import.meta.env.VITE_OMITIR_CAMBIO_CLAVE === 'true';
+
+  if (sesion.debeCambiarClave && !omitirCambioClave) return RUTAS.cambiarClave;
+  return rutaInicioDeRol(sesion.rol);
 }
