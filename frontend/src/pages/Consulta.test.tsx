@@ -211,10 +211,11 @@ describe('Consulta (Issue #136 / 3.7)', () => {
 
     buscar('20200001');
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/No se pudo conectar/i);
-    expect(screen.getByRole('status', { name: /Error de consulta/i })).toHaveTextContent(
-      /No se pudo completar la consulta/i,
-    );
+    // El error se muestra una sola vez, en la tarjeta de abajo, y no se repite bajo el campo.
+    const alerta = await screen.findByRole('alert', { name: /Error de consulta/i });
+    expect(alerta).toHaveTextContent(/No se pudo completar la consulta/i);
+    expect(alerta).toHaveTextContent(/No se pudo conectar/i);
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
     expect(screen.queryByText('Sin resultados encontrados')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Tus clases' })).not.toBeInTheDocument();
   });
@@ -255,5 +256,52 @@ describe('Consulta (Issue #136 / 3.7)', () => {
       expect(screen.queryByText('Fundamentos de Programación')).not.toBeInTheDocument();
     });
     expect(screen.getByRole('status', { name: /Consultando espacios/i })).toBeInTheDocument();
+  });
+
+  it('muestra qué trae el resultado antes de buscar y lo oculta después', async () => {
+    vi.mocked(api.get).mockResolvedValueOnce({
+      data: { success: true, data: datosAlumno([aula]) },
+    });
+    renderizar();
+
+    expect(screen.getByRole('heading', { name: 'Qué verás en tu consulta' })).toBeInTheDocument();
+
+    buscar('20200001');
+
+    expect(await screen.findByRole('heading', { name: 'Tus clases' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Qué verás en tu consulta' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('al editar el campo quita el aviso de la búsqueda anterior', async () => {
+    vi.mocked(api.get).mockRejectedValueOnce(new Error('Network Error'));
+    renderizar();
+
+    buscar('20200001');
+    expect(await screen.findByRole('alert', { name: /Error de consulta/i })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Código de alumno o curso/i), {
+      target: { value: '2020' },
+    });
+
+    expect(screen.queryByRole('alert', { name: /Error de consulta/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Qué verás en tu consulta' })).toBeInTheDocument();
+  });
+
+  it('al editar el campo conserva las clases que la persona está leyendo', async () => {
+    vi.mocked(api.get).mockResolvedValueOnce({
+      data: { success: true, data: datosAlumno([aula]) },
+    });
+    renderizar();
+
+    buscar('20200001');
+    expect(await screen.findByRole('heading', { name: 'Tus clases' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Código de alumno o curso/i), {
+      target: { value: '2020000' },
+    });
+
+    expect(screen.getByRole('heading', { name: 'Tus clases' })).toBeInTheDocument();
   });
 });

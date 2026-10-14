@@ -11,7 +11,7 @@ type Fase =
   | { tipo: 'cargando' }
   | { tipo: 'resultado'; resultado: ResultadoConsulta }
   | { tipo: 'sinResultado'; mensaje: string }
-  | { tipo: 'error' };
+  | { tipo: 'error'; mensaje: string };
 
 const plural = (n: number, singular: string, pluralTexto: string) =>
   `${n} ${n === 1 ? singular : pluralTexto}`;
@@ -94,6 +94,62 @@ const Resultados: React.FC<{ resultado: ResultadoConsulta }> = ({ resultado }) =
   );
 };
 
+/** Qué trae cada resultado: llena el estado inicial con información útil en vez de espacio vacío. */
+const DATOS_DEL_RESULTADO: { titulo: string; detalle: string; trazo: string }[] = [
+  {
+    titulo: 'Aula o laboratorio',
+    detalle: 'El espacio exacto de tu clase.',
+    trazo:
+      'M15 10.5a3 3 0 11-6 0 3 3 0 016 0zM19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z',
+  },
+  {
+    titulo: 'Pabellón y piso',
+    detalle: 'Para saber a dónde ir.',
+    trazo:
+      'M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21',
+  },
+  {
+    titulo: 'Docente y horario',
+    detalle: 'Con quién y a qué hora.',
+    trazo: 'M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z',
+  },
+];
+
+const QueVeras: React.FC = () => (
+  <section aria-labelledby="titulo-que-veras" className="flex flex-col gap-3">
+    <h2 id="titulo-que-veras" className="m-0 text-base font-bold">
+      Qué verás en tu consulta
+    </h2>
+    <ul className="m-0 p-0 list-none grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {DATOS_DEL_RESULTADO.map((dato) => (
+        <li
+          key={dato.titulo}
+          className="flex sm:flex-col items-start gap-3 p-4 bg-white border border-saie-divider rounded-xl"
+        >
+          <span className="shrink-0 w-10 h-10 rounded-lg bg-[#FAF6ED] border border-saie-divider text-saie-primary flex items-center justify-center">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d={dato.trazo} />
+            </svg>
+          </span>
+          <span className="flex flex-col">
+            <span className="text-sm font-semibold text-saie-text">{dato.titulo}</span>
+            <span className="text-sm text-saie-muted">{dato.detalle}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  </section>
+);
+
 /**
  * Issue #136 — 3.7: Vista de consulta de espacios. Une el formulario de búsqueda (3.5), los
  * endpoints de consulta (3.2 y 3.4) y la tarjeta de resultado (3.6): el alumno ingresa su código
@@ -130,6 +186,22 @@ export const Consulta: React.FC = () => {
         className="mx-auto max-w-xl px-4 py-6 sm:py-10 flex flex-col gap-6"
       >
         <div>
+          <p className="m-0 mb-2 inline-flex items-center gap-1.5 text-sm font-semibold text-saie-primary">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+              <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Consulta pública, sin iniciar sesión
+          </p>
           <h1 className="m-0 font-serif text-[28px] leading-9 sm:text-[32px] sm:leading-10 font-bold">
             Consulta de espacios
           </h1>
@@ -139,17 +211,35 @@ export const Consulta: React.FC = () => {
           </p>
         </div>
 
-        <div className="bg-white border border-saie-divider rounded-2xl shadow-[0_2px_8px_rgba(34,34,34,0.08)] p-4 sm:p-6">
+        <div className="saie-rise relative overflow-hidden bg-white border border-saie-divider rounded-2xl shadow-[0_2px_8px_rgba(34,34,34,0.08)] p-4 pt-5 sm:p-6 sm:pt-7">
+          <span
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-saie-primary to-[#A8383A]"
+          />
           <FormularioBusqueda
+            mostrarErrorServidor={false}
+            onCambio={() =>
+              // Al editar el campo se quitan los avisos de la búsqueda anterior (error o sin
+              // resultado), pero no una lista de clases que la persona todavía está leyendo.
+              setFase((actual) =>
+                actual.tipo === 'error' || actual.tipo === 'sinResultado'
+                  ? { tipo: 'inicial' }
+                  : actual,
+              )
+            }
             onCargando={(cargando) => {
               if (cargando) setFase({ tipo: 'cargando' });
             }}
             onBuscar={(resultado) => setFase({ tipo: 'resultado', resultado })}
             onError={(mensaje, estado) =>
-              setFase(estado === 404 ? { tipo: 'sinResultado', mensaje } : { tipo: 'error' })
+              setFase(
+                estado === 404 ? { tipo: 'sinResultado', mensaje } : { tipo: 'error', mensaje },
+              )
             }
           />
         </div>
+
+        {fase.tipo === 'inicial' && <QueVeras />}
 
         {fase.tipo === 'cargando' && <TarjetaResultado cargando />}
 
@@ -161,7 +251,7 @@ export const Consulta: React.FC = () => {
 
         {fase.tipo === 'error' && (
           <EstadoUnico>
-            <TarjetaResultado error="Verifica tu conexión e inténtalo nuevamente en unos momentos." />
+            <TarjetaResultado error={fase.mensaje} />
           </EstadoUnico>
         )}
 

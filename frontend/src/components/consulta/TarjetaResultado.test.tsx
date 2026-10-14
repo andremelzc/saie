@@ -200,7 +200,7 @@ describe('TarjetaResultado (Issue #135 / 3.6)', () => {
     it('muestra un mensaje de error claro cuando falla la consulta', () => {
       render(<TarjetaResultado error="Verifica tu conexión e inténtalo nuevamente." />);
 
-      expect(screen.getByRole('status', { name: /Error de consulta/i })).toBeInTheDocument();
+      expect(screen.getByRole('alert', { name: /Error de consulta/i })).toBeInTheDocument();
       expect(screen.getByText('No se pudo completar la consulta')).toBeInTheDocument();
       expect(screen.getByText('Verifica tu conexión e inténtalo nuevamente.')).toBeInTheDocument();
     });

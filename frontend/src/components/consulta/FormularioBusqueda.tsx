@@ -13,6 +13,13 @@ export interface FormularioBusquedaProps {
   /** Recibe el mensaje y el estado HTTP (undefined si no hubo respuesta, p. ej. sin conexión). */
   onError?: (mensaje: string, estado?: number) => void;
   onCargando?: (cargando: boolean) => void;
+  /** Se llama cuando la persona edita el campo (para que la vista quite avisos ya viejos). */
+  onCambio?: () => void;
+  /**
+   * Si es false, los errores del servidor (sin conexión, 404) no se repiten bajo el campo porque
+   * la vista ya los muestra en su propia tarjeta. Los errores de formato siempre se muestran aquí.
+   */
+  mostrarErrorServidor?: boolean;
   className?: string;
 }
 
@@ -20,30 +27,41 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
   onBuscar,
   onError,
   onCargando,
+  onCambio,
+  mostrarErrorServidor = true,
   className = '',
 }) => {
   const [codigo, setCodigo] = useState('');
   const [cargando, setCargando] = useState(false);
   const [errorServidor, setErrorServidor] = useState<string | null>(null);
   const [tocado, setTocado] = useState(false);
+  // Un campo vacío al salir de él no es un error; solo lo es si se intenta enviar así.
+  const [intentoEnvio, setIntentoEnvio] = useState(false);
 
   const tipoDetectado = detectarTipoCodigo(codigo);
   const esValido = tipoDetectado !== null;
 
   // El error de formato se muestra únicamente tras perder el foco (onBlur) o intentar enviar
+  const vacio = codigo.trim().length === 0;
   const errorFormato =
-    tocado && !esValido ? 'Ingresa 8 dígitos (alumno) o un código de curso como CC-101' : null;
+    tocado && !esValido && !(vacio && !intentoEnvio)
+      ? vacio
+        ? 'Escribe tu código de alumno o el código de un curso.'
+        : 'Ingresa 8 dígitos (alumno) o un código de curso como CC-101'
+      : null;
 
-  const mensajeError = errorServidor || errorFormato;
+  const mensajeError = (mostrarErrorServidor ? errorServidor : null) || errorFormato;
   const tieneError = Boolean(mensajeError);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCodigo(e.target.value);
     // Al escribir se resetea tocado y errorServidor para no marcar en rojo mientras escribe
     setTocado(false);
+    setIntentoEnvio(false);
     if (errorServidor) {
       setErrorServidor(null);
     }
+    onCambio?.();
   };
 
   const handleBlur = () => {
@@ -53,6 +71,7 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setTocado(true);
+    setIntentoEnvio(true);
 
     if (!esValido || cargando) {
       return;
@@ -124,6 +143,8 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
     }
   };
 
+  const idAyuda = 'ayuda-codigo-consulta';
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -131,10 +152,10 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
       noValidate
       aria-label="Formulario de consulta de espacios"
     >
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <label
           htmlFor="codigo-consulta"
-          className="text-sm font-medium text-[#222222] flex flex-wrap items-center justify-between gap-x-3 gap-y-1"
+          className="text-sm font-medium text-[#222222] flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 min-h-7"
         >
           <span>
             Código de alumno o curso{' '}
@@ -144,7 +165,19 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
             <span className="sr-only">(obligatorio)</span>
           </span>
           {tipoDetectado && (
-            <span className="text-sm font-semibold px-2 py-0.5 rounded-full bg-[#FAF6ED] text-[#7B1113] border border-[#E6DFD0]">
+            <span className="saie-rise inline-flex items-center gap-1.5 text-sm font-semibold pl-2 pr-2.5 py-0.5 rounded-full bg-[#FAF6ED] text-[#7B1113] border border-[#E6DFD0]">
+              <svg
+                className="w-3.5 h-3.5"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
+                />
+              </svg>
               {tipoDetectado === 'ALUMNO' ? 'Estudiante detectado' : 'Curso detectado'}
             </span>
           )}
@@ -153,10 +186,33 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
         {/* Contenedor responsivo: columna en móvil (<1024px), fila en escritorio (>=1024px) */}
         <div className="flex flex-col lg:flex-row gap-3">
           <div className="relative flex-1">
+            {/* El ícono acompaña lo que se escribe: lupa, persona (alumno) o libro (curso) */}
+            <svg
+              className={`pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors ${
+                tieneError ? 'text-[#D32F2F]' : tipoDetectado ? 'text-[#7B1113]' : 'text-[#666666]'
+              }`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              {tipoDetectado === 'ALUMNO' ? (
+                <path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.118a7.5 7.5 0 0115 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.5-1.632z" />
+              ) : tipoDetectado === 'CURSO' ? (
+                <path d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+              ) : (
+                <path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              )}
+            </svg>
             <input
               id="codigo-consulta"
               name="codigo"
               type="text"
+              inputMode="text"
+              autoComplete="off"
               value={codigo}
               onChange={handleChange}
               onBlur={handleBlur}
@@ -164,11 +220,11 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
               disabled={cargando}
               aria-required="true"
               aria-invalid={tieneError}
-              aria-describedby={tieneError ? 'mensaje-error-consulta' : 'ayuda-codigo-consulta'}
-              className={`w-full h-12 px-4 rounded-[10px] bg-white text-[#222222] placeholder-[#666666] text-base border transition-colors outline-hidden ${
+              aria-describedby={tieneError ? 'mensaje-error-consulta' : idAyuda}
+              className={`w-full h-12 pl-11 pr-4 rounded-[10px] bg-white text-[#222222] placeholder-[#666666] text-base border transition-colors outline-hidden ${
                 tieneError
-                  ? 'border-[#D32F2F] focus:border-[#D32F2F] focus:ring-2 focus:ring-[#D32F2F]/20'
-                  : 'border-[#8A8578] focus:border-[#7B1113] focus:ring-2 focus:ring-[#7B1113]/20'
+                  ? 'border-2 border-[#D32F2F] focus:ring-3 focus:ring-[#D32F2F]/20'
+                  : 'border-[#8A8578] hover:border-[#222222]/60 focus:border-2 focus:border-[#7B1113] focus:ring-3 focus:ring-[#7B1113]/20'
               } disabled:bg-[#F1EDE3] disabled:text-[#666666] disabled:border-[#E6DFD0]`}
             />
           </div>
@@ -177,7 +233,7 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
             type="submit"
             disabled={!esValido || cargando}
             aria-busy={cargando}
-            className="w-full lg:w-auto min-w-[120px] h-12 px-6 rounded-[12px] font-medium text-base text-white transition-all duration-150 flex items-center justify-center gap-2 focus:outline-hidden focus:ring-3 focus:ring-[#222222] focus:ring-offset-2 bg-[#7B1113] hover:bg-[#5C0D0E] active:bg-[#5C0D0E] disabled:bg-[#E6DFD0] disabled:text-[#666666] disabled:cursor-not-allowed cursor-pointer"
+            className="w-full lg:w-auto min-w-[120px] h-12 px-6 rounded-[12px] font-medium text-base text-white transition-all duration-150 flex items-center justify-center gap-2 shadow-[0_2px_8px_rgba(123,17,19,0.25)] focus:outline-hidden focus:ring-3 focus:ring-[#222222] focus:ring-offset-2 bg-[#7B1113] hover:bg-[#5C0D0E] active:bg-[#5C0D0E] disabled:bg-[#E6DFD0] disabled:text-[#666666] disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
           >
             {cargando ? (
               <>
@@ -205,36 +261,20 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
                 <span>Buscando...</span>
               </>
             ) : (
-              <>
-                <svg
-                  className="w-5 h-5 text-current"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-                <span>Buscar</span>
-              </>
+              <span>Buscar</span>
             )}
           </button>
         </div>
 
-        {/* Mensaje de error visible con icono y texto en 14 px (text-sm) según Guía de Estilos §4.5 */}
+        {/* Error: ícono y texto en 14 px (Guía de Estilos §4.5); nunca solo color */}
         {tieneError ? (
           <div
             id="mensaje-error-consulta"
             role="alert"
-            className="flex items-center gap-2 text-sm text-[#D32F2F] mt-1 font-medium"
+            className="flex items-start gap-2 text-sm text-[#D32F2F] font-medium"
           >
             <svg
-              className="w-4 h-4 shrink-0 text-[#D32F2F]"
+              className="w-4 h-4 shrink-0 mt-0.5 text-[#D32F2F]"
               fill="currentColor"
               viewBox="0 0 20 20"
               aria-hidden="true"
@@ -248,9 +288,22 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
             <span>{mensajeError}</span>
           </div>
         ) : (
-          /* Mensaje de ayuda en 14 px (text-sm) según Guía de Estilos §4.5 */
-          <p id="ayuda-codigo-consulta" className="text-sm text-[#666666] mt-1">
-            Ingresa tu código de alumno (8 dígitos, ej: 20200001) o código de curso (ej: CC-101).
+          <p id={idAyuda} className="m-0 flex items-start gap-2 text-sm text-[#666666]">
+            <svg
+              className="w-4 h-4 shrink-0 mt-0.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+            </svg>
+            <span>
+              Ingresa tu código de alumno (8 dígitos, ej: 20200001) o código de curso (ej: CC-101).
+            </span>
           </p>
         )}
       </div>

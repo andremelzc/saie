@@ -247,4 +247,50 @@ describe('FormularioBusqueda (Issue #134 / 3.5)', () => {
     fireEvent.change(input, { target: { value: '20200002' } });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
+
+  it('un campo vacío no se marca como error al salir de él', () => {
+    render(<FormularioBusqueda />);
+    const input = screen.getByLabelText(/Código de alumno o curso/i);
+
+    fireEvent.focus(input);
+    fireEvent.blur(input);
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(input).toHaveAttribute('aria-invalid', 'false');
+  });
+
+  it('si se intenta enviar vacío pide el código con un mensaje propio', () => {
+    render(<FormularioBusqueda />);
+
+    fireEvent.submit(screen.getByLabelText('Formulario de consulta de espacios'));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Escribe tu código de alumno o el código de un curso.',
+    );
+  });
+
+  it('avisa a la vista cuando se edita el campo', () => {
+    const onCambio = vi.fn();
+    render(<FormularioBusqueda onCambio={onCambio} />);
+
+    fireEvent.change(screen.getByLabelText(/Código de alumno o curso/i), {
+      target: { value: '2' },
+    });
+
+    expect(onCambio).toHaveBeenCalledTimes(1);
+  });
+
+  it('con mostrarErrorServidor desactivado no repite el error bajo el campo pero sí avisa por onError', async () => {
+    vi.mocked(api.get).mockRejectedValueOnce(new Error('Network Error'));
+    const onError = vi.fn();
+    render(<FormularioBusqueda mostrarErrorServidor={false} onError={onError} />);
+
+    fireEvent.change(screen.getByLabelText(/Código de alumno o curso/i), {
+      target: { value: '20200001' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /buscar/i }));
+
+    await waitFor(() => expect(onError).toHaveBeenCalled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });

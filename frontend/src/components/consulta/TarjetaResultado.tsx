@@ -165,16 +165,18 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
     );
   }
 
-  // Estado "Error": mensaje claro con ícono (no depende solo del color)
+  // Estado "Error": mensaje claro con ícono (no depende solo del color). Es una alerta porque
+  // la persona necesita enterarse en cuanto aparece, y va alineada a la izquierda para leerse
+  // como un aviso, no como una pantalla vacía.
   if (error) {
     return (
       <div
-        role="status"
+        role="alert"
         aria-label="Error de consulta"
-        className={`w-full max-w-xl mx-auto p-6 sm:p-8 bg-white border border-rose-200 rounded-xl shadow-[0_2px_8px_rgba(34,34,34,0.08)] flex flex-col items-center text-center ${className}`}
+        className={`w-full max-w-xl mx-auto p-4 sm:p-5 bg-white border border-rose-200 border-l-4 border-l-[#D32F2F] rounded-xl shadow-[0_2px_8px_rgba(34,34,34,0.08)] flex items-start gap-3.5 ${className}`}
       >
-        <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-800 mb-3">
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+        <div className="w-10 h-10 shrink-0 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center text-[#D32F2F]">
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
             <path
               fillRule="evenodd"
               d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
@@ -182,8 +184,12 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
             />
           </svg>
         </div>
-        <h3 className="text-lg font-bold text-[#222222]">No se pudo completar la consulta</h3>
-        <p className="text-sm text-[#666666] mt-1 max-w-sm break-words">{error}</p>
+        <div className="min-w-0">
+          <h3 className="m-0 text-base font-bold text-[#222222]">
+            No se pudo completar la consulta
+          </h3>
+          <p className="m-0 mt-1 text-sm text-[#666666] break-words">{error}</p>
+        </div>
       </div>
     );
   }
@@ -332,8 +338,23 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
         {/* Campo 1, 2, 3, 4: Ubicación y Espacio(s) */}
         {tieneEspacios && (
           <div className="sm:col-span-2 p-3.5 rounded-xl bg-[#FAF6ED] border border-[#E6DFD0] flex flex-col gap-2">
-            <span className="text-sm font-semibold text-[#666666] uppercase tracking-wider">
-              {esBloqueMultiple ? 'Espacios Asignados (Bloque Múltiple)' : 'Espacio Asignado'}
+            <span className="text-sm font-semibold text-[#666666] uppercase tracking-wider flex items-center gap-1.5">
+              <svg
+                className="w-4 h-4 text-[#7B1113] shrink-0"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+              </svg>
+              <span>
+                {esBloqueMultiple ? 'Espacios Asignados (Bloque Múltiple)' : 'Espacio Asignado'}
+              </span>
             </span>
 
             {esBloqueMultiple ? (
