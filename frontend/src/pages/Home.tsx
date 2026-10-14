@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { PORTALES } from '../config/portales';
+import { RUTAS } from '../config/rutas';
 import type { Portal, PortalId } from '../config/portales';
 import LogoEdificioGuinda from '../components/LogoEdificioGuinda';
 import logoBlanco from '../assets/logo-blanco.svg';
@@ -139,6 +140,15 @@ export const Home: React.FC = () => {
                 </li>
               ))}
             </ul>
+            {/* Consulta pública: no requiere iniciar sesión (Issue 3.7) */}
+            <Link
+              to={RUTAS.consulta}
+              data-testid="enlace-consulta"
+              className="mt-6 inline-flex items-center justify-center gap-2 min-h-12 px-5 rounded-xl bg-white text-saie-primary font-medium no-underline hover:bg-saie-canvas focus:outline-hidden focus-visible:ring-3 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-saie-primary transition-colors"
+            >
+              Consultar mi aula sin iniciar sesión
+              <span aria-hidden="true">&rarr;</span>
+            </Link>
           </div>
         </section>
 

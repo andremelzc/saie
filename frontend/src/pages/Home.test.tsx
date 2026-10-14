@@ -17,4 +17,13 @@ describe('Home', () => {
       expect(screen.getByTestId(`portal-${p.id}`)).toHaveAttribute('href', p.loginPath);
     }
   });
+
+  it('ofrece la consulta pública de espacios sin necesidad de iniciar sesión', () => {
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId('enlace-consulta')).toHaveAttribute('href', '/consulta');
+  });
 });
