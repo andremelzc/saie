@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
+import Consulta from './pages/Consulta';
 import AreaPrivadaPlaceholder from './pages/AreaPrivadaPlaceholder';
 import CambiarClavePlaceholder from './pages/CambiarClavePlaceholder';
 import LoginRoute from './components/auth/LoginRoute';
@@ -12,6 +13,9 @@ export const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+
+      {/* Consulta pública de espacios por código de alumno o de curso (Issue 3.7) */}
+      <Route path={RUTAS.consulta} element={<Consulta />} />
 
       {/* Login de cada rol (Issues 3.22, 7.7 y 4.25) */}
       <Route path={RUTAS.loginAlumno} element={<LoginRoute rol="ALUMNO" />} />

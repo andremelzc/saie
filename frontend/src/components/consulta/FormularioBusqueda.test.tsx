@@ -193,6 +193,24 @@ describe('FormularioBusqueda (Issue #134 / 3.5)', () => {
     );
   });
 
+  it('muestra un mensaje de conexión cuando el servidor no responde', async () => {
+    vi.mocked(api.get).mockRejectedValueOnce(new Error('Network Error'));
+
+    const onErrorMock = vi.fn();
+    render(<FormularioBusqueda onError={onErrorMock} />);
+
+    fireEvent.change(screen.getByLabelText(/Código de alumno o curso/i), {
+      target: { value: '20200001' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /buscar/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/No se pudo conectar/i);
+    expect(onErrorMock).toHaveBeenCalledWith(
+      'No se pudo conectar con el servicio. Revisa tu conexión e inténtalo de nuevo.',
+      undefined,
+    );
+  });
+
   it('muestra mensaje de error cuando el backend responde 404', async () => {
     vi.mocked(api.get).mockRejectedValueOnce({
       response: {
@@ -222,6 +240,7 @@ describe('FormularioBusqueda (Issue #134 / 3.5)', () => {
     ).toBeInTheDocument();
     expect(onErrorMock).toHaveBeenCalledWith(
       'No se encontró ningún estudiante con el código 20200001',
+      404,
     );
 
     // Al volver a escribir, el error debe desaparecer

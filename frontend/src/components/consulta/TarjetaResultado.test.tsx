@@ -188,4 +188,54 @@ describe('TarjetaResultado (Issue #135 / 3.6)', () => {
     rerender(<TarjetaResultado asignacion={null} />);
     expect(screen.getByText('Sin resultados encontrados')).toBeInTheDocument();
   });
+  describe('estados de carga y error (Issue #136 / 3.7)', () => {
+    it('muestra un esqueleto accesible mientras consulta', () => {
+      render(<TarjetaResultado cargando />);
+
+      const estado = screen.getByRole('status', { name: /Consultando espacios/i });
+      expect(estado).toHaveAttribute('aria-busy', 'true');
+      expect(screen.queryByText('Sin resultados encontrados')).not.toBeInTheDocument();
+    });
+
+    it('muestra un mensaje de error claro cuando falla la consulta', () => {
+      render(<TarjetaResultado error="Verifica tu conexión e inténtalo nuevamente." />);
+
+      expect(screen.getByRole('status', { name: /Error de consulta/i })).toBeInTheDocument();
+      expect(screen.getByText('No se pudo completar la consulta')).toBeInTheDocument();
+      expect(screen.getByText('Verifica tu conexión e inténtalo nuevamente.')).toBeInTheDocument();
+    });
+
+    it('la carga tiene prioridad sobre un resultado anterior', () => {
+      render(<TarjetaResultado cargando asignacion={mockAulaVigente} />);
+
+      expect(screen.getByRole('status', { name: /Consultando espacios/i })).toBeInTheDocument();
+      expect(screen.queryByText('Ciencias de la Computación I')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('accesibilidad y legibilidad (Issue #138 / 3.9)', () => {
+    it('no usa texto de 12 px ni el gris de bajo contraste en los datos del resultado', () => {
+      const { container } = render(<TarjetaResultado asignacion={mockAulaVigente} />);
+
+      // Texto informativo de 14 px como mínimo (text-sm) y gris #666666 (contraste 5,3:1 o más)
+      expect(container.querySelector('.text-xs')).toBeNull();
+      expect(container.innerHTML).not.toContain('8A8578');
+    });
+
+    it('nombra la tarjeta con su curso y sección para lectores de pantalla', () => {
+      render(<TarjetaResultado asignacion={mockAulaVigente} />);
+
+      expect(
+        screen.getByLabelText('Resultado de consulta para CC-101 sección A'),
+      ).toBeInTheDocument();
+    });
+
+    it('los estados de carga y error tampoco usan texto de 12 px', () => {
+      const { container, rerender } = render(<TarjetaResultado cargando />);
+      expect(container.querySelector('.text-xs')).toBeNull();
+
+      rerender(<TarjetaResultado error="Error de prueba" />);
+      expect(container.querySelector('.text-xs')).toBeNull();
+    });
+  });
 });

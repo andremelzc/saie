@@ -2,6 +2,7 @@ import type { RolCuenta } from '../types/auth';
 
 /** Rutas de la aplicación relacionadas con sesión y áreas privadas (Issue #217 / 4.25). */
 export const RUTAS = {
+  consulta: '/consulta',
   loginAlumno: '/login/alumno',
   loginDocente: '/login/docente',
   loginAdmin: '/login/admin',

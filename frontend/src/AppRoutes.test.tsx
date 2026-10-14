@@ -45,6 +45,14 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
     vi.restoreAllMocks();
   });
 
+  describe('rutas públicas', () => {
+    it('la consulta de espacios no requiere sesión (Issue 3.7)', () => {
+      renderizar('/consulta');
+
+      expect(screen.getByRole('heading', { name: 'Consulta de espacios' })).toBeInTheDocument();
+    });
+  });
+
   describe('rutas privadas', () => {
     it('rechaza a un usuario sin sesión y lo lleva al login', () => {
       renderizar('/admin');

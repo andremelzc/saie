@@ -10,7 +10,8 @@ import { detectarTipoCodigo } from '../../utils/consulta';
 
 export interface FormularioBusquedaProps {
   onBuscar?: (resultado: ResultadoConsulta, codigo: string, tipo: TipoCodigoConsulta) => void;
-  onError?: (mensaje: string) => void;
+  /** Recibe el mensaje y el estado HTTP (undefined si no hubo respuesta, p. ej. sin conexión). */
+  onError?: (mensaje: string, estado?: number) => void;
   onCargando?: (cargando: boolean) => void;
   className?: string;
 }
@@ -89,6 +90,7 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
       }
     } catch (err: unknown) {
       let mensaje = 'Error al realizar la consulta. Por favor, intenta de nuevo.';
+      let estado: number | undefined;
 
       if (
         typeof err === 'object' &&
@@ -100,6 +102,7 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
         const axiosErr = err as {
           response?: { data?: { message?: string }; status?: number };
         };
+        estado = axiosErr.response?.status;
         if (axiosErr.response?.data?.message) {
           mensaje = axiosErr.response.data.message;
         } else if (axiosErr.response?.status === 404) {
@@ -108,10 +111,13 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
               ? `No se encontró ningún estudiante con el código ${codigoNormalizado}`
               : `No se encontró ningún curso con el código ${codigoNormalizado.toUpperCase()}`;
         }
+      } else {
+        // Sin respuesta del servidor: no hay conexión o el servicio no está disponible.
+        mensaje = 'No se pudo conectar con el servicio. Revisa tu conexión e inténtalo de nuevo.';
       }
 
       setErrorServidor(mensaje);
-      onError?.(mensaje);
+      onError?.(mensaje, estado);
     } finally {
       setCargando(false);
       onCargando?.(false);
@@ -128,7 +134,7 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
       <div className="flex flex-col gap-1.5">
         <label
           htmlFor="codigo-consulta"
-          className="text-sm font-medium text-[#222222] flex items-center justify-between"
+          className="text-sm font-medium text-[#222222] flex flex-wrap items-center justify-between gap-x-3 gap-y-1"
         >
           <span>
             Código de alumno o curso{' '}
@@ -138,7 +144,7 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
             <span className="sr-only">(obligatorio)</span>
           </span>
           {tipoDetectado && (
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#FAF6ED] text-[#7B1113] border border-[#E6DFD0]">
+            <span className="text-sm font-semibold px-2 py-0.5 rounded-full bg-[#FAF6ED] text-[#7B1113] border border-[#E6DFD0]">
               {tipoDetectado === 'ALUMNO' ? 'Estudiante detectado' : 'Curso detectado'}
             </span>
           )}

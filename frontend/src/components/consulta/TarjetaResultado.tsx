@@ -5,6 +5,10 @@ export interface TarjetaResultadoProps {
   asignacion?: ItemConsultaAsignacion | null;
   sinResultado?: boolean;
   mensajeSinResultado?: string;
+  /** Estado de carga: muestra un esqueleto mientras llega la respuesta. */
+  cargando?: boolean;
+  /** Estado de error: muestra este mensaje en lugar del resultado. */
+  error?: string | null;
   className?: string;
 }
 
@@ -15,7 +19,7 @@ export interface TarjetaResultadoProps {
 const BadgeTipoEspacio: React.FC<{ tipo: TipoEspacio }> = ({ tipo }) => {
   if (tipo === 'LABORATORIO') {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-semibold bg-teal-50 text-teal-800 border border-teal-200">
         {/* Ícono de monitor / laboratorio de cómputo */}
         <svg
           className="w-3.5 h-3.5 text-teal-700"
@@ -37,7 +41,7 @@ const BadgeTipoEspacio: React.FC<{ tipo: TipoEspacio }> = ({ tipo }) => {
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-900 border border-indigo-200">
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-semibold bg-indigo-50 text-indigo-900 border border-indigo-200">
       {/* Ícono de aula teórica / pizarra */}
       <svg
         className="w-3.5 h-3.5 text-indigo-700"
@@ -66,7 +70,7 @@ const BadgeEstadoAsignacion: React.FC<{
 }> = ({ estado }) => {
   if (estado === 'VIGENTE') {
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300">
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300">
         <svg
           className="w-3.5 h-3.5 text-emerald-600"
           fill="currentColor"
@@ -86,7 +90,7 @@ const BadgeEstadoAsignacion: React.FC<{
 
   if (estado === 'ESCALADA') {
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-300">
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-amber-50 text-amber-900 border border-amber-300">
         <svg
           className="w-3.5 h-3.5 text-amber-600"
           fill="none"
@@ -107,7 +111,7 @@ const BadgeEstadoAsignacion: React.FC<{
   }
 
   return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-300">
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-rose-50 text-rose-800 border border-rose-300">
       <svg
         className="w-3.5 h-3.5 text-rose-600"
         fill="none"
@@ -131,8 +135,59 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
   asignacion,
   sinResultado = false,
   mensajeSinResultado,
+  cargando = false,
+  error = null,
   className = '',
 }) => {
+  // Estado "Cargando": esqueleto accesible (sin animación si el usuario la redujo)
+  if (cargando) {
+    return (
+      <div
+        role="status"
+        aria-label="Consultando espacios"
+        aria-busy="true"
+        className={`w-full max-w-xl mx-auto p-4 sm:p-6 bg-white border border-[#E6DFD0] rounded-xl shadow-[0_2px_8px_rgba(34,34,34,0.08)] flex flex-col gap-3 ${className}`}
+      >
+        <div
+          aria-hidden="true"
+          className="h-5 w-1/3 rounded bg-[#E6DFD0] animate-pulse motion-reduce:animate-none"
+        />
+        <div
+          aria-hidden="true"
+          className="h-6 w-2/3 rounded bg-[#E6DFD0] animate-pulse motion-reduce:animate-none"
+        />
+        <div
+          aria-hidden="true"
+          className="h-16 w-full rounded-xl bg-[#FAF6ED] animate-pulse motion-reduce:animate-none"
+        />
+        <span className="text-sm text-[#666666]">Consultando espacios…</span>
+      </div>
+    );
+  }
+
+  // Estado "Error": mensaje claro con ícono (no depende solo del color)
+  if (error) {
+    return (
+      <div
+        role="status"
+        aria-label="Error de consulta"
+        className={`w-full max-w-xl mx-auto p-6 sm:p-8 bg-white border border-rose-200 rounded-xl shadow-[0_2px_8px_rgba(34,34,34,0.08)] flex flex-col items-center text-center ${className}`}
+      >
+        <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-800 mb-3">
+          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+            <path
+              fillRule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </div>
+        <h3 className="text-lg font-bold text-[#222222]">No se pudo completar la consulta</h3>
+        <p className="text-sm text-[#666666] mt-1 max-w-sm break-words">{error}</p>
+      </div>
+    );
+  }
+
   // Estado "Sin resultado" claro y descriptivo
   if (sinResultado || !asignacion) {
     return (
@@ -191,15 +246,15 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
     >
       {/* Cabecera del Curso y Estado */}
       <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 border-b border-[#E6DFD0] pb-3">
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold text-[#7B1113] bg-[#FAF6ED] px-2 py-0.5 rounded-sm border border-[#E6DFD0]">
+            <span className="text-sm font-bold text-[#7B1113] bg-[#FAF6ED] px-2 py-0.5 rounded-sm border border-[#E6DFD0]">
               {codigoCurso || 'CURSO'}
             </span>
-            <span className="text-xs font-medium text-[#666666]">Sección {codigoSeccion}</span>
-            {periodo && <span className="text-xs text-[#8A8578]">• {periodo}</span>}
+            <span className="text-sm font-medium text-[#666666]">Sección {codigoSeccion}</span>
+            {periodo && <span className="text-sm text-[#666666]">• {periodo}</span>}
           </div>
-          <h3 className="text-base sm:text-lg font-bold text-[#222222] mt-1 leading-snug">
+          <h3 className="text-base sm:text-lg font-bold text-[#222222] mt-1 leading-snug break-words">
             {nombreCurso || 'Curso sin denominación'}
           </h3>
         </div>
@@ -231,10 +286,10 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
             />
           </svg>
           <div>
-            <p className="font-semibold text-xs uppercase tracking-wide text-amber-800">
+            <p className="font-semibold text-sm uppercase tracking-wide text-amber-800">
               Asignación en estado de escalamiento
             </p>
-            <p className="text-xs text-amber-900 mt-0.5">
+            <p className="text-sm text-amber-900 mt-0.5">
               {motivoEscalamiento ||
                 'El espacio asignado se encuentra en revisión por Coordinación Académica.'}
             </p>
@@ -264,8 +319,8 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
             />
           </svg>
           <div>
-            <p className="font-semibold text-xs text-rose-800">Espacio pendiente de asignación</p>
-            <p className="text-xs text-rose-700">
+            <p className="font-semibold text-sm text-rose-800">Espacio pendiente de asignación</p>
+            <p className="text-sm text-rose-700">
               El aula o laboratorio aún no ha sido asignado por la facultad para esta sección.
             </p>
           </div>
@@ -277,7 +332,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
         {/* Campo 1, 2, 3, 4: Ubicación y Espacio(s) */}
         {tieneEspacios && (
           <div className="sm:col-span-2 p-3.5 rounded-xl bg-[#FAF6ED] border border-[#E6DFD0] flex flex-col gap-2">
-            <span className="text-xs font-semibold text-[#666666] uppercase tracking-wider">
+            <span className="text-sm font-semibold text-[#666666] uppercase tracking-wider">
               {esBloqueMultiple ? 'Espacios Asignados (Bloque Múltiple)' : 'Espacio Asignado'}
             </span>
 
@@ -295,7 +350,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
                         {esp.identificador}
                       </span>
                     </div>
-                    <div className="text-xs text-[#666666] flex items-center gap-2">
+                    <div className="text-sm text-[#666666] flex flex-wrap items-center gap-x-2">
                       <span>{esp.pabellon}</span>
                       <span>•</span>
                       <span>Piso {esp.piso}</span>
@@ -312,7 +367,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
                     {espacioPrincipal.identificador}
                   </span>
                 </div>
-                <div className="text-xs sm:text-sm font-medium text-[#666666] flex items-center gap-2">
+                <div className="text-sm font-medium text-[#666666] flex flex-wrap items-center gap-x-2">
                   <span>{espacioPrincipal.pabellon}</span>
                   <span>•</span>
                   <span>Piso {espacioPrincipal.piso}</span>
@@ -340,14 +395,14 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
               />
             </svg>
           </div>
-          <div>
-            <span className="text-xs font-semibold text-[#666666] block uppercase tracking-wider">
+          <div className="min-w-0">
+            <span className="text-sm font-semibold text-[#666666] block uppercase tracking-wider">
               Horario
             </span>
             {horarios.length > 0 ? (
               <ul className="mt-0.5 flex flex-col gap-0.5" aria-label="Horarios programados">
                 {horarios.map((h, idx) => (
-                  <li key={idx} className="font-semibold text-[#222222] text-xs sm:text-sm">
+                  <li key={idx} className="font-semibold text-[#222222] text-sm">
                     {h.diaSemana}{' '}
                     <span className="font-normal text-[#666666] font-mono">
                       {h.horaInicio} - {h.horaFin}
@@ -356,7 +411,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
                 ))}
               </ul>
             ) : (
-              <span className="text-xs text-[#666666] italic mt-0.5 block">
+              <span className="text-sm text-[#666666] italic mt-0.5 block">
                 Horario por confirmar
               </span>
             )}
@@ -381,17 +436,17 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
               />
             </svg>
           </div>
-          <div>
-            <span className="text-xs font-semibold text-[#666666] block uppercase tracking-wider">
+          <div className="min-w-0">
+            <span className="text-sm font-semibold text-[#666666] block uppercase tracking-wider">
               Docente
             </span>
             {docenteNombre ? (
-              <span className="font-semibold text-[#222222] text-xs sm:text-sm mt-0.5 block">
+              <span className="font-semibold text-[#222222] text-sm mt-0.5 block break-words">
                 {docenteNombre}
               </span>
             ) : (
               /* Caso borde: Docente sin nombre registrado */
-              <span className="text-xs text-[#666666] italic mt-0.5 block">
+              <span className="text-sm text-[#666666] italic mt-0.5 block">
                 Docente por asignar
               </span>
             )}
