@@ -11,7 +11,7 @@ Trabajo de la rama `feature/espacios-habilitados-seed-excel`, aún no fusionado 
 
 ### Añadido
 - **Espacios habilitados o deshabilitados:** `Espacio.habilitado` (por defecto `true`) y `Espacio.descripcionUso` (rótulo visual, máximo 120 caracteres). El aforo puede omitirse o ser 0 solo si el espacio está deshabilitado; habilitarlo exige un aforo mayor a 0 (422). Coordinación cambia ambos campos en `POST` y `PATCH /api/v1/admin/espacios`. El mapa del panel marca los espacios como `DESHABILITADO` (`resumen.deshabilitados`) y expone `descripcionUso`; el alumno y el explorador del docente no los muestran.
-- **Seed desde Excel:** `backend/prisma/data/seed-plantilla.xlsx` pasa a ser la única fuente de datos (espacios, contigüidades, docentes, cursos, secciones, horarios, alumnos y matrículas), sin datos sintéticos. Valida todo el archivo antes de escribir y es idempotente. Las matrículas anónimas (`X-<curso>-<sección>-NNN`) completan el total declarado en `matriculados`. Nueva lógica en `plantilla.seed.ts`.
+- **Seed desde Excel:** `backend/prisma/data/seed-plantilla.xlsx` pasa a ser la única fuente de datos (espacios, contigüidades, docentes, cursos, secciones, horarios, alumnos y matrículas), sin datos sintéticos. Valida todo el archivo antes de escribir y es idempotente. Las matrículas anónimas (`X-<curso>-<sección>-NNN`) completan el total declarado en `matriculados`. Nueva lógica en `plantilla.seed.ts`. Se agrega al Excel a la alumna 23200263 con sus 16 matrículas (teoría y laboratorio de 8 cursos), por lo que el seed descuenta sus lugares de los anónimos.
 - **Spec 08:** borrador de la especificación del catálogo de software (Issues 4.27 a 4.30).
 
 ### Cambiado
@@ -162,16 +162,25 @@ Trabajo de la rama `feature/espacios-habilitados-seed-excel`, aún no fusionado 
 ---
 
 ## [1.2.0] - 2026-09-29
+**Hito:** Sprint 1 — Piezas base del algoritmo (cerrado). **PR:** #232, #235, #236, #237.
+
 ### Añadido (Sprint 1 - Motor de Asignación Base)
 - **Regla 1 - Capacidad Real (`calcularCapacidadReal`):** Retorna $AforoNominal$ para aulas teóricas y $\max(0, AforoNominal - PCsMalogradas)$ para laboratorios.
 - **Regla 2 - Grafo de Contigüidad (`sembrarEspaciosYContiguedades`):** Seed e interfaz para adjacencia de aulas en el mismo piso/pabellón.
 - **Regla 3 - Consulta de Espacios Contiguos (`obtenerEspaciosContiguos`):** Búsqueda BFS de espacios adyacentes del mismo tipo.
 - **Regla 4 - Disponibilidad (`calcularEspaciosDisponibles`):** Verificación de no doble reserva contra asignaciones vigentes.
 - **Regla 5 - Algoritmo de Bloque Contiguo (`buscarBloqueContiguo`):** Expansión codiciosa (greedy) de bloques hasta satisfacer la suma de aforo requerido.
+- **Pruebas unitarias y parametrizadas (#235, 5.1 a 5.4):** capacidad real, consulta de contigüidad, disponibilidad por horario y búsqueda de bloque con capacidad variable.
+- **Documento de Diseño UI/UX (#236, 6.6)** y **Guía de Estilos (#237, 6.7).**
+
+### Issues cerrados
+2.1 (#116), 2.2 (#117), 2.3 (#118), 2.4 (#119), 2.5 (#120), 5.1 (#172), 5.2 (#173), 5.3 (#174), 5.4 (#175), 6.6 (#194), 6.7 (#195).
 
 ---
 
 ## [1.1.0] - 2026-09-28
+**Hito:** Sprint 1 — Piezas base del algoritmo (cerrado). **PR:** #230.
+
 ### Añadido (Sprint 1 - Importadores de Datos)
 - **Importador de Cursos y Secciones:** Ingesta de CSV/JSON para `Curso` y `Seccion` (`cursosSecciones.importer.ts`).
 - **Importador de Horarios:** Ingesta de `HorarioSeccion` con validación de franjas temporales (`horarios.importer.ts`).
@@ -179,12 +188,27 @@ Trabajo de la rama `feature/espacios-habilitados-seed-excel`, aún no fusionado 
 - **Importador de Docentes:** Ingesta de perfil de profesores (`docentes.importer.ts`).
 - **Orquestador Principal:** Módulo unificado de ejecución de importaciones (`importers/index.ts`).
 
+### Issues cerrados
+1.3 (#109), 1.4 (#110), 1.5 (#111), 1.6 (#112), 1.7 (#113), 1.8 (#114).
+
+### Notas
+- Los issues 1.6 a 1.8 figuran en el hito Sprint 3 pero se cerraron con este PR. El Issue 1.6 (encadenar la asignación tras una importación) se cerró sin que su criterio de aceptación estuviera en `develop`; se construyó en la v1.4.0 (#246).
+
 ---
 
 ## [1.0.0] - 2026-09-27
+**Hito:** Sprint 0 — Cimientos (cerrado) y base del Sprint 1. **PR:** #225, #226, #227, #228, #229, #233.
+
 ### Añadido (Fundamentos & CI/CD)
 - **Estructura Monorepo:** Configuración de workspaces npm (`backend` + `frontend`).
 - **Modelo de Datos Prisma:** Esquema en PostgreSQL (Supabase) con enums, tablas y relaciones.
 - **Pipeline CI/CD (GitHub Actions):** `.github/workflows/ci.yml` ejecutando linting (ESLint), formateo (Prettier) y pruebas unitarias (Jest).
 - **Especificaciones Técnicas (Specs):** Índice y specs en `docs/specs/` para los 118 issues de las 7 épicas.
 - **Reglas del Agente (`AGENTS.md`):** Protocolos y delimitación estricta de roles de desarrollo (`BI`, `BM`, `FE`) vs QA (`Angel14den`).
+- **Documentos de línea base:** historias de usuario y requisitos (6.1), modelo de reglas y alcance (6.2), plan de línea base (6.3) y acta de línea base funcional (6.4), en `docs/`.
+- **Arquitectura y modelo de datos (#225, 6.5, 1.2):** `docs/arquitectura.md` y `docs/modelo-datos.md`, junto con las 18 entidades de `schema.prisma` y la plantilla de Pull Requests.
+- **Plan Maestro de Pruebas (#226, #227, 5.12).**
+- **Registro de Versiones (#233, 6.8).**
+
+### Issues cerrados
+1.1 (#107), 1.2 (#108), 5.10a (#182), 5.12 (#185), 6.1 (#189), 6.2 (#190), 6.3 (#191), 6.4 (#192), 6.5 (#193), 6.8 (#196).

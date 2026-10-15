@@ -18,9 +18,9 @@ Estado al **2026-10-15**. Cada versión corresponde a un conjunto de PR fusionad
 | **v1.5.0** | 2026-10-10 | Sprint 3 | Seed de demostración, pruebas de integración, auditoría y SonarCloud en el CI | #257 | #5.7, #5.10b, #5.11, #5.17 |
 | **v1.4.0** | 2026-10-08 | Sprint 3 | Autenticación por rol, alertas, portales de alumno y docente, orquestación del motor, asignación a demanda, importación por HTTP, migración inicial y CD separado | #240, #241, #242, #243, #244, #245, #246 | #2.10, #2.11, #2.12, #2.14, #2.15, #3.10 a #3.12, #3.21, #4.1 a #4.5, #4.8, #7.1 a #7.3, #7.5 |
 | **v1.3.0** | 2026-10-04 | Sprint 2 | Reglas de software, accesibilidad y cercanía; consultas públicas; despliegue continuo; pruebas parametrizadas | #231, #234, #238, #239 | #1.10, #2.6 a #2.9, #2.13, #3.1 a #3.4, #5.5, #5.6, #5.13, #5.16 |
-| **v1.2.0** | 2026-09-29 | Sprint 1 | Piezas base del algoritmo de asignación (Capacidad, Contigüidad, Disponibilidad, Bloques) | #232 | #2.1, #2.2, #2.3, #2.4, #2.5 |
+| **v1.2.0** | 2026-09-29 | Sprint 1 | Piezas base del algoritmo de asignación (Capacidad, Contigüidad, Disponibilidad, Bloques), pruebas unitarias de esas piezas, Documento de Diseño UI/UX y Guía de Estilos | #232, #235, #236, #237 | #2.1 a #2.5, #5.1 a #5.4, #6.6, #6.7 |
 | **v1.1.0** | 2026-09-28 | Sprint 1 | Importadores de Datos (Cursos, Horarios, Matrículas con movilidad reducida, Docentes) | #230 | #1.3, #1.4, #1.5, #1.6, #1.7, #1.8 |
-| **v1.0.0** | 2026-09-27 | Setup | Monorepo base, Prisma Schema en Supabase, CI GitHub Actions, Specs Técnicas y `AGENTS.md` | #225, #228, #229, #233 | #1.1, #1.2, #5.10a, #6.8 |
+| **v1.0.0** | 2026-09-27 | Setup | Monorepo base, documentos de línea base, arquitectura y modelo de datos, Prisma Schema en Supabase, Plan Maestro de Pruebas, CI GitHub Actions, Specs Técnicas, `AGENTS.md` y Registro de Versiones | #225, #226, #227, #228, #229, #233 | #1.1, #1.2, #5.10a, #5.12, #6.1 a #6.5, #6.8 |
 
 Trabajo aún no fusionado a `develop` (espacios habilitados, seed desde Excel y corrección del CD): véase `[Sin publicar]` en el [`CHANGELOG.md`](../CHANGELOG.md).
 
