@@ -8,6 +8,10 @@ export interface EspacioSeedData {
   aforoNominal: number;
   softwareInstalado?: string[];
   pcsMalogradas?: number | null;
+  /** Por defecto `true`. `false` siembra el espacio fuera de servicio. */
+  habilitado?: boolean;
+  /** Rótulo visual opcional (ej. "Sala de investigación"). */
+  descripcionUso?: string | null;
 }
 
 export interface ParContiguoSeed {
@@ -242,11 +246,15 @@ export function validarYConstruirContiguedadesSimetricas(
 /**
  * Siembra de forma idempotente los espacios físicos y sus relaciones de contigüidad.
  */
-export async function sembrarEspaciosYContiguedades(prisma: PrismaClient) {
+export async function sembrarEspaciosYContiguedades(
+  prisma: PrismaClient,
+  espacios: EspacioSeedData[] = ESPACIOS_EDIFICIO_SEED,
+  contiguedades: ParContiguoSeed[] = CONTIGUEDADES_SEED,
+) {
   // 1. Sembrar espacios
   const espaciosCreados: Array<EspacioSeedData & { id: string }> = [];
 
-  for (const esp of ESPACIOS_EDIFICIO_SEED) {
+  for (const esp of espacios) {
     const registro = await prisma.espacio.upsert({
       where: {
         pabellon_identificador: {
@@ -260,6 +268,9 @@ export async function sembrarEspaciosYContiguedades(prisma: PrismaClient) {
         aforoNominal: esp.aforoNominal,
         softwareInstalado: esp.softwareInstalado ?? [],
         pcsMalogradas: esp.pcsMalogradas ?? null,
+        // Solo si se indica: re-sembrar no debe pisar un habilitado cambiado luego desde la API.
+        ...(esp.habilitado !== undefined && { habilitado: esp.habilitado }),
+        ...(esp.descripcionUso !== undefined && { descripcionUso: esp.descripcionUso }),
       },
       create: {
         identificador: esp.identificador,
@@ -269,6 +280,8 @@ export async function sembrarEspaciosYContiguedades(prisma: PrismaClient) {
         aforoNominal: esp.aforoNominal,
         softwareInstalado: esp.softwareInstalado ?? [],
         pcsMalogradas: esp.pcsMalogradas ?? null,
+        habilitado: esp.habilitado ?? true,
+        descripcionUso: esp.descripcionUso ?? null,
       },
     });
 
@@ -279,7 +292,7 @@ export async function sembrarEspaciosYContiguedades(prisma: PrismaClient) {
   }
 
   // 2. Validar y construir relaciones simétricas
-  const relaciones = validarYConstruirContiguedadesSimetricas(espaciosCreados, CONTIGUEDADES_SEED);
+  const relaciones = validarYConstruirContiguedadesSimetricas(espaciosCreados, contiguedades);
 
   // 3. Sembrar contigüidades simétricas de forma idempotente
   for (const rel of relaciones) {

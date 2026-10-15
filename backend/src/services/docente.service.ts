@@ -132,6 +132,7 @@ export async function explorarEspacios(
 
   const espacios = await prisma.espacio.findMany({
     where: {
+      habilitado: true,
       ...(filtros.tipo && { tipo: filtros.tipo }),
       ...(filtros.pabellon && { pabellon: { equals: filtros.pabellon, mode: 'insensitive' } }),
       ...(filtros.piso !== undefined && { piso: filtros.piso }),

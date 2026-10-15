@@ -1,6 +1,6 @@
 import { DiaSemana, TipoAlerta, TipoEspacio } from '@prisma/client';
 
-export type EstadoOcupacionEspacio = 'DISPONIBLE' | 'OCUPADO' | 'ALERTA_ACTIVA';
+export type EstadoOcupacionEspacio = 'DISPONIBLE' | 'OCUPADO' | 'ALERTA_ACTIVA' | 'DESHABILITADO';
 
 export interface FranjaOcupacionDTO {
   diaSemana: DiaSemana;
@@ -34,6 +34,8 @@ export interface EspacioOcupacionDTO {
   aforoNominal: number;
   capacidadReal: number;
   estado: EstadoOcupacionEspacio;
+  /** Rótulo visual opcional del espacio; se muestra también si está deshabilitado. */
+  descripcionUso: string | null;
   asignacion: AsignacionOcupacionDTO | null;
   alertas: AlertaOcupacionDTO[];
 }
@@ -43,7 +45,7 @@ export interface MapaOcupacionDTO {
   piso: number;
   franja: FranjaOcupacionDTO;
   espacios: EspacioOcupacionDTO[];
-  resumen: { disponibles: number; ocupados: number; conAlerta: number };
+  resumen: { disponibles: number; ocupados: number; conAlerta: number; deshabilitados: number };
 }
 
 /** Vista de solo lectura del alumno (Issue 3.13): únicamente libre u ocupado. */

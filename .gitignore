@@ -40,3 +40,7 @@ postgres_data/
 Thumbs.db
 .vercel
 .env*
+
+# Datos reales del seed (incluyen datos personales): no subir al repositorio
+backend/prisma/data/*.xlsx
+~$*

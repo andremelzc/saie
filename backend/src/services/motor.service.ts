@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { EstadoAsignacion, PrismaClient, TipoEventoAuditoria } from '@prisma/client';
 import { EspacioConexo } from '../rules/buscarBloqueContiguo';
 import {
@@ -17,14 +18,15 @@ import {
 } from '../types/asignacion';
 
 /**
- * Carga todos los espacios y construye la función de vecinos contiguos desde Prisma.
+ * Carga los espacios habilitados y construye la función de vecinos contiguos desde Prisma.
+ * Un espacio deshabilitado no entra al grafo, así que tampoco forma parte de un bloque contiguo.
  */
 export async function cargarContextoEspacios(prisma: PrismaClient): Promise<{
   todosLosEspacios: EspacioConexo[];
   obtenerVecinos: (espacioId: string) => string[];
 }> {
   const [espaciosDb, contiguosDb] = await Promise.all([
-    prisma.espacio.findMany(),
+    prisma.espacio.findMany({ where: { habilitado: true } }),
     prisma.espacioContiguo.findMany(),
   ]);
 
@@ -318,55 +320,54 @@ export async function procesarCorridaBatchPeriodo(
     return cambio && seccion ? [construirEventoCambio(seccion, cambio, todosLosEspacios)] : [];
   });
 
-  // Persistir en transacción los resultados no conservados
-  await prisma.$transaction(async (tx) => {
-    for (const res of resultadoBatch.resultados) {
-      if (res.conservadaPorIdempotencia) {
-        continue;
-      }
-
+  // Persistir los resultados no conservados. Se escribe con 4 consultas masivas dentro de una sola
+  // transacción (no una consulta por sección): contra una base remota, cientos de consultas
+  // secuenciales superan cualquier tiempo máximo razonable de transacción.
+  const nuevos = resultadoBatch.resultados.filter((res) => !res.conservadaPorIdempotencia);
+  if (nuevos.length > 0) {
+    const ids = nuevos.map(() => randomUUID());
+    await prisma.$transaction([
       // Marcar previas como HISTORICA
-      await tx.asignacion.updateMany({
+      prisma.asignacion.updateMany({
         where: {
-          seccionId: res.seccionId,
+          seccionId: { in: nuevos.map((res) => res.seccionId) },
           estado: { in: [EstadoAsignacion.VIGENTE, EstadoAsignacion.ESCALADA] },
         },
         data: { estado: EstadoAsignacion.HISTORICA },
-      });
-
-      // Crear nueva asignación de la corrida batch
-      const nueva = await tx.asignacion.create({
-        data: {
+      }),
+      // Crear las nuevas asignaciones de la corrida batch
+      prisma.asignacion.createMany({
+        data: nuevos.map((res, i) => ({
+          id: ids[i],
           seccionId: res.seccionId,
           estado: res.estado,
           motivoEscalamiento: res.motivoEscalamiento || null,
           corridaId: resultadoBatch.corridaId,
           huellaEntrada: res.huellaEntrada,
-          espacios: {
-            create: res.espacioIds.map((espId) => ({
-              espacioId: espId,
-            })),
-          },
-        },
-      });
-
+        })),
+      }),
+      prisma.asignacionEspacio.createMany({
+        data: nuevos.flatMap((res, i) =>
+          res.espacioIds.map((espacioId) => ({ asignacionId: ids[i], espacioId })),
+        ),
+      }),
       // Auditoría
-      await tx.registroAuditoria.create({
-        data: {
+      prisma.registroAuditoria.createMany({
+        data: nuevos.map((res, i) => ({
           tipoEvento:
             res.estado === EstadoAsignacion.VIGENTE
               ? TipoEventoAuditoria.ASIGNACION
               : TipoEventoAuditoria.ESCALAMIENTO,
-          asignacionId: nueva.id,
+          asignacionId: ids[i],
           detalle: `Corrida Batch [${resultadoBatch.corridaId}] - ${
             res.estado === EstadoAsignacion.VIGENTE
               ? `Asignada a: [${res.espacioIds.join(', ')}]`
               : `Escalada: ${res.motivoEscalamiento}`
           }`,
-        },
-      });
-    }
-  });
+        })),
+      }),
+    ]);
+  }
 
   // Los avisos salen una vez confirmada la transacción completa.
   emitirCambiosDeAsignacion(eventosCambio);
