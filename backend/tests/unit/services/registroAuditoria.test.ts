@@ -233,77 +233,60 @@ describe('Issue 5.11 — Registro de auditoría: Escalamiento a revisión manual
 // ============================================================
 
 describe('Issue 5.11 — Registro de auditoría: Corrida batch del periodo', () => {
-  it('3a. debe crear un RegistroAuditoria por cada sección procesada en la corrida batch', async () => {
-    const registroAuditoriaMock = { create: jest.fn().mockResolvedValue({ id: 'audit-batch' }) };
-    const asignacionMock = {
-      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
-      create: jest
-        .fn()
-        .mockResolvedValueOnce({ id: 'asig-batch-1' })
-        .mockResolvedValueOnce({ id: 'asig-batch-2' }),
-      findMany: jest.fn().mockResolvedValue([]),
-    };
-
-    const mockTx = {
-      asignacion: asignacionMock,
+  // La corrida batch escribe con operaciones masivas (updateMany + 3 createMany) en una sola
+  // transacción por arreglo, no con una consulta por sección.
+  function crearPrismaBatch(secciones: unknown[]) {
+    const registroAuditoriaMock = { createMany: jest.fn().mockResolvedValue({ count: 0 }) };
+    const mockPrisma = {
+      espacio: { findMany: jest.fn().mockResolvedValue(mockEspacios) },
+      espacioContiguo: { findMany: jest.fn().mockResolvedValue(mockContiguos) },
+      seccion: { findMany: jest.fn().mockResolvedValue(secciones) },
+      asignacion: {
+        findMany: jest.fn().mockResolvedValue([]),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      asignacionEspacio: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
       registroAuditoria: registroAuditoriaMock,
+      $transaction: jest.fn().mockImplementation(async (operaciones) => Promise.all(operaciones)),
     };
+    return { mockPrisma, registroAuditoriaMock };
+  }
 
+  it('3a. debe crear un RegistroAuditoria por cada sección procesada en la corrida batch', async () => {
     const mockSeccionB = {
       ...mockSeccionAula,
       id: 'sec-audit-2',
       codigoSeccion: 'B',
     };
-
-    const mockPrisma = {
-      espacio: { findMany: jest.fn().mockResolvedValue(mockEspacios) },
-      espacioContiguo: { findMany: jest.fn().mockResolvedValue(mockContiguos) },
-      seccion: {
-        findMany: jest.fn().mockResolvedValue([mockSeccionAula, mockSeccionB]),
-      },
-      asignacion: { findMany: jest.fn().mockResolvedValue([]) },
-      $transaction: jest.fn().mockImplementation(async (cb) => cb(mockTx)),
-    };
+    const { mockPrisma, registroAuditoriaMock } = crearPrismaBatch([mockSeccionAula, mockSeccionB]);
 
     const resultadoBatch = await procesarCorridaBatchPeriodo('2026-2', mockPrisma as any);
 
     expect(resultadoBatch.totalSecciones).toBe(2);
-    // Se debe crear un registro de auditoría por cada sección no conservada
-    expect(registroAuditoriaMock.create).toHaveBeenCalledTimes(2);
+    // Una sola escritura masiva con un registro de auditoría por cada sección no conservada
+    expect(registroAuditoriaMock.createMany).toHaveBeenCalledTimes(1);
+    const registros = registroAuditoriaMock.createMany.mock.calls[0][0].data;
+    expect(registros).toHaveLength(2);
 
     // Todos los registros deben tener tipoEvento válido
-    for (const call of registroAuditoriaMock.create.mock.calls) {
+    for (const registro of registros) {
       expect([TipoEventoAuditoria.ASIGNACION, TipoEventoAuditoria.ESCALAMIENTO]).toContain(
-        call[0].data.tipoEvento,
+        registro.tipoEvento,
       );
     }
   });
 
   it('3b. los registros batch incluyen el ID de corrida en el detalle', async () => {
-    const registroAuditoriaMock = { create: jest.fn().mockResolvedValue({ id: 'audit-batch-2' }) };
-    const mockTx = {
-      asignacion: {
-        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
-        create: jest.fn().mockResolvedValue({ id: 'asig-b' }),
-      },
-      registroAuditoria: registroAuditoriaMock,
-    };
-
-    const mockPrisma = {
-      espacio: { findMany: jest.fn().mockResolvedValue(mockEspacios) },
-      espacioContiguo: { findMany: jest.fn().mockResolvedValue(mockContiguos) },
-      seccion: { findMany: jest.fn().mockResolvedValue([mockSeccionAula]) },
-      asignacion: { findMany: jest.fn().mockResolvedValue([]) },
-      $transaction: jest.fn().mockImplementation(async (cb) => cb(mockTx)),
-    };
+    const { mockPrisma, registroAuditoriaMock } = crearPrismaBatch([mockSeccionAula]);
 
     const resultadoBatch = await procesarCorridaBatchPeriodo('2026-2', mockPrisma as any);
 
-    expect(registroAuditoriaMock.create).toHaveBeenCalledTimes(1);
-    const detalle = registroAuditoriaMock.create.mock.calls[0][0].data.detalle;
+    const registros = registroAuditoriaMock.createMany.mock.calls[0][0].data;
+    expect(registros).toHaveLength(1);
 
     // El detalle debe referenciar el corridaId de la corrida batch
-    expect(detalle).toContain(resultadoBatch.corridaId);
+    expect(registros[0].detalle).toContain(resultadoBatch.corridaId);
   });
 
   it('3c. NO debe crear registro de auditoría para secciones conservadas por idempotencia', async () => {
