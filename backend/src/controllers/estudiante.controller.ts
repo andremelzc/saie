@@ -11,6 +11,7 @@ import {
   listarCursosAlumno,
   obtenerHorarioAlumno,
   obtenerPerfilAlumno,
+  obtenerRutaAlumnoPorAsignacionId,
 } from '../services/alumno.service';
 
 const HorarioQuerySchema = z.object({
@@ -82,6 +83,23 @@ export async function consultarMapaOcupacion(req: Request, res: Response): Promi
   try {
     const q = MapaOcupacionQuerySchema.parse(req.query);
     const data = await obtenerMapaLectura(filtrosDeMapa(q), prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 3.14 / 3.15 — GET /api/v1/estudiante/ruta/:asignacionId */
+export async function obtenerRuta(req: Request, res: Response): Promise<void> {
+  try {
+    const asignacionId = Array.isArray(req.params.asignacionId)
+      ? req.params.asignacionId[0]
+      : req.params.asignacionId;
+    if (!asignacionId) {
+      res.status(400).json({ success: false, message: 'Debe proporcionar el ID de asignación' });
+      return;
+    }
+    const data = await obtenerRutaAlumnoPorAsignacionId(req.auth!.sub, asignacionId, prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);

@@ -107,7 +107,7 @@ export async function obtenerOcupacionPorPiso(
       tipo: espacio.tipo,
       aforoNominal: espacio.aforoNominal,
       capacidadReal: calcularCapacidadReal(espacio),
-      estado: !espacio.habilitado
+      estado: espacio.habilitado === false
         ? 'DESHABILITADO'
         : alertasEspacio.length > 0
           ? 'ALERTA_ACTIVA'

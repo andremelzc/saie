@@ -1,7 +1,7 @@
 # Spec 02: Motor de Asignación Inteligente de Espacios
 
 > **Épica:** `epic:motor-asignacion`  
-> **Issues Cubiertos:** #2.1, #2.2, #2.3, #2.4, #2.5, #2.6, #2.7, #2.8, #2.9, #2.10, #2.11, #2.12, #2.13, #2.14, #2.15  
+> **Issues Cubiertos:** #2.1, #2.2, #2.3, #2.4, #2.5, #2.6, #2.7, #2.8, #2.9, #2.10, #2.11, #2.12, #2.13, #2.14, #2.15, #2.16  
 > **Roles:** BM, QA  
 > **Documentos de Referencia:** [`docs/modelo-datos.md`](../modelo-datos.md), [`docs/arquitectura.md`](../arquitectura.md)
 
@@ -52,6 +52,33 @@ El motor de asignación calcula automáticamente el mejor bloque contiguo de aul
 * **Issue 2.14 & 2.15 (Trigger e Integración HTTP):**
   * Endpoint HTTP: `POST /api/v1/asignaciones/batch` y `POST /api/v1/asignaciones/seccion/:id`.
 
+### 2.4 Issue 2.16 — Bus de Eventos Interno
+* **Ubicación:** `backend/src/events/` (`tipos.ts`, `bus.ts`, `emisores.ts`, `registro.ts`).
+* **Bus:** `BusEventos` tipado, interno al proceso, sin broker externo.
+  ```typescript
+  bus.suscribir<K extends NombreEvento>(evento: K, manejador: Manejador<K>): () => void; // devuelve la baja
+  bus.emitir<K extends NombreEvento>(evento: K, contenido: MapaEventos[K]): Promise<void>; // nunca rechaza
+  ```
+* **Eventos y contenido:**
+  ```typescript
+  interface MapaEventos {
+    'asignacion.cambiada': {
+      seccionId: string; codigoCurso: string; nombreCurso: string; codigoSeccion: string; periodo: string;
+      espaciosAnteriores: { id: string; identificador: string }[];
+      espaciosNuevos: { id: string; identificador: string }[];
+      horarios: HorarioSlot[];
+    };
+    'alerta.creada': { alertaId: string; tipo: TipoAlerta; espacioId: string; motivo: string; asignacionesAfectadas: number };
+  }
+  ```
+* **Cuándo se emite `asignacion.cambiada`** (`detectarCambioDeEspacios`): solo si la asignación previa de la sección estaba `VIGENTE`, la nueva también es `VIGENTE` y el conjunto de espacios es distinto. No se emite en la primera asignación, si la sección estaba `ESCALADA`, si pasa a `ESCALADA` ni si se conserva por idempotencia. Lo emiten `procesarAsignacionSeccionIndividual` (individual) y `procesarCorridaBatchPeriodo` (batch).
+* **Cuándo se emite `alerta.creada`:** solo si `registrarAlerta` **creó** una alerta (`creada: true`), no si actualizó una pendiente idéntica. Hoy lo emite `laboratorio.service` (Issues 4.1 y 4.2); todo servicio que cree alertas dentro de una transacción debe llamar a `emitirAlertasCreadas` al terminar.
+* **Reglas de implementación:**
+  * Los eventos se emiten **después de confirmar la transacción**, nunca dentro de ella.
+  * Un manejador que lanza un error o rechaza su promesa se captura y se registra solo el tipo de error; no afecta al emisor ni a los demás manejadores.
+  * Los manejadores se conectan en `registrarManejadores()`, llamada desde `index.ts`; `createApp` no la llama.
+* **Manejadores actuales:** notificador de Telegram (Issue 3.26, ver [Spec 03](03-portal-estudiante.md) §2.4). La auditoría de alertas (Issue 5.11) será otro manejador.
+
 ---
 
 ## 3. Matriz de Pruebas Unitarias & Integración
@@ -68,4 +95,5 @@ El motor de asignación calcula automáticamente el mejor bloque contiguo de aul
 ## 4. Definition of Done (DoD)
 - [ ] Reglas del motor 100% puras, sin acoplamiento a frameworks de UI.
 - [ ] Procesamiento de corrida batch determinista e idempotente.
-- [ ] Cobertura de pruebas unitarias $\ge 85\%$.
+- [ ] Los eventos de §2.4 se emiten solo tras confirmar la transacción y un manejador con error no afecta al emisor.
+- [ ] Cobertura de pruebas unitarias $\ge 85\%$. Las pruebas del bus y de los avisos son del Issue 5.20 (QA).

@@ -1,6 +1,11 @@
 import { randomUUID } from 'crypto';
 import { EstadoAsignacion, PrismaClient, TipoEventoAuditoria } from '@prisma/client';
 import { EspacioConexo } from '../rules/buscarBloqueContiguo';
+import {
+  construirEventoCambio,
+  detectarCambioDeEspacios,
+  emitirCambiosDeAsignacion,
+} from '../events/emisores';
 import { construirGrafoContiguedad, obtenerEspaciosContiguos } from './contiguedad.service';
 import { orquestarAsignacionSeccion } from '../rules/orquestadorAsignacion';
 import { ejecutarCorridaBatch } from '../rules/corridaBatch';
@@ -214,6 +219,16 @@ export async function procesarAsignacionSeccionIndividual(
         },
       });
     });
+
+    // Issue 2.16: el aviso sale una vez confirmada la transacción, nunca dentro de ella.
+    const cambio = detectarCambioDeEspacios(
+      asignacionPrevia,
+      resultado.estado,
+      resultado.espacioIds,
+    );
+    if (cambio) {
+      emitirCambiosDeAsignacion([construirEventoCambio(seccionInput, cambio, todosLosEspacios)]);
+    }
   }
 
   return resultado;
@@ -291,6 +306,20 @@ export async function procesarCorridaBatchPeriodo(
     asignacionesPrevias,
   });
 
+  // Issue 2.16: qué secciones cambiaron de espacios respecto de su asignación VIGENTE previa.
+  const previaPorSeccion = new Map(asignacionesPrevias.map((a) => [a.seccionId, a]));
+  const seccionPorId = new Map(seccionesInput.map((s) => [s.id, s]));
+  const eventosCambio = resultadoBatch.resultados.flatMap((res) => {
+    if (res.conservadaPorIdempotencia) return [];
+    const cambio = detectarCambioDeEspacios(
+      previaPorSeccion.get(res.seccionId),
+      res.estado,
+      res.espacioIds,
+    );
+    const seccion = seccionPorId.get(res.seccionId);
+    return cambio && seccion ? [construirEventoCambio(seccion, cambio, todosLosEspacios)] : [];
+  });
+
   // Persistir los resultados no conservados. Se escribe con 4 consultas masivas dentro de una sola
   // transacción (no una consulta por sección): contra una base remota, cientos de consultas
   // secuenciales superan cualquier tiempo máximo razonable de transacción.
@@ -339,6 +368,9 @@ export async function procesarCorridaBatchPeriodo(
       }),
     ]);
   }
+
+  // Los avisos salen una vez confirmada la transacción completa.
+  emitirCambiosDeAsignacion(eventosCambio);
 
   return resultadoBatch;
 }

@@ -1,1 +1,86 @@
 @import 'tailwindcss';
+
+/* Tokens de la Guía de Estilos UI/UX (docs/07_guia_de_estilos_ui_ux.md, Anexo A) */
+:root {
+  --saie-primary: #7b1113;
+  --saie-primary-dark: #5c0d0e;
+  --saie-canvas: #faf6ed;
+  --saie-surface: #ffffff;
+  --saie-text: #222222;
+  --saie-text-muted: #666666;
+  --saie-success: #2e7d32;
+  --saie-danger: #d32f2f;
+  --saie-divider: #e6dfd0;
+  --saie-border: #8a8578;
+  --saie-radius-card: 12px;
+  --saie-shadow-1: 0 2px 8px rgba(34, 34, 34, 0.08);
+  --saie-shadow-3: 0 8px 24px rgba(34, 34, 34, 0.16);
+  --saie-font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --saie-font-sans: Inter, Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@theme {
+  --color-saie-primary: #7b1113;
+  --color-saie-primary-dark: #5c0d0e;
+  --color-saie-canvas: #faf6ed;
+  --color-saie-text: #222222;
+  --color-saie-muted: #666666;
+  --color-saie-divider: #e6dfd0;
+  --color-saie-success: #2e7d32;
+  --color-saie-danger: #d32f2f;
+  --font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-sans: Inter, Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--saie-canvas);
+  color: var(--saie-text);
+  font-family: var(--saie-font-sans);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+/* Foco visible (WCAG 2.4.7): 3 px #222 con separación de 2 px */
+a:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--saie-text);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Animaciones de entrada y flotado del logo (se anulan con «Reducir movimiento») */
+@keyframes saie-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes saie-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.saie-rise {
+  animation: saie-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.saie-float {
+  animation: saie-float 5s ease-in-out infinite;
+}
