@@ -81,6 +81,7 @@ enum TipoEventoAuditoria {
   ASIGNACION
   ESCALAMIENTO
   ALERTA
+  VERIFICACION
 }
 
 // ==========================================

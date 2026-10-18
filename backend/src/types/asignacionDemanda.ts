@@ -1,4 +1,5 @@
 import { EstadoAsignacion } from '@prisma/client';
+import { ResultadoVerificacion } from '../rules/verificadorCorrida';
 
 export interface ResultadoSeccionDTO {
   seccionId: string;
@@ -23,5 +24,10 @@ export interface ResumenAsignacionDTO {
   mantenidas: number;
   /** Secciones que quedaron ESCALADAS a revisión manual. */
   escaladas: number;
+  /**
+   * Issue 2.17: resultado del verificador posterior a la corrida. `null` cuando no hubo nada que
+   * verificar (periodo sin datos o sin secciones).
+   */
+  verificacion: ResultadoVerificacion | null;
   resultados: ResultadoSeccionDTO[];
 }

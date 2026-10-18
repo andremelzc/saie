@@ -3,6 +3,10 @@ jest.mock('../../../src/services/motor.service', () => ({
   procesarCorridaBatchPeriodo: jest.fn(),
 }));
 
+jest.mock('../../../src/services/verificador.service', () => ({
+  verificarCorridaPeriodo: jest.fn(),
+}));
+
 import {
   ejecutarAsignacionADemanda,
   hayCorridaEnCurso,
@@ -11,9 +15,16 @@ import {
   procesarAsignacionSeccionIndividual,
   procesarCorridaBatchPeriodo,
 } from '../../../src/services/motor.service';
+import { verificarCorridaPeriodo } from '../../../src/services/verificador.service';
 
 const individual = procesarAsignacionSeccionIndividual as jest.Mock;
 const batch = procesarCorridaBatchPeriodo as jest.Mock;
+const verificar = verificarCorridaPeriodo as jest.Mock;
+
+/** Resultado de verificación conforme reutilizable (Issue 2.17). */
+function verificacionConforme() {
+  return { conforme: true, totalRevisadas: 0, totalViolaciones: 0, reglas: [] };
+}
 
 function resultado(seccionId: string, estado: string, extra: Record<string, unknown> = {}) {
   return {
@@ -38,6 +49,7 @@ function prismaMock(seccion: unknown = { id: 's1', periodo: '2026-1' }, periodo 
 
 beforeEach(() => {
   jest.clearAllMocks();
+  verificar.mockResolvedValue(verificacionConforme());
 });
 
 describe('Asignación a demanda (Issue 2.15)', () => {
@@ -58,7 +70,10 @@ describe('Asignación a demanda (Issue 2.15)', () => {
         asignadas: 1,
         mantenidas: 0,
         escaladas: 0,
+        verificacion: { conforme: true },
       });
+      // Issue 2.17: la verificación corre sobre el periodo de la sección.
+      expect(verificar).toHaveBeenCalledWith('2026-1', prisma);
     });
 
     it('404 si la sección no existe, sin invocar al motor', async () => {
@@ -119,13 +134,22 @@ describe('Asignación a demanda (Issue 2.15)', () => {
         asignadas: 1,
         mantenidas: 1,
         escaladas: 1,
+        verificacion: { conforme: true },
       });
+      expect(verificar).toHaveBeenCalledWith('2026-1', prisma, 'corrida-123');
     });
 
     it('periodo sin datos: responde con ceros y no invoca al motor', async () => {
       const res = await ejecutarAsignacionADemanda(undefined, prismaMock(null, ''));
       expect(batch).not.toHaveBeenCalled();
-      expect(res).toMatchObject({ periodo: null, totalSecciones: 0, asignadas: 0, escaladas: 0 });
+      expect(verificar).not.toHaveBeenCalled();
+      expect(res).toMatchObject({
+        periodo: null,
+        totalSecciones: 0,
+        asignadas: 0,
+        escaladas: 0,
+        verificacion: null,
+      });
     });
   });
 
