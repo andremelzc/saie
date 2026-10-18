@@ -47,14 +47,25 @@ describe('Importador de Horarios (Issue 1.4)', () => {
         horaInicio: '10:00',
         horaFin: '08:00',
       },
+      {
+        codigoCurso: '2020101',
+        codigoSeccion: 'S1',
+        periodo: '2026-1',
+        diaSemana: DiaSemana.MIERCOLES,
+        horaInicio: '10:00',
+        horaFin: '10:00',
+      },
     ];
 
     const resultado = await importarHorarios(datos, mockPrisma);
 
     expect(resultado.horariosProcesados).toBe(0);
-    expect(resultado.errores.length).toBeGreaterThan(0);
+    expect(resultado.errores).toHaveLength(2);
     expect(resultado.errores[0]).toContain(
       'hora de inicio (10:00) debe ser menor a la hora de fin (08:00)',
+    );
+    expect(resultado.errores[1]).toContain(
+      'hora de inicio (10:00) debe ser menor a la hora de fin (10:00)',
     );
   });
 
@@ -74,5 +85,65 @@ describe('Importador de Horarios (Issue 1.4)', () => {
 
     expect(resultado.horariosProcesados).toBe(0);
     expect(resultado.errores.length).toBeGreaterThan(0);
+  });
+
+  it('debe registrar error si el curso no existe', async () => {
+    mockPrisma.curso.findUnique.mockResolvedValue(null);
+
+    const datos = [
+      {
+        codigoCurso: 'CURSO_INEXISTENTE',
+        codigoSeccion: 'S1',
+        periodo: '2026-1',
+        diaSemana: DiaSemana.LUNES,
+        horaInicio: '08:00',
+        horaFin: '10:00',
+      },
+    ];
+
+    const resultado = await importarHorarios(datos, mockPrisma);
+
+    expect(resultado.horariosProcesados).toBe(0);
+    expect(resultado.errores[0]).toContain('No existe el curso con código CURSO_INEXISTENTE');
+  });
+
+  it('debe registrar error si la sección no existe', async () => {
+    mockPrisma.seccion.findUnique.mockResolvedValue(null);
+
+    const datos = [
+      {
+        codigoCurso: '2020101',
+        codigoSeccion: 'SECCION_INEXISTENTE',
+        periodo: '2026-1',
+        diaSemana: DiaSemana.LUNES,
+        horaInicio: '08:00',
+        horaFin: '10:00',
+      },
+    ];
+
+    const resultado = await importarHorarios(datos, mockPrisma);
+
+    expect(resultado.horariosProcesados).toBe(0);
+    expect(resultado.errores[0]).toContain('No existe la sección SECCION_INEXISTENTE');
+  });
+
+  it('debe capturar errores de base de datos durante el upsert de horario', async () => {
+    mockPrisma.horario.upsert.mockRejectedValue(new Error('Fallo de BD en horario'));
+
+    const datos = [
+      {
+        codigoCurso: '2020101',
+        codigoSeccion: 'S1',
+        periodo: '2026-1',
+        diaSemana: DiaSemana.LUNES,
+        horaInicio: '08:00',
+        horaFin: '10:00',
+      },
+    ];
+
+    const resultado = await importarHorarios(datos, mockPrisma);
+
+    expect(resultado.horariosProcesados).toBe(0);
+    expect(resultado.errores[0]).toContain('Fallo de BD en horario');
   });
 });

@@ -95,6 +95,15 @@ describe('Alta de alumno (Issue 4.17)', () => {
       crearAlumno({ codigo: 'A2026001', nombre: 'Dup2', correo: 'dup2@test.edu' }, db),
     ).rejects.toMatchObject({ status: 409 });
   });
+
+  it('re-lanza error si create lanza un error distinto a P2002', async () => {
+    const db = dbAlumnoMock(false);
+    db.alumno.create.mockRejectedValue(new Error('Fallo general de base de datos'));
+
+    await expect(
+      crearAlumno({ codigo: 'A2026001', nombre: 'Test', correo: 'test@test.edu' }, db),
+    ).rejects.toThrow('Fallo general de base de datos');
+  });
 });
 
 /* ── suite: alta docente (Issue 4.18) ────────────────────── */
@@ -135,6 +144,44 @@ describe('Alta de docente (Issue 4.18)', () => {
         db,
       ),
     ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('409 si docente.create lanza P2002', async () => {
+    const db = dbDocenteMock(false);
+    const p2002 = new Prisma.PrismaClientKnownRequestError('', {
+      code: 'P2002',
+      clientVersion: '1',
+    });
+    db.docente.create.mockRejectedValue(p2002);
+
+    await expect(
+      crearDocente(
+        {
+          codigoDocente: 'D001',
+          nombre: 'X',
+          correoInstitucional: 'x@uni.edu',
+          departamento: 'Otro',
+        },
+        db,
+      ),
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  it('re-lanza error si docente.create lanza un error distinto a P2002', async () => {
+    const db = dbDocenteMock(false);
+    db.docente.create.mockRejectedValue(new Error('Fallo no esperado'));
+
+    await expect(
+      crearDocente(
+        {
+          codigoDocente: 'D001',
+          nombre: 'X',
+          correoInstitucional: 'x@uni.edu',
+          departamento: 'Otro',
+        },
+        db,
+      ),
+    ).rejects.toThrow('Fallo no esperado');
   });
 });
 
