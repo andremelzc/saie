@@ -120,6 +120,34 @@ describe('Horario semanal del alumno (Issue 3.10)', () => {
       obtenerHorarioAlumno('cuenta-x', undefined, prismaMock([], null)),
     ).rejects.toMatchObject({ status: 404 });
   });
+
+  it('marca la accesibilidad del espacio asignado (HU-04, criterio 3)', async () => {
+    // Piso 1: accesible sin salvar escaleras y sin ascensor.
+    const plantaBaja = [seccion('C1', [['LUNES', '08:00', '10:00']])];
+    (plantaBaja[0].asignaciones[0].espacios[0].espacio as any).piso = 1;
+
+    const enPlantaBaja = await obtenerHorarioAlumno(
+      'cuenta-1',
+      undefined,
+      prismaMock(plantaBaja),
+    );
+    expect(enPlantaBaja.dias.LUNES?.[0].espacios[0]).toMatchObject({
+      accesible: true,
+      accesoPorAscensor: false,
+    });
+
+    // Piso superior con distancia al ascensor registrada: accesible por ascensor.
+    const pisoAlto = [seccion('C1', [['LUNES', '08:00', '10:00']])];
+    const espacioPisoAlto = pisoAlto[0].asignaciones[0].espacios[0].espacio as any;
+    espacioPisoAlto.piso = 3;
+    espacioPisoAlto.distanciaAscensor = 12;
+
+    const enPisoAlto = await obtenerHorarioAlumno('cuenta-1', undefined, prismaMock(pisoAlto));
+    expect(enPisoAlto.dias.LUNES?.[0].espacios[0]).toMatchObject({
+      accesible: true,
+      accesoPorAscensor: true,
+    });
+  });
 });
 
 describe('Cursos matriculados del alumno (Issue 3.11)', () => {

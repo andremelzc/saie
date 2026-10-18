@@ -48,14 +48,26 @@ export async function consultarMovilidadReducidaPorSeccionId(
 }
 
 /**
+ * Distancia del bloque al ascensor: la menor de las distancias de sus espacios. `Infinity` si
+ * ninguno la tiene registrada, de modo que los bloques sin dato queden al final sin alterar el
+ * orden determinista previo.
+ */
+function distanciaAlAscensor(bloque: BloqueCandidato): number {
+  const distancias = bloque.espacios
+    .map((espacio) => espacio.distanciaAscensor)
+    .filter((distancia): distancia is number => distancia != null);
+  return distancias.length > 0 ? Math.min(...distancias) : Number.POSITIVE_INFINITY;
+}
+
+/**
  * Issue 2.9: Prioriza bloques candidatos hacia Piso 1 cuando aplica el flag de movilidad reducida.
  *
  * - Si tieneMovilidadReducida === false: El orden de los bloques no se altera y fallbackAplicado es false.
  * - Si tieneMovilidadReducida === true:
  *   - Los bloques ubicados en piso === 1 se colocan al inicio del orden de evaluación.
  *   - Se preserva el orden relativo determinista dentro de los bloques de Piso 1 y dentro de los de otros pisos.
- *   - Si no existe ningún bloque disponible en Piso 1, se utilizan los bloques disponibles en otros pisos
- *     y se documenta explícitamente el fallback aplicado (fallbackAplicado = true).
+ *   - Si no existe ningún bloque disponible en Piso 1, se ordenan los bloques disponibles de otros
+ *     pisos por cercanía al ascensor (R-07 / RF-10) y se documenta el fallback aplicado.
  */
 export function priorizarBloquesPiso1(
   bloques: BloqueCandidato[],
@@ -78,11 +90,15 @@ export function priorizarBloquesPiso1(
     };
   }
 
-  // Fallback: No hay bloques candidatos en Piso 1 disponibles
+  // Fallback (R-07 / RF-10): sin Piso 1 disponible, se toma primero el piso superior más cercano
+  // al ascensor. El orden es estable: los bloques sin distancia registrada quedan al final en su
+  // orden determinista previo.
   return {
-    bloques: [...bloquesOtrosPisos],
+    bloques: [...bloquesOtrosPisos].sort(
+      (a, b) => distanciaAlAscensor(a) - distanciaAlAscensor(b),
+    ),
     fallbackAplicado: true,
     motivoFallback:
-      'No se encontraron bloques candidatos disponibles en Piso 1; asignación derivada a piso superior con acceso a ascensor.',
+      'No se encontraron bloques candidatos disponibles en Piso 1; asignación derivada al piso superior más cercano al ascensor.',
   };
 }
