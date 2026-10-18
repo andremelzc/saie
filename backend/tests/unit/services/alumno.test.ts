@@ -126,11 +126,7 @@ describe('Horario semanal del alumno (Issue 3.10)', () => {
     const plantaBaja = [seccion('C1', [['LUNES', '08:00', '10:00']])];
     (plantaBaja[0].asignaciones[0].espacios[0].espacio as any).piso = 1;
 
-    const enPlantaBaja = await obtenerHorarioAlumno(
-      'cuenta-1',
-      undefined,
-      prismaMock(plantaBaja),
-    );
+    const enPlantaBaja = await obtenerHorarioAlumno('cuenta-1', undefined, prismaMock(plantaBaja));
     expect(enPlantaBaja.dias.LUNES?.[0].espacios[0]).toMatchObject({
       accesible: true,
       accesoPorAscensor: false,

@@ -94,9 +94,7 @@ export function priorizarBloquesPiso1(
   // al ascensor. El orden es estable: los bloques sin distancia registrada quedan al final en su
   // orden determinista previo.
   return {
-    bloques: [...bloquesOtrosPisos].sort(
-      (a, b) => distanciaAlAscensor(a) - distanciaAlAscensor(b),
-    ),
+    bloques: [...bloquesOtrosPisos].sort((a, b) => distanciaAlAscensor(a) - distanciaAlAscensor(b)),
     fallbackAplicado: true,
     motivoFallback:
       'No se encontraron bloques candidatos disponibles en Piso 1; asignación derivada al piso superior más cercano al ascensor.',
