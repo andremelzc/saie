@@ -1,6 +1,7 @@
 import { DiaSemana, EstadoAsignacion, Prisma } from '@prisma/client';
 import { EspacioAsignadoDTO } from '../types/consulta';
 import { SesionDTO } from '../types/portal';
+import { marcarAccesibilidad } from './accesibilidad';
 
 /** Orden de los días en una grilla semanal (Lunes a Domingo). */
 export const ORDEN_DIAS: DiaSemana[] = [
@@ -88,6 +89,10 @@ export function mapearEspacios(seccion: SeccionConAsignacion): EspacioAsignadoDT
     tipo: ae.espacio.tipo,
     pabellon: ae.espacio.pabellon,
     piso: ae.espacio.piso,
+    ...marcarAccesibilidad({
+      piso: ae.espacio.piso,
+      distanciaAscensor: ae.espacio.distanciaAscensor,
+    }),
   }));
 }
 

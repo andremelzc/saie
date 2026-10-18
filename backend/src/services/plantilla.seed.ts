@@ -194,6 +194,16 @@ export async function leerPlantilla(ruta: string): Promise<ResultadoLectura> {
       errores.push(`${ref}: habilitado debe ser SI o NO ('${v.habilitado}')`);
     if (piso === null || aforo === null || aforo < 0 || habilitado === null) continue;
 
+    // Columna opcional: distancia (metros) hasta el ascensor; base de la accesibilidad (R-07).
+    let distancia: number | null = null;
+    if (v.distancia_ascensor) {
+      distancia = entero(v.distancia_ascensor);
+      if (distancia === null || distancia < 0) {
+        errores.push(`${ref}: distancia_ascensor inválida '${v.distancia_ascensor}'`);
+        continue;
+      }
+    }
+
     if (habilitado !== false && aforo < 1) {
       errores.push(
         `${ref} (${v.identificador}): un espacio habilitado necesita un aforo mayor a 0`,
@@ -228,6 +238,7 @@ export async function leerPlantilla(ruta: string): Promise<ResultadoLectura> {
       pcsMalogradas: esLab ? pcs : null,
       habilitado,
       descripcionUso: v.descripcion_uso ? v.descripcion_uso : null,
+      distanciaAscensor: distancia,
     };
     espaciosPorClave.set(clave, espacio);
     datos.espacios.push(espacio);

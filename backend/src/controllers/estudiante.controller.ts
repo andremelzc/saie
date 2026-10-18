@@ -8,7 +8,9 @@ import { obtenerMapaLectura } from '../services/ocupacion.service';
 import {
   ActualizarPerfilSchema,
   actualizarPerfilAlumno,
+  darDeBajaTelegramAlumno,
   listarCursosAlumno,
+  obtenerEstadoTelegramAlumno,
   obtenerHorarioAlumno,
   obtenerPerfilAlumno,
   obtenerRutaAlumnoPorAsignacionId,
@@ -100,6 +102,26 @@ export async function obtenerRuta(req: Request, res: Response): Promise<void> {
       return;
     }
     const data = await obtenerRutaAlumnoPorAsignacionId(req.auth!.sub, asignacionId, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 3.28 — GET /api/v1/estudiante/telegram (estado de la propia vinculación) */
+export async function obtenerTelegram(req: Request, res: Response): Promise<void> {
+  try {
+    const data = await obtenerEstadoTelegramAlumno(req.auth!.sub, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 3.28 — DELETE /api/v1/estudiante/telegram (baja de la propia vinculación) */
+export async function desvincularTelegram(req: Request, res: Response): Promise<void> {
+  try {
+    const data = await darDeBajaTelegramAlumno(req.auth!.sub, prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);
