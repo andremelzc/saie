@@ -278,7 +278,10 @@ export function resumenSemana(horario: HorarioSemanalDTO): ResumenSemana {
     clases: sesiones.length,
     cursos: new Set(sesiones.map((s) => s.codigoCurso)).size,
     diasConClase: DIAS_LECTIVOS.filter((d) => (horario.dias[d] ?? []).length > 0).length,
-    minutos: sesiones.reduce((total, s) => total + (aMinutos(s.horaFin) - aMinutos(s.horaInicio)), 0),
+    minutos: sesiones.reduce(
+      (total, s) => total + (aMinutos(s.horaFin) - aMinutos(s.horaInicio)),
+      0,
+    ),
   };
 }
 

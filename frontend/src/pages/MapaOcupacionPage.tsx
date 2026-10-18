@@ -80,7 +80,10 @@ const Contador: React.FC<{
   <div
     className={`flex items-center gap-3 rounded-2xl border bg-white p-4 shadow-[0_2px_8px_rgba(34,34,34,0.06)] ${clases}`}
   >
-    <span aria-hidden="true" className="saie-pop flex h-11 w-11 shrink-0 items-center justify-center">
+    <span
+      aria-hidden="true"
+      className="saie-pop flex h-11 w-11 shrink-0 items-center justify-center"
+    >
       {muestra}
     </span>
     <p className="m-0 leading-tight">
@@ -278,7 +281,9 @@ const VistaMapa: React.FC<{
     { valor: 'todos', etiqueta: 'Todos', n: espacios.length },
     { valor: 'libres', etiqueta: 'Libres', n: conteo.libres },
     { valor: 'ocupados', etiqueta: 'Ocupados', n: conteo.ocupados },
-    ...(conteo.mios > 0 ? [{ valor: 'mios' as const, etiqueta: 'Mis clases', n: conteo.mios }] : []),
+    ...(conteo.mios > 0
+      ? [{ valor: 'mios' as const, etiqueta: 'Mis clases', n: conteo.mios }]
+      : []),
   ];
 
   return (
@@ -464,11 +469,7 @@ export const MapaOcupacionPage: React.FC = () => {
       );
     }
     return (
-      <VistaMapa
-        key={JSON.stringify(filtros)}
-        filtros={filtros}
-        cursos={datos?.cursos ?? []}
-      />
+      <VistaMapa key={JSON.stringify(filtros)} filtros={filtros} cursos={datos?.cursos ?? []} />
     );
   };
 

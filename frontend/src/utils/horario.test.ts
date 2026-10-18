@@ -148,7 +148,10 @@ describe('franjas, resumen y progreso', () => {
   });
 
   it('filtra los cursos que tienen clase en la franja (un domingo, ninguno)', () => {
-    const cursos = [{ horarios: [franjaLunes] }, { horarios: [{ ...franjaLunes, horaInicio: '14:00', horaFin: '16:00' }] }];
+    const cursos = [
+      { horarios: [franjaLunes] },
+      { horarios: [{ ...franjaLunes, horaInicio: '14:00', horaFin: '16:00' }] },
+    ];
     expect(cursosEnFranja(cursos, franjaLunes)).toHaveLength(1);
     expect(cursosEnFranja(cursos, { ...franjaLunes, diaSemana: 'DOMINGO' })).toHaveLength(0);
   });

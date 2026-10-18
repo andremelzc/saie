@@ -260,12 +260,7 @@ button:focus-visible {
   }
 }
 .saie-esqueleto {
-  background-image: linear-gradient(
-    100deg,
-    #ffffff 30%,
-    #f4eee0 50%,
-    #ffffff 70%
-  );
+  background-image: linear-gradient(100deg, #ffffff 30%, #f4eee0 50%, #ffffff 70%);
   background-size: 200% 100%;
   animation: saie-brillo 1.6s linear infinite;
 }

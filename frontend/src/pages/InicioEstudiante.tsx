@@ -458,7 +458,10 @@ export const InicioEstudiante: React.FC = () => {
         aria-label="Bienvenida"
         className="relative overflow-hidden bg-gradient-to-br from-saie-primary to-saie-primary-dark pb-16 text-white"
       >
-        <span aria-hidden="true" className="saie-plano-fondo pointer-events-none absolute inset-0" />
+        <span
+          aria-hidden="true"
+          className="saie-plano-fondo pointer-events-none absolute inset-0"
+        />
         <svg
           aria-hidden="true"
           viewBox="0 0 320 140"

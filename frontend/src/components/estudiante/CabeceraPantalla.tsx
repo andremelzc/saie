@@ -37,8 +37,16 @@ export const CabeceraPantalla: React.FC<CabeceraPantallaProps> = ({
       stroke="currentColor"
       strokeWidth="1.5"
     >
-      <path className="saie-trazo" pathLength="1" d="M10 130V30h120v100M130 60h90v70M220 30h90v100M10 130h300" />
-      <path className="saie-trazo" pathLength="1" d="M50 130V90h30v40M250 130V90h30v40M160 130V90h30v40" />
+      <path
+        className="saie-trazo"
+        pathLength="1"
+        d="M10 130V30h120v100M130 60h90v70M220 30h90v100M10 130h300"
+      />
+      <path
+        className="saie-trazo"
+        pathLength="1"
+        d="M50 130V90h30v40M250 130V90h30v40M160 130V90h30v40"
+      />
     </svg>
     <div className={`relative mx-auto flex w-full ${ancho} flex-col gap-2 px-4 pb-7 pt-3`}>
       <Link
