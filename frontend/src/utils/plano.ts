@@ -44,10 +44,10 @@ export function resolverIdPlano(pabellon: string, identificador: string, piso: n
   const esLab = /\bl(ab|aboratorio)?\b|^l-/i.test(sinTildes(identificador));
   const candidatos = esLab
     ? [
-      `${prefijo}-lab-${numero.padStart(2, '0')}`,
-      `${prefijo}-lab-${sinRelleno(numero)}`,
-      `${prefijo}-laboratorio-${sinRelleno(numero)}`,
-    ]
+        `${prefijo}-lab-${numero.padStart(2, '0')}`,
+        `${prefijo}-lab-${sinRelleno(numero)}`,
+        `${prefijo}-laboratorio-${sinRelleno(numero)}`,
+      ]
     : [];
   return candidatos.find((c) => ids.has(c)) ?? porRegla;
 }

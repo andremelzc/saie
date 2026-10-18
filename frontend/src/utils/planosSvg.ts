@@ -30,7 +30,8 @@ export function prepararSvg(texto: string): string {
   const acotado = texto.replace(
     /(<style[^>]*>)([\s\S]*?)(<\/style>)/,
     (_todo, abre: string, css: string, cierra: string) => {
-      const reglas = css.replace(/(^|})\s*([^\s{}][^{}]*)\{/g,
+      const reglas = css.replace(
+        /(^|})\s*([^\s{}][^{}]*)\{/g,
         (_m, previo: string, espacio: string, selectores: string) => {
           const lista = selectores
             .split(',')
