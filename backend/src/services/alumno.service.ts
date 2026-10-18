@@ -9,10 +9,20 @@ import {
   mapearEspacios,
   proximaSesion,
 } from '../lib/horario';
-import { CursoMatriculadoDTO, HorarioSemanalDTO, PerfilAlumnoDTO } from '../types/portal';
+import {
+  CursoMatriculadoDTO,
+  EstadoTelegramDTO,
+  HorarioSemanalDTO,
+  PerfilAlumnoDTO,
+} from '../types/portal';
 import { obtenerPeriodoVigente } from './periodo.service';
 import { construirGrafoContiguedad } from './contiguedad.service';
 import { calcularRutaReferencia } from './rutaReferencia.service';
+import {
+  desvincularPorAlumno,
+  EstadoVinculacionAlumno,
+  obtenerVinculacionDeAlumno,
+} from '../telegram/vinculacion.service';
 
 /**
  * Resuelve el alumno dueño de la cuenta del token. Todas las consultas del portal parten de
@@ -335,4 +345,42 @@ export async function obtenerRutaAlumnoPorAsignacionId(
     grafoContiguedad: grafo,
     movilidadReducida,
   });
+}
+
+// ---------------------------------------------------------------------------
+// Issue 3.28 — Vinculación de Telegram en el perfil del alumno
+// ---------------------------------------------------------------------------
+
+function armarEstadoTelegram(vinculacion: EstadoVinculacionAlumno | null): EstadoTelegramDTO {
+  return {
+    vinculado: Boolean(vinculacion?.activo),
+    fechaVinculacion: vinculacion?.fechaVinculacion?.toISOString() ?? null,
+    fechaBaja: vinculacion?.fechaBaja?.toISOString() ?? null,
+    botUsername: process.env.TELEGRAM_BOT_USERNAME ?? null,
+  };
+}
+
+/**
+ * Issue 3.28: estado de la vinculación con el bot de Telegram del propio alumno. El alumno sale
+ * del token de la sesión, así que nadie puede consultar la vinculación de otro.
+ */
+export async function obtenerEstadoTelegramAlumno(
+  cuentaId: string,
+  prisma: PrismaClient,
+): Promise<EstadoTelegramDTO> {
+  const alumno = await obtenerAlumnoDeCuenta(cuentaId, prisma);
+  return armarEstadoTelegram(await obtenerVinculacionDeAlumno(alumno.id, prisma));
+}
+
+/**
+ * Issue 3.28: baja de la vinculación de Telegram del propio alumno. Idempotente: si no había una
+ * vinculación activa, responde igual con el estado ya desvinculado.
+ */
+export async function darDeBajaTelegramAlumno(
+  cuentaId: string,
+  prisma: PrismaClient,
+): Promise<EstadoTelegramDTO> {
+  const alumno = await obtenerAlumnoDeCuenta(cuentaId, prisma);
+  await desvincularPorAlumno(alumno.id, prisma);
+  return armarEstadoTelegram(await obtenerVinculacionDeAlumno(alumno.id, prisma));
 }

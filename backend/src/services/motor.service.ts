@@ -39,6 +39,7 @@ export async function cargarContextoEspacios(prisma: PrismaClient): Promise<{
     aforoNominal: e.aforoNominal,
     pcsMalogradas: e.pcsMalogradas,
     softwareInstalado: e.softwareInstalado,
+    distanciaAscensor: e.distanciaAscensor,
   }));
 
   const grafo = construirGrafoContiguedad(

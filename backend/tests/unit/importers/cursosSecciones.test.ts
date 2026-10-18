@@ -88,4 +88,24 @@ describe('Importador de Cursos y Secciones (Issue 1.3)', () => {
     expect(resultado.cursosProcesados).toBe(0);
     expect(resultado.errores.length).toBeGreaterThan(0);
   });
+
+  it('debe capturar y registrar excepciones durante la inserción en base de datos', async () => {
+    mockPrisma.curso.upsert.mockRejectedValue(new Error('Fallo de BD en curso'));
+
+    const datos = [
+      {
+        codigoCurso: '2020999',
+        nombreCurso: 'Curso Prueba',
+        codigoSeccion: 'S1',
+        periodo: '2026-1',
+        tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
+      },
+    ];
+
+    const resultado = await importarCursosYSecciones(datos, mockPrisma);
+
+    expect(resultado.cursosProcesados).toBe(0);
+    expect(resultado.errores).toHaveLength(1);
+    expect(resultado.errores[0]).toContain('Fila 1 (2020999-S1): Fallo de BD en curso');
+  });
 });

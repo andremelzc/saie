@@ -12,6 +12,8 @@ export interface EspacioSeedData {
   habilitado?: boolean;
   /** Rótulo visual opcional (ej. "Sala de investigación"). */
   descripcionUso?: string | null;
+  /** Distancia en metros hasta el ascensor; base de la priorización por accesibilidad (R-07). */
+  distanciaAscensor?: number | null;
 }
 
 export interface ParContiguoSeed {
@@ -271,6 +273,7 @@ export async function sembrarEspaciosYContiguedades(
         // Solo si se indica: re-sembrar no debe pisar un habilitado cambiado luego desde la API.
         ...(esp.habilitado !== undefined && { habilitado: esp.habilitado }),
         ...(esp.descripcionUso !== undefined && { descripcionUso: esp.descripcionUso }),
+        ...(esp.distanciaAscensor !== undefined && { distanciaAscensor: esp.distanciaAscensor }),
       },
       create: {
         identificador: esp.identificador,
@@ -282,6 +285,7 @@ export async function sembrarEspaciosYContiguedades(
         pcsMalogradas: esp.pcsMalogradas ?? null,
         habilitado: esp.habilitado ?? true,
         descripcionUso: esp.descripcionUso ?? null,
+        distanciaAscensor: esp.distanciaAscensor ?? null,
       },
     });
 

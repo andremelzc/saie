@@ -6,6 +6,12 @@ export type ResultadoVinculacion =
   | { resultado: 'CREDENCIALES_INVALIDAS' }
   | { resultado: 'CHAT_EN_USO' };
 
+export interface EstadoVinculacionAlumno {
+  activo: boolean;
+  fechaVinculacion: Date | null;
+  fechaBaja: Date | null;
+}
+
 /**
  * Issue 3.25: vincula un chat de Telegram con un alumno, verificando su código y su clave de
  * SAIE igual que el login. Todo fallo de credenciales responde lo mismo (no se revela si el
@@ -53,6 +59,38 @@ export async function desvincularChat(
 ): Promise<boolean> {
   const { count } = await prisma.vinculacionTelegram.updateMany({
     where: { chatId, activo: true },
+    data: { activo: false, fechaBaja: new Date() },
+  });
+  return count > 0;
+}
+
+/**
+ * Issue 3.28: estado de la vinculación del alumno. Devuelve la fila (activa o de baja) o `null`
+ * si nunca vinculó su cuenta. El alumno se identifica por el id de su cuenta autenticada.
+ */
+export async function obtenerVinculacionDeAlumno(
+  alumnoId: string,
+  prisma: Pick<PrismaClient, 'vinculacionTelegram'>,
+): Promise<EstadoVinculacionAlumno | null> {
+  const vinculacion = await prisma.vinculacionTelegram.findUnique({ where: { alumnoId } });
+  if (!vinculacion) return null;
+  return {
+    activo: vinculacion.activo,
+    fechaVinculacion: vinculacion.fechaVinculacion,
+    fechaBaja: vinculacion.fechaBaja,
+  };
+}
+
+/**
+ * Issue 3.28: baja (desactivación) de la vinculación del propio alumno. Idempotente: si no había
+ * ninguna activa, no cambia nada y devuelve `false`.
+ */
+export async function desvincularPorAlumno(
+  alumnoId: string,
+  prisma: Pick<PrismaClient, 'vinculacionTelegram'>,
+): Promise<boolean> {
+  const { count } = await prisma.vinculacionTelegram.updateMany({
+    where: { alumnoId, activo: true },
     data: { activo: false, fechaBaja: new Date() },
   });
   return count > 0;

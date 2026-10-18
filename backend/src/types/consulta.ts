@@ -12,6 +12,10 @@ export interface EspacioAsignadoDTO {
   tipo: TipoEspacio;
   pabellon: string;
   piso: number;
+  /** HU-04, criterio 3: el espacio se puede alcanzar sin salvar escaleras. */
+  accesible: boolean;
+  /** HU-04, criterio 3: el acceso es por ascensor (piso superior). */
+  accesoPorAscensor: boolean;
 }
 
 export interface AsignacionConsultaItemDTO {

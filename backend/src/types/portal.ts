@@ -61,6 +61,16 @@ export interface PerfilAlumnoDTO {
   } | null;
 }
 
+/** Issue 3.28: estado de la vinculación de Telegram que el alumno ve en su perfil. */
+export interface EstadoTelegramDTO {
+  /** `true` si el alumno tiene una vinculación activa con el bot. */
+  vinculado: boolean;
+  fechaVinculacion: string | null;
+  fechaBaja: string | null;
+  /** Usuario del bot para el enlace `https://t.me/<usuario>`; `null` si no está configurado. */
+  botUsername: string | null;
+}
+
 // ---------------- Docente (Issues 7.2, 7.3, 7.5) ----------------
 
 export interface AsignacionActivaDocenteDTO {

@@ -186,6 +186,33 @@ describe('Endpoints Sprint 4 (Issue #267)', () => {
     });
   });
 
+  describe('Mapa de Ocupación del alumno (GET /estudiante/mapa-ocupacion, Issue 3.13)', () => {
+    it('responde 400 si falta pabellon o piso', async () => {
+      const sinPabellon = await request(app)
+        .get('/api/v1/estudiante/mapa-ocupacion?piso=2')
+        .set('Authorization', bearer(RolCuenta.ALUMNO));
+      expect(sinPabellon.status).toBe(400);
+
+      const sinPiso = await request(app)
+        .get('/api/v1/estudiante/mapa-ocupacion?pabellon=A')
+        .set('Authorization', bearer(RolCuenta.ALUMNO));
+      expect(sinPiso.status).toBe(400);
+    });
+
+    it('responde 200 con los espacios del piso en modo solo lectura', async () => {
+      prismaMock.espacio.findMany.mockResolvedValue([]);
+
+      const res = await request(app)
+        .get('/api/v1/estudiante/mapa-ocupacion?pabellon=A&piso=2')
+        .set('Authorization', bearer(RolCuenta.ALUMNO));
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.pabellon).toBe('A');
+      expect(res.body.data.piso).toBe(2);
+      expect(res.body.data.espacios).toEqual([]);
+    });
+  });
+
   describe('Secciones Escaladas (GET /admin/secciones-escaladas)', () => {
     it('responde 200 con la lista de secciones', async () => {
       prismaMock.asignacion.findMany.mockResolvedValue([]);

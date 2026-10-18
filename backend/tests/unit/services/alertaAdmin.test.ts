@@ -134,6 +134,36 @@ describe('Listado de alertas activas (Issue 4.6)', () => {
       ],
     });
   });
+
+  it('ordena asignacionesAfectadas por codigoCurso y luego por codigoSeccion', async () => {
+    const alerta = alertaConDetalle({
+      asignacionesAfectadas: [
+        {
+          asignacionId: 'a2',
+          asignacion: {
+            seccion: {
+              curso: { codigo: 'ISW101', nombre: 'Programación' },
+              codigoSeccion: '2',
+            },
+          },
+        },
+        {
+          asignacionId: 'a1',
+          asignacion: {
+            seccion: {
+              curso: { codigo: 'ISW101', nombre: 'Programación' },
+              codigoSeccion: '1',
+            },
+          },
+        },
+      ],
+    });
+    const db = listDbMock([alerta]);
+    const res = await listarAlertasActivas({}, authCoord, db);
+
+    expect(res[0].asignacionesAfectadas[0].codigoSeccion).toBe('1');
+    expect(res[0].asignacionesAfectadas[1].codigoSeccion).toBe('2');
+  });
 });
 
 /* ── suite: resolver (Issue 4.7) ─────────────────────────── */
