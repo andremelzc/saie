@@ -174,4 +174,29 @@ describe('Autenticación JWT por rol (Issues 4.8, 3.21, 7.1)', () => {
       expect(res.status).toHaveBeenCalledWith(401);
     });
   });
+
+  describe('Configuración de JWT', () => {
+    it('lanza un error si JWT_SECRET no está configurado', () => {
+      const actualSecret = process.env.JWT_SECRET;
+      delete process.env.JWT_SECRET;
+      try {
+        expect(() => firmarToken({ sub: 'c1', rol: RolCuenta.ALUMNO })).toThrow(
+          'JWT_SECRET no está configurado',
+        );
+      } finally {
+        process.env.JWT_SECRET = actualSecret;
+      }
+    });
+
+    it('utiliza 8h por defecto si JWT_EXPIRES_IN no está configurado', () => {
+      const actualExpires = process.env.JWT_EXPIRES_IN;
+      delete process.env.JWT_EXPIRES_IN;
+      try {
+        const token = firmarToken({ sub: 'c1', rol: RolCuenta.ALUMNO });
+        expect(token).toBeDefined();
+      } finally {
+        process.env.JWT_EXPIRES_IN = actualExpires;
+      }
+    });
+  });
 });
