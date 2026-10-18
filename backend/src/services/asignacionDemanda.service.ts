@@ -2,7 +2,11 @@ import { EstadoAsignacion, PrismaClient } from '@prisma/client';
 import { HttpError } from '../lib/http';
 import { ResultadoVerificacion } from '../rules/verificadorCorrida';
 import { ResultadoOrquestacion } from '../types/asignacion';
-import { ResumenAsignacionDTO, ResultadoSeccionDTO } from '../types/asignacionDemanda';
+import {
+  ResumenAsignacionDTO,
+  ResultadoSeccionDTO,
+  OrigenCorrida,
+} from '../types/asignacionDemanda';
 import { procesarAsignacionSeccionIndividual, procesarCorridaBatchPeriodo } from './motor.service';
 import { obtenerPeriodoVigente } from './periodo.service';
 import { verificarCorridaPeriodo } from './verificador.service';
@@ -57,10 +61,13 @@ function resumir(
  * - Sin `seccionId` ejecuta la corrida completa del periodo vigente (Issue 2.11).
  * - Si ya hay una corrida en curso responde 409 y no lanza otra.
  * - Sección inexistente: 404.
+ * - `origen` (Issue 2.18) marca en la auditoría si la corrida vino de Coordinación o de la
+ *   tarea programada por tiempo.
  */
 export async function ejecutarAsignacionADemanda(
   seccionId: string | undefined,
   prisma: PrismaClient,
+  origen: OrigenCorrida = 'DEMANDA',
 ): Promise<ResumenAsignacionDTO> {
   if (corridaEnCurso) {
     throw new HttpError(
@@ -93,7 +100,7 @@ export async function ejecutarAsignacionADemanda(
       return resumir('periodo', null, null, [], null);
     }
 
-    const batch = await procesarCorridaBatchPeriodo(periodo, prisma);
+    const batch = await procesarCorridaBatchPeriodo(periodo, prisma, origen);
     const verificacion = await verificarCorridaPeriodo(periodo, prisma, batch.corridaId);
     return resumir('periodo', periodo, batch.corridaId, batch.resultados, verificacion);
   } finally {

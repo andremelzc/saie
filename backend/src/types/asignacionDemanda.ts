@@ -1,6 +1,13 @@
 import { EstadoAsignacion } from '@prisma/client';
 import { ResultadoVerificacion } from '../rules/verificadorCorrida';
 
+/**
+ * Quién originó una corrida: la petición de Coordinación Académica o la tarea programada por
+ * tiempo (Issue 2.18). Se registra en la auditoría para distinguir corridas atendidas y
+ * desatendidas.
+ */
+export type OrigenCorrida = 'DEMANDA' | 'TIEMPO';
+
 export interface ResultadoSeccionDTO {
   seccionId: string;
   codigoSeccion: string;

@@ -277,6 +277,21 @@ Se configuran en *Settings → Secrets and variables → Actions* y nunca se ver
 | `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | `cd.yml` | Autenticación de la CLI de Vercel para desplegar el frontend. |
 | `BACKEND_URL` | `cd.yml`, `resumen-diario.yml` | URL pública del backend, sin barra final. Alimenta el health check posterior al despliegue y el resumen diario. |
 | `FRONTEND_URL` | `cd.yml` | URL pública del frontend (p. ej. `https://saie-plum.vercel.app`). Habilita el health check del frontend; si no está configurado, esa verificación se omite con una advertencia. |
+| `ASIGNACION_PROGRAMADA_TOKEN` | `asignacion-programada.yml` | Token de servicio de `POST /api/v1/asignaciones/programada` (corrida desatendida nocturna). |
 | `RESUMEN_DIARIO_TOKEN` | `resumen-diario.yml` | Token de servicio de `POST /api/v1/telegram/resumen-diario`. |
 | `SONAR_TOKEN` | `ci.yml` | Análisis estático en SonarCloud. |
+
+### 9.5. Tareas Programadas (Automatización Desatendida)
+
+Además del despliegue, dos workflows de GitHub Actions ejecutan tareas sin intervención humana:
+
+| Workflow | Cadencia (UTC) | Qué hace |
+| :--- | :--- | :--- |
+| `resumen-diario.yml` | 12:30, lunes a sábado | Envía por Telegram el resumen de clases del día a los alumnos vinculados (Issue 3.27). |
+| `asignacion-programada.yml` | 07:00 (02:00 en Lima), a diario | Ejecuta la corrida de asignación del periodo vigente, publica el resumen en la pestaña *Actions* y falla si el verificador reporta violaciones (Issue 2.18). |
+
+Ambos toleran el arranque en frío de Render reintentando la llamada.
+
+> [!NOTE]
+> El candado que evita corridas simultáneas vive en la memoria del proceso. Es válido mientras el backend corra en una sola instancia (el plan gratuito de Render); si se escala a varias instancias, habrá que moverlo a un almacén compartido.
 

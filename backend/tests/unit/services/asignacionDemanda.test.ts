@@ -124,7 +124,7 @@ describe('Asignación a demanda (Issue 2.15)', () => {
 
       const res = await ejecutarAsignacionADemanda(undefined, prisma);
 
-      expect(batch).toHaveBeenCalledWith('2026-1', prisma);
+      expect(batch).toHaveBeenCalledWith('2026-1', prisma, 'DEMANDA');
       expect(individual).not.toHaveBeenCalled();
       expect(res).toMatchObject({
         modo: 'periodo',
