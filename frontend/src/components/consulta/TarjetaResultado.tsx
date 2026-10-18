@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ItemConsultaAsignacion, TipoEspacio } from '../../types/consulta';
+import VerEnMapa from './VerEnMapa';
 
 export interface TarjetaResultadoProps {
   asignacion?: ItemConsultaAsignacion | null;
@@ -395,6 +396,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
                 </div>
               </div>
             )}
+            <VerEnMapa espacios={espacios} />
           </div>
         )}
 

@@ -8,6 +8,8 @@ export type VistaHorario = 'dia' | 'semana';
 /** Una clase concreta de la semana (un bloque de horario de una sección). */
 export interface SesionDTO {
   seccionId: string;
+  /** Asignación vigente de la sección (para pedir la ruta); null si aún no tiene espacio. */
+  asignacionId?: string | null;
   codigoCurso: string;
   nombreCurso: string;
   codigoSeccion: string;
@@ -26,6 +28,8 @@ export interface HorarioSemanalDTO {
 }
 
 export interface CursoMatriculadoDTO {
+  /** Asignación vigente de la sección (para pedir la ruta); null si aún no tiene espacio. */
+  asignacionId?: string | null;
   codigoCurso: string;
   nombreCurso: string;
   codigoSeccion: string;

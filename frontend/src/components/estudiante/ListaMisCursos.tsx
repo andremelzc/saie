@@ -2,6 +2,7 @@ import React from 'react';
 import type { CursoMatriculadoDTO } from '../../types/horario';
 import { ABREVIATURA_DIA, ETIQUETA_DIA, PALETA_CURSOS, formatearRango } from '../../utils/horario';
 import type { ColorCurso } from '../../utils/horario';
+import EnlaceComoLlegar from './EnlaceComoLlegar';
 import { UbicacionEspacios } from './ElementosHorario';
 
 export interface ListaMisCursosProps {
@@ -26,7 +27,7 @@ export const ListaMisCursos: React.FC<ListaMisCursosProps> = ({
     <div className={`flex flex-col gap-4 ${className}`}>
       <p className="m-0 text-sm font-medium text-saie-muted">{resumen}</p>
 
-      <ul className="m-0 flex list-none flex-col gap-4 p-0">
+      <ul className="saie-stagger m-0 flex list-none flex-col gap-4 p-0">
         {cursos.map((curso) => {
           const color = colores[curso.codigoCurso] ?? PALETA_CURSOS[0];
           const idTitulo = `curso-${curso.codigoCurso}-${curso.codigoSeccion}`;
@@ -35,7 +36,7 @@ export const ListaMisCursos: React.FC<ListaMisCursosProps> = ({
             <li key={idTitulo}>
               <article
                 aria-labelledby={idTitulo}
-                className="flex flex-col gap-4 rounded-xl border border-l-4 border-saie-divider bg-white p-5 shadow-[0_2px_8px_rgba(34,34,34,0.08)]"
+                className="saie-lift flex flex-col gap-4 rounded-2xl border border-l-[6px] border-saie-divider bg-white p-5 shadow-[0_2px_8px_rgba(34,34,34,0.08)]"
                 style={{ borderLeftColor: color.borde }}
               >
                 <header className="flex flex-col gap-1">
@@ -90,6 +91,10 @@ export const ListaMisCursos: React.FC<ListaMisCursosProps> = ({
                     </dd>
                   </div>
                 </dl>
+                <EnlaceComoLlegar
+                  asignacionId={curso.asignacionId}
+                  nombreCurso={curso.nombreCurso}
+                />
               </article>
             </li>
           );

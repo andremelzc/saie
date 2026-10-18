@@ -123,13 +123,6 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
       expect(obtenerToken()).not.toBeNull();
     });
 
-    it('si debe cambiar la clave inicial, redirige a la pantalla de cambio de clave', async () => {
-      renderizar('/login/docente');
-      iniciarSesionPorFormulario({ rol: 'DOCENTE', debeCambiarClave: true }, 'D001', /Código/i);
-
-      expect(await screen.findByRole('heading', { name: 'Cambio de clave' })).toBeVisible();
-    });
-
     it('un usuario que ya tiene sesión no ve el login: va directo a su área', () => {
       iniciarSesionDePrueba('ALUMNO');
       renderizar('/login/alumno');

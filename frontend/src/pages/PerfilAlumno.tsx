@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
 import { Icono } from '../components/estudiante/ElementosHorario';
 import SeccionEditable from '../components/estudiante/SeccionEditable';
 import type { CampoPerfil } from '../components/estudiante/SeccionEditable';
-import { RUTAS } from '../config/rutas';
 import { TIPOS_SANGRE } from '../types/perfil';
 import type { CambiosPerfil, PerfilAlumnoDTO } from '../types/perfil';
 import {
@@ -216,7 +215,7 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
               <Icono trazo={TRAZO_CANDADO} className="mt-0.5 h-4 w-4 shrink-0 text-saie-primary" />
               <span>
                 <strong className="font-semibold">Información sensible.</strong> Solo tú la ves,
-                dentro de tu sesión. No se comparte con otros alumnos ni se envía por Telegram.
+                dentro de tu sesión. No se comparte con otros alumnos.
               </span>
             </p>
           }
@@ -227,21 +226,12 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
 
   return (
     <div className="min-h-screen bg-saie-canvas text-saie-text">
-      <header className="bg-saie-primary text-white">
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-2 px-4 py-6">
-          <Link
-            to={RUTAS.inicioAlumno}
-            className="inline-flex min-h-11 w-fit items-center gap-1.5 text-sm font-medium text-white underline-offset-4 hover:underline focus-visible:outline-white"
-          >
-            <span aria-hidden="true">&larr;</span>
-            <span>Volver al inicio</span>
-          </Link>
-          <h1 className="m-0 font-serif text-[28px] font-bold leading-9 sm:text-[32px] sm:leading-10">
-            Mi perfil
-          </h1>
-          <p className="m-0 text-sm text-white/85">Tus datos personales y tu ficha médica.</p>
-        </div>
-      </header>
+      <CabeceraPantalla
+        titulo="Mi perfil"
+        subtitulo="Tus datos personales y tu ficha médica."
+        trazoIcono={TRAZO_USUARIO}
+        ancho="max-w-4xl"
+      />
 
       <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6">
         {renderCuerpo()}

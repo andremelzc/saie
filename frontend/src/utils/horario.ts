@@ -1,4 +1,9 @@
-import type { DiaSemana, EspacioAsignadoDTO, TipoEspacio } from '../types/consulta';
+import type {
+  DiaSemana,
+  EspacioAsignadoDTO,
+  HorarioConsultaDTO,
+  TipoEspacio,
+} from '../types/consulta';
 import type { EstadoAsignacionDTO, HorarioSemanalDTO, SesionDTO } from '../types/horario';
 
 /** Días con clases (Lunes a Sábado, Guía de diseño 2.3). */
@@ -177,4 +182,113 @@ export function asignarColoresCursos(codigos: string[]): Record<string, ColorCur
   return Object.fromEntries(
     unicos.map((codigo, i) => [codigo, PALETA_CURSOS[i % PALETA_CURSOS.length]]),
   );
+}
+
+/** «Buenos días», «Buenas tardes» o «Buenas noches» según la hora. */
+export function saludoSegunHora(fecha: Date): string {
+  const hora = fecha.getHours();
+  if (hora < 12) return 'Buenos días';
+  if (hora < 19) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
+/** Minutos → «35 min», «1 h» o «1 h 20 min». */
+export function formatearMinutos(minutos: number): string {
+  const total = Math.max(0, Math.round(minutos));
+  if (total < 60) return `${total} min`;
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
+
+/** «Empieza en 35 min» o «Termina en 20 min», según el estado de la clase. */
+export function cuentaRegresiva(
+  sesion: Pick<SesionDTO, 'horaInicio' | 'horaFin'>,
+  ahoraEnMinutos: number,
+): string {
+  const estado = estadoDeClase(sesion, ahoraEnMinutos);
+  if (estado === 'EN_CURSO') {
+    return `Termina en ${formatearMinutos(aMinutos(sesion.horaFin) - ahoraEnMinutos)}`;
+  }
+  if (estado === 'PROXIMA') {
+    return `Empieza en ${formatearMinutos(aMinutos(sesion.horaInicio) - ahoraEnMinutos)}`;
+  }
+  return 'Ya terminó';
+}
+
+/** «domingo 18 de octubre». */
+export function fechaLarga(fecha: Date): string {
+  return new Intl.DateTimeFormat('es-PE', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(fecha);
+}
+
+/** ¿El bloque de horario se cruza con la franja dada (mismo día y horas que se solapan)? */
+export function haySolape(
+  bloque: { diaSemana: DiaSemana; horaInicio: string; horaFin: string },
+  franja: { diaSemana: DiaSemana; horaInicio: string; horaFin: string },
+): boolean {
+  return (
+    bloque.diaSemana === franja.diaSemana &&
+    aMinutos(bloque.horaInicio) < aMinutos(franja.horaFin) &&
+    aMinutos(bloque.horaFin) > aMinutos(franja.horaInicio)
+  );
+}
+
+/**
+ * Cursos que tienen clase en la franja dada. Sirve para marcar «tu aula» en el mapa solo cuando
+ * de verdad tienes clase ahí en ese momento (un domingo no debe marcar ninguna).
+ */
+export function cursosEnFranja<T extends { horarios: HorarioConsultaDTO[] }>(
+  cursos: T[],
+  franja: { diaSemana: DiaSemana; horaInicio: string; horaFin: string },
+): T[] {
+  return cursos.filter((curso) => curso.horarios.some((h) => haySolape(h, franja)));
+}
+
+/** Primer día lectivo posterior a `hoy` (dando la vuelta a la semana) que tenga clases. */
+export function proximoDiaConClases(
+  horario: HorarioSemanalDTO,
+  hoy: DiaSemana,
+): { dia: DiaSemana; sesiones: SesionDTO[] } | null {
+  const orden: DiaSemana[] = [...DIAS_LECTIVOS, 'DOMINGO'];
+  const inicio = orden.indexOf(hoy);
+  for (let paso = 1; paso <= 7; paso += 1) {
+    const dia = orden[(inicio + paso) % orden.length];
+    if (dia === 'DOMINGO') continue;
+    const sesiones = sesionesDeDia(horario, dia);
+    if (sesiones.length > 0) return { dia, sesiones };
+  }
+  return null;
+}
+
+export interface ResumenSemana {
+  clases: number;
+  cursos: number;
+  diasConClase: number;
+  /** Total de minutos de clase a la semana. */
+  minutos: number;
+}
+
+export function resumenSemana(horario: HorarioSemanalDTO): ResumenSemana {
+  const sesiones = todasLasSesiones(horario);
+  return {
+    clases: sesiones.length,
+    cursos: new Set(sesiones.map((s) => s.codigoCurso)).size,
+    diasConClase: DIAS_LECTIVOS.filter((d) => (horario.dias[d] ?? []).length > 0).length,
+    minutos: sesiones.reduce((total, s) => total + (aMinutos(s.horaFin) - aMinutos(s.horaInicio)), 0),
+  };
+}
+
+/** Avance de una clase de 0 a 1 (0 si no empezó, 1 si ya terminó). */
+export function progresoClase(
+  sesion: Pick<SesionDTO, 'horaInicio' | 'horaFin'>,
+  ahoraEnMinutos: number,
+): number {
+  const inicio = aMinutos(sesion.horaInicio);
+  const duracion = aMinutos(sesion.horaFin) - inicio;
+  if (duracion <= 0) return 0;
+  return Math.min(1, Math.max(0, (ahoraEnMinutos - inicio) / duracion));
 }

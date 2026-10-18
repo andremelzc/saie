@@ -8,10 +8,17 @@ import {
   PALETA_CURSOS,
   estadoDeClase,
   formatearHora,
+  progresoClase,
   sesionesDeDia,
 } from '../../utils/horario';
 import type { ColorCurso } from '../../utils/horario';
-import { BadgeEstadoClase, EstadoVacio, UbicacionEspacios } from './ElementosHorario';
+import EnlaceComoLlegar from './EnlaceComoLlegar';
+import {
+  BadgeEstadoClase,
+  BarraProgresoClase,
+  EstadoVacio,
+  UbicacionEspacios,
+} from './ElementosHorario';
 
 export interface HorarioDiaProps {
   horario: HorarioSemanalDTO;
@@ -68,10 +75,10 @@ export const HorarioDia: React.FC<HorarioDiaProps> = ({
               aria-pressed={activo}
               aria-label={etiquetaBotonDia(d, esHoy, cantidad)}
               onClick={() => onCambiarDia(d)}
-              className={`flex min-h-14 cursor-pointer flex-col items-center justify-center rounded-xl border text-sm transition-colors ${
+              className={`flex min-h-14 cursor-pointer flex-col items-center justify-center rounded-xl border text-sm transition-all duration-200 ${
                 activo
-                  ? 'border-saie-primary bg-saie-primary font-bold text-white'
-                  : 'border-saie-divider bg-white font-medium text-saie-text hover:bg-saie-primary/5'
+                  ? 'scale-105 border-saie-primary bg-saie-primary font-bold text-white shadow-[0_4px_12px_rgba(123,17,19,0.35)]'
+                  : 'border-saie-divider bg-white font-medium text-saie-text hover:-translate-y-0.5 hover:bg-saie-primary/5'
               }`}
             >
               <span aria-hidden="true">{ABREVIATURA_DIA[d]}</span>
@@ -86,7 +93,9 @@ export const HorarioDia: React.FC<HorarioDiaProps> = ({
       </fieldset>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="m-0 font-serif text-xl font-bold text-saie-text">{ETIQUETA_DIA[dia]}</h3>
+        <h3 key={dia} className="saie-fundido m-0 font-serif text-2xl font-bold text-saie-text">
+          {ETIQUETA_DIA[dia]}
+        </h3>
         {!esDiaActual && hoy !== 'DOMINGO' && (
           <button
             type="button"
@@ -108,7 +117,7 @@ export const HorarioDia: React.FC<HorarioDiaProps> = ({
           descripcion="Elige otro día de la tira superior para ver tus clases."
         />
       ) : (
-        <ol className="m-0 flex list-none flex-col gap-3 p-0">
+        <ol key={dia} className="saie-stagger m-0 flex list-none flex-col gap-3 p-0">
           {sesiones.map((sesion, indice) => {
             const color = colores[sesion.codigoCurso] ?? PALETA_CURSOS[0];
             const estadoClase = esDiaActual ? estadoDeClase(sesion, ahoraEnMinutos) : null;
@@ -117,7 +126,7 @@ export const HorarioDia: React.FC<HorarioDiaProps> = ({
                 key={`${sesion.seccionId}-${sesion.horaInicio}`}
                 className={`flex gap-3 rounded-xl border border-l-4 border-saie-divider bg-white p-4 shadow-[0_2px_8px_rgba(34,34,34,0.08)] ${
                   indice === indiceDestacada ? 'ring-2 ring-saie-primary' : ''
-                }`}
+                } ${estadoClase === 'EN_CURSO' ? 'saie-respira' : ''}`}
                 style={{ borderLeftColor: color.borde }}
               >
                 <div className="w-14 shrink-0 text-center">
@@ -138,6 +147,13 @@ export const HorarioDia: React.FC<HorarioDiaProps> = ({
                     {`Docente: ${sesion.docenteNombre ?? 'Por asignar'}`}
                   </p>
                   <UbicacionEspacios espacios={sesion.espacios} estado={sesion.estadoAsignacion} />
+                  {estadoClase === 'EN_CURSO' && (
+                    <BarraProgresoClase valor={progresoClase(sesion, ahoraEnMinutos)} />
+                  )}
+                  <EnlaceComoLlegar
+                    asignacionId={sesion.asignacionId}
+                    nombreCurso={sesion.nombreCurso}
+                  />
                 </div>
               </li>
             );

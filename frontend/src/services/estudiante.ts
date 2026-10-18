@@ -2,6 +2,11 @@ import axios from 'axios';
 import api from './api';
 import type { CursoMatriculadoDTO, HorarioSemanalDTO } from '../types/horario';
 import type { CambiosPerfil, PerfilAlumnoDTO } from '../types/perfil';
+import type {
+  FiltrosMapaOcupacion,
+  MapaOcupacionLecturaDTO,
+  RutaReferenciaDTO,
+} from '../types/ruta';
 
 /**
  * Cliente del portal del alumno (Issues 3.10, 3.11 y 3.12). Todo sale de la base de datos vía
@@ -40,6 +45,34 @@ export async function obtenerPerfil(): Promise<PerfilAlumnoDTO> {
 /** PATCH /v1/estudiante/perfil — devuelve el perfil ya actualizado. */
 export async function guardarPerfil(cambios: CambiosPerfil): Promise<PerfilAlumnoDTO> {
   const { data } = await api.patch<Respuesta<PerfilAlumnoDTO>>('/v1/estudiante/perfil', cambios);
+  return data.data;
+}
+
+/** GET /v1/estudiante/ruta/:asignacionId — ruta de 3 tramos hacia el espacio asignado. */
+export async function obtenerRuta(asignacionId: string): Promise<RutaReferenciaDTO> {
+  const { data } = await api.get<Respuesta<RutaReferenciaDTO>>(
+    `/v1/estudiante/ruta/${encodeURIComponent(asignacionId)}`,
+  );
+  return data.data;
+}
+
+/** GET /v1/estudiante/mapa-ocupacion — libre u ocupado de cada espacio del piso. */
+export async function obtenerMapaOcupacion(
+  filtros: FiltrosMapaOcupacion,
+): Promise<MapaOcupacionLecturaDTO> {
+  const params: Record<string, string | number> = {
+    pabellon: filtros.pabellon,
+    piso: filtros.piso,
+  };
+  if (filtros.franja) {
+    params.dia = filtros.franja.dia;
+    params.horaInicio = filtros.franja.horaInicio;
+    params.horaFin = filtros.franja.horaFin;
+  }
+  const { data } = await api.get<Respuesta<MapaOcupacionLecturaDTO>>(
+    '/v1/estudiante/mapa-ocupacion',
+    { params },
+  );
   return data.data;
 }
 

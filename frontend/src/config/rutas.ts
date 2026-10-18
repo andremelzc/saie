@@ -10,13 +10,12 @@ export const RUTAS = {
   horarioAlumno: '/estudiante/horario',
   inicioDocente: '/docente',
   inicioAdmin: '/admin',
-  cambiarClave: '/cambiar-clave',
   perfilAlumno: '/estudiante/perfil',
+  mapaAlumno: '/estudiante/mapa',
+  rutaAlumno: '/estudiante/ruta/:asignacionId',
 } as const;
 
 export const ROLES_ADMIN: RolCuenta[] = ['COORDINACION_ACADEMICA', 'JEFATURA_LABORATORIOS'];
-
-export const TODOS_LOS_ROLES: RolCuenta[] = ['ALUMNO', 'DOCENTE', ...ROLES_ADMIN];
 
 /** Pantalla de login que corresponde a cada rol. */
 export function rutaLoginDeRol(rol?: RolCuenta | null): string {
@@ -36,15 +35,12 @@ export function rutaInicioDeRol(rol: RolCuenta): string {
   return RUTAS.inicioAlumno;
 }
 
-/** Destino tras iniciar sesión: cambio de clave inicial si corresponde, o el área del rol. */
-export function rutaDestinoTrasLogin(sesion: {
-  rol: RolCuenta;
-  debeCambiarClave: boolean;
-}): string {
-  // Solo en desarrollo y solo si lo activas en tu .env.development.local (no se sube a git).
-  const omitirCambioClave =
-    import.meta.env.DEV && import.meta.env.VITE_OMITIR_CAMBIO_CLAVE === 'true';
-
-  if (sesion.debeCambiarClave && !omitirCambioClave) return RUTAS.cambiarClave;
+/** Destino tras iniciar sesión: el área del rol (las claves las administra la Facultad). */
+export function rutaDestinoTrasLogin(sesion: { rol: RolCuenta }): string {
   return rutaInicioDeRol(sesion.rol);
+}
+
+/** Ruta concreta hacia el espacio de una asignación del alumno. */
+export function rutaDeAsignacion(asignacionId: string): string {
+  return RUTAS.rutaAlumno.replace(':asignacionId', encodeURIComponent(asignacionId));
 }
