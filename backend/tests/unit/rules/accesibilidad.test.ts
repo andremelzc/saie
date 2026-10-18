@@ -310,4 +310,53 @@ describe('Issue 2.8, 2.9 / 5.6 — Accesibilidad y Priorización de Piso 1', () 
       },
     );
   });
+
+  // -------------------------------------------------------------------------
+  // R-07 / H6: sin Piso 1, el fallback ordena por cercanía al ascensor
+  // -------------------------------------------------------------------------
+  describe('R-07 / H6: fallback por cercanía al ascensor', () => {
+    function bloqueConDistancia(
+      id: string,
+      piso: number,
+      distanciaAscensor: number | null,
+    ): BloqueCandidato {
+      const espacio: EspacioConexo = {
+        ...crearEspacioAula(id, `Aula ${id}`, piso),
+        distanciaAscensor,
+      };
+      return crearBloqueAula(espacio);
+    }
+
+    test('sin Piso 1, el bloque más cercano al ascensor queda primero', () => {
+      const lejos = bloqueConDistancia('a301', 3, 40);
+      const cerca = bloqueConDistancia('a201', 2, 5);
+      const medio = bloqueConDistancia('a302', 3, 15);
+
+      const resultado = priorizarBloquesPiso1([lejos, cerca, medio], true);
+
+      expect(resultado.fallbackAplicado).toBe(true);
+      expect(resultado.bloques.map((b) => b.espacioIds[0])).toEqual(['a201', 'a302', 'a301']);
+    });
+
+    test('los bloques sin distancia registrada quedan al final, conservando su orden previo', () => {
+      const sinDato1 = bloqueConDistancia('a201', 2, null);
+      const conDato = bloqueConDistancia('a202', 2, 10);
+      const sinDato2 = bloqueConDistancia('a203', 2, null);
+
+      const resultado = priorizarBloquesPiso1([sinDato1, sinDato2, conDato], true);
+
+      expect(resultado.fallbackAplicado).toBe(true);
+      expect(resultado.bloques.map((b) => b.espacioIds[0])).toEqual(['a202', 'a201', 'a203']);
+    });
+
+    test('sin el flag de movilidad no reordena aunque haya distancias', () => {
+      const lejos = bloqueConDistancia('a301', 3, 40);
+      const cerca = bloqueConDistancia('a201', 2, 5);
+
+      const resultado = priorizarBloquesPiso1([lejos, cerca], false);
+
+      expect(resultado.fallbackAplicado).toBe(false);
+      expect(resultado.bloques.map((b) => b.espacioIds[0])).toEqual(['a301', 'a201']);
+    });
+  });
 });

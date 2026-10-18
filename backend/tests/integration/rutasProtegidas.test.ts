@@ -183,6 +183,8 @@ describe('Portal del alumno: solo rol ALUMNO (Issues 3.10–3.12)', () => {
     '/api/v1/estudiante/cursos',
     '/api/v1/estudiante/perfil',
     '/api/v1/estudiante/ruta/asig-1',
+    '/api/v1/estudiante/mapa-ocupacion?pabellon=A&piso=2',
+    '/api/v1/estudiante/telegram',
   ];
 
   it.each(rutas)('GET %s rechaza sin token (401) y con rol docente/admin (403)', async (ruta) => {

@@ -7,6 +7,8 @@ export interface EspacioConexo extends EspacioCapacidadInput {
   pabellon: string;
   piso: number;
   softwareInstalado?: string[] | null;
+  /** Distancia en metros hasta el ascensor; base de la priorización por accesibilidad (R-07). */
+  distanciaAscensor?: number | null;
 }
 
 export interface BloqueCandidato {

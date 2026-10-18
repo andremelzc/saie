@@ -1,4 +1,5 @@
 import { EstadoAsignacion, PrismaClient } from '@prisma/client';
+import { marcarAccesibilidad } from '../lib/accesibilidad';
 import {
   AsignacionConsultaItemDTO,
   ConsultaAlumnoResponseDTO,
@@ -76,6 +77,10 @@ export async function obtenerAsignacionPorAlumno(
         tipo: e.espacio.tipo,
         pabellon: e.espacio.pabellon,
         piso: e.espacio.piso,
+        ...marcarAccesibilidad({
+          piso: e.espacio.piso,
+          distanciaAscensor: e.espacio.distanciaAscensor,
+        }),
       }));
     }
 
@@ -163,6 +168,10 @@ export async function obtenerAsignacionPorCurso(
         tipo: e.espacio.tipo,
         pabellon: e.espacio.pabellon,
         piso: e.espacio.piso,
+        ...marcarAccesibilidad({
+          piso: e.espacio.piso,
+          distanciaAscensor: e.espacio.distanciaAscensor,
+        }),
       }));
     }
 
