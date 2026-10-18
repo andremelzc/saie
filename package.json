@@ -19,6 +19,7 @@
     "test:watch": "npm run test:watch --workspace=backend",
     "test:coverage": "npm run test:coverage --workspace=backend && npm run test:coverage --workspace=frontend",
     "test:e2e": "playwright test --config=tests/e2e/playwright.config.ts",
+    "test:load": "k6 run tests/load/pico_primer_dia.js",
     "lint": "npm run lint --workspace=backend && npm run lint --workspace=frontend",
     "format": "npm run format --workspace=backend && npm run format --workspace=frontend",
     "format:check": "npm run format:check --workspace=backend && npm run format:check --workspace=frontend",
