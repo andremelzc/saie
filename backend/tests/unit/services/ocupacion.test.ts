@@ -164,10 +164,30 @@ describe('Mapa de ocupación por piso (Issues 4.11, 4.12)', () => {
     const res = await obtenerOcupacionPorPiso({ pabellon: 'Z', piso: 99, franja: FRANJA }, db);
 
     expect(res.espacios).toHaveLength(0);
-    expect(res.resumen).toEqual({ disponibles: 0, ocupados: 0, conAlerta: 0 });
+    expect(res.resumen).toEqual({ disponibles: 0, ocupados: 0, conAlerta: 0, deshabilitados: 0 });
     // No debe consultar asignaciones ni alertas si no hay espacios
     expect(db.asignacion.findMany).not.toHaveBeenCalled();
     expect(db.alerta.findMany).not.toHaveBeenCalled();
+  });
+
+  it('marca DESHABILITADO un espacio fuera de servicio y lo cuenta aparte en el resumen', async () => {
+    const fuera = { ...espacio('d1'), habilitado: false, descripcionUso: 'Almacén' };
+    const db = dbMock([espacio('a1'), fuera], [], []);
+
+    const res = await obtenerOcupacionPorPiso({ pabellon: 'A', piso: 1, franja: FRANJA }, db);
+
+    expect(res.espacios.find((e) => e.id === 'd1')?.estado).toBe('DESHABILITADO');
+    expect(res.resumen.deshabilitados).toBe(1);
+    expect(res.resumen.disponibles).toBe(1);
+  });
+
+  it('un espacio deshabilitado no se muestra en el mapa del alumno', async () => {
+    const fuera = { ...espacio('d1'), habilitado: false };
+    const db = dbMock([espacio('a1'), fuera], [], []);
+
+    const res = await obtenerMapaLectura({ pabellon: 'A', piso: 1, franja: FRANJA }, db);
+
+    expect(res.espacios.map((e) => e.id)).toEqual(['a1']);
   });
 
   it('devuelve pabellón, piso y franja consultados en la respuesta', async () => {

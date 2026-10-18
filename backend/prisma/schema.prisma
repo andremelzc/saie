@@ -96,9 +96,11 @@ model Espacio {
   aforoNominal      Int         @map("aforo_nominal")
   softwareInstalado String[]    @default([]) @map("software_instalado") // Solo LABORATORIO
   pcsMalogradas     Int?        @map("pcs_malogradas") // Solo LABORATORIO
+  habilitado        Boolean     @default(true) // false = fuera de servicio: el motor no lo asigna
+  descripcionUso    String?     @map("descripcion_uso") // Rótulo visual (ej. "Sala de investigación")
 
   // Relaciones
-  espaciosContiguosA   EspacioContiguo[]       @relation("EspacioContiguoA")
+  espaciosContiguosA  EspacioContiguo[]       @relation("EspacioContiguoA")
   espaciosContiguosB   EspacioContiguo[]       @relation("EspacioContiguoB")
   asignacionesEspacio  AsignacionEspacio[]
   alertas              Alerta[]

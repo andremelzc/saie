@@ -16,6 +16,9 @@ jobs:
   ci:
     name: CI
     uses: ./.github/workflows/ci.yml
+    # Un workflow reutilizable no hereda los secrets: sin esto SONAR_TOKEN
+    # llega vacío y el análisis de SonarCloud falla, bloqueando el despliegue
+    secrets: inherit
 
   deploy:
     name: Despliegue continuo (CD)

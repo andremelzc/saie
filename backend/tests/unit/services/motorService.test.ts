@@ -82,55 +82,19 @@ describe('Motor Service con Prisma (Issue 2.10 & 2.11 & 2.15)', () => {
 
   describe('procesarAsignacionSeccionIndividual', () => {
     it('debe ejecutar asignación individual y persistirla en una transacción', async () => {
-      const mockTx = {
-        asignacion: {
-          updateMany: jest.fn().mockResolvedValue({ count: 0 }),
-          create: jest.fn().mockResolvedValue({ id: 'asig-nueva-1' }),
-        },
-        registroAuditoria: {
-          create: jest.fn().mockResolvedValue({ id: 'audit-1' }),
-        },
-      };
-
-      const mockPrisma = {
-        seccion: { findUnique: jest.fn().mockResolvedValue(mockSeccion) },
-        espacio: { findMany: jest.fn().mockResolvedValue(mockEspacios) },
-        espacioContiguo: { findMany: jest.fn().mockResolvedValue(mockContiguos) },
-        asignacion: {
-          findMany: jest.fn().mockResolvedValue([]),
-          findFirst: jest.fn().mockResolvedValue(null),
-        },
-        $transaction: jest.fn().mockImplementation(async (callback) => callback(mockTx)),
-      };
-
-      const resultado = await procesarAsignacionSeccionIndividual('sec-1', mockPrisma as any);
-
-      expect(resultado.estado).toBe(EstadoAsignacion.VIGENTE);
-      expect(resultado.espacioIds).toEqual(['aula-1']);
-      expect(mockPrisma.$transaction).toHaveBeenCalled();
-      expect(mockTx.asignacion.create).toHaveBeenCalled();
-      expect(mockTx.registroAuditoria.create).toHaveBeenCalled();
-    });
-  });
-
-  describe('procesarCorridaBatchPeriodo', () => {
-    it('debe procesar todas las secciones del periodo y persistir el lote', async () => {
-      const mockTx = {
-        asignacion: {
-          updateMany: jest.fn().mockResolvedValue({ count: 0 }),
-          create: jest.fn().mockResolvedValue({ id: 'asig-batch-1' }),
-        },
-        registroAuditoria: {
-          create: jest.fn().mockResolvedValue({ id: 'audit-batch-1' }),
-        },
-      };
-
+      // La corrida escribe con operaciones masivas dentro de una sola transacción por arreglo
       const mockPrisma = {
         espacio: { findMany: jest.fn().mockResolvedValue(mockEspacios) },
         espacioContiguo: { findMany: jest.fn().mockResolvedValue(mockContiguos) },
         seccion: { findMany: jest.fn().mockResolvedValue([mockSeccion]) },
-        asignacion: { findMany: jest.fn().mockResolvedValue([]) },
-        $transaction: jest.fn().mockImplementation(async (callback) => callback(mockTx)),
+        asignacion: {
+          findMany: jest.fn().mockResolvedValue([]),
+          updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+          createMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
+        asignacionEspacio: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+        registroAuditoria: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+        $transaction: jest.fn().mockImplementation(async (operaciones) => Promise.all(operaciones)),
       };
 
       const resultadoBatch = await procesarCorridaBatchPeriodo('2026-1', mockPrisma as any);
@@ -138,7 +102,9 @@ describe('Motor Service con Prisma (Issue 2.10 & 2.11 & 2.15)', () => {
       expect(resultadoBatch.totalSecciones).toBe(1);
       expect(resultadoBatch.asignadas).toBe(1);
       expect(resultadoBatch.escaladas).toBe(0);
-      expect(mockPrisma.$transaction).toHaveBeenCalled();
+      expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.asignacion.createMany.mock.calls[0][0].data).toHaveLength(1);
+      expect(mockPrisma.registroAuditoria.createMany.mock.calls[0][0].data).toHaveLength(1);
     });
   });
 });

@@ -7,6 +7,8 @@ export type CampoEspacio =
   | 'piso'
   | 'aforoNominal'
   | 'contiguos'
+  | 'habilitado'
+  | 'descripcionUso'
   | 'softwareInstalado'
   | 'pcsMalogradas';
 
@@ -20,6 +22,10 @@ export interface EspacioAdminDTO {
   /** Solo laboratorios; `null` en aulas teóricas. */
   softwareInstalado: string[] | null;
   pcsMalogradas: number | null;
+  /** `false` = fuera de servicio: el motor no lo asigna. */
+  habilitado: boolean;
+  /** Rótulo visual opcional (ej. "Sala de investigación"). */
+  descripcionUso: string | null;
   /** Ids de los espacios contiguos (siempre del mismo tipo). */
   contiguos: string[];
   /** Campos que el rol autenticado puede editar en este espacio (para armar el formulario). */

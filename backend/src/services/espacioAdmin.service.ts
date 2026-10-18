@@ -24,6 +24,8 @@ const CAMPOS_COORDINACION: CampoEspacio[] = [
   'piso',
   'aforoNominal',
   'contiguos',
+  'habilitado',
+  'descripcionUso',
 ];
 const CAMPOS_LABORATORIO: CampoEspacio[] = ['softwareInstalado', 'pcsMalogradas'];
 
@@ -42,10 +44,12 @@ export function camposEditables(rol: RolCuenta, tipo: TipoEspacio): CampoEspacio
 const identificador = z.string().trim().min(1, 'El identificador es requerido').max(60);
 const pabellon = z.string().trim().min(1, 'El pabellón es requerido').max(40);
 const piso = z.number({ error: 'El piso debe ser un entero' }).int('El piso debe ser un entero');
+// 0 = "sin definir": solo se admite en espacios deshabilitados (ver `exigirAforoSiHabilitado`).
 const aforoNominal = z
   .number({ error: 'El aforo nominal debe ser un entero' })
   .int('El aforo nominal debe ser un entero')
-  .min(1, 'El aforo nominal debe ser mayor a 0');
+  .min(0, 'El aforo nominal no puede ser negativo');
+const MENSAJE_AFORO_HABILITADO = 'El aforo nominal debe ser mayor a 0 en un espacio habilitado';
 const pcsMalogradas = z
   .number({ error: 'pcsMalogradas debe ser un número entero' })
   .int('pcsMalogradas debe ser un número entero')
@@ -53,6 +57,7 @@ const pcsMalogradas = z
 const software = z
   .array(z.string().trim().min(1, 'El nombre del software no puede estar vacío').max(120))
   .max(200, 'Demasiados programas en la lista');
+const descripcionUso = z.string().trim().min(1).max(120, 'La descripción de uso es muy larga');
 const contiguos = z.array(z.string().min(1)).max(50, 'Demasiados espacios contiguos');
 
 export const CrearEspacioSchema = z
@@ -61,13 +66,18 @@ export const CrearEspacioSchema = z
     tipo: z.enum(TipoEspacio, { error: 'El tipo de espacio no es válido' }),
     pabellon,
     piso,
-    aforoNominal,
+    aforoNominal: aforoNominal.optional(),
     softwareInstalado: software.optional(),
     pcsMalogradas: pcsMalogradas.optional(),
     contiguos: contiguos.optional(),
+    habilitado: z.boolean({ error: 'habilitado debe ser verdadero o falso' }).optional(),
+    descripcionUso: descripcionUso.optional(),
   })
   .strict()
   .superRefine((e, ctx) => {
+    if (e.habilitado !== false && (e.aforoNominal ?? 0) < 1) {
+      ctx.addIssue({ code: 'custom', path: ['aforoNominal'], message: MENSAJE_AFORO_HABILITADO });
+    }
     if (e.tipo === TipoEspacio.AULA_TEORICA) {
       if (e.softwareInstalado !== undefined || e.pcsMalogradas !== undefined) {
         ctx.addIssue({
@@ -75,7 +85,7 @@ export const CrearEspacioSchema = z
           message: 'Un aula teórica no tiene software ni PCs malogradas',
         });
       }
-    } else if ((e.pcsMalogradas ?? 0) > e.aforoNominal) {
+    } else if ((e.pcsMalogradas ?? 0) > (e.aforoNominal ?? 0)) {
       ctx.addIssue({
         code: 'custom',
         message: 'Las PCs malogradas no pueden exceder el aforo nominal',
@@ -92,6 +102,9 @@ export const ActualizarEspacioSchema = z
     softwareInstalado: software.optional(),
     pcsMalogradas: pcsMalogradas.optional(),
     contiguos: contiguos.optional(),
+    habilitado: z.boolean({ error: 'habilitado debe ser verdadero o falso' }).optional(),
+    // null borra el rótulo
+    descripcionUso: descripcionUso.nullable().optional(),
   })
   .strict()
   .refine((e) => Object.values(e).some((v) => v !== undefined), {
@@ -127,6 +140,8 @@ async function aEspacioDTO(
     aforoNominal: espacio.aforoNominal,
     softwareInstalado: esLab ? espacio.softwareInstalado : null,
     pcsMalogradas: esLab ? espacio.pcsMalogradas : null,
+    habilitado: espacio.habilitado,
+    descripcionUso: espacio.descripcionUso,
     contiguos: await contiguosDe(espacio.id, db),
     camposEditables: camposEditables(rol, espacio.tipo),
   };
@@ -229,9 +244,11 @@ export async function crearEspacio(
           tipo: entrada.tipo,
           pabellon: entrada.pabellon,
           piso: entrada.piso,
-          aforoNominal: entrada.aforoNominal,
+          aforoNominal: entrada.aforoNominal ?? 0,
           softwareInstalado: esLab ? normalizarListaSoftware(entrada.softwareInstalado ?? []) : [],
           pcsMalogradas: esLab ? (entrada.pcsMalogradas ?? 0) : null,
+          habilitado: entrada.habilitado ?? true,
+          descripcionUso: entrada.descripcionUso ?? null,
         },
       });
       await reemplazarContiguos(creado.id, vecinos, tx);
@@ -288,6 +305,12 @@ export async function actualizarEspacio(
   }
 
   const aforoFinal = entrada.aforoNominal ?? actual.aforoNominal;
+  const habilitadoFinal = entrada.habilitado ?? actual.habilitado;
+  if (habilitadoFinal && aforoFinal < 1) {
+    throw new HttpError(422, MENSAJE_AFORO_HABILITADO, [
+      'Define un aforo nominal mayor a 0 antes de habilitar el espacio',
+    ]);
+  }
   const pcsFinal = entrada.pcsMalogradas ?? actual.pcsMalogradas ?? 0;
   if (actual.tipo === TipoEspacio.LABORATORIO && pcsFinal > aforoFinal) {
     throw new HttpError(
@@ -314,6 +337,8 @@ export async function actualizarEspacio(
             ...(entrada.pabellon !== undefined && { pabellon: entrada.pabellon }),
             ...(entrada.piso !== undefined && { piso: entrada.piso }),
             ...(entrada.aforoNominal !== undefined && { aforoNominal: entrada.aforoNominal }),
+            ...(entrada.habilitado !== undefined && { habilitado: entrada.habilitado }),
+            ...(entrada.descripcionUso !== undefined && { descripcionUso: entrada.descripcionUso }),
           },
         });
 

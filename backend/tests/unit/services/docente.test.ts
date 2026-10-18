@@ -167,7 +167,12 @@ describe('Explorar disponibilidad de espacios (Issue 7.3)', () => {
     await explorarEspacios({ tipo: 'LABORATORIO', pabellon: 'b', piso: 1, franja }, prisma);
     expect(prisma.espacio.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { tipo: 'LABORATORIO', pabellon: { equals: 'b', mode: 'insensitive' }, piso: 1 },
+        where: {
+          habilitado: true,
+          tipo: 'LABORATORIO',
+          pabellon: { equals: 'b', mode: 'insensitive' },
+          piso: 1,
+        },
       }),
     );
   });
