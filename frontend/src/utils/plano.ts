@@ -38,16 +38,16 @@ export function resolverIdPlano(pabellon: string, identificador: string, piso: n
   if (ids.has(porRegla)) return porRegla;
 
   const prefijo = /^[A-Z]{3}(?=-)/.exec(porRegla)?.[0];
-  const numero = /(\d+)\s*$/.exec(identificador.trim())?.[1];
+  const numero = /(\d+)$/.exec(identificador.trim())?.[1];
   if (!prefijo || !numero) return porRegla;
 
   const esLab = /\bl(ab|aboratorio)?\b|^l-/i.test(sinTildes(identificador));
   const candidatos = esLab
     ? [
-        `${prefijo}-lab-${numero.padStart(2, '0')}`,
-        `${prefijo}-lab-${sinRelleno(numero)}`,
-        `${prefijo}-laboratorio-${sinRelleno(numero)}`,
-      ]
+      `${prefijo}-lab-${numero.padStart(2, '0')}`,
+      `${prefijo}-lab-${sinRelleno(numero)}`,
+      `${prefijo}-laboratorio-${sinRelleno(numero)}`,
+    ]
     : [];
   return candidatos.find((c) => ids.has(c)) ?? porRegla;
 }
