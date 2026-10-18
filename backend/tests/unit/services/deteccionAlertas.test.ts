@@ -175,6 +175,13 @@ describe('Detección de capacidad insuficiente (Issue 4.4)', () => {
     expect(detectarCapacidadInsuficiente('S1', { aforoNominal: 1 }, [])).toEqual([]);
   });
 
+  it('ignora asignaciones que no contienen el espacio evaluado', () => {
+    const otraAsignacion = asignacion('a2', [aula('OTRO_ESPACIO', 40)], {
+      alumnosMatriculados: 35,
+    });
+    expect(detectarCapacidadInsuficiente('S1', { aforoNominal: 20 }, [otraAsignacion])).toEqual([]);
+  });
+
   it('bloque de varios espacios: la suma sigue alcanzando, no hay alerta', () => {
     const bloque = asignacion('a1', [aula('S1', 30), aula('S2', 30)], { alumnosMatriculados: 50 });
     // S1 baja a 25: 25 + 30 = 55 >= 50

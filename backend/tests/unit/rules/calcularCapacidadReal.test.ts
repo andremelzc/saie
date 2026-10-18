@@ -89,6 +89,26 @@ describe('Issue 2.1 / 5.1 - Cálculo de Capacidad Real de un Espacio', () => {
 
       expect(calcularCapacidadReal(lab)).toBe(0);
     });
+
+    test('aforoNominal negativo debe retornar 0', () => {
+      const espacio = {
+        identificador: 'Invalido',
+        tipo: TipoEspacio.AULA_TEORICA,
+        aforoNominal: -10,
+      };
+
+      expect(calcularCapacidadReal(espacio)).toBe(0);
+    });
+
+    test('tipo de espacio no reconocido debe retornar 0', () => {
+      const espacio = {
+        identificador: 'Otro',
+        tipo: 'TIPO_DESCONOCIDO' as any,
+        aforoNominal: 30,
+      };
+
+      expect(calcularCapacidadReal(espacio)).toBe(0);
+    });
   });
 
   describe('Pruebas parametrizadas: distintos aforos nominales de laboratorio', () => {
