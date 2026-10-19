@@ -15,7 +15,7 @@ export interface LoginRouteProps {
 /**
  * Conecta cada pantalla de login con la sesión: guarda el token al ingresar, muestra el aviso
  * de "sesión vencida" si corresponde y redirige a quien ya tiene sesión.
- * Tras iniciar sesión redirige al cambio de clave (Issue 4.21) o al área del rol.
+ * Tras iniciar sesión redirige al área del rol.
  */
 export const LoginRoute: React.FC<LoginRouteProps> = ({ rol }) => {
   const { sesion, iniciarSesion } = useAuth();

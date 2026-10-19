@@ -127,40 +127,6 @@ export const AreaPrivadaPlaceholder: React.FC<AreaPrivadaPlaceholderProps> = ({
                 </div>
               </Link>
             ))}
-
-            {/* Tarjeta Informativa: Próximos Módulos */}
-            <div className="bg-white/80 border border-[#E6DFD0] rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col justify-between gap-5 opacity-85">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-[#666666]/10 text-[#666666] flex items-center justify-center">
-                    <svg
-                      className="w-5 h-5 stroke-current"
-                      fill="none"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
-                  </div>
-                  <span className="text-[11px] font-semibold text-[#666666] bg-[#E6DFD0]/50 px-2.5 py-1 rounded-full">
-                    Próximamente
-                  </span>
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold text-[#222222]">
-                    Perfil y Telegram
-                  </h3>
-                  <p className="text-xs sm:text-sm text-[#666666] mt-1">
-                    Gestión de datos personales, ficha médica sensible y vinculación directa con el
-                    bot de notificaciones.
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
       </main>
