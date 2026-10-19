@@ -16,6 +16,7 @@ import {
   ResultadoOrquestacion,
   SeccionInputMotor,
 } from '../types/asignacion';
+import { OrigenCorrida } from '../types/asignacionDemanda';
 
 /**
  * Carga los espacios habilitados y construye la función de vecinos contiguos desde Prisma.
@@ -237,10 +238,12 @@ export async function procesarAsignacionSeccionIndividual(
 
 /**
  * Issue 2.11: Ejecuta la corrida batch para todas las secciones de un periodo en Prisma.
+ * `origen` distingue la corrida pedida por Coordinación de la programada por tiempo (Issue 2.18).
  */
 export async function procesarCorridaBatchPeriodo(
   periodo: string,
   prisma: PrismaClient,
+  origen: OrigenCorrida = 'DEMANDA',
 ): Promise<ResultadoCorridaBatch> {
   const { todosLosEspacios, obtenerVecinos } = await cargarContextoEspacios(prisma);
 
@@ -360,7 +363,7 @@ export async function procesarCorridaBatchPeriodo(
               ? TipoEventoAuditoria.ASIGNACION
               : TipoEventoAuditoria.ESCALAMIENTO,
           asignacionId: ids[i],
-          detalle: `Corrida Batch [${resultadoBatch.corridaId}] - ${
+          detalle: `[Origen: ${origen}] Corrida Batch [${resultadoBatch.corridaId}] - ${
             res.estado === EstadoAsignacion.VIGENTE
               ? `Asignada a: [${res.espacioIds.join(', ')}]`
               : `Escalada: ${res.motivoEscalamiento}`

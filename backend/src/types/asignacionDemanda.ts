@@ -1,4 +1,12 @@
 import { EstadoAsignacion } from '@prisma/client';
+import { ResultadoVerificacion } from '../rules/verificadorCorrida';
+
+/**
+ * Quién originó una corrida: la petición de Coordinación Académica o la tarea programada por
+ * tiempo (Issue 2.18). Se registra en la auditoría para distinguir corridas atendidas y
+ * desatendidas.
+ */
+export type OrigenCorrida = 'DEMANDA' | 'TIEMPO';
 
 export interface ResultadoSeccionDTO {
   seccionId: string;
@@ -23,5 +31,10 @@ export interface ResumenAsignacionDTO {
   mantenidas: number;
   /** Secciones que quedaron ESCALADAS a revisión manual. */
   escaladas: number;
+  /**
+   * Issue 2.17: resultado del verificador posterior a la corrida. `null` cuando no hubo nada que
+   * verificar (periodo sin datos o sin secciones).
+   */
+  verificacion: ResultadoVerificacion | null;
   resultados: ResultadoSeccionDTO[];
 }

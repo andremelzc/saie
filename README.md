@@ -248,12 +248,13 @@ El sistema SAIE se encuentra desplegado y disponible en un entorno de demostraci
 
 El despliegue está 100% automatizado y blindado mediante GitHub Actions, con dos workflows: la integración continua ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) y el despliegue continuo ([`.github/workflows/cd.yml`](.github/workflows/cd.yml)), que reutiliza el CI como puerta de calidad:
 
-1. **Pull Request:** Al abrir o actualizar un PR hacia `develop`, se ejecutan automáticamente los análisis de calidad (ESLint, Prettier y pruebas Jest). Ningún despliegue se ejecuta en esta etapa.
+1. **Pull Request:** Al abrir o actualizar un PR hacia `develop`, se ejecutan automáticamente los análisis de calidad (compilación TypeScript sin emisión con `tsc --noEmit`/`tsc -b`, ESLint, Prettier y pruebas Jest). Un error de tipos rompe el CI. Ningún despliegue se ejecuta en esta etapa.
 2. **Merge a `develop`:** Al integrarse cambios a la rama principal, `cd.yml` ejecuta primero el CI (`ci.yml`) como quality gate.
 3. **Migración y Despliegue:** **Únicamente si todos los checks pasan en verde**, el job `deploy` de `cd.yml`:
    * Aplica las migraciones de Prisma directamente sobre Supabase mediante la conexión directa (`DIRECT_URL`, puerto 5432).
    * Dispara el webhook seguro de Render (`RENDER_DEPLOY_HOOK_URL`) para compilar y desplegar la nueva versión del backend.
    * Construye y despliega el frontend en Vercel con la CLI (`vercel pull`, `vercel build` y `vercel deploy --prebuilt`), autenticada con los secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` y `VERCEL_PROJECT_ID`.
+   * **Verifica la salud posterior al despliegue (Issue 5.24):** consulta `GET /api/health` del backend y la URL del frontend con reintentos (para tolerar el arranque en frío de Render); el job `deploy` falla si alguno no responde dentro de la ventana de espera.
 
 ### 9.3. Limitaciones y Notas Operativas (Capa Gratuita)
 
@@ -264,4 +265,33 @@ El despliegue está 100% automatizado y blindado mediante GitHub Actions, con do
   npm run prisma:migrate --workspace=backend
   npm run prisma:seed --workspace=backend
   ```
+
+### 9.4. Secretos del Repositorio (GitHub Actions)
+
+Se configuran en *Settings → Secrets and variables → Actions* y nunca se versionan:
+
+| Secreto | Usado por | Propósito |
+| :--- | :--- | :--- |
+| `DIRECT_URL` | `cd.yml` | Conexión directa a Supabase (puerto 5432) para aplicar migraciones. |
+| `RENDER_DEPLOY_HOOK_URL` | `cd.yml` | Webhook que dispara el despliegue del backend en Render. |
+| `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | `cd.yml` | Autenticación de la CLI de Vercel para desplegar el frontend. |
+| `BACKEND_URL` | `cd.yml`, `resumen-diario.yml` | URL pública del backend, sin barra final. Alimenta el health check posterior al despliegue y el resumen diario. |
+| `FRONTEND_URL` | `cd.yml` | URL pública del frontend (p. ej. `https://saie-plum.vercel.app`). Habilita el health check del frontend; si no está configurado, esa verificación se omite con una advertencia. |
+| `ASIGNACION_PROGRAMADA_TOKEN` | `asignacion-programada.yml` | Token de servicio de `POST /api/v1/asignaciones/programada` (corrida desatendida nocturna). |
+| `RESUMEN_DIARIO_TOKEN` | `resumen-diario.yml` | Token de servicio de `POST /api/v1/telegram/resumen-diario`. |
+| `SONAR_TOKEN` | `ci.yml` | Análisis estático en SonarCloud. |
+
+### 9.5. Tareas Programadas (Automatización Desatendida)
+
+Además del despliegue, dos workflows de GitHub Actions ejecutan tareas sin intervención humana:
+
+| Workflow | Cadencia (UTC) | Qué hace |
+| :--- | :--- | :--- |
+| `resumen-diario.yml` | 12:30, lunes a sábado | Envía por Telegram el resumen de clases del día a los alumnos vinculados (Issue 3.27). |
+| `asignacion-programada.yml` | 07:00 (02:00 en Lima), a diario | Ejecuta la corrida de asignación del periodo vigente, publica el resumen en la pestaña *Actions* y falla si el verificador reporta violaciones (Issue 2.18). |
+
+Ambos toleran el arranque en frío de Render reintentando la llamada.
+
+> [!NOTE]
+> El candado que evita corridas simultáneas vive en la memoria del proceso. Es válido mientras el backend corra en una sola instancia (el plan gratuito de Render); si se escala a varias instancias, habrá que moverlo a un almacén compartido.
 

@@ -118,7 +118,7 @@ export function buscarBloqueContiguo(input: BuscarBloqueInput): ResultadoBusqued
 
   while (cola.length > 0) {
     const estado = cola.shift()!;
-    const claveActual = [...estado.espacioIds].sort().join('::');
+    const claveActual = [...estado.espacioIds].sort((a, b) => a.localeCompare(b)).join('::');
     if (visitadosSet.has(claveActual)) {
       continue;
     }
@@ -144,7 +144,7 @@ export function buscarBloqueContiguo(input: BuscarBloqueInput): ResultadoBusqued
 
       const capVecino = mapaCapacidad.get(idVecino) || 0;
       const nuevaCapacidad = estado.capacidadAcumulada + capVecino;
-      const nuevosIds = [...estado.espacioIds, idVecino].sort();
+      const nuevosIds = [...estado.espacioIds, idVecino].sort((a, b) => a.localeCompare(b));
       const claveNueva = nuevosIds.join('::');
 
       if (nuevaCapacidad >= alumnosRequeridos) {
@@ -199,11 +199,11 @@ export function buscarBloqueContiguo(input: BuscarBloqueInput): ResultadoBusqued
     }
     const identsA = a.espacios
       .map((e) => e.identificador)
-      .sort()
+      .sort((x, y) => x.localeCompare(y))
       .join(', ');
     const identsB = b.espacios
       .map((e) => e.identificador)
-      .sort()
+      .sort((x, y) => x.localeCompare(y))
       .join(', ');
     return identsA.localeCompare(identsB);
   });

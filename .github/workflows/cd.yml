@@ -64,3 +64,45 @@ jobs:
           npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
           npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
           npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+
+      - name: Verificar salud del Backend (Issue 5.24)
+        # Tolerar el arranque en frío de Render (45 a 60 s): hasta 24 intentos cada 5 s.
+        # Un 200 en /api/health confirma que la acción sí se ejecutó correctamente.
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          if [ -z "${BACKEND_URL}" ]; then
+            echo "::error::Falta el secreto BACKEND_URL (URL pública del backend, sin barra final)."
+            exit 1
+          fi
+          for intento in $(seq 1 24); do
+            if curl -fsS --max-time 90 "${BACKEND_URL}/api/health"; then
+              echo ""
+              echo "Backend disponible tras ${intento} intento(s)."
+              exit 0
+            fi
+            echo "Intento ${intento}/24: el backend aún no responde; reintentando en 5 s..."
+            sleep 5
+          done
+          echo "::error::El backend no respondió al health check tras el despliegue."
+          exit 1
+
+      - name: Verificar salud del Frontend (Issue 5.24)
+        # Requiere el secreto FRONTEND_URL (documentado en el README, sección 9.4).
+        env:
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        run: |
+          if [ -z "${FRONTEND_URL}" ]; then
+            echo "::warning::FRONTEND_URL no está configurado; se omite la verificación del frontend."
+            exit 0
+          fi
+          for intento in $(seq 1 12); do
+            if curl -fsS --max-time 30 "${FRONTEND_URL}" > /dev/null; then
+              echo "Frontend disponible tras ${intento} intento(s)."
+              exit 0
+            fi
+            echo "Intento ${intento}/12: el frontend aún no responde; reintentando en 5 s..."
+            sleep 5
+          done
+          echo "::error::El frontend no respondió al health check tras el despliegue."
+          exit 1

@@ -40,10 +40,10 @@ export function normalizarListaSoftware(software: string[]): string[] {
 function mismoSoftware(a: string[], b: string[]): boolean {
   const claveA = normalizarListaSoftware(a)
     .map((s) => s.toLowerCase())
-    .sort();
+    .sort((x, y) => x.localeCompare(y));
   const claveB = normalizarListaSoftware(b)
     .map((s) => s.toLowerCase())
-    .sort();
+    .sort((x, y) => x.localeCompare(y));
   return claveA.length === claveB.length && claveA.every((s, i) => s === claveB[i]);
 }
 
