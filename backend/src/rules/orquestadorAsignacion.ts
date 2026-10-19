@@ -32,12 +32,12 @@ export interface OrquestarAsignacionInput {
 export function calcularHuellaEntradaSeccion(seccion: SeccionInputMotor): string {
   const horariosNormalizados = (seccion.horarios || [])
     .map((h) => `${h.diaSemana}:${h.horaInicio}-${h.horaFin}`)
-    .sort()
+    .sort((a, b) => a.localeCompare(b))
     .join('|');
 
   const softwareNormalizado = (seccion.stackSoftwareRequerido || [])
     .map((s) => s.trim().toLowerCase())
-    .sort()
+    .sort((a, b) => a.localeCompare(b))
     .join('|');
 
   const payload = [
@@ -246,11 +246,11 @@ export function orquestarAsignacionSeccion(input: OrquestarAsignacionInput): Res
 
     const identsA = a.bloque.espacios
       .map((e) => e.identificador)
-      .sort()
+      .sort((x, y) => x.localeCompare(y))
       .join(', ');
     const identsB = b.bloque.espacios
       .map((e) => e.identificador)
-      .sort()
+      .sort((x, y) => x.localeCompare(y))
       .join(', ');
 
     return identsA.localeCompare(identsB);

@@ -28,3 +28,18 @@ export async function ejecutarSeccion(req: Request, res: Response): Promise<void
     responderError(res, error);
   }
 }
+
+/**
+ * Issue 2.18 — POST /api/v1/asignaciones/programada: corrida desatendida del periodo vigente.
+ *
+ * La autentica el token de servicio en la ruta (no un JWT de usuario). Registra el origen
+ * "TIEMPO" en la auditoría para distinguirla de la corrida pedida por Coordinación.
+ */
+export async function ejecutarProgramada(_req: Request, res: Response): Promise<void> {
+  try {
+    const data = await ejecutarAsignacionADemanda(undefined, prisma, 'TIEMPO');
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}

@@ -67,7 +67,7 @@ export function obtenerEspaciosContiguos(espacioId: string, grafo: GrafoContigue
     }
   }
 
-  return resultado.sort();
+  return resultado.sort((a, b) => a.localeCompare(b));
 }
 
 /**
@@ -102,5 +102,5 @@ export async function obtenerEspaciosContiguosPorId(
     .filter((rel: any) => rel.espacioB && rel.espacioB.tipo === espacio.tipo)
     .map((rel: any) => rel.espacioB.id);
 
-  return contiguos.sort();
+  return contiguos.sort((a: string, b: string) => a.localeCompare(b));
 }

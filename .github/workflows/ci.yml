@@ -46,6 +46,16 @@ jobs:
       - name: Generar cliente de Prisma
         run: npm run prisma:generate --workspace=backend
 
+      - name: Verificar compilación TypeScript (Backend)
+        # Issue 5.24: un error de tipos debe romper el CI, no llegar a develop.
+        working-directory: backend
+        run: npx tsc --noEmit
+
+      - name: Verificar compilación TypeScript (Frontend)
+        # Issue 5.24: tsc -b valida el proyecto y sus referencias sin emitir el bundle.
+        working-directory: frontend
+        run: npx tsc -b
+
       - name: Ejecutar linter (ESLint)
         run: npm run lint
 
