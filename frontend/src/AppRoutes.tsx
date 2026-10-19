@@ -6,6 +6,8 @@ import AreaPrivadaPlaceholder from './pages/AreaPrivadaPlaceholder';
 import InicioEstudiante from './pages/InicioEstudiante';
 import HorarioMisCursosPage from './pages/HorarioMisCursosPage';
 import PerfilAlumnoPage from './pages/PerfilAlumnoPage';
+import MapaOcupacionPage from './pages/MapaOcupacionPage';
+import RutaAlumnoPage from './pages/RutaAlumnoPage';
 import InicioAdmin from './pages/admin/InicioAdmin';
 import AlertasAdmin from './pages/admin/AlertasAdmin';
 import CargaDatos from './pages/admin/CargaDatos';
@@ -51,6 +53,23 @@ export const AppRoutes: React.FC = () => {
         element={
           <RutaProtegida rolesPermitidos={['ALUMNO']} rutaLogin={RUTAS.loginAlumno}>
             <PerfilAlumnoPage />
+          </RutaProtegida>
+        }
+      />
+      {/* Pantallas en desarrollo (Issues 3.18 y 3.19): se anuncian sin romper la navegación. */}
+      <Route
+        path={RUTAS.mapaAlumno}
+        element={
+          <RutaProtegida rolesPermitidos={['ALUMNO']} rutaLogin={RUTAS.loginAlumno}>
+            <MapaOcupacionPage />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.rutaAlumno}
+        element={
+          <RutaProtegida rolesPermitidos={['ALUMNO']} rutaLogin={RUTAS.loginAlumno}>
+            <RutaAlumnoPage />
           </RutaProtegida>
         }
       />

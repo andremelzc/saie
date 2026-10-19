@@ -8,6 +8,8 @@ export const RUTAS = {
   loginAdmin: '/login/admin',
   inicioAlumno: '/estudiante',
   horarioAlumno: '/estudiante/horario',
+  mapaAlumno: '/estudiante/mapa',
+  rutaAlumno: '/estudiante/ruta',
   inicioDocente: '/docente',
   inicioAdmin: '/admin',
   alertasAdmin: '/admin/alertas',
