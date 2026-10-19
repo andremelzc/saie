@@ -366,6 +366,29 @@ Catálogo único de software (Spec 08) que sustituye el texto libre de `Espacio.
 
 ---
 
+### 4.21. `SolicitudSoftware`
+Flujo con el que un docente propone un software que aún no está en el catálogo y Coordinación Académica lo aprueba o rechaza (Spec 08, §2.3). Migración aditiva `20261022000000_solicitudes_software`.
+
+| Campo | Tipo | Nulable | Descripción / Regla de Negocio |
+| :--- | :--- | :---: | :--- |
+| `id` | UUID / PK | No | Identificador único. |
+| `docente_id` | UUID / FK | No | Docente que propone (se deduce de la cuenta autenticada). |
+| `seccion_id` | UUID / FK | Sí | Sección para la que se necesita. Al aprobar se puede dejar el software como requerimiento suyo. |
+| `nombre` | VARCHAR | No | Nombre propuesto, ya separado de la versión (`"MATLAB"`). |
+| `version` | VARCHAR | No | Versión propuesta (`"R2023b"`); `""` = sin versión. |
+| `categoria` | ENUM | Sí | `CategoriaSoftware` sugerida por el docente. |
+| `justificacion` | TEXT | No | Para qué se necesita. |
+| `estado` | ENUM | No | `PENDIENTE`, `APROBADA`, `RECHAZADA`. Por defecto `PENDIENTE`. |
+| `fecha_solicitud` | TIMESTAMP | No | Alta de la solicitud. |
+| `resuelta_por_id` | UUID / FK | Sí | Cuenta de Coordinación que resolvió. |
+| `fecha_resolucion` | TIMESTAMP | Sí | Cuándo se resolvió. |
+| `motivo_rechazo` | TEXT | Sí | Obligatorio al rechazar. |
+| `software_id` | UUID / FK | Sí | Fila del catálogo creada o vinculada al aprobar. |
+
+> **Reglas:** crear una solicitud de un software que ya está en el catálogo responde `409` con el `id` existente. Aprobar solo da de alta (o vincula) el software y, opcionalmente, su requerimiento en la sección; **no** lo instala en ningún laboratorio. Una solicitud solo se resuelve una vez (`409` si ya está `APROBADA` o `RECHAZADA`) y un docente solo ve las propias.
+
+---
+
 ## 5. Reglas de Integridad y Restricciones del Negocio
 
 1. **No doble reserva de un espacio:** Un espacio no puede tener dos asignaciones con estado `VIGENTE` cuyos horarios se solapen en día y rango temporal (`hora_inicio` – `hora_fin`).

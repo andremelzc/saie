@@ -36,7 +36,10 @@ import {
 } from '../types/portal';
 
 /** El id del docente sale del JWT: un docente solo llega a sus propias secciones. */
-async function obtenerDocenteDeCuenta(cuentaId: string, prisma: Pick<PrismaClient, 'docente'>) {
+export async function obtenerDocenteDeCuenta(
+  cuentaId: string,
+  prisma: Pick<PrismaClient, 'docente'>,
+) {
   const docente = await prisma.docente.findUnique({ where: { cuentaId } });
   if (!docente) {
     throw new HttpError(404, 'No hay un docente asociado a esta cuenta');

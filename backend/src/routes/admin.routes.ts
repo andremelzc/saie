@@ -25,6 +25,11 @@ import {
   listarCatalogoSoftware,
   obtenerSoftware,
 } from '../controllers/software.controller';
+import {
+  aprobarSolicitudSoftware,
+  listarSolicitudesSoftware,
+  rechazarSolicitudSoftware,
+} from '../controllers/solicitudSoftware.controller';
 
 const router = Router();
 
@@ -63,6 +68,11 @@ router.get('/software/:id', obtenerSoftware);
 router.post('/software', soloCoordinacion, altaSoftware);
 router.patch('/software/:id', soloCoordinacion, editarSoftwareCatalogo);
 router.patch('/software/:id/estado', soloCoordinacion, cambiarEstadoCatalogo);
+
+// Solicitudes de software (Issue 4.29): Coordinación las revisa, aprueba o rechaza.
+router.get('/solicitudes-software', listarSolicitudesSoftware);
+router.patch('/solicitudes-software/:id/aprobar', soloCoordinacion, aprobarSolicitudSoftware);
+router.patch('/solicitudes-software/:id/rechazar', soloCoordinacion, rechazarSolicitudSoftware);
 
 // Gestión de espacios con campos acotados por rol (Issue 4.15): el alta es solo de
 // Coordinación; la edición la restringe el servicio según el rol y el tipo de espacio.
