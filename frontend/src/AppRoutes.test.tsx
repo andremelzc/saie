@@ -81,6 +81,7 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
 
     it('permite el acceso a un rol autorizado (Jefatura al panel administrativo)', () => {
       iniciarSesionDePrueba('JEFATURA_LABORATORIOS');
+      vi.spyOn(api, 'get').mockResolvedValue({ data: { success: true, data: [] } } as never);
       renderizar('/admin');
 
       expect(screen.getByRole('heading', { name: 'Área administrativa' })).toBeInTheDocument();

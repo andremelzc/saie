@@ -10,9 +10,11 @@ export const RUTAS = {
   horarioAlumno: '/estudiante/horario',
   inicioDocente: '/docente',
   inicioAdmin: '/admin',
+  alertasAdmin: '/admin/alertas',
+  cargaAdmin: '/admin/carga',
+  espaciosAdmin: '/admin/espacios',
+  cambioLaboratorio: '/admin/laboratorio',
   perfilAlumno: '/estudiante/perfil',
-  configuracionAlumno: '/estudiante/configuracion',
-  ayudaAlumno: '/estudiante/ayuda',
 } as const;
 
 export const ROLES_ADMIN: RolCuenta[] = ['COORDINACION_ACADEMICA', 'JEFATURA_LABORATORIOS'];

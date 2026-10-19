@@ -42,10 +42,6 @@ const TRAZO_CALENDARIO =
 /** Silueta de persona: el icono de «Mi perfil». */
 const TRAZO_PERFIL =
   'M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z';
-const TRAZO_AJUSTES =
-  'M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75';
-const TRAZO_AYUDA =
-  'M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z';
 const TRAZO_FLECHA = 'M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75';
 const TRAZO_PIN =
   'M15 10.5a3 3 0 11-6 0 3 3 0 016 0zM19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z';
@@ -86,12 +82,6 @@ const SERVICIOS: Servicio[] = [
     fondo: '#F3E5F5',
     color: '#8E24AA',
   },
-];
-
-/** Accesos de la cabecera: son de la cuenta, no del contenido, por eso van como iconos. */
-const ACCESOS_CABECERA = [
-  { etiqueta: 'Configuración', enlace: RUTAS.configuracionAlumno, trazo: TRAZO_AJUSTES },
-  { etiqueta: 'Ayuda', enlace: RUTAS.ayudaAlumno, trazo: TRAZO_AYUDA },
 ];
 
 const UN_MINUTO_MS = 60_000;
@@ -369,7 +359,7 @@ const ListaDeClases: React.FC<{
 /**
  * Inicio del área del estudiante: saludo, la clase en curso o la próxima, el resumen de la
  * semana, las clases de hoy (o las del próximo día con clases) y los accesos a «Mi horario y mis
- * cursos» y «Mi perfil». Configuración y Ayuda van como iconos en la cabecera. Todo sale del horario del backend; si no está disponible, la
+ * cursos», el mapa y «Mi perfil». Todo sale del horario del backend; si no está disponible, la
  * pantalla sigue mostrando los accesos.
  */
 export const InicioEstudiante: React.FC = () => {
@@ -420,24 +410,11 @@ export const InicioEstudiante: React.FC = () => {
         <div className="mx-auto flex h-[85px] w-full max-w-6xl items-center justify-between gap-3 px-4">
           <div className="flex min-w-0 items-center gap-4">
             <img src={logoBlanco} alt="SAIE" className="h-10 w-auto shrink-0" />
-            <span className="hidden items-center rounded-full bg-white/15 px-3 py-1 text-sm font-medium sm:inline-flex">
+            <span className="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-sm font-medium">
               Estudiante
             </span>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <nav aria-label="Accesos de cuenta" className="flex items-center gap-2">
-              {ACCESOS_CABECERA.map((a) => (
-                <Link
-                  key={a.etiqueta}
-                  to={a.enlace}
-                  aria-label={a.etiqueta}
-                  title={a.etiqueta}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white no-underline transition-colors hover:bg-white/20 focus-visible:outline-3 focus-visible:outline-white"
-                >
-                  <Icono trazo={a.trazo} className="h-5 w-5" />
-                </Link>
-              ))}
-            </nav>
+          <div className="flex items-center gap-4">
             <p className="m-0 hidden text-right text-xs leading-4 text-white/80 sm:block">
               Sesión activa
               <strong className="block text-sm font-bold text-white">{sesion?.rol}</strong>
@@ -534,7 +511,7 @@ export const InicioEstudiante: React.FC = () => {
           <h2 id="titulo-servicios" className="m-0 text-xl font-bold">
             Servicios disponibles
           </h2>
-          <ul className="saie-stagger m-0 grid list-none grid-cols-1 gap-5 p-0 md:grid-cols-2">
+          <ul className="saie-stagger m-0 grid list-none grid-cols-1 gap-5 p-0 md:grid-cols-3">
             {SERVICIOS.map((s) => (
               <li key={s.titulo}>
                 <Link

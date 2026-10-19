@@ -6,8 +6,11 @@ import AreaPrivadaPlaceholder from './pages/AreaPrivadaPlaceholder';
 import InicioEstudiante from './pages/InicioEstudiante';
 import HorarioMisCursosPage from './pages/HorarioMisCursosPage';
 import PerfilAlumnoPage from './pages/PerfilAlumnoPage';
-import ConfiguracionAlumno from './pages/ConfiguracionAlumno';
-import AyudaAlumno from './pages/AyudaAlumno';
+import InicioAdmin from './pages/admin/InicioAdmin';
+import AlertasAdmin from './pages/admin/AlertasAdmin';
+import CargaDatos from './pages/admin/CargaDatos';
+import EspaciosAdmin from './pages/admin/EspaciosAdmin';
+import CambioLaboratorio from './pages/admin/CambioLaboratorio';
 import LoginRoute from './components/auth/LoginRoute';
 import RutaProtegida from './components/auth/RutaProtegida';
 import { ROLES_ADMIN, RUTAS } from './config/rutas';
@@ -52,22 +55,6 @@ export const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path={RUTAS.configuracionAlumno}
-        element={
-          <RutaProtegida rolesPermitidos={['ALUMNO']} rutaLogin={RUTAS.loginAlumno}>
-            <ConfiguracionAlumno />
-          </RutaProtegida>
-        }
-      />
-      <Route
-        path={RUTAS.ayudaAlumno}
-        element={
-          <RutaProtegida rolesPermitidos={['ALUMNO']} rutaLogin={RUTAS.loginAlumno}>
-            <AyudaAlumno />
-          </RutaProtegida>
-        }
-      />
-      <Route
         path={RUTAS.inicioDocente}
         element={
           <RutaProtegida rolesPermitidos={['DOCENTE']} rutaLogin={RUTAS.loginDocente}>
@@ -75,11 +62,44 @@ export const AppRoutes: React.FC = () => {
           </RutaProtegida>
         }
       />
+      {/* Panel administrativo (Issues 4.9, 4.10, 4.19, 4.20 y 1.9) */}
       <Route
         path={RUTAS.inicioAdmin}
         element={
           <RutaProtegida rolesPermitidos={ROLES_ADMIN} rutaLogin={RUTAS.loginAdmin}>
-            <AreaPrivadaPlaceholder titulo="Área administrativa" />
+            <InicioAdmin />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.alertasAdmin}
+        element={
+          <RutaProtegida rolesPermitidos={ROLES_ADMIN} rutaLogin={RUTAS.loginAdmin}>
+            <AlertasAdmin />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.cargaAdmin}
+        element={
+          <RutaProtegida rolesPermitidos={['COORDINACION_ACADEMICA']} rutaLogin={RUTAS.loginAdmin}>
+            <CargaDatos />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.espaciosAdmin}
+        element={
+          <RutaProtegida rolesPermitidos={ROLES_ADMIN} rutaLogin={RUTAS.loginAdmin}>
+            <EspaciosAdmin />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.cambioLaboratorio}
+        element={
+          <RutaProtegida rolesPermitidos={ROLES_ADMIN} rutaLogin={RUTAS.loginAdmin}>
+            <CambioLaboratorio />
           </RutaProtegida>
         }
       />

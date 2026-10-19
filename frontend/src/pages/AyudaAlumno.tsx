@@ -27,8 +27,9 @@ const GRUPOS: GrupoPreguntas[] = [
         pregunta: '¿Dónde veo mis clases de hoy y de la semana?',
         respuesta: (
           <>
-            En <Link to={RUTAS.horarioAlumno}>Mi horario y mis cursos</Link> tienes tu semana día
-            por día, con docente, aula y pabellón de cada curso matriculado.
+            En{' '}
+            <Link to={RUTAS.horarioAlumno || '/estudiante/horario'}>Mi horario y mis cursos</Link>{' '}
+            tienes tu semana día por día, con docente, aula y pabellón de cada curso matriculado.
           </>
         ),
       },
@@ -52,8 +53,8 @@ const GRUPOS: GrupoPreguntas[] = [
         pregunta: '¿Cómo actualizo mi teléfono, mi dirección o mi ficha médica?',
         respuesta: (
           <>
-            Entra a <Link to={RUTAS.perfilAlumno}>Mi perfil</Link>, pulsa «Editar» en la sección que
-            quieras cambiar y guarda.
+            Entra a <Link to={RUTAS.perfilAlumno || '/estudiante/perfil'}>Mi perfil</Link>, pulsa
+            «Editar» en la sección que quieras cambiar y guarda.
           </>
         ),
       },
@@ -82,7 +83,7 @@ const GRUPOS: GrupoPreguntas[] = [
         pregunta: '¿Puedo agrandar el texto o quitar las animaciones?',
         respuesta: (
           <>
-            Sí, desde <Link to={RUTAS.configuracionAlumno}>Configuración</Link>. Los cambios se
+            Sí, desde <Link to="/estudiante/configuracion">Configuración</Link>. Los cambios se
             guardan en este dispositivo.
           </>
         ),
