@@ -181,6 +181,8 @@ model Seccion {
   asignaciones Asignacion[]
   // Requerimientos de software del catálogo.
   softwareRequerido SeccionSoftware[]
+  // Solicitudes de software que apuntan a esta sección (Issue 4.29).
+  solicitudesSoftware SolicitudSoftware[]
 
   @@unique([cursoId, codigoSeccion, periodo])
   @@map("secciones")
@@ -257,9 +259,10 @@ model Docente {
   cuentaId            String?      @unique @map("cuenta_id")
 
   // Relaciones
-  cuenta      Cuenta?      @relation(fields: [cuentaId], references: [id])
-  secciones   Seccion[]
-  incidencias Incidencia[]
+  cuenta              Cuenta?             @relation(fields: [cuentaId], references: [id])
+  secciones           Seccion[]
+  incidencias         Incidencia[]
+  solicitudesSoftware SolicitudSoftware[]
 
   @@map("docentes")
 }
@@ -279,6 +282,7 @@ model Cuenta {
   espaciosResponsables EspacioResponsable[]
   softwareCreado       Software[]
   softwareRegistrado   EspacioSoftware[]
+  solicitudesResueltas SolicitudSoftware[]
 
   @@map("cuentas")
 }
@@ -452,6 +456,7 @@ model Software {
   creadoPor Cuenta?            @relation(fields: [creadoPorId], references: [id], onDelete: SetNull)
   espacios  EspacioSoftware[]
   secciones SeccionSoftware[]
+  solicitudes SolicitudSoftware[]
 
   @@unique([nombreNormalizado, version])
   @@index([categoria])
@@ -487,4 +492,39 @@ model SeccionSoftware {
   @@id([seccionId, softwareId])
   @@index([softwareId])
   @@map("seccion_software")
+}
+
+// Estado del flujo de solicitudes de software (Spec 08, §2.3).
+enum EstadoSolicitud {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+}
+
+// Solicitud de software (Spec 08, §2.3 / Issue 4.29). Un docente propone un software que aún no
+// está en el catálogo y Coordinación Académica lo aprueba (crea o vincula la fila en `Software`)
+// o lo rechaza con motivo. Aprobar no instala nada: eso sigue siendo un paso aparte de Jefatura.
+model SolicitudSoftware {
+  id                String          @id @default(uuid())
+  docenteId         String          @map("docente_id")
+  seccionId         String?         @map("seccion_id")
+  nombre            String          // Nombre propuesto (ej. "MATLAB")
+  version           String          @default("") // "" = sin versión declarada
+  categoria         CategoriaSoftware?
+  justificacion     String
+  estado            EstadoSolicitud @default(PENDIENTE)
+  fechaSolicitud    DateTime        @default(now()) @map("fecha_solicitud")
+  resueltaPorId     String?         @map("resuelta_por_id")
+  fechaResolucion   DateTime?       @map("fecha_resolucion")
+  motivoRechazo     String?         @map("motivo_rechazo") // Obligatorio si estado = RECHAZADA
+  softwareId        String?         @map("software_id") // Fila creada o vinculada al aprobar
+
+  docente     Docente  @relation(fields: [docenteId], references: [id], onDelete: Cascade)
+  seccion     Seccion? @relation(fields: [seccionId], references: [id], onDelete: SetNull)
+  resueltaPor Cuenta?  @relation(fields: [resueltaPorId], references: [id], onDelete: SetNull)
+  software    Software? @relation(fields: [softwareId], references: [id], onDelete: SetNull)
+
+  @@index([estado])
+  @@index([docenteId])
+  @@map("solicitudes_software")
 }
