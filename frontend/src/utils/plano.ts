@@ -11,7 +11,10 @@ const PREFIJOS_PABELLON: { patron: RegExp; prefijo: string }[] = [
 ];
 
 function sinTildes(texto: string): string {
-  return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 }
 
 export function idDePlano(pabellon: string, identificador: string): string {
@@ -37,11 +40,13 @@ export function resolverIdPlano(pabellon: string, identificador: string, piso: n
   const porRegla = idDePlano(pabellon, identificador);
   if (ids.has(porRegla)) return porRegla;
 
-  const prefijo = /^[A-Z]{3}(?=-)/.exec(porRegla)?.[0];
-  const numero = /(\d+)$/.exec(identificador.trim())?.[1];
+  const prefijo = /^[A-Z]{3}-/.test(porRegla) ? porRegla.slice(0, 3) : undefined;
+  const matchNumero = /\d+$/.exec(identificador.trim());
+  const numero = matchNumero ? matchNumero[0] : undefined;
+
   if (!prefijo || !numero) return porRegla;
 
-  const esLab = /\bl(ab|aboratorio)?\b|^l-/i.test(sinTildes(identificador));
+  const esLab = /\b(lab|laboratorio)\b|^l-/i.test(sinTildes(identificador));
   const candidatos = esLab
     ? [
         `${prefijo}-lab-${numero.padStart(2, '0')}`,
