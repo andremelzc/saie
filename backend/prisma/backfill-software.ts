@@ -19,7 +19,10 @@
 import fs from 'fs';
 import path from 'path';
 import { PrismaClient } from '@prisma/client';
-import { ejecutarBackfillSoftware } from '../src/services/softwareBackfill.service';
+import {
+  columnasLegadoDisponibles,
+  ejecutarBackfillSoftware,
+} from '../src/services/softwareBackfill.service';
 
 const prisma = new PrismaClient();
 
@@ -27,6 +30,16 @@ async function main(): Promise<void> {
   console.log('=========================================');
   console.log('  SAIE — Backfill del catálogo de software');
   console.log('=========================================');
+
+  if (!(await columnasLegadoDisponibles(prisma))) {
+    console.log('');
+    console.log(
+      '  Las columnas antiguas ya no existen (migración 20261021000000_catalogo_software_limpieza):',
+    );
+    console.log('  el software vive solo en el catálogo. No hay nada que migrar.');
+    console.log('=========================================');
+    return;
+  }
 
   const reporte = await ejecutarBackfillSoftware(prisma);
 

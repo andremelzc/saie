@@ -17,13 +17,13 @@ Este documento especifica el esquema de datos base del sistema SAIE. Define toda
 1. **Modelo de Espacio Único (no dos jerarquías paralelas):**  
    No se dividen aulas y laboratorios en tablas distintas. Se define una entidad genérica `Espacio` con un campo `tipo` (`AULA_TEORICA` | `LABORATORIO`) que determina qué atributos y reglas aplican. Esto coincide directamente con el principio de motor de reglas único.
 2. **Campos exclusivos de Laboratorio:**  
-   `software_instalado` y `pcs_malogradas` solo aplican a `LABORATORIO`; para `AULA_TEORICA` son nulos.
+   El software instalado (relación `EspacioSoftware`) y `pcs_malogradas` solo aplican a `LABORATORIO`; para `AULA_TEORICA` no existen.
 3. **Aforo Nominal Individual:**  
    Propio de cada espacio, configurable individualmente y aplicable a ambos tipos de espacios.
 4. **Contigüidad Homogénea:**  
    La relación de contigüidad física solo se permite entre espacios del mismo tipo (`Espacio.tipo`). Un bloque asignado nunca combina aulas con laboratorios.
 5. **Versionado de Estados Físicos:**  
-   Los cambios en `software_instalado` y `pcs_malogradas` no destruyen el valor anterior; quedan registrados históricamente en `HistorialEspacio`.
+   Los cambios en el software instalado (`EspacioSoftware`) y `pcs_malogradas` no destruyen el valor anterior; quedan registrados históricamente en `HistorialEspacio`.
 6. **Aislamiento de Datos Sensibles (RNF-09):**  
    Los datos médicos y de condición especial de los alumnos se aíslan en la entidad `FichaMédica` (relación 1:1 con `Alumno`), garantizando acceso restringido exclusivo y protegiendo la consulta pública.
 7. **Unicidad e Idempotencia:**  
@@ -72,7 +72,7 @@ Entidad central que modela aulas teóricas y laboratorios de la facultad. Corres
 | `pabellón` | VARCHAR(50) | No | Ubicación del espacio dentro del campus (ej. "Antiguo", "Nuevo"). |
 | `piso` | INT | No | Número de piso. Usado en la regla de accesibilidad (prioridad Piso 1). |
 | `aforo_nominal` | INT | No | Capacidad máxima configurada para el espacio. |
-| `software_instalado` | TEXT[] / JSONB | Sí | **Deprecado** (Spec 08): use `EspacioSoftware`. Lista de software disponible. Solo aplica si `tipo = LABORATORIO`. Versionable. |
+| ~~`software_instalado`~~ | — | — | **Eliminado** (Spec 08): sustituido por `EspacioSoftware`. Ya no existe en la base. |
 | `pcs_malogradas` | INT | Sí | PCs no operativas. Solo aplica si `tipo = LABORATORIO`. Versionable (`pcs_malogradas <= aforo_nominal`). |
 
 ---
@@ -111,7 +111,7 @@ Instancia de dictado de un curso en un periodo lectivo determinado.
 | `código_sección` | VARCHAR(10) | No | Identificador dentro del curso (ej. "1", "2"). |
 | `periodo` | VARCHAR(10) | No | Periodo académico (ej. "2026-1"). |
 | `tipo_espacio_requerido` | ENUM (`AULA_TEORICA`, `LABORATORIO`) | No | Pool de espacios requerido para el dictado. |
-| `stack_software_requerido`| TEXT[] / JSONB | Sí | **Deprecado** (Spec 08): use `SeccionSoftware`. Software requerido si `tipo_espacio_requerido = LABORATORIO`. Nulo o ignorado para aulas teóricas. |
+| ~~`stack_software_requerido`~~ | — | — | **Eliminado** (Spec 08): sustituido por `SeccionSoftware`. Ya no existe en la base. |
 
 > **Restricción de unicidad:** Clave compuesta única `(curso_id, código_sección, periodo)`.  
 > **Secciones paralelas:** Se determinan al vuelo agrupando por `(curso_id, periodo)`.
@@ -336,7 +336,7 @@ Vinculación voluntaria de un alumno con el bot de Telegram para recibir avisos 
 ---
 
 ### 4.20. `Software`, `EspacioSoftware` y `SeccionSoftware`
-Catálogo único de software (Spec 08) que sustituye el texto libre de `Espacio.software_instalado` y `Seccion.stack_software_requerido`. La migración es **aditiva**: las columnas antiguas se mantienen deprecadas hasta que todo el código use el catálogo.
+Catálogo único de software (Spec 08) que sustituye el texto libre de `Espacio.software_instalado` y `Seccion.stack_software_requerido`. Se introdujo con una migración **aditiva** (`20261020000000_catalogo_software`) y una segunda migración de **limpieza** (`20261021000000_catalogo_software_limpieza`) copia cualquier texto restante y elimina ambas columnas: el software solo vive en estas tres tablas.
 
 | Campo (`Software`) | Tipo | Nulable | Descripción / Regla de Negocio |
 | :--- | :--- | :---: | :--- |

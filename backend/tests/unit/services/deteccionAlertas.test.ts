@@ -1,4 +1,5 @@
 import { TipoEspacio } from '@prisma/client';
+import { listaSoftwareInstalado, listaSoftwareRequerido } from '../../helpers/software';
 import {
   AsignacionVigenteConEspacios,
   detectarCapacidadInsuficiente,
@@ -16,7 +17,7 @@ function lab(id: string, aforo: number, software: string[], pcs: number | null =
     piso: 1,
     aforoNominal: aforo,
     pcsMalogradas: pcs,
-    softwareInstalado: software,
+    softwareInstalado: listaSoftwareInstalado(software),
   };
 }
 
@@ -29,7 +30,7 @@ function aula(id: string, aforo: number) {
     piso: 2,
     aforoNominal: aforo,
     pcsMalogradas: null,
-    softwareInstalado: [] as string[],
+    softwareInstalado: [],
   };
 }
 
@@ -44,7 +45,7 @@ function asignacion(
     codigoSeccion: '1',
     codigoCurso: `CUR-${id}`,
     nombreCurso: `Curso ${id}`,
-    stackSoftwareRequerido: [],
+    softwareRequerido: listaSoftwareRequerido([]),
     alumnosMatriculados: 20,
     espacios,
     ...extra,
@@ -55,11 +56,15 @@ describe('Detección de incompatibilidad de software (Issue 4.3)', () => {
   it('devuelve las asignaciones que ya no cumplen el stack con el nuevo software', () => {
     const asignaciones = [
       asignacion('a1', [lab('L1', 30, ['Python', 'Git'])], {
-        stackSoftwareRequerido: ['Python', 'Docker'],
+        softwareRequerido: listaSoftwareRequerido(['Python', 'Docker']),
       }),
     ];
 
-    const afectadas = detectarIncompatibilidadesSoftware('L1', ['Python', 'Git'], asignaciones);
+    const afectadas = detectarIncompatibilidadesSoftware(
+      'L1',
+      listaSoftwareInstalado(['Python', 'Git']),
+      asignaciones,
+    );
 
     expect(afectadas).toHaveLength(1);
     expect(afectadas[0]).toMatchObject({ asignacionId: 'a1', codigoCurso: 'CUR-a1' });
@@ -68,60 +73,82 @@ describe('Detección de incompatibilidad de software (Issue 4.3)', () => {
 
   it('no devuelve nada si el nuevo software sigue cubriendo el stack', () => {
     const asignaciones = [
-      asignacion('a1', [lab('L1', 30, [])], { stackSoftwareRequerido: ['python'] }),
+      asignacion('a1', [lab('L1', 30, [])], {
+        softwareRequerido: listaSoftwareRequerido(['python']),
+      }),
     ];
-    expect(detectarIncompatibilidadesSoftware('L1', ['Python'], asignaciones)).toEqual([]);
+    expect(
+      detectarIncompatibilidadesSoftware('L1', listaSoftwareInstalado(['Python']), asignaciones),
+    ).toEqual([]);
   });
 
   it('usa el software nuevo y no el guardado: la detección no depende de haber persistido', () => {
     const asignaciones = [
-      asignacion('a1', [lab('L1', 30, ['Docker'])], { stackSoftwareRequerido: ['Docker'] }),
+      asignacion('a1', [lab('L1', 30, ['Docker'])], {
+        softwareRequerido: listaSoftwareRequerido(['Docker']),
+      }),
     ];
-    expect(detectarIncompatibilidadesSoftware('L1', ['Docker'], asignaciones)).toEqual([]);
-    expect(detectarIncompatibilidadesSoftware('L1', [], asignaciones)).toHaveLength(1);
+    expect(
+      detectarIncompatibilidadesSoftware('L1', listaSoftwareInstalado(['Docker']), asignaciones),
+    ).toEqual([]);
+    expect(
+      detectarIncompatibilidadesSoftware('L1', listaSoftwareInstalado([]), asignaciones),
+    ).toHaveLength(1);
   });
 
   it('laboratorio sin asignaciones vigentes: lista vacía', () => {
-    expect(detectarIncompatibilidadesSoftware('L1', [], [])).toEqual([]);
+    expect(detectarIncompatibilidadesSoftware('L1', listaSoftwareInstalado([]), [])).toEqual([]);
   });
 
   it('ignora asignaciones que no usan el laboratorio modificado', () => {
     const asignaciones = [
-      asignacion('a1', [lab('L2', 30, [])], { stackSoftwareRequerido: ['Docker'] }),
+      asignacion('a1', [lab('L2', 30, [])], {
+        softwareRequerido: listaSoftwareRequerido(['Docker']),
+      }),
     ];
-    expect(detectarIncompatibilidadesSoftware('L1', [], asignaciones)).toEqual([]);
+    expect(
+      detectarIncompatibilidadesSoftware('L1', listaSoftwareInstalado([]), asignaciones),
+    ).toEqual([]);
   });
 
   it('bloque de varios laboratorios: solo alerta si falla el laboratorio que cambió', () => {
     const bloque = asignacion('a1', [lab('L1', 20, ['Docker']), lab('L2', 20, ['Docker'])], {
-      stackSoftwareRequerido: ['Docker'],
+      softwareRequerido: listaSoftwareRequerido(['Docker']),
     });
 
     // Cambia L1 y pierde Docker: afecta; L2 sigue bien.
-    const cambiaL1 = detectarIncompatibilidadesSoftware('L1', [], [bloque]);
+    const cambiaL1 = detectarIncompatibilidadesSoftware('L1', listaSoftwareInstalado([]), [bloque]);
     expect(cambiaL1).toHaveLength(1);
     expect(cambiaL1[0].detalle).toContain('Lab L1');
     expect(cambiaL1[0].detalle).not.toContain('Lab L2');
 
     // Cambia L1 pero conserva Docker: no afecta aunque el bloque tenga otro lab.
-    expect(detectarIncompatibilidadesSoftware('L1', ['Docker'], [bloque])).toEqual([]);
+    expect(
+      detectarIncompatibilidadesSoftware('L1', listaSoftwareInstalado(['Docker']), [bloque]),
+    ).toEqual([]);
   });
 
   it('un bloque con otro laboratorio ya incompleto no se culpa al laboratorio que cambió', () => {
     const bloque = asignacion('a1', [lab('L1', 20, ['Docker']), lab('L2', 20, [])], {
-      stackSoftwareRequerido: ['Docker'],
+      softwareRequerido: listaSoftwareRequerido(['Docker']),
     });
-    expect(detectarIncompatibilidadesSoftware('L1', ['Docker', 'Git'], [bloque])).toEqual([]);
+    expect(
+      detectarIncompatibilidadesSoftware('L1', listaSoftwareInstalado(['Docker', 'Git']), [bloque]),
+    ).toEqual([]);
   });
 
   it('stack vacío siempre cumple', () => {
     const asignaciones = [asignacion('a1', [lab('L1', 30, ['X'])])];
-    expect(detectarIncompatibilidadesSoftware('L1', [], asignaciones)).toEqual([]);
+    expect(
+      detectarIncompatibilidadesSoftware('L1', listaSoftwareInstalado([]), asignaciones),
+    ).toEqual([]);
   });
 
   it('la versión evaluar* consulta solo asignaciones VIGENTES del laboratorio', async () => {
     const findMany = jest.fn().mockResolvedValue([]);
-    await evaluarIncompatibilidadSoftware('L1', [], { asignacion: { findMany } } as any);
+    await evaluarIncompatibilidadSoftware('L1', listaSoftwareInstalado([]), {
+      asignacion: { findMany },
+    } as any);
 
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -206,7 +233,7 @@ describe('Detección de capacidad insuficiente (Issue 4.4)', () => {
         seccion: {
           codigoSeccion: '1',
           curso: { codigo: 'C1', nombre: 'Curso 1' },
-          stackSoftwareRequerido: [],
+          softwareRequerido: listaSoftwareRequerido([]),
           _count: { matriculas: 28 },
         },
         espacios: [{ espacio: lab('L1', 30, [], 0) }],

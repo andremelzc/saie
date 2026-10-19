@@ -28,6 +28,7 @@ export async function listarSeccionesEscaladas(
           docente: true,
           horarios: true,
           _count: { select: { matriculas: true } },
+          softwareRequerido: { include: { software: true } },
         },
       },
     },
@@ -46,7 +47,12 @@ export async function listarSeccionesEscaladas(
       periodo: a.seccion.periodo,
       docenteNombre: a.seccion.docente?.nombre ?? null,
       tipoEspacioRequerido: a.seccion.tipoEspacioRequerido,
-      stackSoftwareRequerido: a.seccion.stackSoftwareRequerido,
+      softwareRequerido: a.seccion.softwareRequerido.map((fila) => ({
+        id: fila.softwareId,
+        nombre: fila.software.nombre,
+        version: fila.software.version,
+        comparacionVersion: fila.comparacionVersion,
+      })),
       alumnosMatriculados: a.seccion._count.matriculas,
       horarios: a.seccion.horarios.map((h) => ({
         diaSemana: h.diaSemana,

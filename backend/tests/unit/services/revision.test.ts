@@ -13,7 +13,13 @@ function asignacionEscalada(id: string, periodo: string, fecha: string) {
       codigoSeccion: '1',
       periodo,
       tipoEspacioRequerido: 'LABORATORIO',
-      stackSoftwareRequerido: ['Docker'],
+      softwareRequerido: [
+        {
+          softwareId: 'sw-docker',
+          comparacionVersion: 'CUALQUIERA',
+          software: { nombre: 'Docker', nombreNormalizado: 'docker', version: '' },
+        },
+      ],
       curso: { codigo: 'ISW101', nombre: 'Programación' },
       docente: { nombre: 'Dra. García' },
       horarios: [{ diaSemana: 'LUNES', horaInicio: '08:00', horaFin: '10:00' }],
@@ -93,7 +99,9 @@ describe('Secciones escaladas (Issue 4.22)', () => {
     expect(sec.nombreCurso).toBe('Programación');
     expect(sec.docenteNombre).toBe('Dra. García');
     expect(sec.tipoEspacioRequerido).toBe('LABORATORIO');
-    expect(sec.stackSoftwareRequerido).toEqual(['Docker']);
+    expect(sec.softwareRequerido).toEqual([
+      { id: 'sw-docker', nombre: 'Docker', version: '', comparacionVersion: 'CUALQUIERA' },
+    ]);
     expect(sec.alumnosMatriculados).toBe(30);
     expect(sec.horarios).toHaveLength(1);
   });

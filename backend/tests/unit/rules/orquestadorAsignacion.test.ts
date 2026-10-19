@@ -1,4 +1,5 @@
 import { DiaSemana, EstadoAsignacion, TipoEspacio } from '@prisma/client';
+import { listaSoftwareInstalado, listaSoftwareRequerido } from '../../helpers/software';
 import { EspacioConexo } from '../../../src/rules/buscarBloqueContiguo';
 import {
   orquestarAsignacionSeccion,
@@ -45,7 +46,7 @@ describe('Orquestador de Asignación Individual (Issue 2.10 & 2.14)', () => {
       tipo: TipoEspacio.LABORATORIO,
       aforoNominal: 25,
       pcsMalogradas: 0,
-      softwareInstalado: ['Python 3.12', 'Docker'],
+      softwareInstalado: listaSoftwareInstalado(['Python 3.12', 'Docker']),
     },
     {
       id: 'lab-102',
@@ -55,7 +56,7 @@ describe('Orquestador de Asignación Individual (Issue 2.10 & 2.14)', () => {
       tipo: TipoEspacio.LABORATORIO,
       aforoNominal: 25,
       pcsMalogradas: 0,
-      softwareInstalado: ['Python 3.12', 'Docker', 'PostgreSQL'],
+      softwareInstalado: listaSoftwareInstalado(['Python 3.12', 'Docker', 'PostgreSQL']),
     },
     {
       id: 'lab-201',
@@ -65,7 +66,7 @@ describe('Orquestador de Asignación Individual (Issue 2.10 & 2.14)', () => {
       tipo: TipoEspacio.LABORATORIO,
       aforoNominal: 35,
       pcsMalogradas: 2, // Capacidad real: 33
-      softwareInstalado: ['NodeJS', 'VSCode'],
+      softwareInstalado: listaSoftwareInstalado(['NodeJS', 'VSCode']),
     },
   ];
 
@@ -133,7 +134,7 @@ describe('Orquestador de Asignación Individual (Issue 2.10 & 2.14)', () => {
         codigoSeccion: 'SEC-LAB-1',
         periodo: '2026-1',
         tipoEspacioRequerido: TipoEspacio.LABORATORIO,
-        stackSoftwareRequerido: ['Docker', 'PostgreSQL'],
+        softwareRequerido: listaSoftwareRequerido(['Docker', 'PostgreSQL']),
         alumnosMatriculados: 20,
         horarios: [{ diaSemana: DiaSemana.MIERCOLES, horaInicio: '14:00', horaFin: '16:00' }],
       };

@@ -20,6 +20,7 @@ import {
 } from '../lib/horario';
 import { calcularCapacidadReal } from '../rules/calcularCapacidadReal';
 import { validarSoftwareLaboratorio } from '../rules/validarSoftware';
+import { mapearSoftwareInstalado, mapearSoftwareRequerido } from './software.service';
 import {
   AsignacionOcupacionInput,
   calcularEspaciosDisponibles,
@@ -307,8 +308,16 @@ export async function obtenerEstadoLaboratorioDocente(
       espacios: { some: { espacioId, espacio: { tipo: TipoEspacio.LABORATORIO } } },
     },
     include: {
-      espacios: { include: { espacio: true } },
-      seccion: { include: { curso: true } },
+      espacios: {
+        include: {
+          espacio: {
+            include: { softwareInstaladoCatalogo: { include: { software: true } } },
+          },
+        },
+      },
+      seccion: {
+        include: { curso: true, softwareRequerido: { include: { software: true } } },
+      },
     },
   });
 
@@ -325,9 +334,9 @@ export async function obtenerEstadoLaboratorioDocente(
 
   const cursos = asignaciones
     .map((a) => {
-      const requerido = a.seccion.stackSoftwareRequerido;
+      const requerido = mapearSoftwareRequerido(a.seccion.softwareRequerido);
       const { cumple, softwareFaltante } = validarSoftwareLaboratorio(
-        laboratorio.softwareInstalado,
+        mapearSoftwareInstalado(laboratorio.softwareInstaladoCatalogo),
         requerido,
       );
       return {
@@ -335,7 +344,12 @@ export async function obtenerEstadoLaboratorioDocente(
         codigoCurso: a.seccion.curso.codigo,
         nombreCurso: a.seccion.curso.nombre,
         codigoSeccion: a.seccion.codigoSeccion,
-        softwareRequerido: requerido,
+        softwareRequerido: a.seccion.softwareRequerido.map((fila) => ({
+          id: fila.softwareId,
+          nombre: fila.software.nombre,
+          version: fila.software.version,
+          comparacionVersion: fila.comparacionVersion,
+        })),
         softwareFaltante,
         cumple,
       };
@@ -357,7 +371,11 @@ export async function obtenerEstadoLaboratorioDocente(
       aforoNominal: laboratorio.aforoNominal,
       pcsMalogradas,
       pcsOperativas: calcularCapacidadReal(laboratorio),
-      softwareInstalado: laboratorio.softwareInstalado,
+      softwareInstalado: laboratorio.softwareInstaladoCatalogo.map((fila) => ({
+        id: fila.softwareId,
+        nombre: fila.software.nombre,
+        version: fila.software.version,
+      })),
     },
     cursos,
     historial: historial.map((h) => ({

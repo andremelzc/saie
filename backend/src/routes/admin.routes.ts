@@ -18,6 +18,13 @@ import {
   restablecerClaveUsuario,
 } from '../controllers/admin.controller';
 import { authGuard, roleGuard } from '../middlewares/auth.middleware';
+import {
+  altaSoftware,
+  cambiarEstadoCatalogo,
+  editarSoftwareCatalogo,
+  listarCatalogoSoftware,
+  obtenerSoftware,
+} from '../controllers/software.controller';
 
 const router = Router();
 
@@ -48,6 +55,14 @@ router.get('/incidencias', listarIncidenciasReportadas);
 router.patch('/incidencias/:id/resolver', resolverIncidencia);
 
 const soloCoordinacion = roleGuard(RolCuenta.COORDINACION_ACADEMICA);
+
+// Catálogo de software (Issue 4.28). Lectura para Coordinación y Jefatura; alta, edición y
+// baja lógica solo para Coordinación.
+router.get('/software', listarCatalogoSoftware);
+router.get('/software/:id', obtenerSoftware);
+router.post('/software', soloCoordinacion, altaSoftware);
+router.patch('/software/:id', soloCoordinacion, editarSoftwareCatalogo);
+router.patch('/software/:id/estado', soloCoordinacion, cambiarEstadoCatalogo);
 
 // Gestión de espacios con campos acotados por rol (Issue 4.15): el alta es solo de
 // Coordinación; la edición la restringe el servicio según el rol y el tipo de espacio.

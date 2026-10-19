@@ -373,14 +373,32 @@ describe('obtenerEstadoLaboratorioDocente (Issue 7.4)', () => {
       piso: 1,
       aforoNominal: 20,
       pcsMalogradas: 2,
-      softwareInstalado: ['Docker', 'Node.js'],
+      softwareInstaladoCatalogo: [
+        {
+          softwareId: 'sw-docker',
+          software: { nombre: 'Docker', nombreNormalizado: 'docker', version: '' },
+        },
+        {
+          softwareId: 'sw-node',
+          software: { nombre: 'Node.js', nombreNormalizado: 'node.js', version: '' },
+        },
+      ],
     };
     const asignacion = {
       id: 'asig-1',
       espacios: [{ espacioId: 'lab-1', espacio: lab }],
       seccion: {
         codigoSeccion: '01',
-        stackSoftwareRequerido: ['Docker', 'Python'],
+        softwareRequerido: [
+          {
+            comparacionVersion: 'CUALQUIERA',
+            software: { nombre: 'Docker', nombreNormalizado: 'docker', version: '' },
+          },
+          {
+            comparacionVersion: 'CUALQUIERA',
+            software: { nombre: 'Python', nombreNormalizado: 'python', version: '' },
+          },
+        ],
         curso: { codigo: 'CC101', nombre: 'Programación' },
       },
     };

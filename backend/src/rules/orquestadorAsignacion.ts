@@ -35,9 +35,9 @@ export function calcularHuellaEntradaSeccion(seccion: SeccionInputMotor): string
     .sort()
     .join('|');
 
-  const softwareNormalizado = (seccion.stackSoftwareRequerido || [])
-    .map((s) => s.trim().toLowerCase())
-    .sort()
+  const softwareNormalizado = (seccion.softwareRequerido || [])
+    .map((s) => `${s.nombreNormalizado}@${s.comparacionVersion}:${s.version}`)
+    .sort((a, b) => a.localeCompare(b))
     .join('|');
 
   const payload = [
@@ -147,7 +147,7 @@ export function orquestarAsignacionSeccion(input: OrquestarAsignacionInput): Res
       seccion,
       todosLosEspacios,
       espaciosDisponiblesEnFranja: espaciosDisponiblesEnTodasFranjas,
-      softwareRequerido: seccion.stackSoftwareRequerido,
+      softwareRequerido: seccion.softwareRequerido,
     });
 
     return {
@@ -167,11 +167,11 @@ export function orquestarAsignacionSeccion(input: OrquestarAsignacionInput): Res
 
   if (
     seccion.tipoEspacioRequerido === TipoEspacio.LABORATORIO &&
-    seccion.stackSoftwareRequerido &&
-    seccion.stackSoftwareRequerido.length > 0
+    seccion.softwareRequerido &&
+    seccion.softwareRequerido.length > 0
   ) {
     bloquesCandidatos = bloquesCandidatos.filter((bloque) => {
-      const resSoft = validarSoftwareBloque(bloque, seccion.stackSoftwareRequerido);
+      const resSoft = validarSoftwareBloque(bloque, seccion.softwareRequerido);
       return resSoft.cumple;
     });
 
@@ -180,7 +180,7 @@ export function orquestarAsignacionSeccion(input: OrquestarAsignacionInput): Res
         seccion,
         todosLosEspacios,
         espaciosDisponiblesEnFranja: espaciosDisponiblesEnTodasFranjas,
-        softwareRequerido: seccion.stackSoftwareRequerido,
+        softwareRequerido: seccion.softwareRequerido,
       });
 
       return {

@@ -117,6 +117,20 @@ describe('Issue 2.2 - Definir esquema y sembrar datos de contigüidad entre espa
           }),
         ),
       },
+      // Issue 4.28: el software del espacio se siembra en el catálogo y se relaciona.
+      software: {
+        upsert: jest.fn().mockImplementation((args) =>
+          Promise.resolve({
+            id: `sw-${args.where.nombreNormalizado_version.nombreNormalizado}-${
+              args.where.nombreNormalizado_version.version
+            }`,
+          }),
+        ),
+      },
+      espacioSoftware: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
       espacioContiguo: {
         upsert: jest.fn().mockResolvedValue({}),
       },
@@ -128,5 +142,9 @@ describe('Issue 2.2 - Definir esquema y sembrar datos de contigüidad entre espa
     expect(resultado.contiguedadesSembradas).toBe(CONTIGUEDADES_SEED.length * 2);
     expect(mockPrisma.espacio.upsert).toHaveBeenCalledTimes(ESPACIOS_EDIFICIO_SEED.length);
     expect(mockPrisma.espacioContiguo.upsert).toHaveBeenCalledTimes(CONTIGUEDADES_SEED.length * 2);
+    // El catálogo se puebla con los textos del Excel y cada laboratorio queda relacionado.
+    expect(mockPrisma.software.upsert).toHaveBeenCalled();
+    expect(mockPrisma.espacioSoftware.deleteMany).toHaveBeenCalled();
+    expect(mockPrisma.espacioSoftware.createMany).toHaveBeenCalled();
   });
 });

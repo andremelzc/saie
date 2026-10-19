@@ -103,6 +103,8 @@ export interface ExploradorEspaciosDTO {
   espacios: EspacioExploradorDTO[];
 }
 
+import { SoftwareRequeridoDTO, SoftwareResumenDTO } from './software';
+
 // ---------------- Docente: estado de equipos (Issue 7.4) ----------------
 
 export interface CambioHistorialLaboratorioDTO {
@@ -117,7 +119,7 @@ export interface SoftwareRequeridoCursoDTO {
   codigoCurso: string;
   nombreCurso: string;
   codigoSeccion: string;
-  softwareRequerido: string[];
+  softwareRequerido: SoftwareRequeridoDTO[];
   softwareFaltante: string[];
   cumple: boolean;
 }
@@ -131,7 +133,7 @@ export interface EstadoLaboratorioDocenteDTO {
     aforoNominal: number;
     pcsMalogradas: number;
     pcsOperativas: number;
-    softwareInstalado: string[];
+    softwareInstalado: SoftwareResumenDTO[];
   };
   /** Stack que exige cada curso del docente en este laboratorio frente a lo instalado. */
   cursos: SoftwareRequeridoCursoDTO[];

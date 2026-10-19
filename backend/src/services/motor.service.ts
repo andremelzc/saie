@@ -7,6 +7,7 @@ import {
   emitirCambiosDeAsignacion,
 } from '../events/emisores';
 import { construirGrafoContiguedad, obtenerEspaciosContiguos } from './contiguedad.service';
+import { mapearSoftwareInstalado, mapearSoftwareRequerido } from './software.service';
 import { orquestarAsignacionSeccion } from '../rules/orquestadorAsignacion';
 import { ejecutarCorridaBatch } from '../rules/corridaBatch';
 import { consultarUbicacionesSeccionesParalelas } from '../rules/cercaniaParalelas';
@@ -26,7 +27,10 @@ export async function cargarContextoEspacios(prisma: PrismaClient): Promise<{
   obtenerVecinos: (espacioId: string) => string[];
 }> {
   const [espaciosDb, contiguosDb] = await Promise.all([
-    prisma.espacio.findMany({ where: { habilitado: true } }),
+    prisma.espacio.findMany({
+      where: { habilitado: true },
+      include: { softwareInstaladoCatalogo: { include: { software: true } } },
+    }),
     prisma.espacioContiguo.findMany(),
   ]);
 
@@ -38,7 +42,7 @@ export async function cargarContextoEspacios(prisma: PrismaClient): Promise<{
     piso: e.piso,
     aforoNominal: e.aforoNominal,
     pcsMalogradas: e.pcsMalogradas,
-    softwareInstalado: e.softwareInstalado,
+    softwareInstalado: mapearSoftwareInstalado(e.softwareInstaladoCatalogo),
     distanciaAscensor: e.distanciaAscensor,
   }));
 
@@ -71,6 +75,7 @@ export async function cargarSeccionInputPorId(
       curso: true,
       horarios: true,
       matriculas: true,
+      softwareRequerido: { include: { software: true } },
     },
   });
 
@@ -88,7 +93,7 @@ export async function cargarSeccionInputPorId(
     codigoSeccion: seccion.codigoSeccion,
     periodo: seccion.periodo,
     tipoEspacioRequerido: seccion.tipoEspacioRequerido,
-    stackSoftwareRequerido: seccion.stackSoftwareRequerido,
+    softwareRequerido: mapearSoftwareRequerido(seccion.softwareRequerido),
     alumnosMatriculados: seccion.matriculas.length,
     movilidadReducida: tieneMovilidad,
     horarios: seccion.horarios.map((h) => ({
@@ -251,6 +256,7 @@ export async function procesarCorridaBatchPeriodo(
       curso: true,
       horarios: true,
       matriculas: true,
+      softwareRequerido: { include: { software: true } },
     },
   });
 
@@ -262,7 +268,7 @@ export async function procesarCorridaBatchPeriodo(
     codigoSeccion: s.codigoSeccion,
     periodo: s.periodo,
     tipoEspacioRequerido: s.tipoEspacioRequerido,
-    stackSoftwareRequerido: s.stackSoftwareRequerido,
+    softwareRequerido: mapearSoftwareRequerido(s.softwareRequerido),
     alumnosMatriculados: s.matriculas.length,
     movilidadReducida: s.matriculas.some((m) => m.movilidadReducida === true),
     horarios: s.horarios.map((h) => ({

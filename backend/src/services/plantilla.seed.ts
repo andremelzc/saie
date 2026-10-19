@@ -14,6 +14,7 @@ import {
   ParContiguoSeed,
   sembrarEspaciosYContiguedades,
 } from './contiguedad.seed';
+import { sembrarCatalogoSoftware } from './software.service';
 
 /** Prefijo de los alumnos anónimos que solo aportan la demanda (cantidad) de cada sección. */
 export const PREFIJO_ALUMNO_ANONIMO = 'X-';
@@ -578,6 +579,12 @@ export async function cargarPlantilla(
   erroresImportadores.push(...resDocentes.errores);
 
   log('[3/6] Cursos, secciones y horarios...');
+  // Issue 4.28: el importador resuelve los nombres de software contra el catálogo, así que las
+  // filas del catálogo deben existir antes (las de los espacios las crea el paso 1).
+  await sembrarCatalogoSoftware(
+    prisma,
+    datos.secciones.flatMap((s) => s.stackSoftwareRequerido),
+  );
   const resCursos = await importarCursosYSecciones(
     datos.secciones.map(({ codigoDocente: _d, matriculados: _m, ...s }) => s),
     prisma,

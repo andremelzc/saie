@@ -1,4 +1,5 @@
 import { DiaSemana, EstadoAsignacion, TipoEspacio } from '@prisma/client';
+import { listaSoftwareInstalado, listaSoftwareRequerido } from '../../helpers/software';
 import { EspacioConexo } from '../../../src/rules/buscarBloqueContiguo';
 import { ejecutarCorridaBatch } from '../../../src/rules/corridaBatch';
 import { SeccionInputMotor } from '../../../src/types/asignacion';
@@ -40,7 +41,7 @@ describe('Corrida Batch de Asignación (Issue 2.11)', () => {
       tipo: TipoEspacio.LABORATORIO,
       aforoNominal: 25,
       pcsMalogradas: 0,
-      softwareInstalado: ['Python 3.12'],
+      softwareInstalado: listaSoftwareInstalado(['Python 3.12']),
     },
   ];
 
@@ -221,7 +222,7 @@ describe('Corrida Batch de Asignación (Issue 2.11)', () => {
         codigoSeccion: 'SEC-LAB',
         periodo: '2026-1',
         tipoEspacioRequerido: TipoEspacio.LABORATORIO,
-        stackSoftwareRequerido: ['Python 3.12'],
+        softwareRequerido: listaSoftwareRequerido(['Python 3.12']),
         alumnosMatriculados: 20,
         horarios: [{ diaSemana: DiaSemana.LUNES, horaInicio: '08:00', horaFin: '10:00' }],
       },
@@ -248,7 +249,7 @@ describe('Corrida Batch de Asignación (Issue 2.11)', () => {
       codigoSeccion: 'SEC-IMP',
       periodo: '2026-1',
       tipoEspacioRequerido: TipoEspacio.LABORATORIO,
-      stackSoftwareRequerido: ['SoftwareInexistenteXYZ'],
+      softwareRequerido: listaSoftwareRequerido(['SoftwareInexistenteXYZ']),
       alumnosMatriculados: 20,
       horarios: [{ diaSemana: DiaSemana.VIERNES, horaInicio: '08:00', horaFin: '10:00' }],
     };

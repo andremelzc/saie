@@ -1,5 +1,8 @@
 import { PrismaClient } from '@prisma/client';
-import { ejecutarBackfillSoftware } from '../../../src/services/softwareBackfill.service';
+import {
+  columnasLegadoDisponibles,
+  ejecutarBackfillSoftware,
+} from '../../../src/services/softwareBackfill.service';
 
 interface EspacioFalso {
   id: string;
@@ -29,6 +32,7 @@ function crearPrismaFalso(opciones: {
   espacios?: EspacioFalso[];
   secciones?: SeccionFalsa[];
   software?: FilaSoftware[];
+  legado?: boolean;
 }) {
   const softwareFilas: FilaSoftware[] = [...(opciones.software ?? [])];
   const instalaciones = new Set<string>();
@@ -36,12 +40,14 @@ function crearPrismaFalso(opciones: {
   let siguienteId = softwareFilas.length + 1;
 
   const prisma = {
-    espacio: {
-      findMany: jest.fn().mockResolvedValue(opciones.espacios ?? []),
-    },
-    seccion: {
-      findMany: jest.fn().mockResolvedValue(opciones.secciones ?? []),
-    },
+    // El servicio lee las columnas antiguas con `$queryRaw`: ya no forman parte del esquema.
+    $queryRaw: jest.fn(async (strings: TemplateStringsArray) => {
+      const sql = strings.join('?');
+      if (sql.includes('information_schema')) return [{ existe: opciones.legado !== false }];
+      if (sql.includes('"espacios"')) return opciones.espacios ?? [];
+      if (sql.includes('"secciones"')) return opciones.secciones ?? [];
+      return [];
+    }),
     software: {
       count: jest.fn(async () => softwareFilas.length),
       upsert: jest.fn(async ({ where, create }: any) => {
@@ -276,5 +282,13 @@ describe('ejecutarBackfillSoftware (#4.27)', () => {
     expect(reporte.omitidos).toHaveLength(2);
     expect(reporte.omitidos[0]).toContain('Aula 201');
     expect(reporte.omitidos[1]).toContain('s1');
+  });
+
+  it('detecta si las columnas antiguas ya fueron eliminadas por la migración de limpieza', async () => {
+    const conLegado = crearPrismaFalso({ legado: true });
+    const sinLegado = crearPrismaFalso({ legado: false });
+
+    expect(await columnasLegadoDisponibles(conLegado.prisma)).toBe(true);
+    expect(await columnasLegadoDisponibles(sinLegado.prisma)).toBe(false);
   });
 });

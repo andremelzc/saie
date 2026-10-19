@@ -1,6 +1,7 @@
 import { EstadoAsignacion, TipoEspacio } from '@prisma/client';
 import { BloqueCandidato } from '../rules/buscarBloqueContiguo';
 import { HorarioSlot } from '../services/disponibilidad.service';
+import { SoftwareRequeridoInput } from './software';
 
 export enum MotivoEscalamientoTipo {
   CAPACIDAD_INSUFICIENTE = 'CAPACIDAD_INSUFICIENTE',
@@ -25,7 +26,8 @@ export interface SeccionInputMotor {
   codigoSeccion: string;
   periodo: string;
   tipoEspacioRequerido: TipoEspacio;
-  stackSoftwareRequerido?: string[];
+  /** Software que exige la sección, ya resuelto contra el catálogo. */
+  softwareRequerido?: SoftwareRequeridoInput[];
   alumnosMatriculados: number;
   movilidadReducida?: boolean;
   horarios: HorarioSlot[];

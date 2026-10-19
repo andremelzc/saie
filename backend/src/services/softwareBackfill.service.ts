@@ -55,6 +55,38 @@ interface TextoEncontrado {
   parseado: SoftwareParseado;
 }
 
+/** Fila cruda de `espacios` con la columna antigua (la lee `$queryRaw` porque ya no está en el esquema). */
+interface EspacioLegado {
+  id: string;
+  tipo: string;
+  identificador: string;
+  softwareInstalado: string[];
+}
+
+/** Fila cruda de `secciones` con la columna antigua. */
+interface SeccionLegada {
+  id: string;
+  tipoEspacioRequerido: string;
+  stackSoftwareRequerido: string[];
+}
+
+/**
+ * `false` cuando la migración `20261021000000_catalogo_software_limpieza` ya eliminó las columnas
+ * antiguas: en ese caso no hay nada que migrar (lo comprueba el script CLI antes de ejecutar).
+ */
+export async function columnasLegadoDisponibles(prisma: PrismaClient): Promise<boolean> {
+  const filas = await prisma.$queryRaw<Array<{ existe: boolean }>>`
+    SELECT EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = current_schema()
+        AND table_name = 'espacios'
+        AND column_name = 'software_instalado'
+    ) AS "existe"
+  `;
+  return filas[0]?.existe ?? false;
+}
+
 function claveSoftware(nombreNormalizado: string, version: string): string {
   return `${nombreNormalizado}\u0000${version}`;
 }
@@ -68,16 +100,21 @@ export async function ejecutarBackfillSoftware(
   prisma: PrismaClient,
 ): Promise<ReporteBackfillSoftware> {
   const [espacios, secciones, softwareAntes] = await Promise.all([
-    prisma.espacio.findMany({
-      where: { softwareInstalado: { isEmpty: false } },
-      select: { id: true, tipo: true, identificador: true, softwareInstalado: true },
-      orderBy: { id: 'asc' },
-    }),
-    prisma.seccion.findMany({
-      where: { stackSoftwareRequerido: { isEmpty: false } },
-      select: { id: true, tipoEspacioRequerido: true, stackSoftwareRequerido: true },
-      orderBy: { id: 'asc' },
-    }),
+    prisma.$queryRaw<EspacioLegado[]>`
+      SELECT "id", "tipo"::text AS "tipo", "identificador",
+             "software_instalado" AS "softwareInstalado"
+      FROM "espacios"
+      WHERE cardinality("software_instalado") > 0
+      ORDER BY "id"
+    `,
+    prisma.$queryRaw<SeccionLegada[]>`
+      SELECT "id",
+             "tipo_espacio_requerido"::text AS "tipoEspacioRequerido",
+             "stack_software_requerido" AS "stackSoftwareRequerido"
+      FROM "secciones"
+      WHERE cardinality("stack_software_requerido") > 0
+      ORDER BY "id"
+    `,
     prisma.software.count(),
   ]);
 

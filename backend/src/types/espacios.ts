@@ -1,5 +1,6 @@
 import { TipoEspacio } from '@prisma/client';
 import { AlertaRegistradaDTO } from './alertas';
+import { SoftwareResumenDTO } from './software';
 
 export type CampoEspacio =
   | 'identificador'
@@ -9,7 +10,7 @@ export type CampoEspacio =
   | 'contiguos'
   | 'habilitado'
   | 'descripcionUso'
-  | 'softwareInstalado'
+  | 'softwareIds'
   | 'pcsMalogradas';
 
 export interface EspacioAdminDTO {
@@ -20,7 +21,7 @@ export interface EspacioAdminDTO {
   piso: number;
   aforoNominal: number;
   /** Solo laboratorios; `null` en aulas teóricas. */
-  softwareInstalado: string[] | null;
+  softwareInstalado: SoftwareResumenDTO[] | null;
   pcsMalogradas: number | null;
   /** `false` = fuera de servicio: el motor no lo asigna. */
   habilitado: boolean;

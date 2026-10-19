@@ -120,7 +120,6 @@ model Espacio {
   pabellon          String      // Ubicación dentro del campus
   piso              Int         // Usado para regla de accesibilidad (prioridad Piso 1)
   aforoNominal      Int         @map("aforo_nominal")
-  softwareInstalado String[]    @default([]) @map("software_instalado") // Solo LABORATORIO
   pcsMalogradas     Int?        @map("pcs_malogradas") // Solo LABORATORIO
   habilitado        Boolean     @default(true) // false = fuera de servicio: el motor no lo asigna
   descripcionUso    String?     @map("descripcion_uso") // Rótulo visual (ej. "Sala de investigación")
@@ -135,8 +134,7 @@ model Espacio {
   incidencias          Incidencia[]
   historialEspacio     HistorialEspacio[]
   responsables         EspacioResponsable[]
-  // Software del catálogo instalado en este espacio (solo LABORATORIO). Reemplaza a
-  // `softwareInstalado`, que se mantiene deprecado hasta la segunda migración del Issue 4.28.
+  // Software del catálogo instalado en este espacio (solo LABORATORIO).
   softwareInstaladoCatalogo EspacioSoftware[]
 
   @@unique([pabellon, identificador])
@@ -174,7 +172,6 @@ model Seccion {
   codigoSeccion           String      @map("codigo_seccion")
   periodo                 String      // ej. "2026-1"
   tipoEspacioRequerido    TipoEspacio @map("tipo_espacio_requerido")
-  stackSoftwareRequerido  String[]    @default([]) @map("stack_software_requerido")
 
   // Relaciones
   curso        Curso        @relation(fields: [cursoId], references: [id], onDelete: Cascade)
@@ -182,8 +179,7 @@ model Seccion {
   horarios     Horario[]
   matriculas   Matricula[]
   asignaciones Asignacion[]
-  // Requerimientos de software del catálogo. Reemplaza a `stackSoftwareRequerido`, deprecado
-  // hasta la segunda migración del Issue 4.28.
+  // Requerimientos de software del catálogo.
   softwareRequerido SeccionSoftware[]
 
   @@unique([cursoId, codigoSeccion, periodo])
