@@ -64,7 +64,7 @@ describe('Emisores de Eventos (Issue 2.16)', () => {
         periodo: '2026-1',
         alumnosMatriculados: 30,
         tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
-        stackSoftwareRequerido: [],
+        softwareRequerido: [],
         horarios: [],
       };
 

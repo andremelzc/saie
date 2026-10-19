@@ -38,7 +38,7 @@ describe('Motor Service con Prisma (Issue 2.10 & 2.11 & 2.15)', () => {
     codigoSeccion: 'SEC-101',
     periodo: '2026-1',
     tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
-    stackSoftwareRequerido: [],
+    softwareRequerido: [],
     curso: { codigo: '20201', nombre: 'Algoritmos' },
     horarios: [{ diaSemana: 'LUNES', horaInicio: '08:00', horaFin: '10:00' }],
     matriculas: [{ id: 'mat-1', movilidadReducida: false }],
@@ -105,6 +105,32 @@ describe('Motor Service con Prisma (Issue 2.10 & 2.11 & 2.15)', () => {
       expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
       expect(mockPrisma.asignacion.createMany.mock.calls[0][0].data).toHaveLength(1);
       expect(mockPrisma.registroAuditoria.createMany.mock.calls[0][0].data).toHaveLength(1);
+      // Por defecto la corrida es atendida: la pidió Coordinación.
+      expect(mockPrisma.registroAuditoria.createMany.mock.calls[0][0].data[0].detalle).toContain(
+        'Origen: DEMANDA',
+      );
+    });
+
+    it('registra el origen TIEMPO cuando la dispara la tarea programada (Issue 2.18)', async () => {
+      const mockPrisma = {
+        espacio: { findMany: jest.fn().mockResolvedValue(mockEspacios) },
+        espacioContiguo: { findMany: jest.fn().mockResolvedValue(mockContiguos) },
+        seccion: { findMany: jest.fn().mockResolvedValue([mockSeccion]) },
+        asignacion: {
+          findMany: jest.fn().mockResolvedValue([]),
+          updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+          createMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
+        asignacionEspacio: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+        registroAuditoria: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+        $transaction: jest.fn().mockImplementation(async (operaciones) => Promise.all(operaciones)),
+      };
+
+      await procesarCorridaBatchPeriodo('2026-1', mockPrisma as any, 'TIEMPO');
+
+      expect(mockPrisma.registroAuditoria.createMany.mock.calls[0][0].data[0].detalle).toContain(
+        'Origen: TIEMPO',
+      );
     });
   });
 });

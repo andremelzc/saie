@@ -1,0 +1,110 @@
+name: Asignación programada
+
+# Issue 2.18: corrida desatendida del periodo vigente. Cada noche GitHub Actions llama al
+# endpoint de servicio del backend; el backend reasigna solo lo que cambió y notifica por
+# Telegram los cambios de aula (Issue 3.26). El candado de corrida vive en memoria del backend,
+# así que este workflow asume una sola instancia del backend en Render.
+#
+# Secretos del repositorio necesarios:
+#   BACKEND_URL                 URL pública del backend, sin barra final (p. ej. https://saie.onrender.com)
+#   ASIGNACION_PROGRAMADA_TOKEN mismo valor que la variable de entorno del backend
+on:
+  schedule:
+    # El cron de GitHub usa UTC; Lima es UTC-5 y no tiene horario de verano.
+    # 07:00 UTC = 02:00 en Lima: de madrugada y con el backend ya tibio.
+    - cron: '0 7 * * *'
+  # Permite dispararlo a mano desde la pestaña Actions.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  asignar:
+    name: Ejecutar la asignación programada
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Invocar la corrida programada
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          ASIGNACION_PROGRAMADA_TOKEN: ${{ secrets.ASIGNACION_PROGRAMADA_TOKEN }}
+        run: |
+          if [ -z "${BACKEND_URL}" ] || [ -z "${ASIGNACION_PROGRAMADA_TOKEN}" ]; then
+            echo "::error::Faltan los secretos BACKEND_URL y/o ASIGNACION_PROGRAMADA_TOKEN."
+            exit 1
+          fi
+
+          url="${BACKEND_URL}/api/v1/asignaciones/programada"
+          intentos=6
+          codigo=000
+
+          # Tolera el arranque en frío de Render (45 a 60 s) y el 409 de una corrida en curso.
+          for intento in $(seq 1 "${intentos}"); do
+            codigo=$(curl --silent --show-error --location \
+              --connect-timeout 90 --max-time 300 \
+              -o respuesta.json -w '%{http_code}' \
+              -X POST \
+              -H "Authorization: Bearer ${ASIGNACION_PROGRAMADA_TOKEN}" \
+              "${url}") || codigo=000
+
+            if [ "${codigo}" = "200" ]; then
+              break
+            fi
+
+            if [ "${codigo}" = "401" ] || [ "${codigo}" = "403" ]; then
+              echo "::error::El token de servicio fue rechazado (HTTP ${codigo}). Revisa ASIGNACION_PROGRAMADA_TOKEN."
+              cat respuesta.json || true
+              exit 1
+            fi
+
+            if [ "${codigo}" = "409" ]; then
+              echo "Intento ${intento}/${intentos}: ya hay una corrida en curso (409); reintentando en 30 s..."
+              sleep 30
+            else
+              echo "Intento ${intento}/${intentos}: HTTP ${codigo}; reintentando en 20 s..."
+              sleep 20
+            fi
+          done
+
+          if [ "${codigo}" != "200" ]; then
+            echo "::error::La corrida programada no respondió 200 (último código: ${codigo})."
+            cat respuesta.json || true
+            exit 1
+          fi
+
+          echo "Respuesta del backend:"
+          cat respuesta.json
+          echo ""
+
+          # Resumen visible en la pestaña Actions (asignadas, mantenidas, escaladas).
+          {
+            echo "## Asignación programada (Issue 2.18)"
+            echo ""
+            echo "| Métrica | Valor |"
+            echo "| :--- | :--- |"
+            echo "| Periodo | $(jq -r '.data.periodo // "(sin periodo)"' respuesta.json) |"
+            echo "| Corrida | $(jq -r '.data.corridaId // "(ninguna)"' respuesta.json) |"
+            echo "| Total de secciones | $(jq -r '.data.totalSecciones' respuesta.json) |"
+            echo "| Asignadas | $(jq -r '.data.asignadas' respuesta.json) |"
+            echo "| Mantenidas (sin cambios) | $(jq -r '.data.mantenidas' respuesta.json) |"
+            echo "| Escaladas | $(jq -r '.data.escaladas' respuesta.json) |"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          # Las secciones escaladas son un resultado esperado que Coordinación revisa; un
+          # veredicto no conforme del verificador (Issue 2.17), en cambio, sí hace fallar el job.
+          conforme=$(jq -r '.data.verificacion.conforme' respuesta.json)
+
+          if [ "${conforme}" = "false" ]; then
+            {
+              echo ""
+              echo "### Verificación con violaciones (Issue 2.17)"
+              echo ""
+              jq -r '.data.verificacion.reglas[] | select((.violaciones | length) > 0) | "- **\(.regla)**: \(.violaciones | length) violación(es)"' respuesta.json
+            } >> "${GITHUB_STEP_SUMMARY}"
+            echo "::error::El verificador reportó violaciones en la asignación programada."
+            exit 1
+          fi
+
+          echo "Verificación conforme (o sin datos que verificar)."

@@ -81,6 +81,7 @@ enum TipoEventoAuditoria {
   ASIGNACION
   ESCALAMIENTO
   ALERTA
+  VERIFICACION
 }
 
 // Catálogo de software (Spec 08): deja de ser texto libre en `Espacio` y `Seccion`.

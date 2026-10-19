@@ -17,6 +17,10 @@ jest.mock('../../src/services/motor.service', () => ({
   procesarCorridaBatchPeriodo: jest.fn(),
 }));
 
+jest.mock('../../src/services/verificador.service', () => ({
+  verificarCorridaPeriodo: jest.fn(),
+}));
+
 import request from 'supertest';
 import { RolCuenta } from '@prisma/client';
 import { createApp } from '../../src/app';
@@ -25,6 +29,7 @@ import {
   procesarAsignacionSeccionIndividual,
   procesarCorridaBatchPeriodo,
 } from '../../src/services/motor.service';
+import { verificarCorridaPeriodo } from '../../src/services/verificador.service';
 
 process.env.JWT_SECRET = 'secreto-de-pruebas';
 
@@ -35,6 +40,12 @@ const coordinacion = bearer(RolCuenta.COORDINACION_ACADEMICA);
 beforeEach(() => {
   jest.clearAllMocks();
   prismaMock.seccion.findFirst.mockResolvedValue({ periodo: '2026-1' });
+  (verificarCorridaPeriodo as jest.Mock).mockResolvedValue({
+    conforme: true,
+    totalRevisadas: 0,
+    totalViolaciones: 0,
+    reglas: [],
+  });
 });
 
 describe('POST /api/v1/asignaciones (Issue 2.15)', () => {
@@ -87,6 +98,7 @@ describe('POST /api/v1/asignaciones (Issue 2.15)', () => {
       asignadas: 1,
       mantenidas: 0,
       escaladas: 1,
+      verificacion: { conforme: true },
     });
   });
 
