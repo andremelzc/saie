@@ -274,17 +274,3 @@ button:focus-visible {
 .saie-respira {
   animation: saie-respira 2.4s ease-in-out infinite;
 }
-
-/* ── Preferencias del alumno (Issue 3.17): se activan desde «Configuración» ── */
-html.saie-sin-movimiento *,
-html.saie-sin-movimiento *::before,
-html.saie-sin-movimiento *::after {
-  animation: none !important;
-  transition: none !important;
-}
-html.saie-sin-movimiento path.saie-trazo {
-  stroke-dashoffset: 0;
-}
-html.saie-texto-grande {
-  font-size: 112.5%;
-}

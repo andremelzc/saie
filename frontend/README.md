@@ -71,3 +71,20 @@ export default defineConfig([
   },
 ]);
 ```
+
+## Panel administrativo (Sprint 3)
+
+| Ruta | Pantalla | Roles | Issue |
+|---|---|---|---|
+| `/admin` | Inicio (Coordinación: corrida + escaladas; Jefatura: resumen) | Coordinación, Jefatura | 4.20 |
+| `/admin/alertas` | Centro de alertas (`TarjetaAlerta`) | Coordinación, Jefatura | 4.9 / 4.10 |
+| `/admin/carga` | Carga de datos maestros (3 flujos) | Coordinación | 1.9 |
+| `/admin/espacios` | Listado de espacios | Coordinación, Jefatura | 4.15 |
+| `/admin/laboratorio` | Cambio de software / PCs | Coordinación, Jefatura | 4.19 |
+
+**Decisión de navegación (4.20):** el inicio de Coordinación usa la misma barra de pestañas
+(Inicio/Espacios/Alertas/Carga) que el resto del panel, por consistencia; abajo en móvil y
+arriba en escritorio. Pendiente de validar con el equipo.
+
+**4.19:** los campos se tomaron de los endpoints 4.1 y 4.2 porque el Figma (`37:4874`) aún
+tiene texto placeholder; confirmar con diseño.
