@@ -53,7 +53,7 @@ Este módulo cubre la configuración base de la infraestructura del monorepo (ba
 * **Ruta:** `POST /api/v1/import/:tipo`, con `:tipo` ∈ `cursos-secciones` | `horarios` | `matriculas` | `docentes`. Cada tipo es un flujo independiente (Issue 1.9): no se asume que los archivos se suben juntos. Un tipo desconocido responde 404.
 * **Acceso:** solo `COORDINACION_ACADEMICA` (JWT). La autenticación se evalúa antes de leer el cuerpo.
 * **Cuerpo** (hasta 10 mb y 20 000 filas por envío):
-  * `Content-Type: text/csv`: CSV con encabezado. Las columnas se llaman como los campos del esquema Zod del importador (camelCase). Separador `,` o `;`, con BOM opcional. Las listas (`stackSoftwareRequerido`) se separan con `|`, `;` o `,` entre comillas; los booleanos aceptan `true/false`, `1/0`, `si/no`; el día acepta mayúsculas, minúsculas y tilde (`Miércoles`).
+  * `Content-Type: text/csv`: CSV con encabezado. Las columnas se llaman como los campos del esquema Zod del importador (camelCase). Separador `,` o `;`, con BOM opcional. Las listas (`stackSoftwareRequerido`) se separan con `|`, `;` o `,` entre comillas; los booleanos aceptan `true/false`, `1/0`, `si/no`; el día acepta mayúsculas, minúsculas y tilde (`Miércoles`). Cada nombre de `stackSoftwareRequerido` (`"Python 3.12"` o `"VS Code"`) se resuelve contra el catálogo (Issue 4.28): si no está registrado, la fila falla con `SOFTWARE_NO_REGISTRADO` y no se guarda la sección.
   * `Content-Type: application/json`: arreglo de filas o `{ "datos": [...] }`.
 * **Respuesta 200:**
   ```typescript
