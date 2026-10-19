@@ -3,13 +3,12 @@ import { Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Consulta from './pages/Consulta';
 import AreaPrivadaPlaceholder from './pages/AreaPrivadaPlaceholder';
-import CambiarClavePlaceholder from './pages/CambiarClavePlaceholder';
 import InicioEstudiante from './pages/InicioEstudiante';
 import HorarioMisCursosPage from './pages/HorarioMisCursosPage';
 import PerfilAlumnoPage from './pages/PerfilAlumnoPage';
 import LoginRoute from './components/auth/LoginRoute';
 import RutaProtegida from './components/auth/RutaProtegida';
-import { ROLES_ADMIN, RUTAS, TODOS_LOS_ROLES } from './config/rutas';
+import { ROLES_ADMIN, RUTAS } from './config/rutas';
 
 /** Rutas de la aplicación. Debe renderizarse dentro de <BrowserRouter> y <AuthProvider>. */
 export const AppRoutes: React.FC = () => {
@@ -63,16 +62,6 @@ export const AppRoutes: React.FC = () => {
         element={
           <RutaProtegida rolesPermitidos={ROLES_ADMIN} rutaLogin={RUTAS.loginAdmin}>
             <AreaPrivadaPlaceholder titulo="Área administrativa" />
-          </RutaProtegida>
-        }
-      />
-
-      {/* Destino temporal de la redirección por clave inicial */}
-      <Route
-        path={RUTAS.cambiarClave}
-        element={
-          <RutaProtegida rolesPermitidos={TODOS_LOS_ROLES}>
-            <CambiarClavePlaceholder />
           </RutaProtegida>
         }
       />

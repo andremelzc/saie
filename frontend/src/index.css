@@ -41,6 +41,12 @@ body {
   line-height: 24px;
 }
 
+/* Edge/IE dibujan su propio ojo en los campos de contraseña; SAIE ya tiene el suyo. */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
 /* Foco visible (WCAG 2.4.7): 3 px #222 con separación de 2 px */
 a:focus-visible,
 button:focus-visible {
@@ -52,6 +58,9 @@ button:focus-visible {
   * {
     animation: none !important;
     transition: none !important;
+  }
+  path.saie-trazo {
+    stroke-dashoffset: 0;
   }
 }
 
@@ -83,4 +92,185 @@ button:focus-visible {
 
 .saie-float {
   animation: saie-float 5s ease-in-out infinite;
+}
+
+/* Entrada escalonada: los hijos directos aparecen uno tras otro. */
+.saie-stagger > * {
+  animation: saie-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.saie-stagger > *:nth-child(2) {
+  animation-delay: 0.07s;
+}
+.saie-stagger > *:nth-child(3) {
+  animation-delay: 0.14s;
+}
+.saie-stagger > *:nth-child(4) {
+  animation-delay: 0.21s;
+}
+.saie-stagger > *:nth-child(5) {
+  animation-delay: 0.28s;
+}
+.saie-stagger > *:nth-child(n + 6) {
+  animation-delay: 0.35s;
+}
+
+/* Tarjeta que se eleva al pasar el cursor o enfocarla. */
+.saie-lift {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+.saie-lift:hover,
+.saie-lift:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: var(--saie-shadow-3);
+}
+
+/* Rayado del estado «Ocupado»: el color nunca es el único canal. */
+.saie-rayado {
+  background-image: repeating-linear-gradient(
+    45deg,
+    #dde3ea 0,
+    #dde3ea 3px,
+    #8a97a8 3px,
+    #8a97a8 5px
+  );
+}
+
+/* ── Capa visual del área del alumno ── */
+
+/* Fondo de plano arquitectónico: retícula fina que remite a los planos de los pabellones. */
+.saie-plano-fondo {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(115deg, transparent 15%, #000 85%);
+  -webkit-mask-image: linear-gradient(115deg, transparent 15%, #000 85%);
+}
+
+/* Línea de trazo que se dibuja sola (el contorno del aula en la cabecera). */
+@keyframes saie-trazo {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.saie-trazo {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: saie-trazo 1.6s 0.25s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+/* Barras que crecen de izquierda a derecha (progreso de la clase, ocupación del piso). */
+@keyframes saie-crecer {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.saie-barra {
+  transform-origin: left center;
+  animation: saie-crecer 0.9s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Punto «en vivo»: un anillo que se expande para indicar que la clase está en curso. */
+@keyframes saie-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  80%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+.saie-vivo {
+  position: relative;
+}
+.saie-vivo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: saie-ping 1.8s ease-out infinite;
+}
+
+/* Aparición con rebote suave para números y fichas. */
+@keyframes saie-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  70% {
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.saie-pop {
+  animation: saie-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both;
+}
+
+/* Esqueleto de carga con brillo que recorre la tarjeta. */
+@keyframes saie-brillo {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+.saie-esqueleto {
+  background-image: linear-gradient(100deg, #ffffff 30%, #f4eee0 50%, #ffffff 70%);
+  background-size: 200% 100%;
+  animation: saie-brillo 1.6s linear infinite;
+}
+
+/* Icono que flota despacio en los estados vacíos. */
+.saie-flota {
+  animation: saie-float 4s ease-in-out infinite;
+}
+
+/* Cambio de pestaña: el contenido nuevo entra con un fundido corto. */
+@keyframes saie-fundido {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.saie-fundido {
+  animation: saie-fundido 0.32s ease-out both;
+}
+
+/* Indicador deslizante del selector segmentado. */
+.saie-selector-pulgar {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Contorno guinda que respira en la clase en curso. */
+@keyframes saie-respira {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(123, 17, 19, 0.28);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(123, 17, 19, 0);
+  }
+}
+.saie-respira {
+  animation: saie-respira 2.4s ease-in-out infinite;
 }
