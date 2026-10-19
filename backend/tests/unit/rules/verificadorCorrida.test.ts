@@ -1,4 +1,4 @@
-import { DiaSemana, EstadoAsignacion, TipoEspacio } from '@prisma/client';
+import { ComparacionVersion, DiaSemana, EstadoAsignacion, TipoEspacio } from '@prisma/client';
 import { EspacioConexo } from '../../../src/rules/buscarBloqueContiguo';
 import {
   AsignacionVerificable,
@@ -7,6 +7,11 @@ import {
   ResultadoVerificacion,
   verificarCorrida,
 } from '../../../src/rules/verificadorCorrida';
+import {
+  listaSoftwareInstalado,
+  listaSoftwareRequerido,
+  softwareRequerido,
+} from '../../helpers/software';
 
 function espacio(id: string, opciones: Partial<EspacioConexo> = {}): EspacioConexo {
   return {
@@ -32,7 +37,7 @@ function asignacion(overrides: Partial<AsignacionVerificable> = {}): AsignacionV
     motivoEscalamiento: null,
     alumnosMatriculados: 10,
     tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
-    stackSoftwareRequerido: [],
+    softwareRequerido: [],
     horarios: [{ diaSemana: DiaSemana.LUNES, horaInicio: '08:00', horaFin: '10:00' }],
     ...overrides,
   };
@@ -216,11 +221,14 @@ describe('Issue 2.17 - Verificador posterior a la corrida (regla pura)', () => {
           asignacion({
             tipoEspacioRequerido: TipoEspacio.LABORATORIO,
             espacioIds: ['e1'],
-            stackSoftwareRequerido: ['Python 3.12', 'Java 17'],
+            softwareRequerido: listaSoftwareRequerido(['Python 3.12', 'Java 17']),
           }),
         ],
         espacios: [
-          espacio('e1', { tipo: TipoEspacio.LABORATORIO, softwareInstalado: ['Python 3.12'] }),
+          espacio('e1', {
+            tipo: TipoEspacio.LABORATORIO,
+            softwareInstalado: listaSoftwareInstalado(['Python 3.12']),
+          }),
         ],
         obtenerVecinosContiguos: vecinos({}),
       });
@@ -238,12 +246,15 @@ describe('Issue 2.17 - Verificador posterior a la corrida (regla pura)', () => {
             id: 'lab',
             tipoEspacioRequerido: TipoEspacio.LABORATORIO,
             espacioIds: ['e1'],
-            stackSoftwareRequerido: ['Python 3.12'],
+            softwareRequerido: listaSoftwareRequerido(['Python 3.12']),
           }),
           asignacion({ id: 'aula', seccionId: 's2', espacioIds: ['e2'] }),
         ],
         espacios: [
-          espacio('e1', { tipo: TipoEspacio.LABORATORIO, softwareInstalado: ['Python 3.12'] }),
+          espacio('e1', {
+            tipo: TipoEspacio.LABORATORIO,
+            softwareInstalado: listaSoftwareInstalado(['Python 3.12']),
+          }),
           espacio('e2'),
         ],
         obtenerVecinosContiguos: vecinos({}),
@@ -252,6 +263,49 @@ describe('Issue 2.17 - Verificador posterior a la corrida (regla pura)', () => {
       const software = regla(resultado, REGLAS_VERIFICACION.SOFTWARE_COMPLETO);
       expect(software.revisadas).toBe(1);
       expect(software.violaciones).toHaveLength(0);
+    });
+
+    it('respeta la regla de versión del requerimiento (CUALQUIERA y MINIMA)', () => {
+      const conCualquiera = verificarCorrida({
+        asignaciones: [
+          asignacion({
+            tipoEspacioRequerido: TipoEspacio.LABORATORIO,
+            espacioIds: ['e1'],
+            softwareRequerido: [softwareRequerido('Python', ComparacionVersion.CUALQUIERA)],
+          }),
+        ],
+        espacios: [
+          espacio('e1', {
+            tipo: TipoEspacio.LABORATORIO,
+            softwareInstalado: listaSoftwareInstalado(['Python 3.9']),
+          }),
+        ],
+        obtenerVecinosContiguos: vecinos({}),
+      });
+      expect(regla(conCualquiera, REGLAS_VERIFICACION.SOFTWARE_COMPLETO).violaciones).toHaveLength(
+        0,
+      );
+
+      const conMinima = verificarCorrida({
+        asignaciones: [
+          asignacion({
+            tipoEspacioRequerido: TipoEspacio.LABORATORIO,
+            espacioIds: ['e1'],
+            softwareRequerido: [softwareRequerido('Python 3.11', ComparacionVersion.MINIMA)],
+          }),
+        ],
+        espacios: [
+          espacio('e1', {
+            tipo: TipoEspacio.LABORATORIO,
+            softwareInstalado: listaSoftwareInstalado(['Python 3.9']),
+          }),
+        ],
+        obtenerVecinosContiguos: vecinos({}),
+      });
+
+      const software = regla(conMinima, REGLAS_VERIFICACION.SOFTWARE_COMPLETO);
+      expect(software.violaciones).toHaveLength(1);
+      expect(software.violaciones[0].detalle).toContain('Python 3.11');
     });
   });
 

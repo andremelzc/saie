@@ -17,13 +17,13 @@ Este documento especifica el esquema de datos base del sistema SAIE. Define toda
 1. **Modelo de Espacio Único (no dos jerarquías paralelas):**  
    No se dividen aulas y laboratorios en tablas distintas. Se define una entidad genérica `Espacio` con un campo `tipo` (`AULA_TEORICA` | `LABORATORIO`) que determina qué atributos y reglas aplican. Esto coincide directamente con el principio de motor de reglas único.
 2. **Campos exclusivos de Laboratorio:**  
-   `software_instalado` y `pcs_malogradas` solo aplican a `LABORATORIO`; para `AULA_TEORICA` son nulos.
+   El software instalado (relación `EspacioSoftware`) y `pcs_malogradas` solo aplican a `LABORATORIO`; para `AULA_TEORICA` no existen.
 3. **Aforo Nominal Individual:**  
    Propio de cada espacio, configurable individualmente y aplicable a ambos tipos de espacios.
 4. **Contigüidad Homogénea:**  
    La relación de contigüidad física solo se permite entre espacios del mismo tipo (`Espacio.tipo`). Un bloque asignado nunca combina aulas con laboratorios.
 5. **Versionado de Estados Físicos:**  
-   Los cambios en `software_instalado` y `pcs_malogradas` no destruyen el valor anterior; quedan registrados históricamente en `HistorialEspacio`.
+   Los cambios en el software instalado (`EspacioSoftware`) y `pcs_malogradas` no destruyen el valor anterior; quedan registrados históricamente en `HistorialEspacio`.
 6. **Aislamiento de Datos Sensibles (RNF-09):**  
    Los datos médicos y de condición especial de los alumnos se aíslan en la entidad `FichaMédica` (relación 1:1 con `Alumno`), garantizando acceso restringido exclusivo y protegiendo la consulta pública.
 7. **Unicidad e Idempotencia:**  
@@ -72,7 +72,7 @@ Entidad central que modela aulas teóricas y laboratorios de la facultad. Corres
 | `pabellón` | VARCHAR(50) | No | Ubicación del espacio dentro del campus (ej. "Antiguo", "Nuevo"). |
 | `piso` | INT | No | Número de piso. Usado en la regla de accesibilidad (prioridad Piso 1). |
 | `aforo_nominal` | INT | No | Capacidad máxima configurada para el espacio. |
-| `software_instalado` | TEXT[] / JSONB | Sí | Lista de software disponible. Solo aplica si `tipo = LABORATORIO`. Versionable. |
+| ~~`software_instalado`~~ | — | — | **Eliminado** (Spec 08): sustituido por `EspacioSoftware`. Ya no existe en la base. |
 | `pcs_malogradas` | INT | Sí | PCs no operativas. Solo aplica si `tipo = LABORATORIO`. Versionable (`pcs_malogradas <= aforo_nominal`). |
 
 ---
@@ -111,7 +111,7 @@ Instancia de dictado de un curso en un periodo lectivo determinado.
 | `código_sección` | VARCHAR(10) | No | Identificador dentro del curso (ej. "1", "2"). |
 | `periodo` | VARCHAR(10) | No | Periodo académico (ej. "2026-1"). |
 | `tipo_espacio_requerido` | ENUM (`AULA_TEORICA`, `LABORATORIO`) | No | Pool de espacios requerido para el dictado. |
-| `stack_software_requerido`| TEXT[] / JSONB | Sí | Software requerido si `tipo_espacio_requerido = LABORATORIO`. Nulo o ignorado para aulas teóricas. |
+| ~~`stack_software_requerido`~~ | — | — | **Eliminado** (Spec 08): sustituido por `SeccionSoftware`. Ya no existe en la base. |
 
 > **Restricción de unicidad:** Clave compuesta única `(curso_id, código_sección, periodo)`.  
 > **Secciones paralelas:** Se determinan al vuelo agrupando por `(curso_id, periodo)`.
@@ -332,6 +332,60 @@ Vinculación voluntaria de un alumno con el bot de Telegram para recibir avisos 
 | `fecha_ultimo_resumen` | DATE | Sí | Día (hora de Lima) del último resumen diario enviado; evita duplicarlo si la tarea programada corre dos veces el mismo día. |
 
 > **Regla:** como `alumno_id` es único, un alumno nunca tiene dos vinculaciones activas. La baja desactiva la fila (`activo = false`, `fecha_baja`) y una nueva vinculación la reactiva. Si la baja se debe a que el alumno bloqueó el bot, la vinculación se desactiva igual.
+
+---
+
+### 4.20. `Software`, `EspacioSoftware` y `SeccionSoftware`
+Catálogo único de software (Spec 08) que sustituye el texto libre de `Espacio.software_instalado` y `Seccion.stack_software_requerido`. Se introdujo con una migración **aditiva** (`20261020000000_catalogo_software`) y una segunda migración de **limpieza** (`20261021000000_catalogo_software_limpieza`) copia cualquier texto restante y elimina ambas columnas: el software solo vive en estas tres tablas.
+
+| Campo (`Software`) | Tipo | Nulable | Descripción / Regla de Negocio |
+| :--- | :--- | :---: | :--- |
+| `id` | UUID / PK | No | Identificador único. |
+| `nombre` | VARCHAR | No | Nombre visible canónico (ej. `"Visual Studio Code"`). |
+| `nombre_normalizado` | VARCHAR | No | `nombre` en minúsculas y con espacios colapsados; clave de comparación del motor. |
+| `version` | VARCHAR | No | Versión tal como se muestra (`"3.12"`, `"2024.1"`). `""` = sin versión. |
+| `categoria` | ENUM | No | `SISTEMA_OPERATIVO`, `IDE`, `LENGUAJE`, `BASE_DATOS`, `REDES`, `SIMULACION`, `OFIMATICA`, `OTRO`. |
+| `tipo_licencia` | ENUM | No | `LIBRE`, `EDUCATIVA`, `COMERCIAL`. Por defecto `LIBRE`. |
+| `descripcion`, `fabricante` | TEXT / VARCHAR | Sí | Metadatos para el panel de administración. |
+| `activo` | BOOLEAN | No | Baja lógica: `false` bloquea nuevos registros, no borra relaciones. |
+| `creado_por_id` | UUID / FK | Sí | Cuenta que lo registró (nulo en el seed). |
+| `fecha_creacion`, `fecha_actualizacion` | TIMESTAMP | No | Alta y última modificación. |
+
+| Campo (`EspacioSoftware`) | Tipo | Nulable | Descripción |
+| :--- | :--- | :---: | :--- |
+| `espacio_id` + `software_id` | UUID / PK compuesta | No | Software instalado en un laboratorio. |
+| `fecha_instalacion` | TIMESTAMP | No | Alta de la instalación. |
+| `registrado_por_id` | UUID / FK | Sí | Cuenta que registró la instalación. |
+
+| Campo (`SeccionSoftware`) | Tipo | Nulable | Descripción |
+| :--- | :--- | :---: | :--- |
+| `seccion_id` + `software_id` | UUID / PK compuesta | No | Software requerido por una sección. |
+| `comparacion_version` | ENUM | No | `CUALQUIERA`, `EXACTA` o `MINIMA` (regla de versión del requerimiento). |
+
+> **Restricciones:** único `(nombre_normalizado, version)` en `Software`. Solo un espacio `LABORATORIO` tiene filas en `EspacioSoftware`, y una sección de tipo `AULA_TEORICA` no tiene filas en `SeccionSoftware`. La versión con segmentos no numéricos (`R2023b`) solo admite `CUALQUIERA` o `EXACTA`.
+
+---
+
+### 4.21. `SolicitudSoftware`
+Flujo con el que un docente propone un software que aún no está en el catálogo y Coordinación Académica lo aprueba o rechaza (Spec 08, §2.3). Migración aditiva `20261022000000_solicitudes_software`.
+
+| Campo | Tipo | Nulable | Descripción / Regla de Negocio |
+| :--- | :--- | :---: | :--- |
+| `id` | UUID / PK | No | Identificador único. |
+| `docente_id` | UUID / FK | No | Docente que propone (se deduce de la cuenta autenticada). |
+| `seccion_id` | UUID / FK | Sí | Sección para la que se necesita. Al aprobar se puede dejar el software como requerimiento suyo. |
+| `nombre` | VARCHAR | No | Nombre propuesto, ya separado de la versión (`"MATLAB"`). |
+| `version` | VARCHAR | No | Versión propuesta (`"R2023b"`); `""` = sin versión. |
+| `categoria` | ENUM | Sí | `CategoriaSoftware` sugerida por el docente. |
+| `justificacion` | TEXT | No | Para qué se necesita. |
+| `estado` | ENUM | No | `PENDIENTE`, `APROBADA`, `RECHAZADA`. Por defecto `PENDIENTE`. |
+| `fecha_solicitud` | TIMESTAMP | No | Alta de la solicitud. |
+| `resuelta_por_id` | UUID / FK | Sí | Cuenta de Coordinación que resolvió. |
+| `fecha_resolucion` | TIMESTAMP | Sí | Cuándo se resolvió. |
+| `motivo_rechazo` | TEXT | Sí | Obligatorio al rechazar. |
+| `software_id` | UUID / FK | Sí | Fila del catálogo creada o vinculada al aprobar. |
+
+> **Reglas:** crear una solicitud de un software que ya está en el catálogo responde `409` con el `id` existente. Aprobar solo da de alta (o vincula) el software y, opcionalmente, su requerimiento en la sección; **no** lo instala en ningún laboratorio. Una solicitud solo se resuelve una vez (`409` si ya está `APROBADA` o `RECHAZADA`) y un docente solo ve las propias.
 
 ---
 

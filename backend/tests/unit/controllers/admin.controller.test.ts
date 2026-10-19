@@ -112,7 +112,7 @@ describe('Admin Controller (Sprint 4)', () => {
     it('debe responder 400 si el id es inválido o el body supera límites', async () => {
       const req = {
         params: { id: '' },
-        body: { softwareInstalado: [] },
+        body: { softwareIds: [] },
         auth: authAdmin,
       } as unknown as Request;
       const res = mockResponse();
@@ -123,12 +123,17 @@ describe('Admin Controller (Sprint 4)', () => {
     });
 
     it('debe responder 200 al registrar software correctamente', async () => {
-      const mockRes = { laboratorioId: 'lab-1', softwareInstalado: ['Docker', 'Node.js'] };
+      const mockRes = { laboratorioId: 'lab-1', softwareInstalado: [] };
       (registrarCambioSoftware as jest.Mock).mockResolvedValue(mockRes);
 
       const req = {
         params: { id: 'lab-1' },
-        body: { softwareInstalado: ['Docker', 'Node.js'] },
+        body: {
+          softwareIds: [
+            '00000000-0000-4000-8000-000000000001',
+            '00000000-0000-4000-8000-000000000002',
+          ],
+        },
         auth: authAdmin,
       } as unknown as Request;
       const res = mockResponse();

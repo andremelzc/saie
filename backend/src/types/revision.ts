@@ -1,5 +1,6 @@
 import { TipoEspacio } from '@prisma/client';
 import { HorarioConsultaDTO } from './consulta';
+import { SoftwareRequeridoDTO } from './software';
 
 /** Sección que el motor no pudo asignar y espera revisión manual (Issue 4.22). */
 export interface SeccionEscaladaDTO {
@@ -14,7 +15,7 @@ export interface SeccionEscaladaDTO {
     periodo: string;
     docenteNombre: string | null;
     tipoEspacioRequerido: TipoEspacio;
-    stackSoftwareRequerido: string[];
+    softwareRequerido: SoftwareRequeridoDTO[];
     alumnosMatriculados: number;
     horarios: HorarioConsultaDTO[];
   };

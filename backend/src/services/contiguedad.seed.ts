@@ -1,4 +1,5 @@
 import { PrismaClient, TipoEspacio } from '@prisma/client';
+import { sembrarCatalogoSoftware } from './software.service';
 
 export interface EspacioSeedData {
   identificador: string;
@@ -253,6 +254,12 @@ export async function sembrarEspaciosYContiguedades(
   espacios: EspacioSeedData[] = ESPACIOS_EDIFICIO_SEED,
   contiguedades: ParContiguoSeed[] = CONTIGUEDADES_SEED,
 ) {
+  // 0. Catálogo de software (Issue 4.28): el software ya no es texto libre del espacio.
+  const catalogo = await sembrarCatalogoSoftware(
+    prisma,
+    espacios.flatMap((e) => e.softwareInstalado ?? []),
+  );
+
   // 1. Sembrar espacios
   const espaciosCreados: Array<EspacioSeedData & { id: string }> = [];
 
@@ -268,7 +275,6 @@ export async function sembrarEspaciosYContiguedades(
         tipo: esp.tipo,
         piso: esp.piso,
         aforoNominal: esp.aforoNominal,
-        softwareInstalado: esp.softwareInstalado ?? [],
         pcsMalogradas: esp.pcsMalogradas ?? null,
         // Solo si se indica: re-sembrar no debe pisar un habilitado cambiado luego desde la API.
         ...(esp.habilitado !== undefined && { habilitado: esp.habilitado }),
@@ -281,13 +287,31 @@ export async function sembrarEspaciosYContiguedades(
         pabellon: esp.pabellon,
         piso: esp.piso,
         aforoNominal: esp.aforoNominal,
-        softwareInstalado: esp.softwareInstalado ?? [],
         pcsMalogradas: esp.pcsMalogradas ?? null,
         habilitado: esp.habilitado ?? true,
         descripcionUso: esp.descripcionUso ?? null,
         distanciaAscensor: esp.distanciaAscensor ?? null,
       },
     });
+
+    // Software instalado como relación al catálogo (solo laboratorios). Re-sembrar reemplaza
+    // la lista para que el Excel siga siendo la fuente de verdad.
+    await prisma.espacioSoftware.deleteMany({ where: { espacioId: registro.id } });
+    const softwareIds =
+      esp.tipo === TipoEspacio.LABORATORIO
+        ? [
+            ...new Set(
+              (esp.softwareInstalado ?? [])
+                .map((texto) => catalogo.get(texto.trim()))
+                .filter((id): id is string => Boolean(id)),
+            ),
+          ]
+        : [];
+    if (softwareIds.length > 0) {
+      await prisma.espacioSoftware.createMany({
+        data: softwareIds.map((softwareId) => ({ espacioId: registro.id, softwareId })),
+      });
+    }
 
     espaciosCreados.push({
       ...esp,

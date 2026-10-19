@@ -1,5 +1,9 @@
-import { TipoEspacio } from '@prisma/client';
+import { ComparacionVersion, TipoEspacio } from '@prisma/client';
 import { BloqueCandidato } from './buscarBloqueContiguo';
+import { compararVersiones, esVersionNumerica, formatearSoftware } from '../lib/software';
+import { SoftwareInstaladoInput, SoftwareRequeridoInput } from '../types/software';
+
+export { normalizarNombreSoftware } from '../lib/software';
 
 export interface ResultadoValidacionSoftwareLab {
   cumple: boolean;
@@ -19,25 +23,47 @@ export interface ResultadoValidacionSoftwareBloque {
 }
 
 /**
- * Normaliza el nombre de un software eliminando espacios extra y convirtiendo a minúsculas.
- * Nota: La versión se considera parte del nombre (ej. "Python 3.12" != "Python 3.11").
+ * Issue 4.28 (Spec 08, §3): decide si un software instalado cubre un requerimiento.
+ *
+ * El nombre debe coincidir y, además, debe cumplirse la regla de versión que declara el
+ * **requerimiento**:
+ * - `CUALQUIERA`: cualquier versión del software sirve.
+ * - `EXACTA`: la versión instalada es exactamente la requerida.
+ * - `MINIMA`: la instalada es igual o superior, comparando por segmentos numéricos
+ *   (`3.9 < 3.11 < 3.12`). Una versión no numérica nunca satisface `MINIMA`.
  */
-export function normalizarNombreSoftware(nombre: string): string {
-  return nombre.trim().toLowerCase().replace(/\s+/g, ' ');
+export function cumpleRequerimiento(
+  instalado: SoftwareInstaladoInput,
+  requerido: SoftwareRequeridoInput,
+): boolean {
+  if (instalado.nombreNormalizado !== requerido.nombreNormalizado) return false;
+
+  switch (requerido.comparacionVersion) {
+    case ComparacionVersion.CUALQUIERA:
+      return true;
+    case ComparacionVersion.EXACTA:
+      return instalado.version === requerido.version;
+    case ComparacionVersion.MINIMA:
+      return (
+        esVersionNumerica(instalado.version) &&
+        esVersionNumerica(requerido.version) &&
+        compararVersiones(instalado.version, requerido.version) >= 0
+      );
+    default:
+      return false;
+  }
 }
 
 /**
- * Issue 2.6: Función pura que determina si un laboratorio individual cumple con el stack requerido.
+ * Issue 2.6 / 4.28: función pura que determina si un laboratorio individual cumple el stack.
  *
- * - Recibe stack instalado y stack requerido.
- * - Compara nombres normalizados sin distinguir mayúsculas/minúsculas ni espacios sobrantes.
- * - Si el stack requerido está vacío o es nulo, siempre cumple.
- * - Si el stack instalado es nulo o indefinido, se asume vacío [].
- * - Devuelve { cumple, softwareFaltante }.
+ * - Recibe lo instalado y lo requerido ya resueltos contra el catálogo (sin texto libre).
+ * - Si no hay requerimientos, siempre cumple.
+ * - Devuelve los faltantes como `"nombre versión"` para mostrarlos en alertas e historial.
  */
 export function validarSoftwareLaboratorio(
-  softwareInstalado?: string[] | null,
-  softwareRequerido?: string[] | null,
+  softwareInstalado?: SoftwareInstaladoInput[] | null,
+  softwareRequerido?: SoftwareRequeridoInput[] | null,
 ): ResultadoValidacionSoftwareLab {
   if (!softwareRequerido || softwareRequerido.length === 0) {
     return {
@@ -46,18 +72,12 @@ export function validarSoftwareLaboratorio(
     };
   }
 
-  const instaladosSet = new Set<string>(
-    (softwareInstalado || []).map((s) => normalizarNombreSoftware(s)),
-  );
-
-  const softwareFaltante: string[] = [];
-
-  for (const requerido of softwareRequerido) {
-    const requeridoNormalizado = normalizarNombreSoftware(requerido);
-    if (!instaladosSet.has(requeridoNormalizado)) {
-      softwareFaltante.push(requerido.trim());
-    }
-  }
+  const instalados = softwareInstalado ?? [];
+  const softwareFaltante = softwareRequerido
+    .filter(
+      (requerido) => !instalados.some((instalado) => cumpleRequerimiento(instalado, requerido)),
+    )
+    .map(formatearSoftware);
 
   return {
     cumple: softwareFaltante.length === 0,
@@ -66,15 +86,14 @@ export function validarSoftwareLaboratorio(
 }
 
 /**
- * Issue 2.7: Evalúa si un bloque completo cumple el stack de software.
+ * Issue 2.7 / 4.28: evalúa si un bloque completo cumple el stack de software.
  *
- * - Para AULA_TEORICA: Retorna cumple de inmediato sin invocar validación de software ni leer campos inexistentes.
- * - Para LABORATORIO: Evalúa cada laboratorio del bloque mediante el Issue 2.6.
- *   Rechaza el bloque completo si al menos un laboratorio no cumple, registrando qué laboratorio y qué faltó.
+ * - Para AULA_TEORICA: cumple de inmediato, sin leer software.
+ * - Para LABORATORIO: todos los laboratorios del bloque deben cubrir todos los requerimientos.
  */
 export function validarSoftwareBloque(
   bloque: BloqueCandidato,
-  softwareRequerido?: string[] | null,
+  softwareRequerido?: SoftwareRequeridoInput[] | null,
 ): ResultadoValidacionSoftwareBloque {
   // Aulas teóricas no requieren ni poseen software
   if (bloque.tipo === TipoEspacio.AULA_TEORICA) {

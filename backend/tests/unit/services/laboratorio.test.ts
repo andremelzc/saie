@@ -1,6 +1,5 @@
 import { RolCuenta, TipoEspacio } from '@prisma/client';
 import {
-  normalizarListaSoftware,
   registrarCambioPcsMalogradas,
   registrarCambioSoftware,
 } from '../../../src/services/laboratorio.service';
@@ -9,7 +8,50 @@ import { TokenPayload } from '../../../src/types/auth';
 const coordinacion: TokenPayload = { sub: 'cuenta-coord', rol: RolCuenta.COORDINACION_ACADEMICA };
 const jefatura: TokenPayload = { sub: 'cuenta-jef', rol: RolCuenta.JEFATURA_LABORATORIOS };
 
-function labBase(extra: Record<string, unknown> = {}) {
+/** Catálogo simulado: el endpoint recibe ids y el servicio resuelve nombre y versión. */
+const CATALOGO: Record<
+  string,
+  { id: string; nombre: string; nombreNormalizado: string; version: string; activo: boolean }
+> = {
+  'sw-python': {
+    id: 'sw-python',
+    nombre: 'Python',
+    nombreNormalizado: 'python',
+    version: '3.12',
+    activo: true,
+  },
+  'sw-git': { id: 'sw-git', nombre: 'Git', nombreNormalizado: 'git', version: '', activo: true },
+  'sw-docker': {
+    id: 'sw-docker',
+    nombre: 'Docker',
+    nombreNormalizado: 'docker',
+    version: '',
+    activo: true,
+  },
+  'sw-viejo': {
+    id: 'sw-viejo',
+    nombre: 'Software viejo',
+    nombreNormalizado: 'software viejo',
+    version: '',
+    activo: false,
+  },
+};
+
+function filasSoftware(ids: string[]) {
+  return ids.map((id) => ({
+    espacioId: 'L1',
+    softwareId: id,
+    software: CATALOGO[id],
+  }));
+}
+
+function labBase(
+  extra: { software?: string[]; pcsMalogradas?: number | null; tipo?: TipoEspacio } & Record<
+    string,
+    unknown
+  > = {},
+) {
+  const { software, ...resto } = extra;
   return {
     id: 'L1',
     identificador: 'Lab 01',
@@ -17,9 +59,9 @@ function labBase(extra: Record<string, unknown> = {}) {
     pabellon: 'A',
     piso: 1,
     aforoNominal: 30,
-    softwareInstalado: ['Python'],
     pcsMalogradas: 2,
-    ...extra,
+    softwareInstaladoCatalogo: filasSoftware(software ?? ['sw-python']),
+    ...resto,
   };
 }
 
@@ -30,6 +72,19 @@ function prismaMock(opciones: { espacio?: any; responsable?: boolean; asignacion
     espacio: {
       findUnique: jest.fn().mockResolvedValue(espacio),
       update: jest.fn().mockImplementation(async ({ data }) => ({ ...espacio, ...data })),
+    },
+    software: {
+      findMany: jest.fn().mockImplementation(async ({ where }) =>
+        // `resolverSoftwareIds` pide `orderBy: { nombre: 'asc' }`: el mock lo respeta.
+        Object.values(CATALOGO)
+          .filter((sw) => where.id.in.includes(sw.id))
+          .sort((a, b) => a.nombre.localeCompare(b.nombre))
+          .map(({ activo, ...sw }) => ({ ...sw, activo })),
+      ),
+    },
+    espacioSoftware: {
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      createMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     espacioResponsable: {
       findUnique: jest.fn().mockResolvedValue(opciones.responsable ? { cuentaId: 'x' } : null),
@@ -51,33 +106,28 @@ function prismaMock(opciones: { espacio?: any; responsable?: boolean; asignacion
   return db;
 }
 
-function asignacionVigente(stack: string[], alumnos: number, espacio = labBase()) {
+function asignacionVigente(requeridos: string[], alumnos: number, espacio = labBase()) {
   return {
     id: 'asig-1',
     seccionId: 'sec-1',
     seccion: {
       codigoSeccion: '1',
       curso: { codigo: 'ISW101', nombre: 'Programación' },
-      stackSoftwareRequerido: stack,
+      softwareRequerido: requeridos.map((id) => ({
+        comparacionVersion: 'CUALQUIERA',
+        software: CATALOGO[id],
+      })),
       _count: { matriculas: alumnos },
     },
     espacios: [{ espacio }],
   };
 }
 
-describe('normalizarListaSoftware', () => {
-  it('recorta, quita vacíos y duplicados sin distinguir mayúsculas', () => {
-    expect(
-      normalizarListaSoftware([' Python ', 'python', '', '  ', 'Visual   Studio', 'Git']),
-    ).toEqual(['Python', 'Visual Studio', 'Git']);
-  });
-});
-
-describe('Registrar cambio de software de un laboratorio (Issue 4.1)', () => {
+describe('Registrar cambio de software de un laboratorio (Issue 4.1 / 4.28)', () => {
   it('responde 404 con mensaje claro si el laboratorio no existe', async () => {
     const prisma = prismaMock({ espacio: null });
     await expect(
-      registrarCambioSoftware('nope', ['Git'], coordinacion, prisma),
+      registrarCambioSoftware('nope', ['sw-git'], coordinacion, prisma),
     ).rejects.toMatchObject({
       status: 404,
       message: expect.stringContaining('no existe'),
@@ -87,59 +137,87 @@ describe('Registrar cambio de software de un laboratorio (Issue 4.1)', () => {
   it('rechaza (400) un espacio que no es laboratorio', async () => {
     const prisma = prismaMock({ espacio: labBase({ tipo: TipoEspacio.AULA_TEORICA }) });
     await expect(
-      registrarCambioSoftware('L1', ['Git'], coordinacion, prisma),
+      registrarCambioSoftware('L1', ['sw-git'], coordinacion, prisma),
     ).rejects.toMatchObject({
       status: 400,
     });
   });
 
+  it('responde 404 si algún software no está en el catálogo', async () => {
+    const prisma = prismaMock();
+    await expect(
+      registrarCambioSoftware('L1', ['sw-git', 'sw-inexistente'], coordinacion, prisma),
+    ).rejects.toMatchObject({
+      status: 404,
+      message: expect.stringContaining('sw-inexistente'),
+    });
+    expect(prisma.espacioSoftware.createMany).not.toHaveBeenCalled();
+  });
+
+  it('rechaza (422) un software dado de baja', async () => {
+    const prisma = prismaMock();
+    await expect(
+      registrarCambioSoftware('L1', ['sw-viejo'], coordinacion, prisma),
+    ).rejects.toMatchObject({
+      status: 422,
+      message: expect.stringContaining('dado de baja'),
+    });
+  });
+
   it('Coordinación puede operar cualquier laboratorio sin consultar responsables', async () => {
     const prisma = prismaMock();
-    await registrarCambioSoftware('L1', ['Git'], coordinacion, prisma);
+    await registrarCambioSoftware('L1', ['sw-git'], coordinacion, prisma);
     expect(prisma.espacioResponsable.findUnique).not.toHaveBeenCalled();
-    expect(prisma.espacio.update).toHaveBeenCalled();
+    expect(prisma.espacioSoftware.createMany).toHaveBeenCalled();
   });
 
   it('Jefatura responsable del laboratorio puede operarlo', async () => {
     const prisma = prismaMock({ responsable: true });
-    await registrarCambioSoftware('L1', ['Git'], jefatura, prisma);
+    await registrarCambioSoftware('L1', ['sw-git'], jefatura, prisma);
     expect(prisma.espacioResponsable.findUnique).toHaveBeenCalledWith({
       where: { cuentaId_espacioId: { cuentaId: 'cuenta-jef', espacioId: 'L1' } },
     });
-    expect(prisma.espacio.update).toHaveBeenCalled();
+    expect(prisma.espacioSoftware.createMany).toHaveBeenCalled();
   });
 
   it('Jefatura que no es responsable recibe 403 y no se persiste nada', async () => {
     const prisma = prismaMock({ responsable: false });
-    await expect(registrarCambioSoftware('L1', ['Git'], jefatura, prisma)).rejects.toMatchObject({
-      status: 403,
-    });
-    expect(prisma.espacio.update).not.toHaveBeenCalled();
+    await expect(registrarCambioSoftware('L1', ['sw-git'], jefatura, prisma)).rejects.toMatchObject(
+      {
+        status: 403,
+      },
+    );
+    expect(prisma.espacioSoftware.createMany).not.toHaveBeenCalled();
     expect(prisma.historialEspacio.create).not.toHaveBeenCalled();
   });
 
   it('otros roles reciben 403', async () => {
     const prisma = prismaMock();
     const docente: TokenPayload = { sub: 'd', rol: RolCuenta.DOCENTE };
-    await expect(registrarCambioSoftware('L1', ['Git'], docente, prisma)).rejects.toMatchObject({
+    await expect(registrarCambioSoftware('L1', ['sw-git'], docente, prisma)).rejects.toMatchObject({
       status: 403,
     });
   });
 
-  it('persiste el software y registra historial con valor anterior, nuevo y cuenta', async () => {
+  it('reemplaza las relaciones del catálogo y registra historial con nombre y versión', async () => {
     const prisma = prismaMock();
-    await registrarCambioSoftware('L1', ['Git', ' Docker '], coordinacion, prisma);
+    await registrarCambioSoftware('L1', ['sw-docker', 'sw-git'], coordinacion, prisma);
 
-    expect(prisma.espacio.update).toHaveBeenCalledWith({
-      where: { id: 'L1' },
-      data: { softwareInstalado: ['Git', 'Docker'] },
+    expect(prisma.espacioSoftware.deleteMany).toHaveBeenCalledWith({
+      where: { espacioId: 'L1' },
+    });
+    expect(prisma.espacioSoftware.createMany).toHaveBeenCalledWith({
+      data: [
+        { espacioId: 'L1', softwareId: 'sw-docker', registradoPorId: 'cuenta-coord' },
+        { espacioId: 'L1', softwareId: 'sw-git', registradoPorId: 'cuenta-coord' },
+      ],
     });
     expect(prisma.historialEspacio.create).toHaveBeenCalledWith({
       data: {
         espacioId: 'L1',
         campo: 'SOFTWARE',
-        valorAnterior: JSON.stringify(['Python']),
-        valorNuevo: JSON.stringify(['Git', 'Docker']),
+        valorAnterior: JSON.stringify(['Python 3.12']),
+        valorNuevo: JSON.stringify(['Docker', 'Git']),
         cuentaId: 'cuenta-coord',
       },
     });
@@ -147,10 +225,10 @@ describe('Registrar cambio de software de un laboratorio (Issue 4.1)', () => {
 
   it('dispara la evaluación (Issue 4.3) y persiste la alerta (Issue 4.5) en la misma transacción', async () => {
     const prisma = prismaMock({
-      asignaciones: [asignacionVigente(['Docker'], 20, labBase({ softwareInstalado: ['Docker'] }))],
+      asignaciones: [asignacionVigente(['sw-docker'], 20, labBase({ software: ['sw-docker'] }))],
     });
 
-    const res = await registrarCambioSoftware('L1', ['Git'], coordinacion, prisma);
+    const res = await registrarCambioSoftware('L1', ['sw-git'], coordinacion, prisma);
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     expect(prisma.asignacion.findMany).toHaveBeenCalled();
@@ -162,7 +240,7 @@ describe('Registrar cambio de software de un laboratorio (Issue 4.1)', () => {
 
   it('sin asignaciones afectadas guarda el cambio pero no crea alerta', async () => {
     const prisma = prismaMock({ asignaciones: [asignacionVigente([], 20)] });
-    const res = await registrarCambioSoftware('L1', ['Git'], coordinacion, prisma);
+    const res = await registrarCambioSoftware('L1', ['sw-git'], coordinacion, prisma);
     expect(res.cambioRegistrado).toBe(true);
     expect(res.alertas).toEqual([]);
     expect(prisma.alerta.create).not.toHaveBeenCalled();
@@ -170,11 +248,20 @@ describe('Registrar cambio de software de un laboratorio (Issue 4.1)', () => {
 
   it('si el software enviado ya era el vigente no registra historial ni evalúa', async () => {
     const prisma = prismaMock();
-    const res = await registrarCambioSoftware('L1', ['python'], coordinacion, prisma);
+    const res = await registrarCambioSoftware('L1', ['sw-python'], coordinacion, prisma);
     expect(res.cambioRegistrado).toBe(false);
-    expect(prisma.espacio.update).not.toHaveBeenCalled();
+    expect(prisma.espacioSoftware.deleteMany).not.toHaveBeenCalled();
     expect(prisma.historialEspacio.create).not.toHaveBeenCalled();
     expect(prisma.asignacion.findMany).not.toHaveBeenCalled();
+  });
+
+  it('devuelve el software instalado con su nombre y versión', async () => {
+    const prisma = prismaMock();
+    const res = await registrarCambioSoftware('L1', ['sw-python', 'sw-git'], coordinacion, prisma);
+    expect(res.laboratorio.softwareInstalado).toEqual([
+      { id: 'sw-git', nombre: 'Git', version: '' },
+      { id: 'sw-python', nombre: 'Python', version: '3.12' },
+    ]);
   });
 });
 

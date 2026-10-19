@@ -15,6 +15,9 @@ import { TokenPayload } from '../../../src/types/auth';
 const authCoord: TokenPayload = { sub: 'coord1', rol: RolCuenta.COORDINACION_ACADEMICA };
 const authJefatura: TokenPayload = { sub: 'jef1', rol: RolCuenta.JEFATURA_LABORATORIOS };
 
+/** Id de catálogo válido (uuid) para los esquemas de alta. */
+const UUID_SOFTWARE = '00000000-0000-4000-8000-000000000001';
+
 function espacioDB(overrides: Record<string, any> = {}) {
   return {
     id: 'e1',
@@ -24,7 +27,10 @@ function espacioDB(overrides: Record<string, any> = {}) {
     piso: 1,
     aforoNominal: 40,
     pcsMalogradas: 2,
-    softwareInstalado: ['Docker', 'Node.js'],
+    softwareInstaladoCatalogo: [
+      { espacioId: 'e1', softwareId: 'sw-docker', software: { nombre: 'Docker', version: '' } },
+      { espacioId: 'e1', softwareId: 'sw-node', software: { nombre: 'Node.js', version: '' } },
+    ],
     ...overrides,
   };
 }
@@ -38,20 +44,20 @@ describe('camposEditables por rol y tipo (Issue 4.15)', () => {
     expect(campos).toContain('pabellon');
     expect(campos).toContain('aforoNominal');
     expect(campos).toContain('contiguos');
-    expect(campos).toContain('softwareInstalado');
+    expect(campos).toContain('softwareIds');
     expect(campos).toContain('pcsMalogradas');
   });
 
   it('Coordinación NO puede editar software ni PCs de un aula teórica', () => {
     const campos = camposEditables(RolCuenta.COORDINACION_ACADEMICA, TipoEspacio.AULA_TEORICA);
-    expect(campos).not.toContain('softwareInstalado');
+    expect(campos).not.toContain('softwareIds');
     expect(campos).not.toContain('pcsMalogradas');
     expect(campos).toContain('identificador');
   });
 
   it('Jefatura solo edita PCs y software de laboratorios', () => {
     const campos = camposEditables(RolCuenta.JEFATURA_LABORATORIOS, TipoEspacio.LABORATORIO);
-    expect(campos).toEqual(expect.arrayContaining(['softwareInstalado', 'pcsMalogradas']));
+    expect(campos).toEqual(expect.arrayContaining(['softwareIds', 'pcsMalogradas']));
     expect(campos).not.toContain('identificador');
     expect(campos).not.toContain('pabellon');
   });
@@ -90,7 +96,7 @@ describe('CrearEspacioSchema', () => {
         pabellon: 'B',
         piso: 2,
         aforoNominal: 30,
-        softwareInstalado: ['Docker'],
+        softwareIds: [UUID_SOFTWARE],
         pcsMalogradas: 3,
       }),
     ).not.toThrow();
@@ -214,34 +220,111 @@ describe('actualizarEspacio (Issue 4.15)', () => {
 
 /* ── suite: validarContiguos (integrado en crearEspacio) ─── */
 
-describe('crearEspacio — validaciones de contigüidad (Issue 4.15)', () => {
-  function createDb(vecinos: any[] = [], throwOnCreate = false) {
+describe('crearEspacio — validaciones de contigüidad y catálogo (Issue 4.15 / 4.28)', () => {
+  /** Catálogo simulado que resuelve `resolverSoftwareIds`. */
+  const catalogo = [
+    { id: UUID_SOFTWARE, nombre: 'Git', nombreNormalizado: 'git', version: '', activo: true },
+  ];
+
+  function createDb(
+    vecinos: any[] = [],
+    throwOnCreate = false,
+    software: Array<Record<string, unknown>> = catalogo,
+  ) {
     const p2002 = new Prisma.PrismaClientKnownRequestError('', {
       code: 'P2002',
       clientVersion: '1',
     });
 
+    const tx = {
+      espacio: {
+        create: throwOnCreate
+          ? jest.fn().mockRejectedValue(p2002)
+          : jest.fn().mockImplementation(async ({ data }: any) => ({
+              id: 'nuevo-id',
+              ...data,
+            })),
+        findMany: jest.fn().mockResolvedValue(vecinos),
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValue(
+            espacioDB({ id: 'nuevo-id', identificador: 'Lab 99', softwareInstaladoCatalogo: [] }),
+          ),
+      },
+      software: { findMany: jest.fn().mockResolvedValue(software) },
+      espacioSoftware: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      espacioContiguo: {
+        deleteMany: jest.fn(),
+        createMany: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+
     return {
-      $transaction: jest.fn().mockImplementation(async (fn: (tx: any) => Promise<any>) => {
-        return fn({
-          espacio: {
-            create: throwOnCreate
-              ? jest.fn().mockRejectedValue(p2002)
-              : jest.fn().mockImplementation(async ({ data }: any) => ({
-                  id: 'nuevo-id',
-                  ...data,
-                })),
-            findMany: jest.fn().mockResolvedValue(vecinos),
-          },
-          espacioContiguo: {
-            deleteMany: jest.fn(),
-            createMany: jest.fn(),
-            findMany: jest.fn().mockResolvedValue([]),
-          },
-        });
-      }),
+      $transaction: jest.fn().mockImplementation(async (fn: (tx: any) => Promise<any>) => fn(tx)),
+      __tx: tx,
     } as any;
   }
+
+  it('crea las relaciones de software del catálogo a partir de los ids', async () => {
+    const db = createDb();
+
+    await crearEspacio(
+      {
+        identificador: 'Lab 99',
+        tipo: TipoEspacio.LABORATORIO,
+        pabellon: 'A',
+        piso: 1,
+        aforoNominal: 30,
+        softwareIds: [UUID_SOFTWARE],
+      },
+      authCoord,
+      db,
+    );
+
+    expect(db.__tx.espacioSoftware.createMany).toHaveBeenCalledWith({
+      data: [{ espacioId: 'nuevo-id', softwareId: UUID_SOFTWARE, registradoPorId: 'coord1' }],
+    });
+  });
+
+  it('404 si algún software no existe en el catálogo y no crea el espacio', async () => {
+    const db = createDb([], false, []);
+
+    await expect(
+      crearEspacio(
+        {
+          identificador: 'Lab 99',
+          tipo: TipoEspacio.LABORATORIO,
+          pabellon: 'A',
+          piso: 1,
+          aforoNominal: 30,
+          softwareIds: [UUID_SOFTWARE],
+        },
+        authCoord,
+        db,
+      ),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(db.__tx.espacioSoftware.createMany).not.toHaveBeenCalled();
+  });
+
+  it('422 si el software está dado de baja', async () => {
+    const db = createDb([], false, [{ ...catalogo[0], activo: false }]);
+
+    await expect(
+      crearEspacio(
+        {
+          identificador: 'Lab 99',
+          tipo: TipoEspacio.LABORATORIO,
+          pabellon: 'A',
+          piso: 1,
+          aforoNominal: 30,
+          softwareIds: [UUID_SOFTWARE],
+        },
+        authCoord,
+        db,
+      ),
+    ).rejects.toMatchObject({ status: 422, message: expect.stringContaining('dado de baja') });
+  });
 
   it('422 si un espacio contiguo es de tipo distinto al nuevo', async () => {
     const db = createDb([{ id: 'vecino', tipo: TipoEspacio.AULA_TEORICA }]);

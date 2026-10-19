@@ -44,3 +44,6 @@ Thumbs.db
 # Datos reales del seed (incluyen datos personales): no subir al repositorio
 backend/prisma/data/*.xlsx
 ~$*
+
+# Reporte local del backfill del catálogo de software
+backend/prisma/backfill-software-reporte.json

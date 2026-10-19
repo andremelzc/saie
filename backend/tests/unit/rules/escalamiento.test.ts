@@ -1,4 +1,5 @@
 import { DiaSemana, TipoEspacio } from '@prisma/client';
+import { listaSoftwareInstalado, listaSoftwareRequerido } from '../../helpers/software';
 import { EspacioConexo } from '../../../src/rules/buscarBloqueContiguo';
 import {
   clasificarMotivoEscalamiento,
@@ -16,7 +17,7 @@ describe('Regla de Escalamiento a Revisión Manual (Issue 2.12)', () => {
       tipo: TipoEspacio.LABORATORIO,
       aforoNominal: 30,
       pcsMalogradas: 0,
-      softwareInstalado: ['Python 3.12', 'Docker'],
+      softwareInstalado: listaSoftwareInstalado(['Python 3.12', 'Docker']),
     },
     {
       id: 'lab-102',
@@ -26,7 +27,7 @@ describe('Regla de Escalamiento a Revisión Manual (Issue 2.12)', () => {
       tipo: TipoEspacio.LABORATORIO,
       aforoNominal: 30,
       pcsMalogradas: 5, // Capacidad real: 25
-      softwareInstalado: ['Python 3.12'],
+      softwareInstalado: listaSoftwareInstalado(['Python 3.12']),
     },
     {
       id: 'aula-201',
@@ -140,7 +141,7 @@ describe('Regla de Escalamiento a Revisión Manual (Issue 2.12)', () => {
         codigoSeccion: 'SEC-01',
         periodo: '2026-1',
         tipoEspacioRequerido: TipoEspacio.LABORATORIO,
-        stackSoftwareRequerido: ['Matlab', 'Simulink'],
+        softwareRequerido: listaSoftwareRequerido(['Matlab', 'Simulink']),
         alumnosMatriculados: 25,
         horarios: [{ diaSemana: DiaSemana.MIERCOLES, horaInicio: '10:00', horaFin: '12:00' }],
       };
@@ -149,7 +150,7 @@ describe('Regla de Escalamiento a Revisión Manual (Issue 2.12)', () => {
         seccion,
         todosLosEspacios: mockEspacios,
         espaciosDisponiblesEnFranja: [mockEspacios[0], mockEspacios[1]],
-        softwareRequerido: ['Matlab', 'Simulink'],
+        softwareRequerido: listaSoftwareRequerido(['Matlab', 'Simulink']),
       });
 
       expect(resultado.tipo).toBe(MotivoEscalamientoTipo.SOFTWARE_FALTANTE);
@@ -177,7 +178,7 @@ describe('Regla de Escalamiento a Revisión Manual (Issue 2.12)', () => {
         tipo: TipoEspacio.LABORATORIO,
         aforoNominal: 30,
         pcsMalogradas: 0,
-        softwareInstalado: [],
+        softwareInstalado: listaSoftwareInstalado([]),
       };
 
       const labPiso2: EspacioConexo = {
@@ -188,7 +189,7 @@ describe('Regla de Escalamiento a Revisión Manual (Issue 2.12)', () => {
         tipo: TipoEspacio.LABORATORIO,
         aforoNominal: 30,
         pcsMalogradas: 0,
-        softwareInstalado: [],
+        softwareInstalado: listaSoftwareInstalado([]),
       };
 
       const resultado = clasificarMotivoEscalamiento({
@@ -252,7 +253,7 @@ describe('Regla de Escalamiento a Revisión Manual (Issue 2.12)', () => {
         codigoSeccion: 'SEC-LAB',
         periodo: '2026-1',
         tipoEspacioRequerido: TipoEspacio.LABORATORIO,
-        stackSoftwareRequerido: ['AutoCAD 2026'],
+        softwareRequerido: listaSoftwareRequerido(['AutoCAD 2026']),
         alumnosMatriculados: 20,
         horarios: [{ diaSemana: DiaSemana.LUNES, horaInicio: '08:00', horaFin: '10:00' }],
       };
@@ -261,7 +262,7 @@ describe('Regla de Escalamiento a Revisión Manual (Issue 2.12)', () => {
         seccion: seccionLab,
         todosLosEspacios: mockEspacios,
         espaciosDisponiblesEnFranja: mockEspacios,
-        softwareRequerido: ['AutoCAD 2026'],
+        softwareRequerido: listaSoftwareRequerido(['AutoCAD 2026']),
       });
 
       expect(resLab.tipo).toBe(MotivoEscalamientoTipo.SOFTWARE_FALTANTE);

@@ -33,7 +33,7 @@ function fila(matriculas = 2) {
     seccion: {
       codigoSeccion: '1',
       tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
-      stackSoftwareRequerido: [],
+      softwareRequerido: [],
       matriculas: Array.from({ length: matriculas }, (_, i) => ({ id: `m${i}` })),
       horarios: [{ diaSemana: DiaSemana.LUNES, horaInicio: '08:00', horaFin: '10:00' }],
     },

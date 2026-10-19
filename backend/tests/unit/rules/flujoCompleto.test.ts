@@ -18,6 +18,7 @@ import { EspacioConexo } from '../../../src/rules/buscarBloqueContiguo';
 import { ejecutarCorridaBatch, CorridaBatchInput } from '../../../src/rules/corridaBatch';
 import { orquestarAsignacionSeccion } from '../../../src/rules/orquestadorAsignacion';
 import { AsignacionExistenteContexto, SeccionInputMotor } from '../../../src/types/asignacion';
+import { listaSoftwareInstalado, listaSoftwareRequerido } from '../../helpers/software';
 
 // ============================================================
 // FIXTURES COMPARTIDOS
@@ -62,7 +63,7 @@ const ESPACIOS: EspacioConexo[] = [
     tipo: TipoEspacio.LABORATORIO,
     aforoNominal: 25,
     pcsMalogradas: 0,
-    softwareInstalado: ['VS Code', 'Node.js'],
+    softwareInstalado: listaSoftwareInstalado(['VS Code', 'Node.js']),
   },
   {
     id: 'lab-102',
@@ -72,7 +73,7 @@ const ESPACIOS: EspacioConexo[] = [
     tipo: TipoEspacio.LABORATORIO,
     aforoNominal: 25,
     pcsMalogradas: 2, // Capacidad real: 23
-    softwareInstalado: ['VS Code', 'Node.js', 'Docker'],
+    softwareInstalado: listaSoftwareInstalado(['VS Code', 'Node.js', 'Docker']),
   },
 ];
 
@@ -132,7 +133,7 @@ describe('Issue 5.7 — Flujo completo: Caso Feliz Individual', () => {
       codigoSeccion: 'A',
       periodo: PERIODO,
       tipoEspacioRequerido: TipoEspacio.LABORATORIO,
-      stackSoftwareRequerido: ['VS Code', 'Node.js'],
+      softwareRequerido: listaSoftwareRequerido(['VS Code', 'Node.js']),
       alumnosMatriculados: 15,
       movilidadReducida: false,
       horarios: [{ diaSemana: DiaSemana.VIERNES, horaInicio: '08:00', horaFin: '11:00' }],
@@ -186,7 +187,7 @@ describe('Issue 5.7 — Flujo completo: Corrida Batch del Periodo', () => {
       codigoSeccion: 'A',
       periodo: PERIODO,
       tipoEspacioRequerido: TipoEspacio.LABORATORIO,
-      stackSoftwareRequerido: ['VS Code', 'Node.js'],
+      softwareRequerido: listaSoftwareRequerido(['VS Code', 'Node.js']),
       alumnosMatriculados: 15,
       movilidadReducida: false,
       horarios: [{ diaSemana: DiaSemana.VIERNES, horaInicio: '08:00', horaFin: '11:00' }],
@@ -198,7 +199,7 @@ describe('Issue 5.7 — Flujo completo: Corrida Batch del Periodo', () => {
       codigoSeccion: 'A',
       periodo: PERIODO,
       tipoEspacioRequerido: TipoEspacio.LABORATORIO,
-      stackSoftwareRequerido: ['Cisco Packet Tracer', 'Wireshark'], // Ningún lab lo tiene
+      softwareRequerido: listaSoftwareRequerido(['Cisco Packet Tracer', 'Wireshark']), // Ningún lab lo tiene
       alumnosMatriculados: 12,
       movilidadReducida: false,
       horarios: [{ diaSemana: DiaSemana.SABADO, horaInicio: '08:00', horaFin: '11:00' }],
@@ -473,7 +474,7 @@ describe('Issue 5.7 — Flujo completo: Escalamiento automático', () => {
       codigoSeccion: 'A',
       periodo: PERIODO,
       tipoEspacioRequerido: TipoEspacio.LABORATORIO,
-      stackSoftwareRequerido: ['Cisco Packet Tracer', 'Wireshark'],
+      softwareRequerido: listaSoftwareRequerido(['Cisco Packet Tracer', 'Wireshark']),
       alumnosMatriculados: 12,
       movilidadReducida: false,
       horarios: [{ diaSemana: DiaSemana.SABADO, horaInicio: '08:00', horaFin: '11:00' }],
@@ -500,7 +501,7 @@ describe('Issue 5.7 — Flujo completo: Escalamiento automático', () => {
       codigoSeccion: 'A',
       periodo: PERIODO,
       tipoEspacioRequerido: TipoEspacio.LABORATORIO,
-      stackSoftwareRequerido: ['Cisco Packet Tracer'],
+      softwareRequerido: listaSoftwareRequerido(['Cisco Packet Tracer']),
       alumnosMatriculados: 12,
       movilidadReducida: false,
       horarios: [{ diaSemana: DiaSemana.SABADO, horaInicio: '08:00', horaFin: '11:00' }],
@@ -597,7 +598,7 @@ describe('Issue 5.7 — Flujo completo: Corrida batch integrada (todos los escen
         codigoSeccion: 'A',
         periodo: PERIODO,
         tipoEspacioRequerido: TipoEspacio.LABORATORIO,
-        stackSoftwareRequerido: ['VS Code', 'Node.js'],
+        softwareRequerido: listaSoftwareRequerido(['VS Code', 'Node.js']),
         alumnosMatriculados: 15,
         movilidadReducida: false,
         horarios: [{ diaSemana: DiaSemana.VIERNES, horaInicio: '08:00', horaFin: '11:00' }],
@@ -609,7 +610,7 @@ describe('Issue 5.7 — Flujo completo: Corrida batch integrada (todos los escen
         codigoSeccion: 'A',
         periodo: PERIODO,
         tipoEspacioRequerido: TipoEspacio.LABORATORIO,
-        stackSoftwareRequerido: ['Cisco Packet Tracer', 'Wireshark'],
+        softwareRequerido: listaSoftwareRequerido(['Cisco Packet Tracer', 'Wireshark']),
         alumnosMatriculados: 12,
         movilidadReducida: false,
         horarios: [{ diaSemana: DiaSemana.SABADO, horaInicio: '08:00', horaFin: '11:00' }],

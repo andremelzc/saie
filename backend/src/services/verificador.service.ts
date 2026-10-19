@@ -5,6 +5,7 @@ import {
   verificarCorrida,
 } from '../rules/verificadorCorrida';
 import { cargarContextoEspacios } from './motor.service';
+import { mapearSoftwareRequerido } from './software.service';
 
 /**
  * Issue 2.17 — Verificación posterior a la corrida.
@@ -27,7 +28,13 @@ export async function verificarCorridaPeriodo(
       },
       include: {
         espacios: true,
-        seccion: { include: { horarios: true, matriculas: true } },
+        seccion: {
+          include: {
+            horarios: true,
+            matriculas: true,
+            softwareRequerido: { include: { software: true } },
+          },
+        },
       },
     }),
   ]);
@@ -41,7 +48,7 @@ export async function verificarCorridaPeriodo(
     motivoEscalamiento: asignacion.motivoEscalamiento,
     alumnosMatriculados: asignacion.seccion.matriculas.length,
     tipoEspacioRequerido: asignacion.seccion.tipoEspacioRequerido,
-    stackSoftwareRequerido: asignacion.seccion.stackSoftwareRequerido,
+    softwareRequerido: mapearSoftwareRequerido(asignacion.seccion.softwareRequerido),
     horarios: asignacion.seccion.horarios.map((h) => ({
       diaSemana: h.diaSemana,
       horaInicio: h.horaInicio,

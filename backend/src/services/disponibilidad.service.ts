@@ -21,7 +21,6 @@ export interface EspacioBase {
   piso?: number;
   aforoNominal?: number;
   pcsMalogradas?: number | null;
-  softwareInstalado?: string[] | null;
 }
 
 /**

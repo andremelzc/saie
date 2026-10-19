@@ -22,7 +22,7 @@ Asimismo, incluye el panel de revisión y resolución de incidencias para la **J
   * Horario semanal y espacios asignados del docente autenticado.
 * `GET /api/v1/docente/laboratorio-estado/:espacioId` (Issue 7.4)
   * Solo laboratorios donde el docente tiene una asignación `VIGENTE`; en cualquier otro caso 404 (no se revela qué espacios existen).
-  * Respuesta: `{ laboratorio: { id, identificador, pabellon, piso, aforoNominal, pcsMalogradas, pcsOperativas, softwareInstalado }, cursos: [{ asignacionId, codigoCurso, nombreCurso, codigoSeccion, softwareRequerido, softwareFaltante, cumple }], historial: [{ campo, valorAnterior, valorNuevo, fechaCambio }] }`.
+  * Respuesta: `{ laboratorio: { id, identificador, pabellon, piso, aforoNominal, pcsMalogradas, pcsOperativas, softwareInstalado: [{ id, nombre, version }] }, cursos: [{ asignacionId, codigoCurso, nombreCurso, codigoSeccion, softwareRequerido: [{ id, nombre, version, comparacionVersion }], softwareFaltante, cumple }], historial: [{ campo, valorAnterior, valorNuevo, fechaCambio }] }`.
   * `pcsOperativas` es la capacidad real (Issue 2.1). `cursos` compara el stack que exige cada curso del docente con lo instalado (`validarSoftwareLaboratorio`). El historial trae los últimos 20 cambios, del más reciente al más antiguo.
 * `GET /api/v1/docente/espacios/explorador`
   * Explorador de aulas y laboratorios para consultar disponibilidad de espacios libres.

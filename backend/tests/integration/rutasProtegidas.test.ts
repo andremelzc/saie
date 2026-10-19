@@ -7,6 +7,14 @@ const prismaMock: any = {
   seccion: { findFirst: jest.fn(), findMany: jest.fn() },
   matricula: { findMany: jest.fn() },
   espacio: { findUnique: jest.fn(), findMany: jest.fn(), update: jest.fn() },
+  software: {
+    findUnique: jest.fn(),
+    findMany: jest.fn().mockResolvedValue([]),
+    count: jest.fn().mockResolvedValue(0),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
+  espacioSoftware: { deleteMany: jest.fn(), createMany: jest.fn() },
   espacioResponsable: { findUnique: jest.fn() },
   historialEspacio: { create: jest.fn() },
   espacioContiguo: { findMany: jest.fn() },
@@ -29,7 +37,7 @@ jest.mock('../../src/lib/prisma', () => ({
 
 import bcrypt from 'bcrypt';
 import request from 'supertest';
-import { RolCuenta } from '@prisma/client';
+import { Prisma, RolCuenta } from '@prisma/client';
 import { createApp } from '../../src/app';
 import { firmarToken } from '../../src/services/auth.service';
 
@@ -116,7 +124,7 @@ describe('Panel administrativo: autenticación y rol (Issue 4.8)', () => {
     const sw = await request(app)
       .post('/api/v1/admin/laboratorios/L1/software')
       .set('Authorization', auth)
-      .send({ softwareInstalado: 'no-es-lista' });
+      .send({ softwareIds: 'no-es-lista' });
     const pcs = await request(app)
       .post('/api/v1/admin/laboratorios/L1/pcs-malogradas')
       .set('Authorization', auth)
@@ -132,7 +140,7 @@ describe('Panel administrativo: autenticación y rol (Issue 4.8)', () => {
     const res = await request(app)
       .post('/api/v1/admin/laboratorios/nope/software')
       .set('Authorization', bearer(RolCuenta.COORDINACION_ACADEMICA))
-      .send({ softwareInstalado: ['Git'] });
+      .send({ softwareIds: ['00000000-0000-4000-8000-000000000001'] });
 
     expect(res.status).toBe(404);
     expect(res.body.message).toContain('no existe');
@@ -144,7 +152,7 @@ describe('Panel administrativo: autenticación y rol (Issue 4.8)', () => {
       identificador: 'Lab 01',
       tipo: 'LABORATORIO',
       aforoNominal: 30,
-      softwareInstalado: [],
+      softwareInstaladoCatalogo: [],
       pcsMalogradas: 0,
     });
     prismaMock.espacioResponsable.findUnique.mockResolvedValue(null);
@@ -164,7 +172,7 @@ describe('Panel administrativo: autenticación y rol (Issue 4.8)', () => {
       identificador: 'Lab 01',
       tipo: 'LABORATORIO',
       aforoNominal: 30,
-      softwareInstalado: [],
+      softwareInstaladoCatalogo: [],
       pcsMalogradas: 0,
     });
 
@@ -174,6 +182,112 @@ describe('Panel administrativo: autenticación y rol (Issue 4.8)', () => {
       .send({ pcsMalogradas: 99 });
 
     expect(res.status).toBe(422);
+  });
+});
+
+describe('Catálogo de software (Issue 4.28)', () => {
+  const filaSoftware = {
+    id: 'sw-1',
+    nombre: 'Git',
+    nombreNormalizado: 'git',
+    version: '',
+    categoria: 'IDE',
+    tipoLicencia: 'LIBRE',
+    descripcion: null,
+    fabricante: null,
+    activo: true,
+    creadoPorId: 'cuenta-1',
+    fechaCreacion: new Date('2026-01-01T00:00:00Z'),
+    fechaActualizacion: new Date('2026-01-01T00:00:00Z'),
+    _count: { espacios: 0, secciones: 0 },
+  };
+
+  it('GET exige token y admite a Coordinación y Jefatura', async () => {
+    expect((await request(app).get('/api/v1/admin/software')).status).toBe(401);
+
+    for (const rol of [RolCuenta.ALUMNO, RolCuenta.DOCENTE]) {
+      const res = await request(app)
+        .get('/api/v1/admin/software')
+        .set('Authorization', bearer(rol));
+      expect(res.status).toBe(403);
+    }
+
+    for (const rol of [RolCuenta.COORDINACION_ACADEMICA, RolCuenta.JEFATURA_LABORATORIOS]) {
+      const res = await request(app)
+        .get('/api/v1/admin/software')
+        .set('Authorization', bearer(rol));
+      expect(res.status).toBe(200);
+      expect(res.body.data).toMatchObject({ items: [], total: 0, page: 1, limit: 50 });
+    }
+  });
+
+  it('el alta, la edición y la baja lógica son solo de Coordinación', async () => {
+    const jefatura = bearer(RolCuenta.JEFATURA_LABORATORIOS);
+    const cuerpo = { nombre: 'Git', version: '', categoria: 'IDE' };
+
+    expect(
+      (
+        await request(app)
+          .post('/api/v1/admin/software')
+          .set('Authorization', jefatura)
+          .send(cuerpo)
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await request(app)
+          .patch('/api/v1/admin/software/sw-1')
+          .set('Authorization', jefatura)
+          .send({ nombre: 'Git 2' })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await request(app)
+          .patch('/api/v1/admin/software/sw-1/estado')
+          .set('Authorization', jefatura)
+          .send({ activo: false })
+      ).status,
+    ).toBe(403);
+  });
+
+  it('crea software normalizado y valida el cuerpo', async () => {
+    prismaMock.software.create.mockResolvedValue(filaSoftware);
+
+    const invalido = await request(app)
+      .post('/api/v1/admin/software')
+      .set('Authorization', bearer(RolCuenta.COORDINACION_ACADEMICA))
+      .send({ nombre: '' });
+    expect(invalido.status).toBe(400);
+
+    const res = await request(app)
+      .post('/api/v1/admin/software')
+      .set('Authorization', bearer(RolCuenta.COORDINACION_ACADEMICA))
+      .send({ nombre: 'Git', version: '', categoria: 'IDE' });
+
+    expect(res.status).toBe(201);
+    expect(prismaMock.software.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ nombreNormalizado: 'git' }) }),
+    );
+  });
+
+  it('un duplicado responde 409 y un id desconocido 404', async () => {
+    const { Prisma } = jest.requireActual('@prisma/client');
+    prismaMock.software.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('', { code: 'P2002', clientVersion: '1' }),
+    );
+    prismaMock.software.findUnique.mockResolvedValue(null);
+
+    const duplicado = await request(app)
+      .post('/api/v1/admin/software')
+      .set('Authorization', bearer(RolCuenta.COORDINACION_ACADEMICA))
+      .send({ nombre: 'Git', version: '', categoria: 'IDE' });
+    expect(duplicado.status).toBe(409);
+
+    const inexistente = await request(app)
+      .get('/api/v1/admin/software/sw-x')
+      .set('Authorization', bearer(RolCuenta.COORDINACION_ACADEMICA));
+    expect(inexistente.status).toBe(404);
   });
 });
 

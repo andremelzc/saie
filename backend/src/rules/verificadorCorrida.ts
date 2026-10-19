@@ -3,6 +3,7 @@ import { EspacioConexo } from './buscarBloqueContiguo';
 import { calcularCapacidadReal } from './calcularCapacidadReal';
 import { validarSoftwareLaboratorio } from './validarSoftware';
 import { haySolapamientoHorario, HorarioSlot } from '../services/disponibilidad.service';
+import { SoftwareRequeridoInput } from '../types/software';
 
 /** Reglas duras que el verificador comprueba al cerrar una corrida (Issue 2.17). */
 export const REGLAS_VERIFICACION = {
@@ -52,7 +53,8 @@ export interface AsignacionVerificable {
   motivoEscalamiento?: string | null;
   alumnosMatriculados: number;
   tipoEspacioRequerido: TipoEspacio;
-  stackSoftwareRequerido?: string[] | null;
+  /** Stack exigido por la sección, ya resuelto contra el catálogo (Issue 4.28). */
+  softwareRequerido?: SoftwareRequeridoInput[] | null;
   horarios: HorarioSlot[];
 }
 
@@ -166,7 +168,7 @@ function softwareFaltanteEnBloque(
   asignacion: AsignacionVerificable,
   mapaEspacios: Map<string, EspacioConexo>,
 ): string[] {
-  const requerido = asignacion.stackSoftwareRequerido ?? [];
+  const requerido = asignacion.softwareRequerido ?? [];
   if (requerido.length === 0) {
     return [];
   }

@@ -46,9 +46,9 @@ const AlertasQuerySchema = z.object({
 });
 
 const CambioSoftwareSchema = z.object({
-  softwareInstalado: z
-    .array(z.string().trim().min(1, 'El nombre del software no puede estar vacío').max(120))
-    .max(200, 'Demasiados programas en la lista'),
+  softwareIds: z
+    .array(z.string().uuid('Cada software debe ser un id válido'))
+    .max(100, 'Demasiados programas en la lista'),
 });
 
 const CambioPcsSchema = z.object({
@@ -65,8 +65,8 @@ const CambioPcsSchema = z.object({
 export async function registrarSoftwareLaboratorio(req: Request, res: Response): Promise<void> {
   try {
     const { id } = LaboratorioParamSchema.parse(req.params);
-    const { softwareInstalado } = CambioSoftwareSchema.parse(req.body);
-    const resultado = await registrarCambioSoftware(id, softwareInstalado, req.auth!, prisma);
+    const { softwareIds } = CambioSoftwareSchema.parse(req.body);
+    const resultado = await registrarCambioSoftware(id, softwareIds, req.auth!, prisma);
     res.status(200).json({ success: true, data: resultado });
   } catch (error: unknown) {
     responderError(res, error);

@@ -1,10 +1,45 @@
-import { TipoEspacio } from '@prisma/client';
+import { ComparacionVersion, TipoEspacio } from '@prisma/client';
 import {
+  cumpleRequerimiento,
   validarSoftwareLaboratorio,
   validarSoftwareBloque,
   normalizarNombreSoftware,
 } from '../../../src/rules/validarSoftware';
+import { parsearNombreVersion } from '../../../src/lib/software';
 import { BloqueCandidato, EspacioConexo } from '../../../src/rules/buscarBloqueContiguo';
+import { SoftwareInstaladoInput, SoftwareRequeridoInput } from '../../../src/types/software';
+
+// ---------------------------------------------------------------------------
+// Helpers: el motor recibe software ya resuelto contra el catálogo (Issue 4.28)
+// ---------------------------------------------------------------------------
+
+/** Convierte `"Python 3.12"` en la entrada pura del motor (nombre + versión ya separados). */
+function instalado(texto: string): SoftwareInstaladoInput {
+  const parseado = parsearNombreVersion(texto);
+  return {
+    nombre: parseado.nombre,
+    nombreNormalizado: parseado.nombreNormalizado,
+    version: parseado.version,
+  };
+}
+
+function instalados(textos: string[]): SoftwareInstaladoInput[] {
+  return textos.map(instalado);
+}
+
+/** Requerimiento con la regla que usa el importador: EXACTA si hay versión, CUALQUIERA si no. */
+function requerido(texto: string, regla?: ComparacionVersion): SoftwareRequeridoInput {
+  const base = instalado(texto);
+  return {
+    ...base,
+    comparacionVersion:
+      regla ?? (base.version === '' ? ComparacionVersion.CUALQUIERA : ComparacionVersion.EXACTA),
+  };
+}
+
+function requeridos(textos: string[], regla?: ComparacionVersion): SoftwareRequeridoInput[] {
+  return textos.map((texto) => requerido(texto, regla));
+}
 
 // ---------------------------------------------------------------------------
 // Fixtures compartidos
@@ -17,7 +52,7 @@ const lab1: EspacioConexo = {
   pabellon: 'Pab A',
   piso: 1,
   aforoNominal: 30,
-  softwareInstalado: ['VS Code', 'Node.js', 'PostgreSQL'],
+  softwareInstalado: instalados(['VS Code', 'Node.js', 'PostgreSQL']),
 };
 
 const lab2: EspacioConexo = {
@@ -27,7 +62,7 @@ const lab2: EspacioConexo = {
   pabellon: 'Pab A',
   piso: 1,
   aforoNominal: 30,
-  softwareInstalado: ['VS Code', 'Node.js'], // No tiene PostgreSQL
+  softwareInstalado: instalados(['VS Code', 'Node.js']), // No tiene PostgreSQL
 };
 
 const aula1: EspacioConexo = {
@@ -39,9 +74,6 @@ const aula1: EspacioConexo = {
   aforoNominal: 40,
 };
 
-// ---------------------------------------------------------------------------
-// Helper para construir un BloqueCandidato de laboratorio
-// ---------------------------------------------------------------------------
 function crearBloqueLabConEspacios(espacios: EspacioConexo[]): BloqueCandidato {
   return {
     espacios,
@@ -58,10 +90,7 @@ function crearBloqueLabConEspacios(espacios: EspacioConexo[]): BloqueCandidato {
 // Suite principal
 // ---------------------------------------------------------------------------
 
-describe('Issue 2.6, 2.7 / 5.5 — Pruebas parametrizadas de validación de software (laboratorio individual y bloque)', () => {
-  // -------------------------------------------------------------------------
-  // Issue 2.6: validarSoftwareLaboratorio — casos básicos
-  // -------------------------------------------------------------------------
+describe('Issue 2.6, 2.7 / 4.28 — Validación de software con catálogo y regla de versión', () => {
   describe('Issue 2.6: validarSoftwareLaboratorio — funcionalidad básica', () => {
     test('normalización de nombres de software es insensible a mayúsculas y espacios extra', () => {
       expect(normalizarNombreSoftware('  Python  3.12  ')).toBe('python 3.12');
@@ -69,61 +98,107 @@ describe('Issue 2.6, 2.7 / 5.5 — Pruebas parametrizadas de validación de soft
     });
 
     test('cumple si el stack requerido está vacío o es nulo', () => {
-      const instalado = ['VS Code', 'Node.js'];
+      const stack = instalados(['VS Code', 'Node.js']);
 
-      expect(validarSoftwareLaboratorio(instalado, [])).toEqual({
+      expect(validarSoftwareLaboratorio(stack, [])).toEqual({
         cumple: true,
         softwareFaltante: [],
       });
-      expect(validarSoftwareLaboratorio(instalado, null)).toEqual({
+      expect(validarSoftwareLaboratorio(stack, null)).toEqual({
         cumple: true,
         softwareFaltante: [],
       });
     });
 
     test('cumple cuando el laboratorio tiene todo el software requerido con normalización', () => {
-      const instalado = ['Visual Studio Code ', 'PYTHON 3.12', 'docker'];
-      const requerido = ['visual studio code', 'Python 3.12', 'Docker'];
+      const stack = instalados(['Visual Studio Code ', 'PYTHON 3.12', 'docker']);
+      const requeridosStack = requeridos(['visual studio code', 'Python 3.12', 'Docker']);
 
-      const resultado = validarSoftwareLaboratorio(instalado, requerido);
+      const resultado = validarSoftwareLaboratorio(stack, requeridosStack);
       expect(resultado.cumple).toBe(true);
       expect(resultado.softwareFaltante).toHaveLength(0);
     });
 
-    test('no cumple y retorna la lista de software faltante si carece de algún programa', () => {
-      const instalado = ['VS Code', 'Node.js'];
-      const requerido = ['VS Code', 'PostgreSQL', 'Docker'];
+    test('no cumple y retorna nombre y versión de lo faltante', () => {
+      const stack = instalados(['VS Code', 'Node.js']);
+      const requeridosStack = requeridos(['VS Code', 'PostgreSQL 16', 'Docker']);
 
-      const resultado = validarSoftwareLaboratorio(instalado, requerido);
+      const resultado = validarSoftwareLaboratorio(stack, requeridosStack);
       expect(resultado.cumple).toBe(false);
-      expect(resultado.softwareFaltante).toEqual(['PostgreSQL', 'Docker']);
+      expect(resultado.softwareFaltante).toEqual(['PostgreSQL 16', 'Docker']);
     });
 
     test('maneja stack instalado nulo o indefinido tratándolo como vacío', () => {
-      const requerido = ['IntelliJ IDEA'];
+      const requeridosStack = requeridos(['IntelliJ IDEA']);
 
-      const resNull = validarSoftwareLaboratorio(null, requerido);
+      const resNull = validarSoftwareLaboratorio(null, requeridosStack);
       expect(resNull.cumple).toBe(false);
       expect(resNull.softwareFaltante).toEqual(['IntelliJ IDEA']);
 
-      const resUndefined = validarSoftwareLaboratorio(undefined, requerido);
+      const resUndefined = validarSoftwareLaboratorio(undefined, requeridosStack);
       expect(resUndefined.cumple).toBe(false);
       expect(resUndefined.softwareFaltante).toEqual(['IntelliJ IDEA']);
     });
 
-    test('las versiones forman parte del nombre: versión distinta no cumple', () => {
-      const instalado = ['Python 3.10'];
-      const requerido = ['Python 3.12'];
-
-      const resultado = validarSoftwareLaboratorio(instalado, requerido);
+    test('regla EXACTA: una versión distinta no cumple', () => {
+      const resultado = validarSoftwareLaboratorio(
+        instalados(['Python 3.10']),
+        requeridos(['Python 3.12'], ComparacionVersion.EXACTA),
+      );
       expect(resultado.cumple).toBe(false);
       expect(resultado.softwareFaltante).toEqual(['Python 3.12']);
+    });
+
+    test('regla CUALQUIERA: cualquier versión del mismo software cumple', () => {
+      const resultado = validarSoftwareLaboratorio(
+        instalados(['Python 3.12']),
+        requeridos(['Python'], ComparacionVersion.CUALQUIERA),
+      );
+      expect(resultado.cumple).toBe(true);
     });
   });
 
   // -------------------------------------------------------------------------
-  // Issue 2.6 / 5.5: Casos parametrizados — los tres escenarios obligatorios
-  // del plan maestro §1.1 para laboratorio individual
+  // Issue 4.28 §3: la versión se compara por segmentos numéricos, no como texto
+  // -------------------------------------------------------------------------
+  describe('Issue 4.28: comparación de versiones (MINIMA)', () => {
+    it.each([
+      ['3.12', '3.9', true],
+      ['3.11', '3.9', true],
+      ['3.9', '3.11', false],
+      ['3.12', '3.11', true],
+      ['3.12', '3.12', true],
+      ['21', '9', true],
+      ['9', '21', false],
+    ])('instalada %s frente a mínima %s → cumple %s', (instalada, minima, esperado) => {
+      const resultado = validarSoftwareLaboratorio(
+        instalados([`Python ${instalada}`]),
+        requeridos([`Python ${minima}`], ComparacionVersion.MINIMA),
+      );
+      expect(resultado.cumple).toBe(esperado);
+    });
+
+    it('MINIMA no se cumple con una versión no numérica', () => {
+      const resultado = validarSoftwareLaboratorio(
+        instalados(['MATLAB R2023b']),
+        requeridos(['MATLAB R2022a'], ComparacionVersion.MINIMA),
+      );
+      expect(resultado.cumple).toBe(false);
+      expect(resultado.softwareFaltante).toEqual(['MATLAB R2022a']);
+    });
+
+    it('un nombre distinto nunca cumple, sin importar la versión', () => {
+      expect(
+        cumpleRequerimiento(
+          instalado('Node.js 18'),
+          requerido('Node 18', ComparacionVersion.CUALQUIERA),
+        ),
+      ).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Issue 5.5: Casos parametrizados — laboratorio individual
   // -------------------------------------------------------------------------
   describe('Issue 5.5: test.each — cumplimiento total, parcial y stack vacío en laboratorio individual', () => {
     interface CasoSoftwareLab {
@@ -176,7 +251,10 @@ describe('Issue 2.6, 2.7 / 5.5 — Pruebas parametrizadas de validación de soft
     test.each(casos)(
       '$descripcion',
       ({ softwareInstalado, softwareRequerido, cumpleEsperado, faltanteEsperado }) => {
-        const resultado = validarSoftwareLaboratorio(softwareInstalado, softwareRequerido);
+        const resultado = validarSoftwareLaboratorio(
+          softwareInstalado === null ? null : instalados(softwareInstalado),
+          softwareRequerido === null ? null : requeridos(softwareRequerido),
+        );
         expect(resultado.cumple).toBe(cumpleEsperado);
         expect(resultado.softwareFaltante).toEqual(faltanteEsperado);
       },
@@ -198,7 +276,7 @@ describe('Issue 2.6, 2.7 / 5.5 — Pruebas parametrizadas de validación de soft
         tipo: TipoEspacio.AULA_TEORICA,
       };
 
-      const resultado = validarSoftwareBloque(bloqueAula, ['PostgreSQL', 'Docker']);
+      const resultado = validarSoftwareBloque(bloqueAula, requeridos(['PostgreSQL', 'Docker']));
       expect(resultado.cumple).toBe(true);
       expect(resultado.detalles).toHaveLength(0);
     });
@@ -222,7 +300,7 @@ describe('Issue 2.6, 2.7 / 5.5 — Pruebas parametrizadas de validación de soft
     test('LABORATORIO: cumple si todos los laboratorios del bloque tienen el stack', () => {
       const bloqueLab = crearBloqueLabConEspacios([lab1]);
 
-      const resultado = validarSoftwareBloque(bloqueLab, ['VS Code', 'PostgreSQL']);
+      const resultado = validarSoftwareBloque(bloqueLab, requeridos(['VS Code', 'PostgreSQL']));
       expect(resultado.cumple).toBe(true);
       expect(resultado.detalles).toHaveLength(0);
     });
@@ -238,7 +316,10 @@ describe('Issue 2.6, 2.7 / 5.5 — Pruebas parametrizadas de validación de soft
     test('LABORATORIO: rechaza el bloque si al menos un laboratorio no cumple y registra el detalle', () => {
       const bloqueMultiLab = crearBloqueLabConEspacios([lab1, lab2]);
 
-      const resultado = validarSoftwareBloque(bloqueMultiLab, ['VS Code', 'PostgreSQL']);
+      const resultado = validarSoftwareBloque(
+        bloqueMultiLab,
+        requeridos(['VS Code', 'PostgreSQL']),
+      );
       expect(resultado.cumple).toBe(false);
       expect(resultado.motivoRechazo).toContain('Lab 102');
       expect(resultado.detalles).toHaveLength(1);
@@ -252,7 +333,7 @@ describe('Issue 2.6, 2.7 / 5.5 — Pruebas parametrizadas de validación de soft
     test('LABORATORIO: registra todos los laboratorios cuando más de uno falla', () => {
       const bloqueMultiLab = crearBloqueLabConEspacios([lab1, lab2]);
 
-      const resultado = validarSoftwareBloque(bloqueMultiLab, ['Docker']);
+      const resultado = validarSoftwareBloque(bloqueMultiLab, requeridos(['Docker']));
       expect(resultado.cumple).toBe(false);
       expect(resultado.detalles).toHaveLength(2);
       expect(resultado.detalles.map((d) => d.identificador)).toEqual(['Lab 101', 'Lab 102']);
@@ -260,14 +341,14 @@ describe('Issue 2.6, 2.7 / 5.5 — Pruebas parametrizadas de validación de soft
   });
 
   // -------------------------------------------------------------------------
-  // Issue 5.5: Casos parametrizados — bloque completo (3 escenarios obligatorios
-  // del plan maestro §1.1 para bloques de laboratorio)
+  // Issue 5.5: Casos parametrizados — bloque completo
   // -------------------------------------------------------------------------
   describe('Issue 5.5: test.each — cumplimiento total, parcial y stack vacío en bloque de laboratorio', () => {
     interface CasoBloqueLab {
       descripcion: string;
       espacios: EspacioConexo[];
       softwareRequerido: string[] | null;
+      regla?: ComparacionVersion;
       cumpleEsperado: boolean;
       numDetallesFalloEsperado: number;
     }
@@ -279,7 +360,7 @@ describe('Issue 2.6, 2.7 / 5.5 — Pruebas parametrizadas de validación de soft
       pabellon: 'Pab B',
       piso: 2,
       aforoNominal: 25,
-      softwareInstalado: ['Python 3.12', 'VS Code', 'Docker'],
+      softwareInstalado: instalados(['Python 3.12', 'VS Code', 'Docker']),
     };
 
     const labIncompleto: EspacioConexo = {
@@ -289,7 +370,7 @@ describe('Issue 2.6, 2.7 / 5.5 — Pruebas parametrizadas de validación de soft
       pabellon: 'Pab B',
       piso: 2,
       aforoNominal: 25,
-      softwareInstalado: ['VS Code'],
+      softwareInstalado: instalados(['VS Code']),
     };
 
     const casos: CasoBloqueLab[] = [
@@ -314,13 +395,24 @@ describe('Issue 2.6, 2.7 / 5.5 — Pruebas parametrizadas de validación de soft
         cumpleEsperado: true,
         numDetallesFalloEsperado: 0,
       },
+      {
+        descripcion: 'regla MINIMA — el bloque cumple con una versión superior',
+        espacios: [labCompleto],
+        softwareRequerido: ['Python 3.9'],
+        regla: ComparacionVersion.MINIMA,
+        cumpleEsperado: true,
+        numDetallesFalloEsperado: 0,
+      },
     ];
 
     test.each(casos)(
       '$descripcion',
-      ({ espacios, softwareRequerido, cumpleEsperado, numDetallesFalloEsperado }) => {
+      ({ espacios, softwareRequerido, regla, cumpleEsperado, numDetallesFalloEsperado }) => {
         const bloque = crearBloqueLabConEspacios(espacios);
-        const resultado = validarSoftwareBloque(bloque, softwareRequerido);
+        const resultado = validarSoftwareBloque(
+          bloque,
+          softwareRequerido === null ? null : requeridos(softwareRequerido, regla),
+        );
         expect(resultado.cumple).toBe(cumpleEsperado);
         expect(resultado.detalles).toHaveLength(numDetallesFalloEsperado);
       },

@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient, RolCuenta, TipoAlerta, TipoEspacio } from '@prisma/client';
 import { z } from 'zod';
 import { HttpError } from '../lib/http';
+import { formatearSoftware } from '../lib/software';
 import { AlertaRegistradaDTO } from '../types/alertas';
 import { TokenPayload } from '../types/auth';
 import {
@@ -12,11 +13,8 @@ import {
 import { verificarAccesoEspacio } from './acceso.service';
 import { registrarAlertaDesdeDeteccion } from './alerta.service';
 import { evaluarCapacidadInsuficiente } from './deteccionAlertas.service';
-import {
-  normalizarListaSoftware,
-  registrarCambioPcsMalogradas,
-  registrarCambioSoftware,
-} from './laboratorio.service';
+import { registrarCambioPcsMalogradas, registrarCambioSoftware } from './laboratorio.service';
+import { resolverSoftwareIds } from './software.service';
 
 const CAMPOS_COORDINACION: CampoEspacio[] = [
   'identificador',
@@ -27,7 +25,14 @@ const CAMPOS_COORDINACION: CampoEspacio[] = [
   'habilitado',
   'descripcionUso',
 ];
-const CAMPOS_LABORATORIO: CampoEspacio[] = ['softwareInstalado', 'pcsMalogradas'];
+const CAMPOS_LABORATORIO: CampoEspacio[] = ['softwareIds', 'pcsMalogradas'];
+
+/** Relación de software que se incluye en las respuestas del panel (Issue 4.28). */
+const ESPACIO_CON_SOFTWARE = {
+  softwareInstaladoCatalogo: { include: { software: true } },
+} satisfies Prisma.EspacioInclude;
+
+type EspacioConSoftware = Prisma.EspacioGetPayload<{ include: typeof ESPACIO_CON_SOFTWARE }>;
 
 /** Campos que cada rol puede editar según el tipo de espacio (Issue 4.15). */
 export function camposEditables(rol: RolCuenta, tipo: TipoEspacio): CampoEspacio[] {
@@ -54,9 +59,9 @@ const pcsMalogradas = z
   .number({ error: 'pcsMalogradas debe ser un número entero' })
   .int('pcsMalogradas debe ser un número entero')
   .min(0, 'pcsMalogradas no puede ser negativo');
-const software = z
-  .array(z.string().trim().min(1, 'El nombre del software no puede estar vacío').max(120))
-  .max(200, 'Demasiados programas en la lista');
+const softwareIds = z
+  .array(z.string().uuid('Cada software debe ser un id válido'))
+  .max(100, 'Demasiados programas en la lista');
 const descripcionUso = z.string().trim().min(1).max(120, 'La descripción de uso es muy larga');
 const contiguos = z.array(z.string().min(1)).max(50, 'Demasiados espacios contiguos');
 
@@ -67,7 +72,7 @@ export const CrearEspacioSchema = z
     pabellon,
     piso,
     aforoNominal: aforoNominal.optional(),
-    softwareInstalado: software.optional(),
+    softwareIds: softwareIds.optional(),
     pcsMalogradas: pcsMalogradas.optional(),
     contiguos: contiguos.optional(),
     habilitado: z.boolean({ error: 'habilitado debe ser verdadero o falso' }).optional(),
@@ -79,7 +84,7 @@ export const CrearEspacioSchema = z
       ctx.addIssue({ code: 'custom', path: ['aforoNominal'], message: MENSAJE_AFORO_HABILITADO });
     }
     if (e.tipo === TipoEspacio.AULA_TEORICA) {
-      if (e.softwareInstalado !== undefined || e.pcsMalogradas !== undefined) {
+      if (e.softwareIds !== undefined || e.pcsMalogradas !== undefined) {
         ctx.addIssue({
           code: 'custom',
           message: 'Un aula teórica no tiene software ni PCs malogradas',
@@ -99,7 +104,7 @@ export const ActualizarEspacioSchema = z
     pabellon: pabellon.optional(),
     piso: piso.optional(),
     aforoNominal: aforoNominal.optional(),
-    softwareInstalado: software.optional(),
+    softwareIds: softwareIds.optional(),
     pcsMalogradas: pcsMalogradas.optional(),
     contiguos: contiguos.optional(),
     habilitado: z.boolean({ error: 'habilitado debe ser verdadero o falso' }).optional(),
@@ -126,7 +131,7 @@ async function contiguosDe(espacioId: string, db: Pick<Db, 'espacioContiguo'>): 
 }
 
 async function aEspacioDTO(
-  espacio: Prisma.EspacioGetPayload<object>,
+  espacio: EspacioConSoftware,
   rol: RolCuenta,
   db: Pick<Db, 'espacioContiguo'>,
 ): Promise<EspacioAdminDTO> {
@@ -138,7 +143,15 @@ async function aEspacioDTO(
     pabellon: espacio.pabellon,
     piso: espacio.piso,
     aforoNominal: espacio.aforoNominal,
-    softwareInstalado: esLab ? espacio.softwareInstalado : null,
+    softwareInstalado: esLab
+      ? espacio.softwareInstaladoCatalogo
+          .map((fila) => ({
+            id: fila.softwareId,
+            nombre: fila.software.nombre,
+            version: fila.software.version,
+          }))
+          .sort((a, b) => formatearSoftware(a).localeCompare(formatearSoftware(b)))
+      : null,
     pcsMalogradas: esLab ? espacio.pcsMalogradas : null,
     habilitado: espacio.habilitado,
     descripcionUso: espacio.descripcionUso,
@@ -185,7 +198,10 @@ async function reemplazarContiguos(espacioId: string, ids: string[], db: Db): Pr
 }
 
 async function obtenerEspacio(espacioId: string, db: Pick<Db, 'espacio'>) {
-  const espacio = await db.espacio.findUnique({ where: { id: espacioId } });
+  const espacio = await db.espacio.findUnique({
+    where: { id: espacioId },
+    include: ESPACIO_CON_SOFTWARE,
+  });
   if (!espacio) {
     throw new HttpError(404, `El espacio con ID '${espacioId}' no existe`);
   }
@@ -213,6 +229,7 @@ export async function listarEspacios(
       }),
     },
     orderBy: [{ pabellon: 'asc' }, { piso: 'asc' }, { identificador: 'asc' }],
+    include: ESPACIO_CON_SOFTWARE,
   });
   return Promise.all(espacios.map((e) => aEspacioDTO(e, auth.rol, prisma)));
 }
@@ -238,6 +255,10 @@ export async function crearEspacio(
       const vecinos = await validarContiguos(null, entrada.tipo, entrada.contiguos ?? [], tx);
       const esLab = entrada.tipo === TipoEspacio.LABORATORIO;
 
+      // Issue 4.28: el software se resuelve contra el catálogo; un id inexistente o dado de
+      // baja cancela el alta completa (la transacción no deja el espacio a medias).
+      const software = esLab ? await resolverSoftwareIds(entrada.softwareIds ?? [], tx) : [];
+
       const creado = await tx.espacio.create({
         data: {
           identificador: entrada.identificador,
@@ -245,14 +266,28 @@ export async function crearEspacio(
           pabellon: entrada.pabellon,
           piso: entrada.piso,
           aforoNominal: entrada.aforoNominal ?? 0,
-          softwareInstalado: esLab ? normalizarListaSoftware(entrada.softwareInstalado ?? []) : [],
           pcsMalogradas: esLab ? (entrada.pcsMalogradas ?? 0) : null,
           habilitado: entrada.habilitado ?? true,
           descripcionUso: entrada.descripcionUso ?? null,
         },
       });
+
+      if (software.length > 0) {
+        await tx.espacioSoftware.createMany({
+          data: software.map((s) => ({
+            espacioId: creado.id,
+            softwareId: s.id,
+            registradoPorId: auth.sub,
+          })),
+        });
+      }
+
       await reemplazarContiguos(creado.id, vecinos, tx);
-      return aEspacioDTO(creado, auth.rol, tx);
+      const conSoftware = await tx.espacio.findUniqueOrThrow({
+        where: { id: creado.id },
+        include: ESPACIO_CON_SOFTWARE,
+      });
+      return aEspacioDTO(conSoftware, auth.rol, tx);
     });
   } catch (error: unknown) {
     if (esConflictoUnico(error)) {
@@ -374,8 +409,8 @@ export async function actualizarEspacio(
     const r = await registrarCambioPcsMalogradas(actual.id, entrada.pcsMalogradas, auth, prisma);
     alertas.push(...r.alertas);
   }
-  if (entrada.softwareInstalado !== undefined) {
-    const r = await registrarCambioSoftware(actual.id, entrada.softwareInstalado, auth, prisma);
+  if (entrada.softwareIds !== undefined) {
+    const r = await registrarCambioSoftware(actual.id, entrada.softwareIds, auth, prisma);
     alertas.push(...r.alertas);
   }
 

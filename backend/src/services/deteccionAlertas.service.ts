@@ -3,6 +3,8 @@ import { calcularCapacidadReal } from '../rules/calcularCapacidadReal';
 import { BloqueCandidato } from '../rules/buscarBloqueContiguo';
 import { validarSoftwareBloque } from '../rules/validarSoftware';
 import { AsignacionAfectadaDTO, CambioCapacidad } from '../types/alertas';
+import { SoftwareInstaladoInput, SoftwareRequeridoInput } from '../types/software';
+import { mapearSoftwareInstalado, mapearSoftwareRequerido } from './software.service';
 
 type Db = Prisma.TransactionClient;
 
@@ -14,7 +16,7 @@ interface EspacioDeAsignacion {
   piso: number;
   aforoNominal: number;
   pcsMalogradas: number | null;
-  softwareInstalado: string[];
+  softwareInstalado: SoftwareInstaladoInput[];
 }
 
 /** Asignación vigente con los datos mínimos que necesitan las dos detecciones. */
@@ -24,7 +26,7 @@ export interface AsignacionVigenteConEspacios {
   codigoSeccion: string;
   codigoCurso: string;
   nombreCurso: string;
-  stackSoftwareRequerido: string[];
+  softwareRequerido: SoftwareRequeridoInput[];
   alumnosMatriculados: number;
   espacios: EspacioDeAsignacion[];
 }
@@ -47,9 +49,16 @@ export async function cargarAsignacionesVigentesDeEspacio(
         include: {
           curso: true,
           _count: { select: { matriculas: true } },
+          softwareRequerido: { include: { software: true } },
         },
       },
-      espacios: { include: { espacio: true } },
+      espacios: {
+        include: {
+          espacio: {
+            include: { softwareInstaladoCatalogo: { include: { software: true } } },
+          },
+        },
+      },
     },
   });
 
@@ -59,7 +68,7 @@ export async function cargarAsignacionesVigentesDeEspacio(
     codigoSeccion: a.seccion.codigoSeccion,
     codigoCurso: a.seccion.curso.codigo,
     nombreCurso: a.seccion.curso.nombre,
-    stackSoftwareRequerido: a.seccion.stackSoftwareRequerido,
+    softwareRequerido: mapearSoftwareRequerido(a.seccion.softwareRequerido),
     alumnosMatriculados: a.seccion._count.matriculas,
     espacios: a.espacios.map((ae) => ({
       id: ae.espacio.id,
@@ -69,7 +78,7 @@ export async function cargarAsignacionesVigentesDeEspacio(
       piso: ae.espacio.piso,
       aforoNominal: ae.espacio.aforoNominal,
       pcsMalogradas: ae.espacio.pcsMalogradas,
-      softwareInstalado: ae.espacio.softwareInstalado,
+      softwareInstalado: mapearSoftwareInstalado(ae.espacio.softwareInstaladoCatalogo),
     })),
   }));
 }
@@ -84,7 +93,7 @@ export async function cargarAsignacionesVigentesDeEspacio(
  */
 export function detectarIncompatibilidadesSoftware(
   laboratorioId: string,
-  nuevoSoftware: string[],
+  nuevoSoftware: SoftwareInstaladoInput[],
   asignaciones: AsignacionVigenteConEspacios[],
 ): AsignacionAfectadaDTO[] {
   const afectadas: AsignacionAfectadaDTO[] = [];
@@ -109,7 +118,7 @@ export function detectarIncompatibilidadesSoftware(
       tipo: espacios[0].tipo,
     };
 
-    const resultado = validarSoftwareBloque(bloque, asignacion.stackSoftwareRequerido);
+    const resultado = validarSoftwareBloque(bloque, asignacion.softwareRequerido);
     const falloEnLab = resultado.detalles.find((d) => d.laboratorioId === laboratorioId);
 
     if (!resultado.cumple && falloEnLab) {
@@ -133,7 +142,7 @@ export function detectarIncompatibilidadesSoftware(
  */
 export async function evaluarIncompatibilidadSoftware(
   laboratorioId: string,
-  nuevoSoftware: string[],
+  nuevoSoftware: SoftwareInstaladoInput[],
   db: Db,
 ): Promise<AsignacionAfectadaDTO[]> {
   const asignaciones = await cargarAsignacionesVigentesDeEspacio(laboratorioId, db);

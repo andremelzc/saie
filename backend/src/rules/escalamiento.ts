@@ -2,6 +2,8 @@ import { TipoEspacio } from '@prisma/client';
 import { EspacioConexo } from './buscarBloqueContiguo';
 import { calcularCapacidadReal } from './calcularCapacidadReal';
 import { validarSoftwareLaboratorio } from './validarSoftware';
+import { formatearSoftware } from '../lib/software';
+import { SoftwareRequeridoInput } from '../types/software';
 import {
   DetalleEscalamiento,
   MotivoEscalamientoTipo,
@@ -12,7 +14,7 @@ export interface DiagnosticoEscalamientoInput {
   seccion: SeccionInputMotor;
   todosLosEspacios: EspacioConexo[];
   espaciosDisponiblesEnFranja: EspacioConexo[];
-  softwareRequerido?: string[] | null;
+  softwareRequerido?: SoftwareRequeridoInput[] | null;
 }
 
 /**
@@ -98,9 +100,9 @@ export function clasificarMotivoEscalamiento(
     if (labsConSoftware.length === 0) {
       return {
         tipo: MotivoEscalamientoTipo.SOFTWARE_FALTANTE,
-        descripcion: `Ningún laboratorio disponible en la franja horaria cuenta con el stack de software requerido: [${softwareRequerido.join(', ')}].`,
+        descripcion: `Ningún laboratorio disponible en la franja horaria cuenta con el stack de software requerido: [${softwareRequerido.map(formatearSoftware).join(', ')}].`,
         detallesTecnicos: {
-          softwareRequerido,
+          softwareRequerido: softwareRequerido.map(formatearSoftware),
           laboratoriosDisponiblesEvaluados: disponiblesTipo.map((l) => l.identificador),
         },
       };

@@ -1,12 +1,14 @@
 import { TipoEspacio } from '@prisma/client';
 import { calcularCapacidadReal, EspacioCapacidadInput } from './calcularCapacidadReal';
+import { SoftwareInstaladoInput } from '../types/software';
 
 export interface EspacioConexo extends EspacioCapacidadInput {
   id: string;
   identificador: string;
   pabellon: string;
   piso: number;
-  softwareInstalado?: string[] | null;
+  /** Software del catálogo instalado en el espacio (solo laboratorios). */
+  softwareInstalado?: SoftwareInstaladoInput[] | null;
   /** Distancia en metros hasta el ascensor; base de la priorización por accesibilidad (R-07). */
   distanciaAscensor?: number | null;
 }
