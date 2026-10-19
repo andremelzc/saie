@@ -56,6 +56,9 @@ const TRAZO_MAPA =
 /** Flecha con desvío: el icono de "Ruta hacia mi aula". */
 const TRAZO_RUTA =
   'M9 6.75V15m6-6v8.25m0 0a3 3 0 11-6 0 3 3 0 016 0zM15 9.75a3 3 0 11-6 0 3 3 0 016 0z';
+/** Avión de papel: el icono de "Avisos por Telegram". */
+const TRAZO_TELEGRAM =
+  'M6 12 3.269 3.126A59.768 59.768 0 0 1 21.485 12 59.77 59.77 0 0 1 3.27 20.876L5.999 12Zm0 0h7.5';
 
 interface Servicio {
   titulo: string;
@@ -105,6 +108,15 @@ const SERVICIOS: Servicio[] = [
     trazo: TRAZO_RUTA,
     fondo: '#FFF3E0',
     color: '#E65100',
+  },
+  {
+    titulo: 'Avisos por Telegram',
+    descripcion: 'Entérate al instante si tu clase cambia de aula o laboratorio.',
+    enlace: RUTAS.telegramAlumno,
+    etiquetaEnlace: 'Configurar avisos',
+    trazo: TRAZO_TELEGRAM,
+    fondo: '#E1F5FE',
+    color: '#0277BD',
   },
 ];
 

@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { MENSAJE_EN_DESARROLLO, PantallaEnDesarrollo } from './PantallaEnDesarrollo';
+import {
+  MENSAJE_EN_DESARROLLO,
+  PREVISION_EN_DESARROLLO,
+  PantallaEnDesarrollo,
+} from './PantallaEnDesarrollo';
 
 vi.mock('../context/useAuth', () => ({
   useAuth: () => ({ sesion: { rol: 'ALUMNO' } }),
@@ -33,6 +37,7 @@ describe('PantallaEnDesarrollo', () => {
     expect(screen.getByRole('heading', { name: 'Mapa de ocupación' })).toBeVisible();
     expect(screen.getByText('Ubica tus aulas en el plano.')).toBeVisible();
     expect(screen.getByRole('status')).toHaveTextContent(MENSAJE_EN_DESARROLLO);
+    expect(screen.getByText(PREVISION_EN_DESARROLLO)).toBeVisible();
   });
 
   it('lista las funcionalidades previstas y el issue de seguimiento', () => {

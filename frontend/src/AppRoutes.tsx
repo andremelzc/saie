@@ -2,17 +2,30 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Consulta from './pages/Consulta';
-import AreaPrivadaPlaceholder from './pages/AreaPrivadaPlaceholder';
 import InicioEstudiante from './pages/InicioEstudiante';
 import HorarioMisCursosPage from './pages/HorarioMisCursosPage';
 import PerfilAlumnoPage from './pages/PerfilAlumnoPage';
 import MapaOcupacionPage from './pages/MapaOcupacionPage';
 import RutaAlumnoPage from './pages/RutaAlumnoPage';
+import TelegramAlumnoPage from './pages/TelegramAlumnoPage';
+import InicioDocentePage from './pages/docente/InicioDocentePage';
+import HorarioDocentePage from './pages/docente/HorarioDocentePage';
+import EspaciosDocentePage from './pages/docente/EspaciosDocentePage';
+import IncidenciasDocentePage from './pages/docente/IncidenciasDocentePage';
 import InicioAdmin from './pages/admin/InicioAdmin';
 import AlertasAdmin from './pages/admin/AlertasAdmin';
 import CargaDatos from './pages/admin/CargaDatos';
 import EspaciosAdmin from './pages/admin/EspaciosAdmin';
 import CambioLaboratorio from './pages/admin/CambioLaboratorio';
+import ProximamenteAdminPage from './pages/admin/ProximamenteAdminPage';
+import MapaAdminPage from './pages/admin/MapaAdminPage';
+import LaboratoriosAdminPage from './pages/admin/LaboratoriosAdminPage';
+import AltaAlumnoPage from './pages/admin/AltaAlumnoPage';
+import AltaDocentePage from './pages/admin/AltaDocentePage';
+import ClavesAdminPage from './pages/admin/ClavesAdminPage';
+import SoftwareAdminPage from './pages/admin/SoftwareAdminPage';
+import SolicitudesSoftwareAdminPage from './pages/admin/SolicitudesSoftwareAdminPage';
+import IncidenciasAdminPage from './pages/admin/IncidenciasAdminPage';
 import LoginRoute from './components/auth/LoginRoute';
 import RutaProtegida from './components/auth/RutaProtegida';
 import { ROLES_ADMIN, RUTAS } from './config/rutas';
@@ -73,11 +86,45 @@ export const AppRoutes: React.FC = () => {
           </RutaProtegida>
         }
       />
+      {/* Avisos por Telegram (Issue 3.28): el backend ya está listo, falta la pantalla. */}
+      <Route
+        path={RUTAS.telegramAlumno}
+        element={
+          <RutaProtegida rolesPermitidos={['ALUMNO']} rutaLogin={RUTAS.loginAlumno}>
+            <TelegramAlumnoPage />
+          </RutaProtegida>
+        }
+      />
+      {/* Portal del docente (Issues 7.8 a 7.12): inicio y pantallas pendientes. */}
       <Route
         path={RUTAS.inicioDocente}
         element={
           <RutaProtegida rolesPermitidos={['DOCENTE']} rutaLogin={RUTAS.loginDocente}>
-            <AreaPrivadaPlaceholder titulo="Área del docente" />
+            <InicioDocentePage />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.horarioDocente}
+        element={
+          <RutaProtegida rolesPermitidos={['DOCENTE']} rutaLogin={RUTAS.loginDocente}>
+            <HorarioDocentePage />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.espaciosDocente}
+        element={
+          <RutaProtegida rolesPermitidos={['DOCENTE']} rutaLogin={RUTAS.loginDocente}>
+            <EspaciosDocentePage />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.incidenciasDocente}
+        element={
+          <RutaProtegida rolesPermitidos={['DOCENTE']} rutaLogin={RUTAS.loginDocente}>
+            <IncidenciasDocentePage />
           </RutaProtegida>
         }
       />
@@ -119,6 +166,79 @@ export const AppRoutes: React.FC = () => {
         element={
           <RutaProtegida rolesPermitidos={ROLES_ADMIN} rutaLogin={RUTAS.loginAdmin}>
             <CambioLaboratorio />
+          </RutaProtegida>
+        }
+      />
+      {/* Pantallas administrativas pendientes: se anuncian sin romper la navegación. */}
+      <Route
+        path={RUTAS.proximamenteAdmin}
+        element={
+          <RutaProtegida rolesPermitidos={ROLES_ADMIN} rutaLogin={RUTAS.loginAdmin}>
+            <ProximamenteAdminPage />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.mapaAdmin}
+        element={
+          <RutaProtegida rolesPermitidos={['COORDINACION_ACADEMICA']} rutaLogin={RUTAS.loginAdmin}>
+            <MapaAdminPage />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.laboratoriosAdmin}
+        element={
+          <RutaProtegida rolesPermitidos={['COORDINACION_ACADEMICA']} rutaLogin={RUTAS.loginAdmin}>
+            <LaboratoriosAdminPage />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.altaAlumnoAdmin}
+        element={
+          <RutaProtegida rolesPermitidos={['COORDINACION_ACADEMICA']} rutaLogin={RUTAS.loginAdmin}>
+            <AltaAlumnoPage />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.altaDocenteAdmin}
+        element={
+          <RutaProtegida rolesPermitidos={['COORDINACION_ACADEMICA']} rutaLogin={RUTAS.loginAdmin}>
+            <AltaDocentePage />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.clavesAdmin}
+        element={
+          <RutaProtegida rolesPermitidos={ROLES_ADMIN} rutaLogin={RUTAS.loginAdmin}>
+            <ClavesAdminPage />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.softwareAdmin}
+        element={
+          <RutaProtegida rolesPermitidos={['COORDINACION_ACADEMICA']} rutaLogin={RUTAS.loginAdmin}>
+            <SoftwareAdminPage />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.solicitudesSoftwareAdmin}
+        element={
+          <RutaProtegida rolesPermitidos={['COORDINACION_ACADEMICA']} rutaLogin={RUTAS.loginAdmin}>
+            <SolicitudesSoftwareAdminPage />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.incidenciasAdmin}
+        element={
+          <RutaProtegida rolesPermitidos={['JEFATURA_LABORATORIOS']} rutaLogin={RUTAS.loginAdmin}>
+            <IncidenciasAdminPage />
           </RutaProtegida>
         }
       />
