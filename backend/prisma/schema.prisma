@@ -83,6 +83,32 @@ enum TipoEventoAuditoria {
   ALERTA
 }
 
+// Catálogo de software (Spec 08): deja de ser texto libre en `Espacio` y `Seccion`.
+// `SISTEMA_OPERATIVO` es una categoría más del catálogo.
+enum CategoriaSoftware {
+  SISTEMA_OPERATIVO
+  IDE
+  LENGUAJE
+  BASE_DATOS
+  REDES
+  SIMULACION
+  OFIMATICA
+  OTRO
+}
+
+enum TipoLicencia {
+  LIBRE
+  EDUCATIVA
+  COMERCIAL
+}
+
+// Cómo se compara la versión instalada con la requerida por una sección (Spec 08, §3).
+enum ComparacionVersion {
+  CUALQUIERA
+  EXACTA
+  MINIMA
+}
+
 // ==========================================
 // MODELOS DE ESPACIOS FÍSICOS
 // ==========================================
@@ -109,6 +135,9 @@ model Espacio {
   incidencias          Incidencia[]
   historialEspacio     HistorialEspacio[]
   responsables         EspacioResponsable[]
+  // Software del catálogo instalado en este espacio (solo LABORATORIO). Reemplaza a
+  // `softwareInstalado`, que se mantiene deprecado hasta la segunda migración del Issue 4.28.
+  softwareInstaladoCatalogo EspacioSoftware[]
 
   @@unique([pabellon, identificador])
   @@map("espacios")
@@ -153,6 +182,9 @@ model Seccion {
   horarios     Horario[]
   matriculas   Matricula[]
   asignaciones Asignacion[]
+  // Requerimientos de software del catálogo. Reemplaza a `stackSoftwareRequerido`, deprecado
+  // hasta la segunda migración del Issue 4.28.
+  softwareRequerido SeccionSoftware[]
 
   @@unique([cursoId, codigoSeccion, periodo])
   @@map("secciones")
@@ -249,6 +281,8 @@ model Cuenta {
   docente              Docente?
   historialEspacio     HistorialEspacio[]
   espaciosResponsables EspacioResponsable[]
+  softwareCreado       Software[]
+  softwareRegistrado   EspacioSoftware[]
 
   @@map("cuentas")
 }
@@ -395,4 +429,66 @@ model VinculacionTelegram {
   alumno Alumno @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
 
   @@map("vinculaciones_telegram")
+}
+
+// ==========================================
+// CATÁLOGO DE SOFTWARE (Spec 08)
+// ==========================================
+
+// Catálogo único de software. La identidad de un software es (nombre, versión): el nombre se
+// normaliza igual que en el motor y `version` vacía representa "sin versión declarada".
+// La baja es lógica (`activo = false`); nunca se borra una fila que tenga instalaciones o
+// requerimientos asociados. `SISTEMA_OPERATIVO` es una categoría más.
+model Software {
+  id                 String            @id @default(uuid())
+  nombre             String // Nombre visible (ej. "Python")
+  nombreNormalizado  String            @map("nombre_normalizado") // Clave de comparación del motor
+  version            String            @default("") // "" = sin versión declarada
+  categoria          CategoriaSoftware
+  tipoLicencia       TipoLicencia      @default(LIBRE) @map("tipo_licencia")
+  descripcion        String?
+  fabricante         String?
+  activo             Boolean           @default(true) // false = baja lógica
+  creadoPorId        String?           @map("creado_por_id")
+  fechaCreacion      DateTime          @default(now()) @map("fecha_creacion")
+  fechaActualizacion DateTime          @updatedAt @map("fecha_actualizacion")
+
+  creadoPor Cuenta?            @relation(fields: [creadoPorId], references: [id], onDelete: SetNull)
+  espacios  EspacioSoftware[]
+  secciones SeccionSoftware[]
+
+  @@unique([nombreNormalizado, version])
+  @@index([categoria])
+  @@map("software")
+}
+
+// Software instalado en un laboratorio. Sustituye a `Espacio.softwareInstalado` (text[]).
+model EspacioSoftware {
+  espacioId        String   @map("espacio_id")
+  softwareId       String   @map("software_id")
+  fechaInstalacion DateTime @default(now()) @map("fecha_instalacion")
+  registradoPorId  String?  @map("registrado_por_id")
+
+  espacio       Espacio  @relation(fields: [espacioId], references: [id], onDelete: Cascade)
+  software      Software @relation(fields: [softwareId], references: [id], onDelete: Cascade)
+  registradoPor Cuenta?  @relation(fields: [registradoPorId], references: [id], onDelete: SetNull)
+
+  @@id([espacioId, softwareId])
+  @@index([softwareId])
+  @@map("espacio_software")
+}
+
+// Software requerido por una sección, con la regla de versión declarada. Sustituye a
+// `Seccion.stackSoftwareRequerido` (text[]).
+model SeccionSoftware {
+  seccionId          String             @map("seccion_id")
+  softwareId         String             @map("software_id")
+  comparacionVersion ComparacionVersion @default(CUALQUIERA) @map("comparacion_version")
+
+  seccion  Seccion  @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+  software Software @relation(fields: [softwareId], references: [id], onDelete: Cascade)
+
+  @@id([seccionId, softwareId])
+  @@index([softwareId])
+  @@map("seccion_software")
 }
