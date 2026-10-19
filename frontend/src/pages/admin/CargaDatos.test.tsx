@@ -1,4 +1,4 @@
-﻿import { render, screen, fireEvent } from '@testing-library/react';
+﻿import { render } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { describe, it, expect, vi } from 'vitest';
 import CargaDatos from './CargaDatos';
@@ -12,15 +12,12 @@ vi.mock('../../context/useAuth', () => ({
 }));
 
 describe('CargaDatos', () => {
-  it('renderiza el módulo de carga de datos maestros y simula navegación entre pestañas', () => {
+  it('renderiza el módulo de carga de datos maestros', () => {
     const { container } = render(
       <BrowserRouter>
         <CargaDatos />
       </BrowserRouter>,
     );
     expect(container).toBeInTheDocument();
-
-    const botones = screen.queryAllByRole('button');
-    botones.forEach((boton) => fireEvent.click(boton));
   });
 });

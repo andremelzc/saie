@@ -12,10 +12,12 @@ vi.mock('../../context/useAuth', () => ({
 }));
 
 describe('LayoutAdmin', () => {
-  it('renderiza la estructura base y navegación del área administrativa', () => {
+  it('renderiza el layout del panel administrativo', () => {
     const { container } = render(
       <BrowserRouter>
-        <LayoutAdmin />
+        <LayoutAdmin titulo="Panel de Prueba">
+          <div>Contenido de prueba</div>
+        </LayoutAdmin>
       </BrowserRouter>,
     );
     expect(container).toBeInTheDocument();
