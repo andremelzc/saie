@@ -6,6 +6,8 @@ import AreaPrivadaPlaceholder from './pages/AreaPrivadaPlaceholder';
 import InicioEstudiante from './pages/InicioEstudiante';
 import HorarioMisCursosPage from './pages/HorarioMisCursosPage';
 import PerfilAlumnoPage from './pages/PerfilAlumnoPage';
+import ConfiguracionAlumno from './pages/ConfiguracionAlumno';
+import AyudaAlumno from './pages/AyudaAlumno';
 import LoginRoute from './components/auth/LoginRoute';
 import RutaProtegida from './components/auth/RutaProtegida';
 import { ROLES_ADMIN, RUTAS } from './config/rutas';
@@ -46,6 +48,22 @@ export const AppRoutes: React.FC = () => {
         element={
           <RutaProtegida rolesPermitidos={['ALUMNO']} rutaLogin={RUTAS.loginAlumno}>
             <PerfilAlumnoPage />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.configuracionAlumno}
+        element={
+          <RutaProtegida rolesPermitidos={['ALUMNO']} rutaLogin={RUTAS.loginAlumno}>
+            <ConfiguracionAlumno />
+          </RutaProtegida>
+        }
+      />
+      <Route
+        path={RUTAS.ayudaAlumno}
+        element={
+          <RutaProtegida rolesPermitidos={['ALUMNO']} rutaLogin={RUTAS.loginAlumno}>
+            <AyudaAlumno />
           </RutaProtegida>
         }
       />

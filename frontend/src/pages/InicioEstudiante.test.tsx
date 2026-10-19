@@ -82,13 +82,21 @@ describe('InicioEstudiante', () => {
       expect(screen.queryByRole('region', { name: 'Resumen de tu semana' })).toBeNull();
     });
 
-    it('si la API falla, sigue mostrando los accesos a horario y perfil', async () => {
+    it('si la API falla, sigue mostrando los accesos a horario y perfil y los iconos de la cabecera', async () => {
       const get = vi.spyOn(api, 'get').mockRejectedValue(new Error('caída'));
       montar();
 
       await waitFor(() => expect(get).toHaveBeenCalled());
       expect(await screen.findByRole('link', { name: /Ir a mi horario/ })).toBeVisible();
       expect(screen.getByRole('link', { name: /Ir a mi perfil/ })).toBeVisible();
+      expect(screen.getByRole('link', { name: 'Configuración' })).toHaveAttribute(
+        'href',
+        '/estudiante/configuracion',
+      );
+      expect(screen.getByRole('link', { name: 'Ayuda' })).toHaveAttribute(
+        'href',
+        '/estudiante/ayuda',
+      );
       expect(screen.queryByRole('region', { name: 'Resumen de tu semana' })).toBeNull();
     });
 

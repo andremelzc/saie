@@ -11,6 +11,8 @@ export const RUTAS = {
   inicioDocente: '/docente',
   inicioAdmin: '/admin',
   perfilAlumno: '/estudiante/perfil',
+  configuracionAlumno: '/estudiante/configuracion',
+  ayudaAlumno: '/estudiante/ayuda',
 } as const;
 
 export const ROLES_ADMIN: RolCuenta[] = ['COORDINACION_ACADEMICA', 'JEFATURA_LABORATORIOS'];
