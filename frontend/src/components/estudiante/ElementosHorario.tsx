@@ -121,24 +121,62 @@ export interface EstadoVacioProps {
 export const EstadoVacio: React.FC<EstadoVacioProps> = ({ titulo, descripcion }) => (
   <div
     role="status"
-    className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-saie-divider bg-white px-6 py-10 text-center"
+    className="saie-fundido flex flex-col items-center gap-2 rounded-2xl border border-dashed border-saie-divider bg-white px-6 py-10 text-center"
   >
-    <Icono trazo={TRAZO_CALENDARIO} className="h-10 w-10 text-saie-muted" />
+    <span
+      aria-hidden="true"
+      className="saie-flota flex h-16 w-16 items-center justify-center rounded-2xl bg-saie-canvas text-saie-primary"
+    >
+      <Icono trazo={TRAZO_CALENDARIO} className="h-8 w-8" />
+    </span>
     <h3 className="m-0 font-serif text-xl font-bold text-saie-text">{titulo}</h3>
     <p className="m-0 max-w-sm text-sm text-saie-muted">{descripcion}</p>
   </div>
 );
 
 /** Esqueleto de carga con la forma del contenido; respeta «Reducir movimiento». */
-export const EsqueletoCarga: React.FC = () => (
+export const EsqueletoCarga: React.FC<{ texto?: string }> = ({
+  texto = 'Cargando tu horario…',
+}) => (
   <div role="status" aria-busy="true" className="flex flex-col gap-3">
-    <span className="sr-only">Cargando tu horario…</span>
+    <span className="sr-only">{texto}</span>
     {[0, 1, 2].map((posicion) => (
       <div
         key={posicion}
         aria-hidden="true"
-        className="h-24 rounded-xl border border-saie-divider bg-white motion-safe:animate-pulse"
+        className="saie-esqueleto h-24 rounded-xl border border-saie-divider"
       />
     ))}
   </div>
+);
+
+/** Barra con el avance de la clase en curso (0 a 1). */
+export const BarraProgresoClase: React.FC<{ valor: number; className?: string }> = ({
+  valor,
+  className = '',
+}) => {
+  const porcentaje = Math.round(Math.min(1, Math.max(0, valor)) * 100);
+  return (
+    <span
+      role="progressbar"
+      aria-label="Avance de la clase"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={porcentaje}
+      className={`block h-1.5 w-full overflow-hidden rounded-full bg-saie-primary/10 ${className}`}
+    >
+      <span
+        className="saie-barra block h-full rounded-full bg-saie-primary"
+        style={{ width: `${porcentaje}%` }}
+      />
+    </span>
+  );
+};
+
+/** Punto guinda con un anillo que se expande: la clase está en curso ahora mismo. */
+export const PuntoEnVivo: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <span
+    aria-hidden="true"
+    className={`saie-vivo inline-block h-2.5 w-2.5 rounded-full bg-saie-primary text-saie-primary ${className}`}
+  />
 );

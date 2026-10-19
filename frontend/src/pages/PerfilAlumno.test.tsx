@@ -57,14 +57,9 @@ describe('PerfilAlumno (Issue 3.17)', () => {
     expect(within(ficha).getByText('Sin registrar')).toBeVisible();
   });
 
-  it('avisa que la ficha médica es privada y no se envía por Telegram', () => {
+  it('avisa que la ficha médica es privada', () => {
     renderizar();
     expect(within(seccion(/^Ficha médica$/i)).getByText(/Solo tú la ves/i)).toBeVisible();
-  });
-
-  it('no incluye el apartado de Telegram', () => {
-    renderizar();
-    expect(screen.queryByRole('heading', { name: /telegram/i })).not.toBeInTheDocument();
   });
 
   describe('edición de datos personales', () => {

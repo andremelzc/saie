@@ -10,10 +10,18 @@ import {
   diaLectivoInicial,
   estadoAMostrar,
   estadoDeClase,
+  cuentaRegresiva,
+  cursosEnFranja,
+  haySolape,
+  progresoClase,
+  proximoDiaConClases,
+  resumenSemana,
+  formatearMinutos,
   formatearRango,
   ordenarSesiones,
   posicionBloque,
   resumenUbicacion,
+  saludoSegunHora,
   todasLasSesiones,
 } from './horario';
 
@@ -100,5 +108,68 @@ describe('utilidades del horario del alumno (Issue #145 / 3.16)', () => {
 
   it('reúne todas las sesiones del horario de ejemplo', () => {
     expect(todasLasSesiones(HORARIO_FIXTURE)).toHaveLength(11);
+  });
+});
+
+describe('saludo y cuenta regresiva', () => {
+  const sesion = { horaInicio: '10:00', horaFin: '12:00' };
+
+  it('saluda según la hora del día', () => {
+    expect(saludoSegunHora(new Date(2026, 9, 19, 8))).toBe('Buenos días');
+    expect(saludoSegunHora(new Date(2026, 9, 19, 15))).toBe('Buenas tardes');
+    expect(saludoSegunHora(new Date(2026, 9, 19, 20))).toBe('Buenas noches');
+  });
+
+  it('formatea minutos como minutos u horas', () => {
+    expect(formatearMinutos(35)).toBe('35 min');
+    expect(formatearMinutos(60)).toBe('1 h');
+    expect(formatearMinutos(80)).toBe('1 h 20 min');
+  });
+
+  it('indica cuánto falta para empezar o para terminar', () => {
+    expect(cuentaRegresiva(sesion, 9 * 60 + 25)).toBe('Empieza en 35 min');
+    expect(cuentaRegresiva(sesion, 11 * 60 + 40)).toBe('Termina en 20 min');
+    expect(cuentaRegresiva(sesion, 13 * 60)).toBe('Ya terminó');
+  });
+});
+
+describe('franjas, resumen y progreso', () => {
+  const franjaLunes = { diaSemana: 'LUNES' as const, horaInicio: '08:00', horaFin: '10:00' };
+
+  it('detecta si un bloque se cruza con una franja', () => {
+    expect(haySolape({ ...franjaLunes, horaInicio: '09:00', horaFin: '11:00' }, franjaLunes)).toBe(
+      true,
+    );
+    // Rozarse en el borde no cuenta como cruce.
+    expect(haySolape({ ...franjaLunes, horaInicio: '10:00', horaFin: '12:00' }, franjaLunes)).toBe(
+      false,
+    );
+    expect(haySolape({ ...franjaLunes, diaSemana: 'MARTES' }, franjaLunes)).toBe(false);
+  });
+
+  it('filtra los cursos que tienen clase en la franja (un domingo, ninguno)', () => {
+    const cursos = [
+      { horarios: [franjaLunes] },
+      { horarios: [{ ...franjaLunes, horaInicio: '14:00', horaFin: '16:00' }] },
+    ];
+    expect(cursosEnFranja(cursos, franjaLunes)).toHaveLength(1);
+    expect(cursosEnFranja(cursos, { ...franjaLunes, diaSemana: 'DOMINGO' })).toHaveLength(0);
+  });
+
+  it('calcula el avance de una clase entre 0 y 1', () => {
+    const sesion = { horaInicio: '10:00', horaFin: '12:00' };
+    expect(progresoClase(sesion, 9 * 60)).toBe(0);
+    expect(progresoClase(sesion, 11 * 60)).toBe(0.5);
+    expect(progresoClase(sesion, 13 * 60)).toBe(1);
+  });
+
+  it('resume la semana y busca el próximo día con clases', () => {
+    const resumen = resumenSemana(HORARIO_FIXTURE);
+    expect(resumen.clases).toBe(todasLasSesiones(HORARIO_FIXTURE).length);
+    expect(resumen.minutos).toBeGreaterThan(0);
+    const siguiente = proximoDiaConClases(HORARIO_FIXTURE, 'DOMINGO');
+    expect(siguiente?.dia).toBeDefined();
+    expect(siguiente?.sesiones.length).toBeGreaterThan(0);
+    expect(proximoDiaConClases({ periodo: null, vista: 'semana', dias: {} }, 'LUNES')).toBeNull();
   });
 });
