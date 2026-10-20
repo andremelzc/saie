@@ -1,6 +1,6 @@
 # Auditoría UX/UI del frontend — SAIE
 
-> **Estado:** borrador de auditoría (no modifica código ni contratos).
+> **Estado:** aplicada. Ver §0.4 para el estado de cada hallazgo.
 > **Fecha:** 20 de octubre de 2026.
 > **Rama auditada:** `feature/5.15-validacion-manual`.
 > **Alcance:** `frontend/src/` (React 19 + TypeScript + Vite + Tailwind v4). Contraste de comportamiento con `backend/src/` y `docs/specs/`.
@@ -35,6 +35,26 @@ El brief original llegó con los campos de contexto sin rellenar; se dedujeron d
 ### 0.3 Convención de referencias
 
 Las rutas son relativas a la raíz del repositorio. Los números de línea corresponden a la rama y fecha indicadas y pueden desplazarse con cambios posteriores.
+
+### 0.4 Estado de aplicación
+
+La auditoría se aplicó en la rama `feature/4.15-edicion-espacios-y-pulido-ui-panel`:
+
+| Hallazgos | Estado | Dónde |
+|---|---|---|
+| 1–7 · Carga de datos maestros | Resuelto | `pages/admin/CargaDatos.tsx` (Issue 1.9) |
+| 8 · Rol crudo en la cabecera | Resuelto | `components/admin/LayoutAdmin.tsx` |
+| 9 y 20 · Placeholders e issues en la UI | Resuelto | `components/PantallaEnDesarrollo.tsx`, `pages/docente/InicioDocentePage.tsx`, `pages/admin/ProximamenteAdminPage.tsx` |
+| 10 · Resumen engañoso de la corrida | Resuelto | `pages/admin/InicioAdmin.tsx` (Issue 4.20) |
+| 11 y 12 · Cambio de laboratorio | Resuelto | `pages/admin/CambioLaboratorio.tsx` (Issue 4.19) |
+| 13 y 14 · Centro de alertas | Resuelto | `components/admin/TarjetaAlerta.tsx`, `pages/admin/AlertasAdmin.tsx` (Issues 4.9 y 4.10) |
+| 15 · Espacios | Resuelto | `pages/admin/EspaciosAdmin.tsx`, `components/admin/FormularioEspacio.tsx` (Issue 4.15) |
+| 16–18 · Sistema de diseño | Resuelto | `components/ui/`, `index.css` |
+| 19 · Consulta pública | Resuelto | `pages/Consulta.tsx`, `components/consulta/` (Issues 3.5–3.7) |
+
+**Pendiente de la Fase 3:** pruebas de accesibilidad automáticas con `axe` y la extracción de un `ModalConfirmacion` (la confirmación de resolver alerta se resolvió en línea, dentro de la tarjeta).
+
+**Pendiente de proceso:** el registro de estos ajustes en el Registro de Versiones lo hace el maintainer al cerrar el sprint.
 
 ---
 
