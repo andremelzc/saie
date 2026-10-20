@@ -78,7 +78,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
       }
     } catch (err: unknown) {
       let mensaje =
-        'Credenciales inválidas. Las cuentas de acceso son asignadas exclusivamente por Coordinación Académica.';
+        'Credenciales inválidas. Las cuentas de acceso son asignadas por Coordinación Académica.';
 
       if (
         typeof err === 'object' &&
@@ -93,7 +93,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
 
         if (axiosErr.response?.status === 401) {
           mensaje =
-            'Credenciales inválidas. Las cuentas de acceso son administradas por Coordinación Académica. Si tienes problemas de acceso, comunícate con la coordinación.';
+            'Credenciales inválidas. Las cuentas de acceso son administradas por Coordinación Académica.';
         } else if (axiosErr.response?.data?.message) {
           mensaje = axiosErr.response.data.message;
         } else {
@@ -112,7 +112,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
 
   return (
     <div
-      className={`saie-rise relative w-full max-w-md md:max-w-lg lg:max-w-md mx-auto overflow-hidden bg-white border border-saie-divider rounded-xl shadow-[0_8px_24px_rgba(34,34,34,0.16)] p-6 sm:p-8 flex flex-col gap-6 text-saie-text ${className}`}
+      className={`saie-rise relative w-full max-w-md md:max-w-lg lg:max-w-md mx-auto overflow-hidden bg-white border border-saie-divider rounded-xl shadow-[0_8px_24px_rgba(34,34,34,0.16)] p-6 sm:p-8 flex flex-col gap-5 text-saie-text ${className}`}
     >
       {/* Acento superior de la tarjeta */}
       <span
@@ -165,7 +165,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
         <div
           role="alert"
           aria-live="polite"
-          className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-sm text-saie-danger flex items-start gap-2.5 font-medium"
+          className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-saie-danger flex items-start gap-2.5 font-medium"
         >
           <svg
             className="w-5 h-5 text-saie-danger shrink-0 mt-0.5"
