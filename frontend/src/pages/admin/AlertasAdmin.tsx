@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import TarjetaAlerta from '../../components/admin/TarjetaAlerta';
 import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import { Boton } from '../../components/ui/Boton';
+import { useAvisos } from '../../components/ui/useAvisos';
 import { useAuth } from '../../context/useAuth';
 import { useCarga } from '../../hooks/useCarga';
 import { obtenerAlertas, resolverAlerta } from '../../services/admin';
@@ -10,30 +12,43 @@ import type { TipoAlerta } from '../../types/admin';
 
 type Filtro = 'TODAS' | TipoAlerta;
 
+const ETIQUETAS_FILTRO: Record<Filtro, string> = {
+  TODAS: 'Todas',
+  SOFTWARE: 'Software',
+  CAPACIDAD: 'Capacidad',
+};
+
 /**
- * Issue 4.10 — lista real de alertas. El backend ya restringe a Jefatura a sus laboratorios;
- * resolver una alerta actualiza la lista localmente, sin recargar la página.
+ * Issue 4.10 — lista real de alertas. El backend ya restringe a Jefatura a sus laboratorios.
+ * Al resolver una alerta se quita de la lista local y se confirma con un aviso; no se inventa
+ * un estado «Resuelta» que el backend no devuelve.
  */
 export const AlertasAdmin: React.FC = () => {
   const { sesion } = useAuth();
   const { datos, cargando, error, recargar } = useCarga(obtenerAlertas);
-  const [resueltas, setResueltas] = useState<Set<string>>(new Set());
+  const { mostrar } = useAvisos();
+  const [resueltasLocal, setResueltasLocal] = useState<Set<string>>(new Set());
   const [enCurso, setEnCurso] = useState<string | null>(null);
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<Filtro>('TODAS');
 
-  const alertas = (datos ?? [])
-    .map((a) => (resueltas.has(a.id) ? { ...a, estado: 'RESUELTA' as const } : a))
-    .filter((a) => filtro === 'TODAS' || a.tipo === filtro);
-
-  const pendientes = alertas.filter((a) => a.estado === 'PENDIENTE').length;
+  const base = (datos ?? []).filter((a) => !resueltasLocal.has(a.id));
+  const alertas = base.filter((a) => filtro === 'TODAS' || a.tipo === filtro);
+  const conteos: Record<Filtro, number> = {
+    TODAS: base.length,
+    SOFTWARE: base.filter((a) => a.tipo === 'SOFTWARE').length,
+    CAPACIDAD: base.filter((a) => a.tipo === 'CAPACIDAD').length,
+  };
+  const pendientes = base.filter((a) => a.estado === 'PENDIENTE').length;
+  const total = base.length;
 
   async function manejarResolver(id: string) {
     setEnCurso(id);
     setErrorAccion(null);
     try {
       await resolverAlerta(id);
-      setResueltas((prev) => new Set(prev).add(id));
+      setResueltasLocal((prev) => new Set(prev).add(id));
+      mostrar('exito', 'Alerta marcada como resuelta.');
     } catch (e) {
       setErrorAccion(mensajeDeError(e));
     } finally {
@@ -47,34 +62,66 @@ export const AlertasAdmin: React.FC = () => {
       : 'Alertas de software y capacidad de todos los espacios.';
 
   return (
-    <LayoutAdmin titulo="Centro de alertas" subtitulo={subtitulo}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div
-          role="group"
-          aria-label="Filtrar por tipo"
-          className="inline-flex rounded-lg border border-saie-divider bg-white p-1"
+    <LayoutAdmin
+      titulo="Centro de alertas"
+      subtitulo={subtitulo}
+      acciones={
+        <Boton
+          variante="secundario"
+          onClick={recargar}
+          cargando={cargando}
+          textoCargando="Actualizando…"
         >
-          {(['TODAS', 'SOFTWARE', 'CAPACIDAD'] as Filtro[]).map((f) => (
-            <button
-              key={f}
-              type="button"
-              aria-pressed={filtro === f}
-              onClick={() => setFiltro(f)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                filtro === f
-                  ? 'bg-saie-primary text-white'
-                  : 'text-saie-muted hover:text-saie-primary'
-              }`}
-            >
-              {f === 'TODAS' ? 'Todas' : f === 'SOFTWARE' ? 'Software' : 'Capacidad'}
-            </button>
-          ))}
+          Actualizar
+        </Boton>
+      }
+    >
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div
+            role="group"
+            aria-label="Filtrar por tipo"
+            className="inline-flex flex-wrap gap-1 rounded-xl border border-saie-divider bg-white p-1"
+          >
+            {(['TODAS', 'SOFTWARE', 'CAPACIDAD'] as Filtro[]).map((f) => {
+              const activo = filtro === f;
+              return (
+                <button
+                  key={f}
+                  type="button"
+                  aria-pressed={activo}
+                  aria-label={`${ETIQUETAS_FILTRO[f]} (${conteos[f]})`}
+                  onClick={() => setFiltro(f)}
+                  className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors ${
+                    activo
+                      ? 'bg-saie-primary text-white'
+                      : 'text-saie-muted hover:bg-saie-primary/5 hover:text-saie-primary'
+                  }`}
+                >
+                  <span>{ETIQUETAS_FILTRO[f]}</span>
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${
+                      activo ? 'bg-white/20 text-white' : 'bg-saie-canvas text-saie-text'
+                    }`}
+                  >
+                    {conteos[f]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {datos && (
+            <p className="m-0 text-sm text-saie-muted" aria-live="polite">
+              <strong className="text-saie-text">{pendientes}</strong>{' '}
+              {pendientes === 1 ? 'pendiente' : 'pendientes'}
+              {total !== pendientes && <> de {total}</>}
+            </p>
+          )}
         </div>
-        {datos && (
-          <p className="m-0 text-sm text-saie-muted">
-            <strong className="text-saie-text">{pendientes}</strong> pendiente(s)
-          </p>
-        )}
+        <p className="m-0 text-xs text-saie-muted">
+          Al resolver una alerta deja de aparecer en esta lista; el historial completo llegará con
+          la próxima actualización.
+        </p>
       </div>
 
       {errorAccion && <AvisoError mensaje={errorAccion} />}
@@ -82,8 +129,21 @@ export const AlertasAdmin: React.FC = () => {
 
       {cargando && !datos ? (
         <EsqueletoCarga texto="Cargando alertas…" />
+      ) : base.length === 0 && !error ? (
+        <EstadoVacio
+          titulo="Sin alertas pendientes"
+          descripcion="No hay alertas de software ni de capacidad en este momento."
+        />
       ) : alertas.length === 0 && !error ? (
-        <EstadoVacio titulo="Sin alertas" descripcion="No hay alertas que mostrar por ahora." />
+        <EstadoVacio
+          titulo="Sin alertas de este tipo"
+          descripcion={`No hay alertas de ${ETIQUETAS_FILTRO[filtro].toLowerCase()} por ahora.`}
+          accion={
+            <Boton variante="secundario" tamano="sm" onClick={() => setFiltro('TODAS')}>
+              Ver todas
+            </Boton>
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {alertas.map((a) => (

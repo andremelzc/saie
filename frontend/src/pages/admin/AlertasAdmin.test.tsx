@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../../context/AuthProvider';
 import AppRoutes from '../../AppRoutes';
@@ -44,10 +44,12 @@ describe('Tarjeta de alerta (Issue 4.9)', () => {
     expect(sw.className).not.toEqual(cap.className);
   });
 
-  it('expone "marcar como resuelta" solo si está pendiente', () => {
+  it('pide confirmación y expone la acción solo si está pendiente', () => {
     const onResolver = vi.fn();
     const { rerender } = render(<TarjetaAlerta alerta={base} onResolver={onResolver} />);
     fireEvent.click(screen.getByRole('button', { name: 'Marcar como resuelta' }));
+    expect(onResolver).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, resolver' }));
     expect(onResolver).toHaveBeenCalledWith('a1');
     rerender(<TarjetaAlerta alerta={{ ...base, estado: 'RESUELTA' }} onResolver={onResolver} />);
     expect(screen.queryByRole('button', { name: 'Marcar como resuelta' })).toBeNull();
@@ -99,7 +101,42 @@ describe('Lista de alertas (Issue 4.10)', () => {
 
     const tarjeta = await screen.findByRole('article');
     fireEvent.click(within(tarjeta).getByRole('button', { name: 'Marcar como resuelta' }));
-    expect(await within(tarjeta).findByText('Resuelta')).toBeInTheDocument();
-    expect(patch).toHaveBeenCalledWith('/v1/admin/alertas/a1/resolver');
+    fireEvent.click(within(tarjeta).getByRole('button', { name: 'Sí, resolver' }));
+
+    await waitFor(() => expect(patch).toHaveBeenCalledWith('/v1/admin/alertas/a1/resolver'));
+    expect(await screen.findByText('Alerta marcada como resuelta.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('article')).toBeNull());
+  });
+
+  it('muestra el contador global y filtra por tipo con sus conteos', async () => {
+    guardarSesion({
+      token: crearToken(ahoraEnSegundos() + 3600, 'COORDINACION_ACADEMICA'),
+      rol: 'COORDINACION_ACADEMICA',
+      debeCambiarClave: false,
+      expiresIn: '8h',
+    });
+    vi.spyOn(api, 'get').mockResolvedValue({
+      data: {
+        success: true,
+        data: [base, { ...base, id: 'a2', tipo: 'CAPACIDAD', motivo: 'Aforo excedido' }],
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/admin/alertas']}>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('button', { name: /Todas \(2\)/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Software \(1\)/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Capacidad \(1\)/ })).toBeInTheDocument();
+    expect(screen.getByText(/pendientes/)).toHaveTextContent('2 pendientes');
+
+    fireEvent.click(screen.getByRole('button', { name: /Software \(1\)/ }));
+    expect(screen.getByRole('article', { name: /software/i })).toBeInTheDocument();
+    expect(screen.queryByRole('article', { name: /capacidad/i })).toBeNull();
   });
 });
