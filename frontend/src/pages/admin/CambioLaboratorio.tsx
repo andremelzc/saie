@@ -127,6 +127,11 @@ export const CambioLaboratorio: React.FC = () => {
             Aforo {lab.aforoNominal} · {lab.pcsMalogradas ?? 0} PCs malogradas registradas
           </p>
         )}
+        {labs.datos && labs.datos.length === 0 && (
+          <p className="m-0 text-xs font-medium text-saie-danger">
+            No hay laboratorios registrados todavía.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -141,6 +146,10 @@ export const CambioLaboratorio: React.FC = () => {
           )}
           {catalogo.cargando && !catalogo.datos ? (
             <EsqueletoCarga texto="Cargando catálogo…" />
+          ) : catalogo.datos && catalogo.datos.items.length === 0 ? (
+            <p className="m-0 text-sm text-saie-muted">
+              No hay software activo en el catálogo. Coordinación debe registrarlo primero.
+            </p>
           ) : (
             <ul className="m-0 flex max-h-72 list-none flex-col gap-1 overflow-auto p-0">
               {catalogo.datos?.items.map((s) => (

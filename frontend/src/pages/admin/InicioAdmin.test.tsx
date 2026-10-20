@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import InicioAdmin from './InicioAdmin';
 import {
@@ -8,7 +8,13 @@ import {
   obtenerEscaladas,
   reintentarSeccion,
 } from '../../services/admin';
-import type { AlertaDTO, ResumenAsignacionDTO, SeccionesEscaladasDTO } from '../../types/admin';
+import type {
+  AlertaDTO,
+  ReglaVerificacion,
+  ResultadoVerificacionDTO,
+  ResumenAsignacionDTO,
+  SeccionesEscaladasDTO,
+} from '../../types/admin';
 
 let rol = 'COORDINACION_ACADEMICA';
 vi.mock('../../context/useAuth', () => ({
@@ -82,6 +88,58 @@ const resumen: ResumenAsignacionDTO = {
   asignadas: 6,
   mantenidas: 2,
   escaladas: 2,
+  verificacion: null,
+  resultados: [],
+};
+
+const REGLAS: ReglaVerificacion[] = [
+  'DOBLE_RESERVA',
+  'CAPACIDAD_SUFICIENTE',
+  'TIPO_HOMOGENEO',
+  'BLOQUE_CONTIGUO',
+  'SOFTWARE_COMPLETO',
+  'ESCALADA_CON_MOTIVO',
+  'UNA_VIGENTE_POR_SECCION',
+];
+
+const reglaConforme = (regla: ReglaVerificacion) => ({
+  regla,
+  descripcion: regla,
+  revisadas: 8,
+  cumplen: 8,
+  violaciones: [],
+});
+
+const verificacionConforme: ResultadoVerificacionDTO = {
+  conforme: true,
+  totalRevisadas: 8,
+  totalViolaciones: 0,
+  reglas: REGLAS.map(reglaConforme),
+};
+
+const verificacionNoConforme: ResultadoVerificacionDTO = {
+  conforme: false,
+  totalRevisadas: 8,
+  totalViolaciones: 1,
+  reglas: REGLAS.map((regla) =>
+    regla === 'CAPACIDAD_SUFICIENTE'
+      ? {
+          regla,
+          descripcion: regla,
+          revisadas: 8,
+          cumplen: 7,
+          violaciones: [
+            {
+              regla,
+              asignacionId: 'a1',
+              seccionId: 'sec1',
+              codigoSeccion: '01',
+              detalle: 'Aforo insuficiente para 45 alumnos',
+            },
+          ],
+        }
+      : reglaConforme(regla),
+  ),
 };
 
 const montar = () =>
@@ -122,7 +180,53 @@ describe('Inicio del panel administrativo', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Ejecutar asignación del periodo' }));
       expect(await screen.findByText('8')).toBeInTheDocument();
       expect(screen.getByText(/escaladas de/)).toBeInTheDocument();
+      expect(screen.getByText(/6 nueva\(s\) · 2 mantenida\(s\)/)).toBeInTheDocument();
       await waitFor(() => expect(escaladas).toHaveBeenCalledTimes(2));
+    });
+
+    it('muestra el veredicto conforme del verificador (Issue 2.17)', async () => {
+      corrida.mockResolvedValue({ ...resumen, verificacion: verificacionConforme });
+      montar();
+      await screen.findByText(/IS101/);
+      fireEvent.click(screen.getByRole('button', { name: 'Ejecutar asignación del periodo' }));
+
+      expect(
+        await screen.findByText('Conforme: la corrida cumple las 7 reglas duras.'),
+      ).toBeInTheDocument();
+      expect(screen.getByText('CONFORME')).toBeInTheDocument();
+      expect(
+        screen.getByText('8 asignación(es) revisada(s) · 0 violación(es)'),
+      ).toBeInTheDocument();
+      expect(screen.getByText('Sin doble reserva')).toBeInTheDocument();
+      expect(screen.getByText('Capacidad suficiente')).toBeInTheDocument();
+      expect(screen.getByText(/Verificador conforme · 8 revisadas/)).toBeInTheDocument();
+    });
+
+    it('detalla las violaciones cuando el verificador no es conforme', async () => {
+      corrida.mockResolvedValue({ ...resumen, verificacion: verificacionNoConforme });
+      montar();
+      await screen.findByText(/IS101/);
+      fireEvent.click(screen.getByRole('button', { name: 'Ejecutar asignación del periodo' }));
+
+      expect(
+        await screen.findByText('No conforme: 1 violación(es) en 1 regla(s).'),
+      ).toBeInTheDocument();
+      expect(screen.getByText('NO CONFORME')).toBeInTheDocument();
+      expect(screen.getByText(/Ver 1 violación/)).toBeInTheDocument();
+      expect(screen.getByText(/Aforo insuficiente para 45 alumnos/)).toBeInTheDocument();
+      expect(screen.getByText(/Verificador no conforme · 1 violación/)).toBeInTheDocument();
+    });
+
+    it('avisa cuando la corrida no dejó asignaciones que verificar', async () => {
+      corrida.mockResolvedValue({ ...resumen, verificacion: null });
+      montar();
+      await screen.findByText(/IS101/);
+      fireEvent.click(screen.getByRole('button', { name: 'Ejecutar asignación del periodo' }));
+
+      expect(
+        await screen.findByText('No hubo asignaciones que verificar en esta corrida.'),
+      ).toBeInTheDocument();
+      expect(screen.getByText('Verificador: sin asignaciones que revisar')).toBeInTheDocument();
     });
 
     it('muestra el error si la corrida falla', async () => {
@@ -131,6 +235,18 @@ describe('Inicio del panel administrativo', () => {
       await screen.findByText(/IS101/);
       fireEvent.click(screen.getByRole('button', { name: 'Ejecutar asignación del periodo' }));
       expect(await screen.findByText('Inténtalo de nuevo en unos minutos.')).toBeInTheDocument();
+    });
+
+    it('permite reintentar la corrida desde el aviso de error', async () => {
+      corrida.mockRejectedValueOnce(new Error('x')).mockResolvedValueOnce(resumen);
+      montar();
+      await screen.findByText(/IS101/);
+      fireEvent.click(screen.getByRole('button', { name: 'Ejecutar asignación del periodo' }));
+
+      const aviso = await screen.findByRole('alert');
+      fireEvent.click(within(aviso).getByRole('button', { name: 'Reintentar' }));
+      await waitFor(() => expect(corrida).toHaveBeenCalledTimes(2));
+      expect(await screen.findByText('8')).toBeInTheDocument();
     });
 
     it('reintenta una sección escalada', async () => {

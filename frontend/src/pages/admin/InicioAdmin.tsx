@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
+import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
 import { EsqueletoCarga } from '../../components/estudiante/ElementosHorario';
 import { RUTAS } from '../../config/rutas';
 import { useAuth } from '../../context/useAuth';
@@ -99,7 +100,11 @@ const InicioCoordinacion: React.FC = () => {
   const [corriendo, setCorriendo] = useState(false);
   const [reintentando, setReintentando] = useState<string | null>(null);
   const [resumen, setResumen] = useState<ResumenAsignacionDTO | null>(null);
-  const [errorAccion, setErrorAccion] = useState<string | null>(null);
+  const [ultimaCorridaEn, setUltimaCorridaEn] = useState<Date | null>(null);
+  const [errorAccion, setErrorAccion] = useState<{
+    mensaje: string;
+    reintentar: () => void;
+  } | null>(null);
 
   const pendientes = alertas.datos?.filter((a) => a.estado === 'PENDIENTE').length ?? 0;
 
@@ -108,9 +113,10 @@ const InicioCoordinacion: React.FC = () => {
     setErrorAccion(null);
     try {
       setResumen(await ejecutarCorrida());
+      setUltimaCorridaEn(new Date());
       escaladas.recargar();
     } catch (e) {
-      setErrorAccion(mensajeDeError(e));
+      setErrorAccion({ mensaje: mensajeDeError(e), reintentar: correr });
     } finally {
       setCorriendo(false);
     }
@@ -121,9 +127,10 @@ const InicioCoordinacion: React.FC = () => {
     setErrorAccion(null);
     try {
       setResumen(await reintentarSeccion(seccionId));
+      setUltimaCorridaEn(new Date());
       escaladas.recargar();
     } catch (e) {
-      setErrorAccion(mensajeDeError(e));
+      setErrorAccion({ mensaje: mensajeDeError(e), reintentar: () => reintentar(seccionId) });
     } finally {
       setReintentando(null);
     }
@@ -145,15 +152,44 @@ const InicioCoordinacion: React.FC = () => {
               Corrida de asignación · Periodo {escaladas.datos?.periodo ?? resumen?.periodo ?? '—'}
             </p>
             {resumen ? (
-              <p className="m-0 mt-1 text-lg">
-                <strong className="text-3xl">{resumen.asignadas + resumen.mantenidas}</strong>{' '}
-                asignadas · <strong className="text-3xl">{resumen.escaladas}</strong> escaladas de{' '}
-                {resumen.totalSecciones}
-              </p>
+              <>
+                <p className="m-0 mt-1 text-lg">
+                  <strong className="text-3xl">{resumen.asignadas + resumen.mantenidas}</strong> con
+                  espacio · <strong className="text-3xl">{resumen.escaladas}</strong> escaladas de{' '}
+                  {resumen.totalSecciones}
+                </p>
+                <p className="m-0 mt-1 text-xs text-white/85">
+                  {resumen.asignadas} nueva(s) · {resumen.mantenidas} mantenida(s)
+                  {ultimaCorridaEn &&
+                    ` · actualizada a las ${ultimaCorridaEn.toLocaleTimeString('es-PE', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}`}
+                </p>
+              </>
             ) : (
               <p className="m-0 mt-1 text-lg">
                 <strong className="text-3xl">{escaladas.datos?.total ?? '…'}</strong> secciones
                 escaladas a revisión
+              </p>
+            )}
+            {resumen && (
+              <p className="m-0 mt-2">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+                    resumen.verificacion?.conforme
+                      ? 'bg-[#E8F3E9] text-saie-success'
+                      : resumen.verificacion
+                        ? 'bg-[#FBE9E9] text-saie-danger'
+                        : 'bg-white/15 text-white'
+                  }`}
+                >
+                  {resumen.verificacion
+                    ? resumen.verificacion.conforme
+                      ? `✓ Verificador conforme · ${resumen.verificacion.totalRevisadas} revisadas`
+                      : `✗ Verificador no conforme · ${resumen.verificacion.totalViolaciones} violación(es)`
+                    : 'Verificador: sin asignaciones que revisar'}
+                </span>
               </p>
             )}
           </div>
@@ -168,7 +204,11 @@ const InicioCoordinacion: React.FC = () => {
         </div>
       </section>
 
-      {errorAccion && <AvisoError mensaje={errorAccion} />}
+      {errorAccion && (
+        <AvisoError mensaje={errorAccion.mensaje} onReintentar={errorAccion.reintentar} />
+      )}
+
+      {resumen && <VeredictoVerificacion verificacion={resumen.verificacion} />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Acceso

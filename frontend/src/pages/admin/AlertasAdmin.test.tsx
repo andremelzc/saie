@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../../context/AuthProvider';
 import AppRoutes from '../../AppRoutes';
@@ -100,6 +100,39 @@ describe('Lista de alertas (Issue 4.10)', () => {
     const tarjeta = await screen.findByRole('article');
     fireEvent.click(within(tarjeta).getByRole('button', { name: 'Marcar como resuelta' }));
     expect(await within(tarjeta).findByText('Resuelta')).toBeInTheDocument();
+    expect(await screen.findByText('Alerta de LAB-301 marcada como resuelta.')).toBeInTheDocument();
     expect(patch).toHaveBeenCalledWith('/v1/admin/alertas/a1/resolver');
+  });
+
+  it('muestra el error al resolver y permite reintentar la acción', async () => {
+    guardarSesion({
+      token: crearToken(ahoraEnSegundos() + 3600, 'COORDINACION_ACADEMICA'),
+      rol: 'COORDINACION_ACADEMICA',
+      debeCambiarClave: false,
+      expiresIn: '8h',
+    });
+    vi.spyOn(api, 'get').mockResolvedValue({ data: { success: true, data: [base] } } as never);
+    const patch = vi
+      .spyOn(api, 'patch')
+      .mockRejectedValueOnce(new Error('x'))
+      .mockResolvedValueOnce({ data: { success: true } } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/admin/alertas']}>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    const tarjeta = await screen.findByRole('article');
+    fireEvent.click(within(tarjeta).getByRole('button', { name: 'Marcar como resuelta' }));
+
+    const aviso = await screen.findByRole('alert');
+    expect(aviso).toHaveTextContent('Inténtalo de nuevo en unos minutos.');
+    fireEvent.click(within(aviso).getByRole('button', { name: 'Reintentar' }));
+
+    await waitFor(() => expect(patch).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('Alerta de LAB-301 marcada como resuelta.')).toBeInTheDocument();
   });
 });

@@ -19,7 +19,11 @@ export const AlertasAdmin: React.FC = () => {
   const { datos, cargando, error, recargar } = useCarga(obtenerAlertas);
   const [resueltas, setResueltas] = useState<Set<string>>(new Set());
   const [enCurso, setEnCurso] = useState<string | null>(null);
-  const [errorAccion, setErrorAccion] = useState<string | null>(null);
+  const [errorAccion, setErrorAccion] = useState<{
+    mensaje: string;
+    reintentar: () => void;
+  } | null>(null);
+  const [mensajeOk, setMensajeOk] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<Filtro>('TODAS');
 
   const alertas = (datos ?? [])
@@ -31,11 +35,16 @@ export const AlertasAdmin: React.FC = () => {
   async function manejarResolver(id: string) {
     setEnCurso(id);
     setErrorAccion(null);
+    setMensajeOk(null);
     try {
       await resolverAlerta(id);
       setResueltas((prev) => new Set(prev).add(id));
+      const espacio = datos?.find((a) => a.id === id)?.espacio.identificador;
+      setMensajeOk(
+        espacio ? `Alerta de ${espacio} marcada como resuelta.` : 'Alerta marcada como resuelta.',
+      );
     } catch (e) {
-      setErrorAccion(mensajeDeError(e));
+      setErrorAccion({ mensaje: mensajeDeError(e), reintentar: () => manejarResolver(id) });
     } finally {
       setEnCurso(null);
     }
@@ -77,7 +86,18 @@ export const AlertasAdmin: React.FC = () => {
         )}
       </div>
 
-      {errorAccion && <AvisoError mensaje={errorAccion} />}
+      {mensajeOk && (
+        <p
+          role="status"
+          className="m-0 flex items-center gap-2 rounded-xl border border-saie-success/30 bg-[#E8F3E9] px-4 py-3 text-sm font-medium text-saie-success"
+        >
+          <span aria-hidden="true">✓</span>
+          {mensajeOk}
+        </p>
+      )}
+      {errorAccion && (
+        <AvisoError mensaje={errorAccion.mensaje} onReintentar={errorAccion.reintentar} />
+      )}
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
 
       {cargando && !datos ? (
