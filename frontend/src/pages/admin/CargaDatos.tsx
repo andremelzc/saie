@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import LayoutAdmin from '../../components/admin/LayoutAdmin';
 import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
 import { importarCsv } from '../../services/admin';
@@ -70,6 +71,7 @@ export const ZonaCarga: React.FC<{
 
   return (
     <section
+      id={`carga-${tipo}`}
       aria-label={titulo}
       className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-[var(--saie-shadow-1)]"
     >
@@ -403,25 +405,35 @@ const PlantillasCarga: React.FC = () => (
   </section>
 );
 
-export const CargaDatos: React.FC = () => (
-  <LayoutAdmin
-    titulo="Carga de datos maestros"
-    subtitulo="Cada archivo se carga por separado y puede volver a cargarse cuando quieras."
-  >
-    <GuiaCarga />
-    <PlantillasCarga />
+export const CargaDatos: React.FC = () => {
+  const { hash } = useLocation();
 
-    <section aria-labelledby="titulo-zonas" className="flex flex-col gap-3">
-      <h2 id="titulo-zonas" className="m-0 text-lg font-bold text-saie-text">
-        Cargar un archivo
-      </h2>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {FLUJOS.map((f) => (
-          <ZonaCarga key={f.tipo} {...f} />
-        ))}
-      </div>
-    </section>
-  </LayoutAdmin>
-);
+  useEffect(() => {
+    if (!hash) return;
+    const destino = document.getElementById(hash.slice(1));
+    destino?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [hash]);
+
+  return (
+    <LayoutAdmin
+      titulo="Carga de datos maestros"
+      subtitulo="Cada archivo se carga por separado y puede volver a cargarse cuando quieras."
+    >
+      <GuiaCarga />
+      <PlantillasCarga />
+
+      <section aria-labelledby="titulo-zonas" className="flex flex-col gap-3">
+        <h2 id="titulo-zonas" className="m-0 text-lg font-bold text-saie-text">
+          Cargar un archivo
+        </h2>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {FLUJOS.map((f) => (
+            <ZonaCarga key={f.tipo} {...f} />
+          ))}
+        </div>
+      </section>
+    </LayoutAdmin>
+  );
+};
 
 export default CargaDatos;

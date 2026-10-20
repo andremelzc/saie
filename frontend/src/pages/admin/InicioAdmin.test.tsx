@@ -50,7 +50,7 @@ const conEscaladas: SeccionesEscaladasDTO = {
     {
       asignacionId: 'x1',
       fechaEscalamiento: '2026-10-10T10:00:00Z',
-      motivoEscalamiento: 'Sin aula con aforo',
+      motivoEscalamiento: '[SIN_HORARIOS_DEFINIDOS] La sección 01 no tiene horario en 2026-II',
       seccion: {
         id: 'sec1',
         codigoCurso: 'IS101',
@@ -162,8 +162,15 @@ describe('Inicio del panel administrativo', () => {
       montar();
       expect(await screen.findByText(/IS101 · 01 — Algoritmos/)).toBeInTheDocument();
       expect(screen.getByText(/Periodo 2026-II/)).toBeInTheDocument();
-      expect(screen.getByText('Sin aula con aforo · 45 alumnos', { exact: false })).toBeTruthy();
-      expect(screen.getByText(/Sin motivo registrado/)).toBeInTheDocument();
+      expect(screen.getByText('Sin horarios definidos')).toBeInTheDocument();
+      expect(screen.getAllByText('No se le asignó aula.')).toHaveLength(2);
+      expect(screen.getByText('La sección 01 no tiene horario en 2026-II')).toBeInTheDocument();
+      expect(screen.getByText(/45 alumnos matriculados/)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Cargar horario' })).toHaveAttribute(
+        'href',
+        '/admin/carga#carga-horarios',
+      );
+      expect(screen.getByText('Sin motivo registrado.')).toBeInTheDocument();
       expect(await screen.findByText('2', { selector: 'span' })).toBeInTheDocument();
     });
 
