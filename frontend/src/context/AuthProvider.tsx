@@ -1,12 +1,18 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { registrarManejadorSesionExpirada } from '../services/api';
 import {
+  adoptarSesion,
+  anunciarSesion,
+  anunciarSesionCerrada,
   borrarSesion,
   guardarSesion,
+  iniciarSincronizacionSesion,
   leerSesionAlmacenada,
   obtenerExpiracion,
   obtenerSesionValida,
+  pedirSesionCompartida,
+  registrarManejadorSincronizacion,
   tokenVencido,
   type Sesion,
 } from '../services/sesion';
@@ -32,6 +38,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const nueva = guardarSesion(resultado);
     setSesion(nueva);
     setSesionVencida(false);
+    // Las demás pestañas abiertas se enteran y adopts la misma sesión.
+    anunciarSesion(nueva);
     return nueva;
   }, []);
 
@@ -45,6 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSesion(null);
       // RutaProtegida también redirige al quedar sin sesión; esta marca hace que conserve el aviso.
       setSesionVencida(motivo === 'vencida');
+      anunciarSesionCerrada();
       void navigate(rutaLoginDeRol(actual?.rol), {
         replace: true,
         state: motivo === 'vencida' ? { motivo } : null,
@@ -52,6 +61,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     },
     [navigate],
   );
+
+  /**
+   * Sesión compartida entre pestañas del mismo navegador (Issue 3.29).
+   *
+   * El token sigue en `sessionStorage`, que es por pestaña. Para que una pestaña abierta con
+   * control+clic no termine en el login, las pestañas se avisan por `BroadcastChannel`: la que
+   * tiene sesión la comparte y la que no la pide.
+   */
+  const preguntoPorSesion = useRef(false);
+  useEffect(() => {
+    const detener = iniciarSincronizacionSesion();
+    registrarManejadorSincronizacion((mensaje) => {
+      if (mensaje.tipo === 'cerrada') {
+        borrarSesion();
+        setSesion(null);
+        return;
+      }
+      if (mensaje.tipo === 'respuesta' || mensaje.tipo === 'actualizada') {
+        // Solo se adopta si esta pestaña no tiene ya la suya: una sesión vigente manda.
+        if (!leerSesionAlmacenada()) {
+          adoptarSesion(mensaje.sesion);
+          setSesion(mensaje.sesion);
+          setSesionVencida(false);
+        }
+      }
+    });
+    return () => {
+      detener();
+      registrarManejadorSincronizacion(null);
+    };
+  }, []);
+
+  // Si esta pestaña no tiene sesión, la pide a las demás (una sola vez por montaje).
+  useEffect(() => {
+    if (sesion || preguntoPorSesion.current) return;
+    preguntoPorSesion.current = true;
+    pedirSesionCompartida();
+  }, [sesion]);
 
   // Un 401 del servidor en una petición autenticada equivale a una sesión vencida.
   useEffect(() => {
