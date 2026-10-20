@@ -20,6 +20,34 @@ export interface PlantillaCSV {
   contenido: string;
 }
 
+/** Crea una columna; `obligatorio` solo se indica cuando la columna es opcional. */
+const columna = (
+  nombre: string,
+  descripcion: string,
+  ejemplo: string,
+  obligatorio = true,
+): ColumnaPlantilla => ({ nombre, obligatorio, descripcion, ejemplo });
+
+/**
+ * Columnas que comparten las plantillas de cursos, horarios y matrículas. Se declaran una sola vez
+ * para que la guía de carga explique lo mismo en los tres flujos.
+ */
+const CODIGO_CURSO = columna(
+  'codigoCurso',
+  'Código del curso (el mismo en todas sus secciones).',
+  '202SW0104',
+);
+const CODIGO_SECCION = columna(
+  'codigoSeccion',
+  'Código de la sección. Suele ser el número y, si tiene laboratorio, el mismo con el sufijo -LAB.',
+  '1',
+);
+const PERIODO = columna(
+  'periodo',
+  'Periodo académico de la sección (p. ej. 2026-2). Debe coincidir con el de la carga de cursos.',
+  '2026-2',
+);
+
 /**
  * Plantillas oficiales de carga masiva. Los encabezados son exactamente los campos que espera
  * cada importador del backend (`backend/src/importers/*`): el parser los toma tal cual.
@@ -32,45 +60,21 @@ export const PLANTILLAS: PlantillaCSV[] = [
       'Catálogo de cursos del periodo y las secciones que lo componen. Es el primer archivo que se carga: los horarios y las matrículas buscan la sección por (curso, sección, periodo).',
     archivo: 'plantilla-cursos-secciones.csv',
     columnas: [
-      {
-        nombre: 'codigoCurso',
-        obligatorio: true,
-        descripcion: 'Código del curso (el mismo en todas sus secciones).',
-        ejemplo: '202SW0104',
-      },
-      {
-        nombre: 'nombreCurso',
-        obligatorio: true,
-        descripcion: 'Nombre completo del curso.',
-        ejemplo: 'CÁLCULO I',
-      },
-      {
-        nombre: 'codigoSeccion',
-        obligatorio: true,
-        descripcion:
-          'Código de la sección. Suele ser el número y, si tiene laboratorio, el mismo con el sufijo -LAB.',
-        ejemplo: '1',
-      },
-      {
-        nombre: 'periodo',
-        obligatorio: true,
-        descripcion: 'Periodo académico al que pertenece la sección (p. ej. 2026-2).',
-        ejemplo: '2026-2',
-      },
-      {
-        nombre: 'tipoEspacioRequerido',
-        obligatorio: true,
-        descripcion:
-          'AULA_TEORICA o LABORATORIO. Define qué tipo de espacio puede recibir la sección.',
-        ejemplo: 'AULA_TEORICA',
-      },
-      {
-        nombre: 'stackSoftwareRequerido',
-        obligatorio: false,
-        descripcion:
-          'Software que el laboratorio debe tener instalado, separado por |. Cada nombre debe existir en el catálogo: si no, la fila se rechaza con SOFTWARE_NO_REGISTRADO.',
-        ejemplo: 'Python 3.12|VS Code',
-      },
+      CODIGO_CURSO,
+      columna('nombreCurso', 'Nombre completo del curso.', 'CÁLCULO I'),
+      CODIGO_SECCION,
+      PERIODO,
+      columna(
+        'tipoEspacioRequerido',
+        'AULA_TEORICA o LABORATORIO. Define qué tipo de espacio puede recibir la sección.',
+        'AULA_TEORICA',
+      ),
+      columna(
+        'stackSoftwareRequerido',
+        'Software que el laboratorio debe tener instalado, separado por |. Cada nombre debe existir en el catálogo: si no, la fila se rechaza con SOFTWARE_NO_REGISTRADO.',
+        'Python 3.12|VS Code',
+        false,
+      ),
     ],
     contenido: [
       'codigoCurso,nombreCurso,codigoSeccion,periodo,tipoEspacioRequerido,stackSoftwareRequerido',
@@ -85,44 +89,20 @@ export const PLANTILLAS: PlantillaCSV[] = [
       'Los bloques de día y hora de cada sección. La sección debe existir ya (carga anterior) o la fila se rechaza.',
     archivo: 'plantilla-horarios.csv',
     columnas: [
-      {
-        nombre: 'codigoCurso',
-        obligatorio: true,
-        descripcion: 'Código del curso de la sección.',
-        ejemplo: '202SW0104',
-      },
-      {
-        nombre: 'codigoSeccion',
-        obligatorio: true,
-        descripcion: 'Código de la sección.',
-        ejemplo: '1',
-      },
-      {
-        nombre: 'periodo',
-        obligatorio: true,
-        descripcion:
-          'Periodo de la sección. Debe coincidir con el de la carga de cursos y secciones.',
-        ejemplo: '2026-2',
-      },
-      {
-        nombre: 'diaSemana',
-        obligatorio: true,
-        descripcion:
-          'LUNES, MARTES, MIERCOLES, JUEVES, VIERNES, SABADO o DOMINGO. Acepta minúsculas y sin tilde.',
-        ejemplo: 'LUNES',
-      },
-      {
-        nombre: 'horaInicio',
-        obligatorio: true,
-        descripcion: 'Hora de inicio en formato HH:mm (24 horas).',
-        ejemplo: '08:00',
-      },
-      {
-        nombre: 'horaFin',
-        obligatorio: true,
-        descripcion: 'Hora de fin en formato HH:mm. Debe ser posterior a la de inicio.',
-        ejemplo: '10:00',
-      },
+      CODIGO_CURSO,
+      CODIGO_SECCION,
+      PERIODO,
+      columna(
+        'diaSemana',
+        'LUNES, MARTES, MIERCOLES, JUEVES, VIERNES, SABADO o DOMINGO. Acepta minúsculas y sin tilde.',
+        'LUNES',
+      ),
+      columna('horaInicio', 'Hora de inicio en formato HH:mm (24 horas).', '08:00'),
+      columna(
+        'horaFin',
+        'Hora de fin en formato HH:mm. Debe ser posterior a la de inicio.',
+        '10:00',
+      ),
     ],
     contenido: [
       'codigoCurso,codigoSeccion,periodo,diaSemana,horaInicio,horaFin',
@@ -137,56 +117,24 @@ export const PLANTILLAS: PlantillaCSV[] = [
       'Alumnos matriculados por sección. Si `crearCuentaAcceso` está activo, se crea la cuenta de acceso del alumno con su código como clave inicial.',
     archivo: 'plantilla-matriculas.csv',
     columnas: [
-      {
-        nombre: 'codigoAlumno',
-        obligatorio: true,
-        descripcion: 'Código de matrícula del alumno.',
-        ejemplo: '23200107',
-      },
-      {
-        nombre: 'nombre',
-        obligatorio: true,
-        descripcion: 'Nombre completo del alumno.',
-        ejemplo: 'ALUMNO DE EJEMPLO',
-      },
-      {
-        nombre: 'correo',
-        obligatorio: true,
-        descripcion: 'Correo institucional del alumno.',
-        ejemplo: 'alumno.ejemplo@unmsm.edu.pe',
-      },
-      {
-        nombre: 'movilidadReducida',
-        obligatorio: false,
-        descripcion:
-          'true/false (también 1/0 o si/no). Marca la necesidad de accesibilidad: el motor prioriza los espacios de Piso 1.',
-        ejemplo: 'false',
-      },
-      {
-        nombre: 'codigoCurso',
-        obligatorio: true,
-        descripcion: 'Código del curso de la sección en la que se matricula.',
-        ejemplo: '202SW0104',
-      },
-      {
-        nombre: 'codigoSeccion',
-        obligatorio: true,
-        descripcion: 'Código de la sección.',
-        ejemplo: '1',
-      },
-      {
-        nombre: 'periodo',
-        obligatorio: true,
-        descripcion: 'Periodo de la sección.',
-        ejemplo: '2026-2',
-      },
-      {
-        nombre: 'crearCuentaAcceso',
-        obligatorio: false,
-        descripcion:
-          'true/false. Con true se crea la cuenta de acceso del alumno (clave inicial = su código) y se le pide cambiar la clave al entrar.',
-        ejemplo: 'true',
-      },
+      columna('codigoAlumno', 'Código de matrícula del alumno.', '23200107'),
+      columna('nombre', 'Nombre completo del alumno.', 'ALUMNO DE EJEMPLO'),
+      columna('correo', 'Correo institucional del alumno.', 'alumno.ejemplo@unmsm.edu.pe'),
+      columna(
+        'movilidadReducida',
+        'true/false (también 1/0 o si/no). Marca la necesidad de accesibilidad: el motor prioriza los espacios de Piso 1.',
+        'false',
+        false,
+      ),
+      CODIGO_CURSO,
+      CODIGO_SECCION,
+      PERIODO,
+      columna(
+        'crearCuentaAcceso',
+        'true/false. Con true se crea la cuenta de acceso del alumno (clave inicial = su código) y se le pide cambiar la clave al entrar.',
+        'true',
+        false,
+      ),
     ],
     contenido: [
       'codigoAlumno,nombre,correo,movilidadReducida,codigoCurso,codigoSeccion,periodo,crearCuentaAcceso',
@@ -200,30 +148,10 @@ export const PLANTILLAS: PlantillaCSV[] = [
       'Docentes de la Facultad y su cuenta de acceso (clave inicial = su código). No interviene en la asignación automática, pero conviene cargarlo antes de los horarios.',
     archivo: 'plantilla-docentes.csv',
     columnas: [
-      {
-        nombre: 'codigoDocente',
-        obligatorio: true,
-        descripcion: 'Código del docente.',
-        ejemplo: '001198',
-      },
-      {
-        nombre: 'nombre',
-        obligatorio: true,
-        descripcion: 'Nombre completo del docente.',
-        ejemplo: 'DOCENTE DE EJEMPLO',
-      },
-      {
-        nombre: 'correoInstitucional',
-        obligatorio: true,
-        descripcion: 'Correo institucional.',
-        ejemplo: 'docente.ejemplo@unmsm.edu.pe',
-      },
-      {
-        nombre: 'departamento',
-        obligatorio: true,
-        descripcion: 'Departamento académico al que pertenece.',
-        ejemplo: 'Ingeniería de Software',
-      },
+      columna('codigoDocente', 'Código del docente.', '001198'),
+      columna('nombre', 'Nombre completo del docente.', 'DOCENTE DE EJEMPLO'),
+      columna('correoInstitucional', 'Correo institucional.', 'docente.ejemplo@unmsm.edu.pe'),
+      columna('departamento', 'Departamento académico al que pertenece.', 'Ingeniería de Software'),
     ],
     contenido: [
       'codigoDocente,nombre,correoInstitucional,departamento',
