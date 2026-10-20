@@ -65,7 +65,7 @@ function celdaPcs(espacio: EspacioAdminDTO): React.ReactNode {
 function celdaEstado(espacio: EspacioAdminDTO): React.ReactNode {
   return (
     <BadgeEstado tono={espacio.habilitado ? 'exito' : 'peligro'}>
-      {espacio.habilitado ? 'Habilitado' : 'Fuera de servicio'}
+      {espacio.habilitado ? 'Habilitado' : 'No asignable'}
     </BadgeEstado>
   );
 }
@@ -250,7 +250,7 @@ const DetalleEspacio: React.FC<{
           <Dato etiqueta="PCs malogradas">{detallePcs(espacio)}</Dato>
           <Dato etiqueta="Estado">
             <BadgeEstado tono={espacio.habilitado ? 'exito' : 'peligro'}>
-              {espacio.habilitado ? 'Habilitado' : 'Fuera de servicio'}
+              {espacio.habilitado ? 'Habilitado' : 'No asignable'}
             </BadgeEstado>
           </Dato>
           <Dato etiqueta="Uso previsto">
@@ -589,7 +589,7 @@ export const EspaciosAdmin: React.FC = () => {
           </span>
           {fueraDeServicio > 0 && (
             <span className="rounded-full bg-saie-danger-soft px-2.5 py-1 font-semibold text-saie-danger-strong">
-              {fueraDeServicio} fuera de servicio
+              {fueraDeServicio} no asignables
             </span>
           )}
         </div>

@@ -78,11 +78,11 @@ describe('Gestión de espacios (Issue 4.15)', () => {
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('No aplica')).toBeInTheDocument();
     expect(screen.getByText('Habilitado')).toBeInTheDocument();
-    expect(screen.getByText('Fuera de servicio')).toBeInTheDocument();
+    expect(screen.getByText('No asignable')).toBeInTheDocument();
     expect(screen.getByText('2 espacio(s)')).toBeInTheDocument();
     expect(screen.getByText('1 aula(s) teórica(s)')).toBeInTheDocument();
     expect(screen.getByText('1 laboratorio(s)')).toBeInTheDocument();
-    expect(screen.getByText('1 fuera de servicio')).toBeInTheDocument();
+    expect(screen.getByText('1 no asignables')).toBeInTheDocument();
   });
 
   it('filtra por tipo de espacio', async () => {

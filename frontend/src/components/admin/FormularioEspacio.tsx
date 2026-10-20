@@ -471,7 +471,7 @@ const GrupoCapacidad: React.FC<{
       ) : (
         <p id="ayuda-aforo" className={CLASE_AYUDA}>
           Al cambiarla se revisa si las secciones asignadas siguen cabiendo y se genera la alerta
-          correspondiente. Deja 0 solo si el espacio está fuera de servicio.
+          correspondiente. Deja 0 solo si el espacio queda deshabilitado.
         </p>
       )}
     </div>

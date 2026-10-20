@@ -131,7 +131,7 @@ describe('Formulario de espacios (Issue 4.15)', () => {
     ).toBeInTheDocument();
   });
 
-  it('permite guardar un aforo de 0 si el espacio queda fuera de servicio', async () => {
+  it('permite guardar un aforo de 0 si el espacio queda deshabilitado', async () => {
     montar({ espacio: espacio({ pcsMalogradas: null }) });
     fireEvent.click(screen.getByLabelText(/Espacio en servicio/));
     fireEvent.change(screen.getByLabelText(/Capacidad \(aforo nominal\)/), {

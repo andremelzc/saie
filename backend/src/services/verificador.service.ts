@@ -78,8 +78,8 @@ async function registrarVerificacionEnAuditoria(
 ): Promise<void> {
   const etiquetaCorrida = corridaId ? ` (corrida ${corridaId})` : '';
   const detalle = verificacion.conforme
-    ? `Verificación conforme${etiquetaCorrida}: ${verificacion.totalRevisadas} asignaciones revisadas sin violaciones (Issue 2.17).`
-    : `Verificación con ${verificacion.totalViolaciones} violación(es)${etiquetaCorrida} (Issue 2.17): ${verificacion.reglas
+    ? `Verificación conforme${etiquetaCorrida}: ${verificacion.totalRevisadas} asignaciones revisadas sin violaciones.`
+    : `Verificación con ${verificacion.totalViolaciones} violación(es)${etiquetaCorrida}: ${verificacion.reglas
         .filter((r) => r.violaciones.length > 0)
         .map((r) => `${r.regla} (${r.violaciones.length})`)
         .join(', ')}.`;
