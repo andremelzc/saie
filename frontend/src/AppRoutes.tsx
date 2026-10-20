@@ -16,6 +16,9 @@ import InicioAdmin from './pages/admin/InicioAdmin';
 import AlertasAdmin from './pages/admin/AlertasAdmin';
 import CargaDatos from './pages/admin/CargaDatos';
 import EspaciosAdmin from './pages/admin/EspaciosAdmin';
+import SeccionesAdmin from './pages/admin/SeccionesAdmin';
+import AuditoriaAdmin from './pages/admin/AuditoriaAdmin';
+import ReporteSalones from './pages/admin/ReporteSalones';
 import CambioLaboratorio from './pages/admin/CambioLaboratorio';
 import ProximamenteAdminPage from './pages/admin/ProximamenteAdminPage';
 import MapaAdminPage from './pages/admin/MapaAdminPage';
@@ -171,6 +174,33 @@ export const AppRoutes: React.FC = () => {
           element={
             <RutaProtegida rolesPermitidos={ROLES_ADMIN} rutaLogin={RUTAS.loginAdmin}>
               <CambioLaboratorio />
+            </RutaProtegida>
+          }
+        />
+        {/* Gestión individual de secciones (Issue 4.31). */}
+        <Route
+          path={RUTAS.seccionesAdmin}
+          element={
+            <RutaProtegida rolesPermitidos={ROLES_ADMIN} rutaLogin={RUTAS.loginAdmin}>
+              <SeccionesAdmin />
+            </RutaProtegida>
+          }
+        />
+        {/* Auditoría e historial de asignaciones (Issue 4.32). */}
+        <Route
+          path={RUTAS.auditoriaAdmin}
+          element={
+            <RutaProtegida rolesPermitidos={ROLES_ADMIN} rutaLogin={RUTAS.loginAdmin}>
+              <AuditoriaAdmin />
+            </RutaProtegida>
+          }
+        />
+        {/* Informe de salones imprimible (Issue 4.33). */}
+        <Route
+          path={RUTAS.reporteSalonesAdmin}
+          element={
+            <RutaProtegida rolesPermitidos={ROLES_ADMIN} rutaLogin={RUTAS.loginAdmin}>
+              <ReporteSalones />
             </RutaProtegida>
           }
         />

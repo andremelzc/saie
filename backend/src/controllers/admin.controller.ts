@@ -1,5 +1,12 @@
 import { Request, Response } from 'express';
-import { EstadoIncidencia, PrioridadIncidencia, TipoAlerta, TipoEspacio } from '@prisma/client';
+import {
+  EstadoIncidencia,
+  PrioridadIncidencia,
+  TipoAlerta,
+  TipoEspacio,
+  TipoEventoAuditoria,
+  EstadoAsignacion,
+} from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { responderError } from '../lib/http';
@@ -14,6 +21,19 @@ import {
   listarEspacios,
   obtenerEspacioAdmin,
 } from '../services/espacioAdmin.service';
+import {
+  actualizarSeccion,
+  ActualizarSeccionSchema,
+  FiltrosSeccionesSchema,
+  listarDocentesParaAsignar,
+  listarSecciones,
+  obtenerSeccionAdmin,
+} from '../services/seccionAdmin.service';
+import {
+  generarReporteAsignaciones,
+  listarAuditoria,
+  listarHistorialAsignaciones,
+} from '../services/auditoria.service';
 import {
   AltaAlumnoSchema,
   AltaDocenteSchema,
@@ -263,6 +283,118 @@ export async function restablecerClaveUsuario(req: Request, res: Response): Prom
     const entrada = RestablecerClaveSchema.parse(req.body);
     const data = await restablecerClave(entrada, prisma);
     res.setHeader('Cache-Control', 'no-store');
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/**
+ * Issue 4.31 — GET /api/v1/admin/secciones[?periodo=&q=&tipo=&pagina=]
+ * Gestión individual de secciones: ver el catálogo del periodo y sus asignaciones.
+ */
+export async function listarSeccionesAdmin(req: Request, res: Response): Promise<void> {
+  try {
+    const filtros = FiltrosSeccionesSchema.parse(req.query);
+    const data = await listarSecciones(filtros, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.31 — GET /api/v1/admin/secciones/:id */
+export async function obtenerSeccion(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = z.object({ id: z.string().min(1) }).parse(req.params);
+    const data = await obtenerSeccionAdmin(id, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.31 — GET /api/v1/admin/docentes (listado mínimo para asignar docente a una sección). */
+export async function listarDocentes(req: Request, res: Response): Promise<void> {
+  try {
+    const data = await listarDocentesParaAsignar(prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.31 — PATCH /api/v1/admin/secciones/:id (solo Coordinación Académica) */
+export async function editarSeccion(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = z.object({ id: z.string().min(1) }).parse(req.params);
+    const entrada = ActualizarSeccionSchema.parse(req.body);
+    const data = await actualizarSeccion(id, entrada, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+const AuditoriaQuerySchema = z
+  .object({
+    tipo: z.enum(TipoEventoAuditoria, { error: 'El tipo de evento no es válido' }).optional(),
+    desde: z.coerce.date().optional(),
+    hasta: z.coerce.date().optional(),
+    pagina: z.coerce.number().int().min(1).default(1),
+    limite: z.coerce.number().int().min(1).max(200).default(50),
+  })
+  .strict();
+
+/** Issue 4.32 — GET /api/v1/admin/auditoria[?tipo=&desde=&hasta=&pagina=] */
+export async function listarRegistrosAuditoria(req: Request, res: Response): Promise<void> {
+  try {
+    const filtros = AuditoriaQuerySchema.parse(req.query);
+    const data = await listarAuditoria(filtros, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+const HistorialQuerySchema = z
+  .object({
+    seccionId: z.string().trim().min(1).optional(),
+    periodo: z
+      .string()
+      .trim()
+      .regex(/^\d{4}-\d+$/, 'El periodo debe tener formato AAAA-N (ej. 2026-1)')
+      .optional(),
+    estado: z.enum(EstadoAsignacion, { error: 'El estado no es válido' }).optional(),
+    pagina: z.coerce.number().int().min(1).default(1),
+    limite: z.coerce.number().int().min(1).max(200).default(50),
+  })
+  .strict();
+
+/** Issue 4.32 — GET /api/v1/admin/asignaciones/historial[?seccionId=&periodo=&estado=] */
+export async function listarHistorial(req: Request, res: Response): Promise<void> {
+  try {
+    const filtros = HistorialQuerySchema.parse(req.query);
+    const data = await listarHistorialAsignaciones(filtros, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.33 — GET /api/v1/admin/reporte/asignaciones[?periodo=] */
+export async function consultarReporteAsignaciones(req: Request, res: Response): Promise<void> {
+  try {
+    const { periodo } = z
+      .object({
+        periodo: z
+          .string()
+          .trim()
+          .regex(/^\d{4}-\d+$/, 'El periodo debe tener formato AAAA-N (ej. 2026-1)')
+          .optional(),
+      })
+      .parse(req.query);
+    const data = await generarReporteAsignaciones(periodo, prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);

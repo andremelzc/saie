@@ -217,3 +217,148 @@ export interface ResultadoImportacionDTO {
     resumen: ResumenAsignacionDTO | null;
   } | null;
 }
+
+// ==========================================
+// GESTIÓN INDIVIDUAL DE SECCIONES (Issue 4.31)
+// ==========================================
+
+export type ComparacionVersion = 'CUALQUIERA' | 'EXACTA' | 'MINIMA';
+export type EstadoAsignacion = 'VIGENTE' | 'ESCALADA' | 'HISTORICA';
+export type TipoEventoAuditoria = 'ASIGNACION' | 'ESCALAMIENTO' | 'ALERTA' | 'VERIFICACION';
+
+/** Campos de una sección que el backend permite editar según el rol. */
+export type CampoSeccion = 'tipoEspacioRequerido' | 'docenteId' | 'softwareRequerido';
+
+export interface SoftwareRequeridoSeccionDTO {
+  id: string;
+  nombre: string;
+  version: string;
+  comparacionVersion: ComparacionVersion;
+}
+
+export interface EspacioDeSeccionDTO {
+  id: string;
+  identificador: string;
+  pabellon: string;
+  piso: number;
+  tipo: TipoEspacio;
+}
+
+/** GET /v1/admin/secciones (Issue 4.31). */
+export interface SeccionAdminDTO {
+  id: string;
+  codigoCurso: string;
+  nombreCurso: string;
+  codigoSeccion: string;
+  periodo: string;
+  tipoEspacioRequerido: TipoEspacio;
+  docente: { id: string; codigoDocente: string; nombre: string } | null;
+  alumnosMatriculados: number;
+  horarios: { diaSemana: string; horaInicio: string; horaFin: string }[];
+  softwareRequerido: SoftwareRequeridoSeccionDTO[];
+  asignacion: {
+    id: string;
+    estado: EstadoAsignacion;
+    fechaAsignacion: string;
+    corridaId: string | null;
+    motivoEscalamiento: string | null;
+    espacios: EspacioDeSeccionDTO[];
+  } | null;
+  camposEditables: CampoSeccion[];
+}
+
+export interface ListadoSeccionesDTO {
+  items: SeccionAdminDTO[];
+  total: number;
+  pagina: number;
+  limite: number;
+}
+
+/** PATCH /v1/admin/secciones/:id (Issue 4.31). Solo se envían los campos que cambian. */
+export interface CambiosSeccion {
+  tipoEspacioRequerido?: TipoEspacio;
+  docenteId?: string | null;
+  softwareRequerido?: { softwareId: string; comparacionVersion: ComparacionVersion }[];
+}
+
+export interface ResultadoEdicionSeccionDTO {
+  seccion: SeccionAdminDTO;
+  alertas: { id: string; tipo: string; motivo: string }[];
+}
+
+// ==========================================
+// AUDITORÍA E HISTORIAL (Issue 4.32)
+// ==========================================
+
+export interface RegistroAuditoriaDTO {
+  id: string;
+  tipoEvento: TipoEventoAuditoria;
+  detalle: string;
+  fechaHora: string;
+  asignacionId: string | null;
+  alertaId: string | null;
+  seccion: {
+    id: string;
+    codigoCurso: string;
+    codigoSeccion: string;
+    nombreCurso: string;
+  } | null;
+}
+
+export interface ListadoAuditoriaDTO {
+  items: RegistroAuditoriaDTO[];
+  total: number;
+  pagina: number;
+  limite: number;
+}
+
+export interface HistorialAsignacionDTO {
+  id: string;
+  seccionId: string;
+  codigoCurso: string;
+  nombreCurso: string;
+  codigoSeccion: string;
+  periodo: string;
+  estado: EstadoAsignacion;
+  fechaAsignacion: string;
+  corridaId: string | null;
+  motivoEscalamiento: string | null;
+  espacios: { id: string; identificador: string; pabellon: string; piso: number }[];
+}
+
+export interface ListadoHistorialDTO {
+  items: HistorialAsignacionDTO[];
+  total: number;
+  pagina: number;
+  limite: number;
+}
+
+// ==========================================
+// INFORME DE SALONES (Issue 4.33)
+// ==========================================
+
+export interface ReporteSeccionDTO {
+  codigoCurso: string;
+  nombreCurso: string;
+  codigoSeccion: string;
+  tipoEspacioRequerido: string;
+  docente: string | null;
+  aula: { identificador: string; pabellon: string; piso: number } | null;
+  sinAula: boolean;
+  horarios: string[];
+  alumnosMatriculados: number;
+  softwareRequerido: string[];
+}
+
+export interface ReporteAsignacionesDTO {
+  periodo: string;
+  generadoEn: string;
+  secciones: ReporteSeccionDTO[];
+  totales: {
+    secciones: number;
+    asignadas: number;
+    sinAula: number;
+    aulasDistintas: number;
+    alumnos: number;
+  };
+}
