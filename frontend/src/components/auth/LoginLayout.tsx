@@ -106,18 +106,14 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
 
       {/* Columna del formulario */}
       <div className="relative flex min-h-screen flex-col overflow-hidden lg:h-full lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto">
-        {/* Manchas de color suaves de fondo */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-28 -right-28 hidden lg:block h-80 w-80 rounded-full bg-saie-primary/5 blur-3xl"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-32 -left-24 h-72 w-72 rounded-full bg-saie-primary/5 blur-3xl"
-        />
+        {/* Manchas de color suaves de fondo (recortadas para que no generen scroll) */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-28 -right-28 hidden lg:block h-80 w-80 rounded-full bg-saie-primary/5 blur-3xl" />
+          <div className="absolute -bottom-32 -left-24 h-72 w-72 rounded-full bg-saie-primary/5 blur-3xl" />
+        </div>
 
         {/* Franja guinda en móvil/tablet; en escritorio solo queda el enlace de volver */}
-        <header className="relative flex items-center justify-between px-4 md:px-8 pt-4 pb-16 bg-gradient-to-br from-saie-primary to-saie-primary-dark text-white lg:bg-none lg:text-saie-primary lg:justify-end lg:px-10 lg:pt-6 lg:pb-0">
+        <header className="relative flex items-center justify-between px-4 md:px-8 pt-4 pb-16 bg-gradient-to-br from-saie-primary to-saie-primary-dark text-white lg:bg-none lg:text-saie-primary lg:justify-end lg:px-10 lg:pt-4 lg:pb-0">
           <Link to="/" className="lg:hidden rounded-lg">
             <img src={logoBlanco} alt="SAIE" className="h-10 w-auto" />
           </Link>
@@ -132,7 +128,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
 
         <main
           aria-label={ariaLabel}
-          className="relative z-10 flex flex-1 flex-col items-center gap-5 px-4 pb-8 -mt-10 lg:mt-0 lg:py-6"
+          className="relative z-10 flex flex-1 flex-col items-center gap-5 px-4 pb-8 -mt-10 lg:mt-0 lg:py-4"
         >
           <div className="my-auto flex w-full flex-col items-center gap-5">
             {children}
@@ -158,7 +154,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
           </div>
         </main>
 
-        <footer className="relative px-4 pb-6 text-center text-xs text-saie-muted">
+        <footer className="relative px-4 pb-4 text-center text-xs text-saie-muted">
           SAIE &copy; {new Date().getFullYear()} · UNMSM · Grupo 6
         </footer>
       </div>
