@@ -70,6 +70,37 @@ function celdaEstado(espacio: EspacioAdminDTO): React.ReactNode {
   );
 }
 
+/** PCs del laboratorio en el detalle: no aplica, sin registrar o el número. */
+function detallePcs(espacio: EspacioAdminDTO): React.ReactNode {
+  if (espacio.tipo === 'AULA_TEORICA') {
+    return <span className="text-saie-muted">No aplica: es un aula teórica.</span>;
+  }
+  if (espacio.pcsMalogradas == null) {
+    return <BadgeEstado tono="neutro">Sin registrar</BadgeEstado>;
+  }
+  return `${espacio.pcsMalogradas} PCs`;
+}
+
+/** Software del laboratorio en el detalle: no aplica o la lista instalada. */
+function detalleSoftware(espacio: EspacioAdminDTO): React.ReactNode {
+  if (espacio.tipo === 'AULA_TEORICA') {
+    return <p className="m-0 text-sm text-saie-muted">No aplica: es un aula teórica.</p>;
+  }
+  if (!espacio.softwareInstalado || espacio.softwareInstalado.length === 0) {
+    return <p className="m-0 text-sm text-saie-muted">Sin software registrado.</p>;
+  }
+  return (
+    <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+      {espacio.softwareInstalado.map((s) => (
+        <li key={s.id} className="rounded-full bg-saie-canvas px-3 py-1 text-sm text-saie-text">
+          {s.nombre}
+          {s.version ? ` ${s.version}` : ''}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** Título del drawer: el alta o el espacio que se está consultando. */
 function tituloDrawer(creando: boolean, seleccionado: EspacioAdminDTO | null): string {
   if (creando) return 'Nuevo espacio';
@@ -216,15 +247,7 @@ const DetalleEspacio: React.FC<{
               <span className="text-saie-muted">Sin definir</span>
             )}
           </Dato>
-          <Dato etiqueta="PCs malogradas">
-            {espacio.tipo === 'AULA_TEORICA' ? (
-              <span className="text-saie-muted">No aplica: es un aula teórica.</span>
-            ) : espacio.pcsMalogradas == null ? (
-              <BadgeEstado tono="neutro">Sin registrar</BadgeEstado>
-            ) : (
-              `${espacio.pcsMalogradas} PCs`
-            )}
-          </Dato>
+          <Dato etiqueta="PCs malogradas">{detallePcs(espacio)}</Dato>
           <Dato etiqueta="Estado">
             <BadgeEstado tono={espacio.habilitado ? 'exito' : 'peligro'}>
               {espacio.habilitado ? 'Habilitado' : 'Fuera de servicio'}
@@ -240,23 +263,7 @@ const DetalleEspacio: React.FC<{
         <h3 id="detalle-software" className="m-0 mb-2 text-base font-bold text-saie-text">
           Software instalado
         </h3>
-        {espacio.tipo === 'AULA_TEORICA' ? (
-          <p className="m-0 text-sm text-saie-muted">No aplica: es un aula teórica.</p>
-        ) : espacio.softwareInstalado && espacio.softwareInstalado.length > 0 ? (
-          <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
-            {espacio.softwareInstalado.map((s) => (
-              <li
-                key={s.id}
-                className="rounded-full bg-saie-canvas px-3 py-1 text-sm text-saie-text"
-              >
-                {s.nombre}
-                {s.version ? ` ${s.version}` : ''}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="m-0 text-sm text-saie-muted">Sin software registrado.</p>
-        )}
+        {detalleSoftware(espacio)}
       </section>
 
       <section aria-labelledby="detalle-contiguos">
@@ -403,6 +410,33 @@ export const EspaciosAdmin: React.FC = () => {
   const aulas = (datos ?? []).filter((e) => e.tipo === 'AULA_TEORICA').length;
   const laboratorios = (datos ?? []).filter((e) => e.tipo === 'LABORATORIO').length;
   const fueraDeServicio = (datos ?? []).filter((e) => !e.habilitado).length;
+
+  // El listado tiene tres estados: cargando, sin espacios registrados y con espacios.
+  const contenidoListado = (() => {
+    if (cargando && !datos) return <EsqueletoCarga texto="Cargando espacios…" />;
+    if (base.length === 0) {
+      return (
+        <EstadoVacio
+          titulo="Sin espacios registrados"
+          descripcion="Cuando se carguen los espacios, aparecerán aquí."
+        />
+      );
+    }
+    if (espacios.length === 0) {
+      return (
+        <EstadoVacio
+          titulo="Sin coincidencias"
+          descripcion="No hay espacios que coincidan con los filtros."
+          accion={
+            <Boton variante="secundario" tamano="sm" onClick={limpiarFiltros}>
+              Limpiar filtros
+            </Boton>
+          }
+        />
+      );
+    }
+    return <ListadoEspacios espacios={espacios} onVer={abrirDetalle} />;
+  })();
 
   // El drawer muestra una de las tres vistas posibles: el alta, la edición o la consulta.
   const contenidoDrawer = (() => {
@@ -563,26 +597,7 @@ export const EspaciosAdmin: React.FC = () => {
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
 
-      {cargando && !datos ? (
-        <EsqueletoCarga texto="Cargando espacios…" />
-      ) : base.length === 0 ? (
-        <EstadoVacio
-          titulo="Sin espacios registrados"
-          descripcion="Cuando se carguen los espacios, aparecerán aquí."
-        />
-      ) : espacios.length === 0 ? (
-        <EstadoVacio
-          titulo="Sin coincidencias"
-          descripcion="No hay espacios que coincidan con los filtros."
-          accion={
-            <Boton variante="secundario" tamano="sm" onClick={limpiarFiltros}>
-              Limpiar filtros
-            </Boton>
-          }
-        />
-      ) : (
-        <ListadoEspacios espacios={espacios} onVer={abrirDetalle} />
-      )}
+      {contenidoListado}
 
       <Drawer
         abierto={seleccionado !== null || creando}

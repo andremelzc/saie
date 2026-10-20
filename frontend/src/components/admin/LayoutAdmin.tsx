@@ -64,9 +64,8 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
           </div>
           <div className="flex items-center gap-4">
             <p className="m-0 hidden text-right text-xs leading-4 text-white/80 sm:block">
-              Sesión activa
+              <span>Sesión activa</span>
               <strong className="block text-sm font-bold text-white">
-                {' '}
                 {etiquetaRol(sesion?.rol)}
               </strong>
             </p>

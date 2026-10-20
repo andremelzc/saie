@@ -96,33 +96,22 @@ const PanelSoftware: React.FC<{
   errorCatalogo,
   onReintentarCatalogo,
   cargandoCatalogo,
-}) => (
-  <div className="flex flex-col gap-3">
-    <div className="flex flex-wrap items-end justify-between gap-2">
-      <label htmlFor="buscar-software" className={`${CLASE_ETIQUETA} flex-1`}>
-        Buscar software
-      </label>
-      <span className="text-sm text-saie-muted">
-        <strong className="text-saie-text">{seleccionados.size}</strong> de {totalCatalogo}{' '}
-        seleccionados
-      </span>
-    </div>
-    <input
-      id="buscar-software"
-      type="search"
-      value={busqueda}
-      disabled={!hayLaboratorio}
-      onChange={(e) => onBusqueda(e.target.value)}
-      placeholder="Nombre o versión…"
-      className={CLASE_CAMPO}
-    />
-    {errorCatalogo ? (
-      <AvisoError mensaje={errorCatalogo} onReintentar={onReintentarCatalogo} />
-    ) : cargandoCatalogo ? (
-      <EsqueletoCarga texto="Cargando catálogo…" />
-    ) : softwareFiltrado.length === 0 ? (
-      <p className="m-0 text-sm text-saie-muted">{mensajeCatalogoVacio(totalCatalogo, busqueda)}</p>
-    ) : (
+}) => {
+  const contenidoCatalogo = (() => {
+    if (errorCatalogo) {
+      return <AvisoError mensaje={errorCatalogo} onReintentar={onReintentarCatalogo} />;
+    }
+    if (cargandoCatalogo) {
+      return <EsqueletoCarga texto="Cargando catálogo…" />;
+    }
+    if (softwareFiltrado.length === 0) {
+      return (
+        <p className="m-0 text-sm text-saie-muted">
+          {mensajeCatalogoVacio(totalCatalogo, busqueda)}
+        </p>
+      );
+    }
+    return (
       <ul className="m-0 flex max-h-80 list-none flex-col gap-1 overflow-auto p-0">
         {softwareFiltrado.map((s) => (
           <li key={s.id}>
@@ -146,16 +135,40 @@ const PanelSoftware: React.FC<{
           </li>
         ))}
       </ul>
-    )}
-    {seleccionados.size > 0 && (
-      <div>
-        <Boton variante="fantasma" tamano="sm" disabled={!hayLaboratorio} onClick={quitarTodos}>
-          Quitar todos
-        </Boton>
+    );
+  })();
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <label htmlFor="buscar-software" className={`${CLASE_ETIQUETA} flex-1`}>
+          Buscar software
+        </label>
+        <span className="text-sm text-saie-muted">
+          <strong className="text-saie-text">{seleccionados.size}</strong> de {totalCatalogo}{' '}
+          seleccionados
+        </span>
       </div>
-    )}
-  </div>
-);
+      <input
+        id="buscar-software"
+        type="search"
+        value={busqueda}
+        disabled={!hayLaboratorio}
+        onChange={(e) => onBusqueda(e.target.value)}
+        placeholder="Nombre o versión…"
+        className={CLASE_CAMPO}
+      />
+      {contenidoCatalogo}
+      {seleccionados.size > 0 && (
+        <div>
+          <Boton variante="fantasma" tamano="sm" disabled={!hayLaboratorio} onClick={quitarTodos}>
+            Quitar todos
+          </Boton>
+        </div>
+      )}
+    </div>
+  );
+};
 
 /** Pestaña de PCs: número de equipos fuera de servicio. */
 const PanelPcs: React.FC<{

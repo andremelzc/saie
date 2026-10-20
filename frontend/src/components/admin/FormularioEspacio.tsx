@@ -165,6 +165,34 @@ function errorDescripcion(valor: string): string | undefined {
   return undefined;
 }
 
+interface ReglaValidacion {
+  campo: CampoEspacio;
+  error: (
+    form: EstadoFormulario,
+    original: EstadoFormulario,
+    campos: Set<CampoEspacio>,
+    espacio: EspacioAdminDTO | undefined,
+  ) => string | undefined;
+}
+
+/** Una regla por campo: cada una sabe validar su propio valor. */
+const REGLAS_VALIDACION: ReglaValidacion[] = [
+  { campo: 'identificador', error: (form) => errorIdentificador(form.identificador) },
+  { campo: 'pabellon', error: (form) => errorPabellon(form.pabellon) },
+  { campo: 'piso', error: (form) => errorPiso(form.piso) },
+  { campo: 'aforoNominal', error: (form) => errorAforo(form.aforoNominal, form.habilitado) },
+  {
+    campo: 'pcsMalogradas',
+    error: (form, original, campos, espacio) =>
+      errorPcs(
+        form.pcsMalogradas,
+        original.pcsMalogradas,
+        aforoEfectivo(form, campos, espacio?.aforoNominal ?? 0),
+      ),
+  },
+  { campo: 'descripcionUso', error: (form) => errorDescripcion(form.descripcionUso) },
+];
+
 function validar(
   form: EstadoFormulario,
   campos: Set<CampoEspacio>,
@@ -173,30 +201,10 @@ function validar(
 ): Record<string, string> {
   const errores: Record<string, string> = {};
 
-  if (campos.has('identificador')) {
-    const error = errorIdentificador(form.identificador);
-    if (error) errores.identificador = error;
-  }
-  if (campos.has('pabellon')) {
-    const error = errorPabellon(form.pabellon);
-    if (error) errores.pabellon = error;
-  }
-  if (campos.has('piso')) {
-    const error = errorPiso(form.piso);
-    if (error) errores.piso = error;
-  }
-  if (campos.has('aforoNominal')) {
-    const error = errorAforo(form.aforoNominal, form.habilitado);
-    if (error) errores.aforoNominal = error;
-  }
-  if (campos.has('pcsMalogradas')) {
-    const aforo = aforoEfectivo(form, campos, espacio?.aforoNominal ?? 0);
-    const error = errorPcs(form.pcsMalogradas, original.pcsMalogradas, aforo);
-    if (error) errores.pcsMalogradas = error;
-  }
-  if (campos.has('descripcionUso')) {
-    const error = errorDescripcion(form.descripcionUso);
-    if (error) errores.descripcionUso = error;
+  for (const regla of REGLAS_VALIDACION) {
+    if (!campos.has(regla.campo)) continue;
+    const error = regla.error(form, original, campos, espacio);
+    if (error) errores[regla.campo] = error;
   }
 
   return errores;
@@ -532,6 +540,31 @@ const GrupoLaboratorio: React.FC<{
     ? 'El catálogo de software está vacío.'
     : `No hay software que coincida con «${busquedaSoftware.trim()}».`;
 
+  const contenido = (() => {
+    if (catalogo.error) {
+      return <Aviso tono="error">No se pudo cargar el catálogo de software.</Aviso>;
+    }
+    if (sinCoincidencias) {
+      return <p className="m-0 text-sm text-saie-muted">{mensajeVacio}</p>;
+    }
+    return (
+      <ul className="m-0 flex max-h-56 list-none flex-col gap-1 overflow-auto p-0">
+        {softwareFiltrado.map((s) => (
+          <li key={s.id}>
+            <Casilla
+              id={`software-espacio-${s.id}`}
+              marcada={form.softwareIds.includes(s.id)}
+              onCambio={(marcada) => alternarSoftware(s.id, marcada)}
+            >
+              {s.nombre}
+              {s.version && <span className="text-saie-muted"> {s.version}</span>}
+            </Casilla>
+          </li>
+        ))}
+      </ul>
+    );
+  })();
+
   return (
     <fieldset className="flex flex-col gap-3 border-0 p-0">
       <legend className="m-0 text-base font-bold text-saie-text">
@@ -583,26 +616,7 @@ const GrupoLaboratorio: React.FC<{
           onChange={(e) => onBusquedaSoftware(e.target.value)}
           className={CLASE_CAMPO}
         />
-        {catalogo.error ? (
-          <Aviso tono="error">No se pudo cargar el catálogo de software.</Aviso>
-        ) : sinCoincidencias ? (
-          <p className="m-0 text-sm text-saie-muted">{mensajeVacio}</p>
-        ) : (
-          <ul className="m-0 flex max-h-56 list-none flex-col gap-1 overflow-auto p-0">
-            {softwareFiltrado.map((s) => (
-              <li key={s.id}>
-                <Casilla
-                  id={`software-espacio-${s.id}`}
-                  marcada={form.softwareIds.includes(s.id)}
-                  onCambio={(marcada) => alternarSoftware(s.id, marcada)}
-                >
-                  {s.nombre}
-                  {s.version && <span className="text-saie-muted"> {s.version}</span>}
-                </Casilla>
-              </li>
-            ))}
-          </ul>
-        )}
+        {contenido}
       </div>
     </fieldset>
   );
