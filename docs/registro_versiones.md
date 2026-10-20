@@ -4,7 +4,7 @@
 
 Este documento registra los cambios de esquema de datos, endpoints, servicios e importadores entregados en cada hito del proyecto **SAIE**.
 
-Estado al **2026-10-15**. Cada versión corresponde a un conjunto de PR fusionados a `develop` y se alinea con los hitos (*milestones*) del repositorio.
+Estado al **2026-10-20**. Cada versión corresponde a un conjunto de PR fusionados a `develop` y se alinea con los hitos (*milestones*) del repositorio.
 
 ---
 
@@ -22,7 +22,7 @@ Estado al **2026-10-15**. Cada versión corresponde a un conjunto de PR fusionad
 | **v1.1.0** | 2026-09-28 | Sprint 1 | Importadores de Datos (Cursos, Horarios, Matrículas con movilidad reducida, Docentes) | #230 | #1.3, #1.4, #1.5, #1.6, #1.7, #1.8 |
 | **v1.0.0** | 2026-09-27 | Setup | Monorepo base, documentos de línea base, arquitectura y modelo de datos, Prisma Schema en Supabase, Plan Maestro de Pruebas, CI GitHub Actions, Specs Técnicas, `AGENTS.md` y Registro de Versiones | #225, #226, #227, #228, #229, #233 | #1.1, #1.2, #5.10a, #5.12, #6.1 a #6.5, #6.8 |
 
-Trabajo aún no fusionado a `develop` (espacios habilitados, seed desde Excel y corrección del CD): véase `[Sin publicar]` en el [`CHANGELOG.md`](../CHANGELOG.md).
+Trabajo aún no fusionado a `develop` (espacios habilitados, seed desde Excel, corrección del CD, sistema de diseño del panel, rediseño de las pantallas administrativas y alta y edición de espacios por rol): véase `[Sin publicar]` en el [`CHANGELOG.md`](../CHANGELOG.md).
 
 ---
 

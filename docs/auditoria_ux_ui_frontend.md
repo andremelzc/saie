@@ -52,7 +52,15 @@ La auditoría se aplicó en la rama `feature/4.15-edicion-espacios-y-pulido-ui-p
 | 16–18 · Sistema de diseño | Resuelto | `components/ui/`, `index.css` |
 | 19 · Consulta pública | Resuelto | `pages/Consulta.tsx`, `components/consulta/` (Issues 3.5–3.7) |
 
-**Pendiente de la Fase 3:** pruebas de accesibilidad automáticas con `axe` y la extracción de un `ModalConfirmacion` (la confirmación de resolver alerta se resolvió en línea, dentro de la tarjeta).
+**Fase 3 (parcial):** las pruebas de accesibilidad automáticas con `axe` ya existen
+(`frontend/src/test/axe.ts` y `frontend/src/pages/admin/accesibilidad.test.tsx`): fallan solo con
+violaciones `serious` o `critical`, que es lo que pide la spec 03. Lo que jsdom no puede resolver
+(contraste de color y texto visible) queda como «incomplete» y se documenta en el propio test.
+
+**Diferido a propósito:** la extracción de un `ModalConfirmacion`. La confirmación de resolver
+alerta se resolvió en línea, dentro de la tarjeta, y la de la corrida de asignación, en el panel
+de inicio. No hay una segunda acción irreversible que justifique un modal genérico, así que no se
+crea el componente hasta que aparezca una.
 
 **Pendiente de proceso:** el registro de estos ajustes en el Registro de Versiones lo hace el maintainer al cerrar el sprint.
 
