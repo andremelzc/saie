@@ -1,0 +1,6 @@
+codigoDocente,nombre,correoInstitucional,departamento
+D9999,DOCENTE DEMO ERROR,docente.demo@example.edu,DEPARTAMENTO DE PRUEBA
+,DOCENTE SIN CODIGO,docente.sin.codigo@example.edu,DEPARTAMENTO DE PRUEBA
+D9998,,docente.sin.nombre@example.edu,DEPARTAMENTO DE PRUEBA
+D9997,DOCENTE CORREO MALO,correo-invalido,DEPARTAMENTO DE PRUEBA
+D9996,DOCENTE SIN DEPARTAMENTO,docente.sin.departamento@example.edu,
