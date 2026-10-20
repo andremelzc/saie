@@ -25,6 +25,69 @@ export function formatearFechaCorta(iso: string): string {
   });
 }
 
+export interface MotivoEscalamientoInfo {
+  codigo: string | null;
+  etiqueta: string;
+  descripcion: string;
+  accion: { etiqueta: string; to: string } | null;
+}
+
+const MOTIVOS_ESCALAMIENTO: Record<
+  string,
+  Omit<MotivoEscalamientoInfo, 'codigo' | 'descripcion'>
+> = {
+  SIN_HORARIOS_DEFINIDOS: {
+    etiqueta: 'Sin horarios definidos',
+    accion: { etiqueta: 'Cargar horario', to: `${RUTAS.cargaAdmin}#carga-horarios` },
+  },
+  SIN_ESPACIOS_DISPONIBLES: {
+    etiqueta: 'Sin espacios del tipo requerido',
+    accion: { etiqueta: 'Revisar espacios', to: RUTAS.espaciosAdmin },
+  },
+  CAPACIDAD_INSUFICIENTE: {
+    etiqueta: 'Capacidad insuficiente',
+    accion: { etiqueta: 'Revisar espacios', to: RUTAS.espaciosAdmin },
+  },
+  HORARIO_BLOQUEADO: {
+    etiqueta: 'Horario bloqueado',
+    accion: { etiqueta: 'Revisar ocupación', to: RUTAS.espaciosAdmin },
+  },
+  SOFTWARE_FALTANTE: {
+    etiqueta: 'Software faltante',
+    accion: { etiqueta: 'Revisar laboratorios', to: RUTAS.espaciosAdmin },
+  },
+  CONTIGUEDAD_NO_ALCANZADA: {
+    etiqueta: 'Sin bloque contiguo',
+    accion: { etiqueta: 'Revisar espacios', to: RUTAS.espaciosAdmin },
+  },
+};
+
+const MOTIVO_DESCONOCIDO = {
+  etiqueta: 'Escalamiento',
+  accion: null,
+} satisfies Omit<MotivoEscalamientoInfo, 'codigo' | 'descripcion'>;
+
+/**
+ * El backend guarda el motivo como `[CODIGO] descripción`. La UI muestra una etiqueta legible,
+ * la descripción y una acción sugerida; el código queda solo como referencia de soporte.
+ */
+export function describirMotivoEscalamiento(
+  motivo: string | null | undefined,
+): MotivoEscalamientoInfo {
+  const texto = motivo?.trim() ?? '';
+  const coincidencia = texto.match(/^\[([A-Z0-9_]+)\]\s*(.*)$/s);
+  const codigo = coincidencia?.[1] ?? null;
+  const descripcion = (coincidencia?.[2] ?? texto).trim();
+  const definicion = (codigo && MOTIVOS_ESCALAMIENTO[codigo]) || MOTIVO_DESCONOCIDO;
+
+  return {
+    codigo,
+    etiqueta: definicion.etiqueta,
+    descripcion: descripcion || 'Sin motivo registrado.',
+    accion: definicion.accion,
+  };
+}
+
 const T_INICIO = 'M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10';
 const T_ALERTA =
   'M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z';
@@ -59,24 +122,4 @@ export function etiquetaRol(rol?: RolCuenta): string {
   if (rol === 'JEFATURA_LABORATORIOS') return 'Jefatura de Laboratorios';
   if (rol === 'COORDINACION_ACADEMICA') return 'Coordinación Académica';
   return 'Administrativo';
-}
-
-const MOTIVOS_ESCALAMIENTO: Record<string, string> = {
-  SIN_HORARIOS_DEFINIDOS: 'La sección no tiene horarios registrados.',
-  SIN_ESPACIOS_DISPONIBLES: 'No hay espacios de ese tipo registrados en el campus.',
-  CAPACIDAD_INSUFICIENTE: 'La capacidad disponible no alcanza para los estudiantes matriculados.',
-  HORARIO_BLOQUEADO: 'Todos los espacios están ocupados en el horario de la sección.',
-  SOFTWARE_FALTANTE: 'Ningún laboratorio disponible tiene el software que necesita la sección.',
-  CONTIGUEDAD_NO_ALCANZADA: 'Hay capacidad suficiente, pero no en espacios contiguos.',
-};
-
-/**
- * Convierte el motivo guardado por el motor (`[TIPO] detalle técnico`) en una frase para el panel.
- * Los motivos escritos a mano se muestran tal cual.
- */
-export function motivoEscalamientoLegible(motivo?: string | null): string {
-  if (!motivo) return 'Sin motivo registrado.';
-  const conCodigo = /^\[([A-Z_]+)\]\s*(.*)$/.exec(motivo);
-  if (!conCodigo) return motivo;
-  return MOTIVOS_ESCALAMIENTO[conCodigo[1]] ?? 'Requiere revisión manual.';
 }

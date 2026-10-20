@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
+import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
 import { EsqueletoCarga } from '../../components/estudiante/ElementosHorario';
 import { Aviso } from '../../components/ui/Aviso';
 import { Boton } from '../../components/ui/Boton';
@@ -15,7 +16,7 @@ import {
 } from '../../services/admin';
 import { mensajeDeError } from '../../services/estudiante';
 import type { ResumenAsignacionDTO, SeccionEscaladaDTO } from '../../types/admin';
-import { formatearFechaCorta, motivoEscalamientoLegible } from '../../utils/admin';
+import { describirMotivoEscalamiento, formatearFechaCorta } from '../../utils/admin';
 
 const Acceso: React.FC<{ to: string; titulo: string; descripcion: string }> = ({
   to,
@@ -104,7 +105,10 @@ const InicioCoordinacion: React.FC = () => {
   } | null>(null);
   const [ultimaCorrida, setUltimaCorrida] = useState<string | null>(null);
   const [verTodasEscaladas, setVerTodasEscaladas] = useState(false);
-  const [errorAccion, setErrorAccion] = useState<string | null>(null);
+  const [errorAccion, setErrorAccion] = useState<{
+    mensaje: string;
+    reintentar: () => void;
+  } | null>(null);
 
   const pendientes = alertas.datos?.filter((a) => a.estado === 'PENDIENTE').length ?? 0;
   const periodo = escaladas.datos?.periodo ?? resumenCorrida?.periodo ?? '—';
@@ -125,7 +129,7 @@ const InicioCoordinacion: React.FC = () => {
       escaladas.recargar();
       alertas.recargar();
     } catch (e) {
-      setErrorAccion(mensajeDeError(e));
+      setErrorAccion({ mensaje: mensajeDeError(e), reintentar: correr });
     } finally {
       setCorriendo(false);
     }
@@ -142,7 +146,7 @@ const InicioCoordinacion: React.FC = () => {
       escaladas.recargar();
       alertas.recargar();
     } catch (e) {
-      setErrorAccion(mensajeDeError(e));
+      setErrorAccion({ mensaje: mensajeDeError(e), reintentar: () => reintentar(seccion) });
     } finally {
       setReintentando(null);
     }
@@ -179,6 +183,25 @@ const InicioCoordinacion: React.FC = () => {
             {ultimaCorrida && (
               <p className="m-0 mt-2 text-xs text-white/75">
                 Última actualización: {formatearFechaCorta(ultimaCorrida)}
+              </p>
+            )}
+            {resumenCorrida && (
+              <p className="m-0 mt-2">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+                    resumenCorrida.verificacion?.conforme
+                      ? 'bg-[#E8F3E9] text-saie-success'
+                      : resumenCorrida.verificacion
+                        ? 'bg-[#FBE9E9] text-saie-danger'
+                        : 'bg-white/15 text-white'
+                  }`}
+                >
+                  {resumenCorrida.verificacion
+                    ? resumenCorrida.verificacion.conforme
+                      ? `✓ Verificador conforme · ${resumenCorrida.verificacion.totalRevisadas} revisadas`
+                      : `✗ Verificador no conforme · ${resumenCorrida.verificacion.totalViolaciones} violación(es)`
+                    : 'Verificador: sin asignaciones que revisar'}
+                </span>
               </p>
             )}
           </div>
@@ -225,7 +248,11 @@ const InicioCoordinacion: React.FC = () => {
         )}
       </section>
 
-      {errorAccion && <AvisoError mensaje={errorAccion} />}
+      {errorAccion && (
+        <AvisoError mensaje={errorAccion.mensaje} onReintentar={errorAccion.reintentar} />
+      )}
+
+      {resumenCorrida && <VeredictoVerificacion verificacion={resumenCorrida.verificacion} />}
 
       {resultadoSeccion && (
         <Aviso tono="info" role="status">
@@ -288,32 +315,63 @@ const InicioCoordinacion: React.FC = () => {
           </p>
         ) : (
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
-            {visibles.map((s) => (
-              <li
-                key={s.asignacionId}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-saie-divider bg-white p-4"
-              >
-                <div className="min-w-0">
-                  <p className="m-0 font-semibold text-saie-text">
-                    {s.seccion.codigoCurso} · {s.seccion.codigoSeccion} — {s.seccion.nombreCurso}
-                  </p>
-                  <p className="m-0 text-sm text-saie-muted">
-                    {motivoEscalamientoLegible(s.motivoEscalamiento)} ·{' '}
-                    {s.seccion.alumnosMatriculados} alumnos
-                  </p>
-                </div>
-                <Boton
-                  variante="secundario"
-                  tamano="sm"
-                  onClick={() => reintentar(s)}
-                  cargando={reintentando === s.seccion.id}
-                  textoCargando="Reintentando…"
-                  disabled={reintentando !== null && reintentando !== s.seccion.id}
+            {visibles.map((s) => {
+              const motivo = describirMotivoEscalamiento(s.motivoEscalamiento);
+              const alumnos = s.seccion.alumnosMatriculados;
+              return (
+                <li
+                  key={s.asignacionId}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-saie-divider bg-white p-4"
                 >
-                  Reintentar
-                </Boton>
-              </li>
-            ))}
+                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <p className="m-0 font-semibold text-saie-text">
+                      {s.seccion.codigoCurso} · {s.seccion.codigoSeccion} — {s.seccion.nombreCurso}
+                    </p>
+                    <span className="w-fit rounded-full bg-[#FDF0E1] px-2 py-0.5 text-xs font-bold text-[#B45309]">
+                      {motivo.etiqueta}
+                    </span>
+                    <p className="m-0 text-sm text-saie-text">No se le asignó aula.</p>
+                    <p className="m-0 text-sm text-saie-muted">{motivo.descripcion}</p>
+                    <p className="m-0 text-xs text-saie-muted">
+                      {alumnos} {alumnos === 1 ? 'alumno matriculado' : 'alumnos matriculados'}
+                      {motivo.codigo && (
+                        <>
+                          {' · '}
+                          <span className="font-mono text-[10px]" title="Código interno del motivo">
+                            {motivo.codigo}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {motivo.accion && (
+                      <Link
+                        to={motivo.accion.to}
+                        className="rounded-lg bg-saie-primary px-3 py-1.5 text-sm font-semibold text-white no-underline hover:bg-saie-primary-dark"
+                      >
+                        {motivo.accion.etiqueta}
+                      </Link>
+                    )}
+                    <Boton
+                      variante="secundario"
+                      tamano="sm"
+                      onClick={() => reintentar(s)}
+                      cargando={reintentando === s.seccion.id}
+                      textoCargando="Reintentando…"
+                      disabled={reintentando !== null && reintentando !== s.seccion.id}
+                      title={
+                        motivo.codigo === 'SIN_HORARIOS_DEFINIDOS'
+                          ? 'Vuelve a intentar después de cargar el horario'
+                          : 'Vuelve a ejecutar la asignación de esta sección'
+                      }
+                    >
+                      Reintentar
+                    </Boton>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

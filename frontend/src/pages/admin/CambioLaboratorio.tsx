@@ -184,6 +184,11 @@ export const CambioLaboratorio: React.FC = () => {
             con un solo botón.
           </Aviso>
         )}
+        {labs.datos && labs.datos.length === 0 && (
+          <p className="m-0 text-xs font-medium text-saie-danger">
+            No hay laboratorios registrados todavía.
+          </p>
+        )}
       </section>
 
       <div className="rounded-xl border border-saie-divider bg-white">
@@ -230,7 +235,7 @@ export const CambioLaboratorio: React.FC = () => {
               ) : catalogoFiltrado.length === 0 ? (
                 <p className="m-0 text-sm text-saie-muted">
                   {itemsCatalogo.length === 0
-                    ? 'El catálogo de software está vacío.'
+                    ? 'No hay software activo en el catálogo. Coordinación debe registrarlo primero.'
                     : `No hay software que coincida con «${busqueda.trim()}».`}
                 </p>
               ) : (

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import api from './api';
 import type { CursoMatriculadoDTO, HorarioSemanalDTO } from '../types/horario';
-import type { CambiosPerfil, PerfilAlumnoDTO } from '../types/perfil';
+import type { CambiosPerfil, EstadoTelegramDTO, PerfilAlumnoDTO } from '../types/perfil';
 
 /**
  * Cliente del portal del alumno (Issues 3.10, 3.11 y 3.12). Todo sale de la base de datos vía
@@ -43,7 +43,19 @@ export async function guardarPerfil(cambios: CambiosPerfil): Promise<PerfilAlumn
   return data.data;
 }
 
-/** Mensaje legible para mostrar al usuario a partir de un error de red o del backend. */
+/** GET /v1/estudiante/telegram — estado de la vinculación con el bot (Issue 3.28). */
+export async function obtenerTelegram(): Promise<EstadoTelegramDTO> {
+  const { data } = await api.get<Respuesta<EstadoTelegramDTO>>('/v1/estudiante/telegram');
+  return data.data;
+}
+
+/** DELETE /v1/estudiante/telegram — da de baja la vinculación activa (Issue 3.28). */
+export async function desvincularTelegram(): Promise<EstadoTelegramDTO> {
+  const { data } = await api.delete<Respuesta<EstadoTelegramDTO>>('/v1/estudiante/telegram');
+  return data.data;
+}
+
+/** Mensaje legible para mostrar al alumno a partir de un error de red o del backend. */
 export function mensajeDeError(error: unknown): string {
   if (!axios.isAxiosError(error)) {
     return 'Inténtalo de nuevo en unos minutos.';

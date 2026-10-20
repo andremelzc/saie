@@ -8,7 +8,13 @@ import {
   obtenerEscaladas,
   reintentarSeccion,
 } from '../../services/admin';
-import type { AlertaDTO, ResumenAsignacionDTO, SeccionesEscaladasDTO } from '../../types/admin';
+import type {
+  AlertaDTO,
+  ReglaVerificacion,
+  ResultadoVerificacionDTO,
+  ResumenAsignacionDTO,
+  SeccionesEscaladasDTO,
+} from '../../types/admin';
 
 let rol = 'COORDINACION_ACADEMICA';
 vi.mock('../../context/useAuth', () => ({
@@ -44,7 +50,7 @@ const conEscaladas: SeccionesEscaladasDTO = {
     {
       asignacionId: 'x1',
       fechaEscalamiento: '2026-10-10T10:00:00Z',
-      motivoEscalamiento: 'Sin aula con capacidad suficiente',
+      motivoEscalamiento: '[SIN_HORARIOS_DEFINIDOS] La sección 01 no tiene horario en 2026-II',
       seccion: {
         id: 'sec1',
         codigoCurso: 'IS101',
@@ -82,6 +88,58 @@ const resumen: ResumenAsignacionDTO = {
   asignadas: 6,
   mantenidas: 2,
   escaladas: 2,
+  verificacion: null,
+  resultados: [],
+};
+
+const REGLAS: ReglaVerificacion[] = [
+  'DOBLE_RESERVA',
+  'CAPACIDAD_SUFICIENTE',
+  'TIPO_HOMOGENEO',
+  'BLOQUE_CONTIGUO',
+  'SOFTWARE_COMPLETO',
+  'ESCALADA_CON_MOTIVO',
+  'UNA_VIGENTE_POR_SECCION',
+];
+
+const reglaConforme = (regla: ReglaVerificacion) => ({
+  regla,
+  descripcion: regla,
+  revisadas: 8,
+  cumplen: 8,
+  violaciones: [],
+});
+
+const verificacionConforme: ResultadoVerificacionDTO = {
+  conforme: true,
+  totalRevisadas: 8,
+  totalViolaciones: 0,
+  reglas: REGLAS.map(reglaConforme),
+};
+
+const verificacionNoConforme: ResultadoVerificacionDTO = {
+  conforme: false,
+  totalRevisadas: 8,
+  totalViolaciones: 1,
+  reglas: REGLAS.map((regla) =>
+    regla === 'CAPACIDAD_SUFICIENTE'
+      ? {
+          regla,
+          descripcion: regla,
+          revisadas: 8,
+          cumplen: 7,
+          violaciones: [
+            {
+              regla,
+              asignacionId: 'a1',
+              seccionId: 'sec1',
+              codigoSeccion: '01',
+              detalle: 'Aforo insuficiente para 45 alumnos',
+            },
+          ],
+        }
+      : reglaConforme(regla),
+  ),
 };
 
 const montar = () =>
@@ -104,10 +162,15 @@ describe('Inicio del panel administrativo', () => {
       montar();
       expect(await screen.findByText(/IS101 · 01 — Algoritmos/)).toBeInTheDocument();
       expect(screen.getByText(/Periodo 2026-II/)).toBeInTheDocument();
-      expect(
-        screen.getByText('Sin aula con capacidad suficiente · 45 alumnos', { exact: false }),
-      ).toBeTruthy();
-      expect(screen.getByText(/Sin motivo registrado/)).toBeInTheDocument();
+      expect(screen.getByText('Sin horarios definidos')).toBeInTheDocument();
+      expect(screen.getAllByText('No se le asignó aula.')).toHaveLength(2);
+      expect(screen.getByText('La sección 01 no tiene horario en 2026-II')).toBeInTheDocument();
+      expect(screen.getByText(/45 alumnos matriculados/)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Cargar horario' })).toHaveAttribute(
+        'href',
+        '/admin/carga#carga-horarios',
+      );
+      expect(screen.getByText('Sin motivo registrado.')).toBeInTheDocument();
       const atencion = screen.getByRole('region', { name: 'Requieren tu atención' });
       expect(within(atencion).getByText(/alertas pendientes/).parentElement).toHaveTextContent(
         '2 alertas pendientes',
@@ -126,7 +189,6 @@ describe('Inicio del panel administrativo', () => {
       corrida.mockResolvedValue(resumen);
       montar();
       await screen.findByText(/IS101/);
-
       fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
       expect(screen.getByText(/Se volverán a asignar las aulas/)).toBeInTheDocument();
       expect(corrida).not.toHaveBeenCalled();
@@ -151,6 +213,54 @@ describe('Inicio del panel administrativo', () => {
       expect(corrida).not.toHaveBeenCalled();
     });
 
+    it('muestra el veredicto conforme del verificador (Issue 2.17)', async () => {
+      corrida.mockResolvedValue({ ...resumen, verificacion: verificacionConforme });
+      montar();
+      await screen.findByText(/IS101/);
+      fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
+
+      expect(
+        await screen.findByText('Conforme: la corrida cumple las 7 reglas duras.'),
+      ).toBeInTheDocument();
+      expect(screen.getByText('CONFORME')).toBeInTheDocument();
+      expect(
+        screen.getByText('8 asignación(es) revisada(s) · 0 violación(es)'),
+      ).toBeInTheDocument();
+      expect(screen.getByText('Sin doble reserva')).toBeInTheDocument();
+      expect(screen.getByText('Capacidad suficiente')).toBeInTheDocument();
+      expect(screen.getByText(/Verificador conforme · 8 revisadas/)).toBeInTheDocument();
+    });
+
+    it('detalla las violaciones cuando el verificador no es conforme', async () => {
+      corrida.mockResolvedValue({ ...resumen, verificacion: verificacionNoConforme });
+      montar();
+      await screen.findByText(/IS101/);
+      fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
+
+      expect(
+        await screen.findByText('No conforme: 1 violación(es) en 1 regla(s).'),
+      ).toBeInTheDocument();
+      expect(screen.getByText('NO CONFORME')).toBeInTheDocument();
+      expect(screen.getByText(/Ver 1 violación/)).toBeInTheDocument();
+      expect(screen.getByText(/Aforo insuficiente para 45 alumnos/)).toBeInTheDocument();
+      expect(screen.getByText(/Verificador no conforme · 1 violación/)).toBeInTheDocument();
+    });
+
+    it('avisa cuando la corrida no dejó asignaciones que verificar', async () => {
+      corrida.mockResolvedValue({ ...resumen, verificacion: null });
+      montar();
+      await screen.findByText(/IS101/);
+      fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
+
+      expect(
+        await screen.findByText('No hubo asignaciones que verificar en esta corrida.'),
+      ).toBeInTheDocument();
+      expect(screen.getByText('Verificador: sin asignaciones que revisar')).toBeInTheDocument();
+    });
+
     it('muestra el error si la corrida falla', async () => {
       corrida.mockRejectedValue(new Error('x'));
       montar();
@@ -158,6 +268,20 @@ describe('Inicio del panel administrativo', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
       fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
       expect(await screen.findByText('Inténtalo de nuevo en unos minutos.')).toBeInTheDocument();
+    });
+
+    it('permite reintentar la corrida desde el aviso de error', async () => {
+      corrida.mockRejectedValueOnce(new Error('x')).mockResolvedValueOnce(resumen);
+      montar();
+      await screen.findByText(/IS101/);
+      fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
+
+      const aviso = await screen.findByRole('alert');
+      fireEvent.click(within(aviso).getByRole('button', { name: 'Reintentar' }));
+      await waitFor(() => expect(corrida).toHaveBeenCalledTimes(2));
+      const estado = await screen.findByRole('status');
+      expect(estado).toHaveTextContent(/6\s*con aula nueva/);
     });
 
     it('reintenta una sección escalada', async () => {

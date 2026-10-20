@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import LayoutAdmin from '../../components/admin/LayoutAdmin';
+import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
 import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
 import { Acordeon } from '../../components/ui/Acordeon';
 import { Aviso } from '../../components/ui/Aviso';
@@ -217,7 +219,7 @@ export const ZonaCarga: React.FC<{
 
   return (
     <section
-      id={`zona-${tipo}`}
+      id={`carga-${tipo}`}
       tabIndex={-1}
       aria-label={titulo}
       className="flex h-full scroll-mt-24 flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-[var(--saie-shadow-1)] focus:outline-3 focus:outline-offset-2 focus:outline-saie-primary"
@@ -397,6 +399,10 @@ export const ZonaCarga: React.FC<{
             </div>
           )}
         </div>
+      )}
+
+      {resultado?.asignacion?.resumen && (
+        <VeredictoVerificacion verificacion={resultado.asignacion.resumen.verificacion} />
       )}
     </section>
   );
@@ -651,6 +657,7 @@ const OPCIONES_AYUDA = [
 ];
 
 export const CargaDatos: React.FC = () => {
+  const { hash } = useLocation();
   const [guiaAbierta, setGuiaAbierta] = useState(false);
   const [pestanaAyuda, setPestanaAyuda] = useState<Ayuda>('guia');
   const [estados, setEstados] = useState<Record<TipoImportacion, EstadoFlujo>>(ESTADOS_INICIALES);
@@ -672,11 +679,18 @@ export const CargaDatos: React.FC = () => {
   }
 
   function irAZona(tipo: TipoImportacion) {
-    const zona = document.getElementById(`zona-${tipo}`);
+    const zona = document.getElementById(`carga-${tipo}`);
     if (!zona) return;
     zona.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
     zona.focus({ preventScroll: true });
   }
+
+  // Enlace profundo desde el motivo de escalamiento (p. ej. «Cargar horario» → #carga-horarios).
+  useEffect(() => {
+    if (!hash) return;
+    const destino = document.getElementById(hash.slice(1));
+    destino?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [hash]);
 
   return (
     <LayoutAdmin

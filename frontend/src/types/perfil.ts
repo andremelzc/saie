@@ -26,6 +26,18 @@ export interface PerfilAlumnoDTO {
   fichaMedica: FichaMedicaDTO | null;
 }
 
+/** Issue 3.28: estado de la vinculación del alumno con el bot de Telegram. */
+export interface EstadoTelegramDTO {
+  /** `true` si el alumno tiene una vinculación activa con el bot. */
+  vinculado: boolean;
+  /** ISO 8601 o `null`. */
+  fechaVinculacion: string | null;
+  /** ISO 8601 o `null`. */
+  fechaBaja: string | null;
+  /** Usuario del bot para `https://t.me/<usuario>`; `null` si no está configurado. */
+  botUsername: string | null;
+}
+
 /** Cuerpo de PATCH /v1/estudiante/perfil: solo se envía lo que se modificó. */
 export interface CambiosPerfil {
   datosPersonales?: Pick<DatosAlumnoDTO, 'dni' | 'fechaNacimiento' | 'telefono' | 'direccion'>;

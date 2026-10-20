@@ -222,4 +222,16 @@ describe('Formulario de cambio de laboratorio (Issue 4.19)', () => {
     );
     await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2));
   });
+
+  it('avisa cuando no hay laboratorios ni software activo', async () => {
+    labs.mockResolvedValue([]);
+    catalogo.mockResolvedValue({ items: [], total: 0, page: 1, limit: 100 });
+    render(
+      <MemoryRouter>
+        <CambioLaboratorio />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('No hay laboratorios registrados todavía.')).toBeInTheDocument();
+    expect(await screen.findByText(/No hay software activo en el catálogo/)).toBeInTheDocument();
+  });
 });

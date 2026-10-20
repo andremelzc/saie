@@ -254,6 +254,10 @@ export const EspaciosAdmin: React.FC = () => {
     );
   }
 
+  const aulas = (datos ?? []).filter((e) => e.tipo === 'AULA_TEORICA').length;
+  const laboratorios = (datos ?? []).filter((e) => e.tipo === 'LABORATORIO').length;
+  const fueraDeServicio = (datos ?? []).filter((e) => !e.habilitado).length;
+
   return (
     <LayoutAdmin
       titulo="Espacios"
@@ -353,6 +357,25 @@ export const EspaciosAdmin: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {datos && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-full border border-saie-divider bg-white px-2.5 py-1 font-semibold text-saie-text">
+            {datos.length} espacio(s)
+          </span>
+          <span className="rounded-full border border-saie-divider bg-white px-2.5 py-1 text-saie-muted">
+            {aulas} aula(s) teórica(s)
+          </span>
+          <span className="rounded-full border border-saie-divider bg-white px-2.5 py-1 text-saie-muted">
+            {laboratorios} laboratorio(s)
+          </span>
+          {fueraDeServicio > 0 && (
+            <span className="rounded-full bg-[#FBE9E9] px-2.5 py-1 font-semibold text-saie-danger">
+              {fueraDeServicio} fuera de servicio
+            </span>
+          )}
+        </div>
+      )}
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
 

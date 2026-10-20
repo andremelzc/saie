@@ -29,7 +29,10 @@ export const AlertasAdmin: React.FC = () => {
   const { mostrar } = useAvisos();
   const [resueltasLocal, setResueltasLocal] = useState<Set<string>>(new Set());
   const [enCurso, setEnCurso] = useState<string | null>(null);
-  const [errorAccion, setErrorAccion] = useState<string | null>(null);
+  const [errorAccion, setErrorAccion] = useState<{
+    mensaje: string;
+    reintentar: () => void;
+  } | null>(null);
   const [filtro, setFiltro] = useState<Filtro>('TODAS');
 
   const base = (datos ?? []).filter((a) => !resueltasLocal.has(a.id));
@@ -48,9 +51,13 @@ export const AlertasAdmin: React.FC = () => {
     try {
       await resolverAlerta(id);
       setResueltasLocal((prev) => new Set(prev).add(id));
-      mostrar('exito', 'Alerta marcada como resuelta.');
+      const espacio = datos?.find((a) => a.id === id)?.espacio.identificador;
+      mostrar(
+        'exito',
+        espacio ? `Alerta de ${espacio} marcada como resuelta.` : 'Alerta marcada como resuelta.',
+      );
     } catch (e) {
-      setErrorAccion(mensajeDeError(e));
+      setErrorAccion({ mensaje: mensajeDeError(e), reintentar: () => manejarResolver(id) });
     } finally {
       setEnCurso(null);
     }
@@ -124,7 +131,9 @@ export const AlertasAdmin: React.FC = () => {
         </p>
       </div>
 
-      {errorAccion && <AvisoError mensaje={errorAccion} />}
+      {errorAccion && (
+        <AvisoError mensaje={errorAccion.mensaje} onReintentar={errorAccion.reintentar} />
+      )}
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
 
       {cargando && !datos ? (
