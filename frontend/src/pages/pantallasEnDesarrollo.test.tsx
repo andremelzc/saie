@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { MENSAJE_EN_DESARROLLO, PREVISION_EN_DESARROLLO } from '../components/PantallaEnDesarrollo';
-import TelegramAlumnoPage from './TelegramAlumnoPage';
 import InicioDocentePage from './docente/InicioDocentePage';
 import HorarioDocentePage from './docente/HorarioDocentePage';
 import EspaciosDocentePage from './docente/EspaciosDocentePage';
@@ -34,7 +33,6 @@ function montar(nodo: React.ReactNode) {
 }
 
 const PANTALLAS = [
-  { nombre: 'Avisos por Telegram', Page: TelegramAlumnoPage, titulo: 'Avisos por Telegram' },
   {
     nombre: 'Horario del docente',
     Page: HorarioDocentePage,

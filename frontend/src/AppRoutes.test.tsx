@@ -90,7 +90,6 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
 
   describe('pantallas en desarrollo', () => {
     it.each([
-      ['ALUMNO', '/estudiante/telegram', 'Avisos por Telegram'],
       ['DOCENTE', '/docente', 'Portal del docente'],
       ['DOCENTE', '/docente/horario', 'Mi horario y asignaciones'],
       ['DOCENTE', '/docente/espacios', 'Explorar espacios y equipos'],
