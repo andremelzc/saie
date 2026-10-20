@@ -10,6 +10,7 @@ import { Boton } from '../../components/ui/Boton';
 import { Drawer } from '../../components/ui/Drawer';
 import { PLANTILLAS, descargarPlantilla } from '../../config/plantillas';
 import type { PlantillaCSV } from '../../config/plantillas';
+import { usePantallaAncha } from '../../hooks/usePantallaAncha';
 import { importarCsv } from '../../services/admin';
 import { mensajeDeError } from '../../services/estudiante';
 import type { ResultadoImportacionDTO, TipoImportacion } from '../../types/admin';
@@ -98,7 +99,7 @@ function leerArchivo(archivo: File): Promise<string> {
 
 function descargarErrores(tipo: TipoImportacion, errores: string[]) {
   if (typeof URL.createObjectURL !== 'function') return;
-  const filas = errores.map((error, indice) => `"${indice + 1}","${error.replace(/"/g, '""')}"`);
+  const filas = errores.map((error, indice) => `"${indice + 1}","${error.replaceAll('"', '""')}"`);
   const contenido = ['fila,error', ...filas].join('\n');
   const blob = new Blob([contenido], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -117,6 +118,189 @@ const ESTADOS_INICIALES: Record<TipoImportacion, EstadoFlujo> = {
   horarios: 'sin-cargar',
   matriculas: 'sin-cargar',
   docentes: 'sin-cargar',
+};
+
+/** Distintivo del estado de una zona de carga. */
+function insigniaDeEstado(
+  estado: EstadoFlujo,
+  enviando: boolean,
+): { tono: 'info' | 'exito' | 'advertencia' | 'neutro'; texto: string } {
+  if (enviando) return { tono: 'info', texto: 'Importando' };
+  if (estado === 'cargado') return { tono: 'exito', texto: 'Cargado' };
+  if (estado === 'con-errores') return { tono: 'advertencia', texto: 'Con errores' };
+  return { tono: 'neutro', texto: 'Sin cargar' };
+}
+
+/** Resumen de lo que hizo la asignación tras la carga. */
+function textoAsignacion(asignacion: NonNullable<ResultadoImportacionDTO['asignacion']>): string {
+  const resumen = asignacion.resumen;
+  if (!asignacion.disparada || !resumen) {
+    return `No se asignaron aulas: ${asignacion.motivo ?? 'motivo no informado'}.`;
+  }
+  return `Asignación de aulas: ${textoSecciones(resumen.asignadas)} con aula nueva, ${textoSecciones(resumen.mantenidas)} ${resumen.mantenidas === 1 ? 'que conserva' : 'que conservan'} la suya y ${textoSecciones(resumen.escaladas)} ${resumen.escaladas === 1 ? 'pendiente' : 'pendientes'} de revisión.`;
+}
+
+/**
+ * Zona de arrastre y selección del CSV. Es un `<label>` que envuelve al input oculto, para que
+ * el foco con el teclado llegue al campo de archivo (visible con el foco del navegador).
+ */
+const ZonaArchivo: React.FC<{
+  idInput: string;
+  idAyuda: string;
+  archivo: File | null;
+  arrastrando: boolean;
+  enviando: boolean;
+  onArrastrando: (valor: boolean) => void;
+  onSeleccionar: (archivo: File | null) => void;
+}> = ({ idInput, idAyuda, archivo, arrastrando, enviando, onArrastrando, onSeleccionar }) => (
+  <>
+    <label
+      htmlFor={idInput}
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!enviando) onArrastrando(true);
+      }}
+      onDragLeave={() => onArrastrando(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        onArrastrando(false);
+        if (!enviando) onSeleccionar(e.dataTransfer.files?.[0] ?? null);
+      }}
+      className={`flex min-h-28 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-4 py-6 text-center text-sm transition-colors focus-within:border-saie-primary focus-within:ring-3 focus-within:ring-saie-primary/20 ${
+        arrastrando
+          ? 'border-saie-primary bg-saie-primary/5'
+          : 'border-saie-border bg-saie-canvas hover:border-saie-primary'
+      } ${enviando ? 'pointer-events-none opacity-60' : ''}`}
+    >
+      {archivo ? (
+        <>
+          <span className="max-w-full break-all font-semibold text-saie-primary">{archivo.name}</span>
+          <span className="text-xs text-saie-muted">
+            {(archivo.size / 1024).toFixed(1)} KB · listo para importar
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="font-semibold text-saie-primary">
+            Arrastra tu CSV o elige un archivo
+          </span>
+          <span className="text-xs text-saie-muted">Máx. 10 MB · solo archivos .csv</span>
+        </>
+      )}
+      <input
+        id={idInput}
+        type="file"
+        accept=".csv,text/csv"
+        className="sr-only"
+        disabled={enviando}
+        aria-describedby={idAyuda}
+        onChange={(e) => onSeleccionar(e.target.files?.[0] ?? null)}
+      />
+    </label>
+    <p id={idAyuda} className="m-0 text-xs text-saie-muted">
+      Se aceptan archivos .csv de hasta 10 MB. La primera fila debe tener los nombres de las
+      columnas.
+    </p>
+
+    {archivo && (
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => onSeleccionar(null)}
+          disabled={enviando}
+          className="min-h-11 cursor-pointer rounded-lg px-2 text-sm font-semibold text-saie-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Quitar archivo
+        </button>
+      </div>
+    )}
+  </>
+);
+
+/** Resultado de la importación: resumen, errores descargables y siguiente paso. */
+const PanelResultado: React.FC<{
+  resultado: ResultadoImportacionDTO;
+  tipo: TipoImportacion;
+  onCorregir: () => void;
+  onSiguiente?: () => void;
+  etiquetaSiguiente?: string;
+}> = ({ resultado, tipo, onCorregir, onSiguiente, etiquetaSiguiente }) => {
+  const conProblemas = resultado.errores.length > 0;
+  const haySiguiente = resultado.exitosa && Boolean(onSiguiente) && Boolean(etiquetaSiguiente);
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-saie-canvas p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <output className="m-0 block text-sm font-bold text-saie-text">
+          {resultado.exitosa
+            ? 'Carga completada sin errores'
+            : `La carga tiene ${textoFilasConProblemas(resultado.errores.length)}`}
+        </output>
+        <BadgeEstado tono={resultado.exitosa ? 'exito' : 'advertencia'}>
+          {resultado.exitosa ? 'Sin errores' : `${resultado.errores.length} con problemas`}
+        </BadgeEstado>
+      </div>
+      <p className="m-0 text-sm text-saie-muted">
+        {resultado.filasRecibidas} filas leídas ·{' '}
+        {resultado.filasRecibidas - resultado.errores.length} sin errores
+      </p>
+
+      {Object.keys(resultado.procesados).length > 0 && (
+        <dl className="m-0 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+          {Object.entries(resultado.procesados).map(([clave, valor]) => (
+            <div key={clave} className="rounded-lg bg-white px-3 py-2">
+              <dt className="text-xs text-saie-muted">{ETIQUETAS_PROCESADOS[clave] ?? humanizar(clave)}</dt>
+              <dd className="m-0 text-lg font-bold text-saie-text">{valor}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {conProblemas && (
+        <>
+          <Aviso tono="advertencia">
+            {tipo !== 'docentes' && (
+              <strong>
+                No se asignaron aulas porque el archivo tiene filas con problemas.{' '}
+              </strong>
+            )}
+            Corrige esas filas y sube el archivo de nuevo; las demás ya se guardaron.
+          </Aviso>
+          <div className="flex flex-wrap gap-2">
+            <Boton
+              variante="secundario"
+              tamano="sm"
+              onClick={() => descargarErrores(tipo, resultado.errores)}
+            >
+              Descargar errores (CSV)
+            </Boton>
+            <Boton variante="fantasma" tamano="sm" onClick={onCorregir}>
+              Corregir y volver a subir
+            </Boton>
+          </div>
+          <Acordeon titulo={`Ver ${textoFilasConProblemas(resultado.errores.length)}`} abiertoInicial>
+            <ul className="m-0 max-h-48 list-disc overflow-auto pl-5 text-sm text-saie-text">
+              {resultado.errores.map((e, i) => (
+                <li key={i}>{e}</li>
+              ))}
+            </ul>
+          </Acordeon>
+        </>
+      )}
+
+      {resultado.asignacion && (
+        <p className="m-0 text-sm text-saie-text">{textoAsignacion(resultado.asignacion)}</p>
+      )}
+
+      {haySiguiente && (
+        <div>
+          <Boton variante="secundario" tamano="sm" onClick={onSiguiente}>
+            Continuar con {etiquetaSiguiente} →
+          </Boton>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export const ZonaCarga: React.FC<{
@@ -209,13 +393,7 @@ export const ZonaCarga: React.FC<{
     document.getElementById(idInput)?.focus();
   }
 
-  const insignia = enviando
-    ? { tono: 'info' as const, texto: 'Importando' }
-    : estado === 'cargado'
-      ? { tono: 'exito' as const, texto: 'Cargado' }
-      : estado === 'con-errores'
-        ? { tono: 'advertencia' as const, texto: 'Con errores' }
-        : { tono: 'neutro' as const, texto: 'Sin cargar' };
+  const insignia = insigniaDeEstado(estado, enviando);
 
   return (
     <section
@@ -237,68 +415,15 @@ export const ZonaCarga: React.FC<{
         </p>
       )}
 
-      <label
-        htmlFor={idInput}
-        onDragOver={(e) => {
-          e.preventDefault();
-          if (!enviando) setArrastrando(true);
-        }}
-        onDragLeave={() => setArrastrando(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setArrastrando(false);
-          if (!enviando) seleccionar(e.dataTransfer.files?.[0] ?? null);
-        }}
-        className={`flex min-h-28 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-4 py-6 text-center text-sm transition-colors focus-within:border-saie-primary focus-within:ring-3 focus-within:ring-saie-primary/20 ${
-          arrastrando
-            ? 'border-saie-primary bg-saie-primary/5'
-            : 'border-saie-border bg-saie-canvas hover:border-saie-primary'
-        } ${enviando ? 'pointer-events-none opacity-60' : ''}`}
-      >
-        {archivo ? (
-          <>
-            <span className="max-w-full break-all font-semibold text-saie-primary">
-              {archivo.name}
-            </span>
-            <span className="text-xs text-saie-muted">
-              {(archivo.size / 1024).toFixed(1)} KB · listo para importar
-            </span>
-          </>
-        ) : (
-          <>
-            <span className="font-semibold text-saie-primary">
-              Arrastra tu CSV o elige un archivo
-            </span>
-            <span className="text-xs text-saie-muted">Máx. 10 MB · solo archivos .csv</span>
-          </>
-        )}
-        <input
-          id={idInput}
-          type="file"
-          accept=".csv,text/csv"
-          className="sr-only"
-          disabled={enviando}
-          aria-describedby={idAyuda}
-          onChange={(e) => seleccionar(e.target.files?.[0] ?? null)}
-        />
-      </label>
-      <p id={idAyuda} className="m-0 text-xs text-saie-muted">
-        Se aceptan archivos .csv de hasta 10 MB. La primera fila debe tener los nombres de las
-        columnas.
-      </p>
-
-      {archivo && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={() => seleccionar(null)}
-            disabled={enviando}
-            className="min-h-11 cursor-pointer rounded-lg px-2 text-sm font-semibold text-saie-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Quitar archivo
-          </button>
-        </div>
-      )}
+      <ZonaArchivo
+        idInput={idInput}
+        idAyuda={idAyuda}
+        archivo={archivo}
+        arrastrando={arrastrando}
+        enviando={enviando}
+        onArrastrando={setArrastrando}
+        onSeleccionar={seleccionar}
+      />
 
       {errorArchivo && <Aviso tono="error">{errorArchivo}</Aviso>}
       {error && <Aviso tono="error">{error}</Aviso>}
@@ -319,86 +444,13 @@ export const ZonaCarga: React.FC<{
       </div>
 
       {resultado && (
-        <div className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-saie-canvas p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p role="status" className="m-0 text-sm font-bold text-saie-text">
-              {resultado.exitosa
-                ? 'Carga completada sin errores'
-                : `La carga tiene ${textoFilasConProblemas(resultado.errores.length)}`}
-            </p>
-            <BadgeEstado tono={resultado.exitosa ? 'exito' : 'advertencia'}>
-              {resultado.exitosa ? 'Sin errores' : `${resultado.errores.length} con problemas`}
-            </BadgeEstado>
-          </div>
-          <p className="m-0 text-sm text-saie-muted">
-            {resultado.filasRecibidas} filas leídas ·{' '}
-            {resultado.filasRecibidas - resultado.errores.length} sin errores
-          </p>
-
-          {Object.keys(resultado.procesados).length > 0 && (
-            <dl className="m-0 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-              {Object.entries(resultado.procesados).map(([clave, valor]) => (
-                <div key={clave} className="rounded-lg bg-white px-3 py-2">
-                  <dt className="text-xs text-saie-muted">
-                    {ETIQUETAS_PROCESADOS[clave] ?? humanizar(clave)}
-                  </dt>
-                  <dd className="m-0 text-lg font-bold text-saie-text">{valor}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
-
-          {resultado.errores.length > 0 && (
-            <>
-              <Aviso tono="advertencia">
-                {tipo !== 'docentes' && (
-                  <strong>
-                    No se asignaron aulas porque el archivo tiene filas con problemas.{' '}
-                  </strong>
-                )}
-                Corrige esas filas y sube el archivo de nuevo; las demás ya se guardaron.
-              </Aviso>
-              <div className="flex flex-wrap gap-2">
-                <Boton
-                  variante="secundario"
-                  tamano="sm"
-                  onClick={() => descargarErrores(tipo, resultado.errores)}
-                >
-                  Descargar errores (CSV)
-                </Boton>
-                <Boton variante="fantasma" tamano="sm" onClick={corregir}>
-                  Corregir y volver a subir
-                </Boton>
-              </div>
-              <Acordeon
-                titulo={`Ver ${textoFilasConProblemas(resultado.errores.length)}`}
-                abiertoInicial
-              >
-                <ul className="m-0 max-h-48 list-disc overflow-auto pl-5 text-sm text-saie-text">
-                  {resultado.errores.map((e, i) => (
-                    <li key={i}>{e}</li>
-                  ))}
-                </ul>
-              </Acordeon>
-            </>
-          )}
-
-          {resultado.asignacion && (
-            <p className="m-0 text-sm text-saie-text">
-              {resultado.asignacion.disparada && resultado.asignacion.resumen
-                ? `Asignación de aulas: ${textoSecciones(resultado.asignacion.resumen.asignadas)} con aula nueva, ${textoSecciones(resultado.asignacion.resumen.mantenidas)} ${resultado.asignacion.resumen.mantenidas === 1 ? 'que conserva' : 'que conservan'} la suya y ${textoSecciones(resultado.asignacion.resumen.escaladas)} ${resultado.asignacion.resumen.escaladas === 1 ? 'pendiente' : 'pendientes'} de revisión.`
-                : `No se asignaron aulas: ${resultado.asignacion.motivo ?? 'motivo no informado'}.`}
-            </p>
-          )}
-
-          {resultado.exitosa && onSiguiente && etiquetaSiguiente && (
-            <div>
-              <Boton variante="secundario" tamano="sm" onClick={onSiguiente}>
-                Continuar con {etiquetaSiguiente} →
-              </Boton>
-            </div>
-          )}
-        </div>
+        <PanelResultado
+          resultado={resultado}
+          tipo={tipo}
+          onCorregir={corregir}
+          onSiguiente={onSiguiente}
+          etiquetaSiguiente={etiquetaSiguiente}
+        />
       )}
 
       {resultado?.asignacion?.resumen && (
@@ -558,77 +610,85 @@ const GuiaCarga: React.FC = () => (
 );
 
 /** Tarjeta de una plantilla: descarga del CSV y detalle de sus columnas. */
-const TarjetaPlantilla: React.FC<{ plantilla: PlantillaCSV }> = ({ plantilla }) => (
-  <article className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-[var(--saie-shadow-1)]">
-    <header className="flex flex-col gap-1">
-      <h3 className="m-0 text-base font-bold text-saie-text">{plantilla.titulo}</h3>
-      <p className="m-0 text-sm text-saie-muted">{plantilla.descripcion}</p>
-    </header>
+const TarjetaPlantilla: React.FC<{ plantilla: PlantillaCSV }> = ({ plantilla }) => {
+  // En pantallas estrechas las columnas se apilan en una lista: una tabla de cuatro columnas no
+  // cabe a 320 px. Solo existe una de las dos versiones en el DOM.
+  const esPantallaAncha = usePantallaAncha(640);
 
-    <div>
-      <Boton variante="secundario" tamano="sm" onClick={() => descargarPlantilla(plantilla)}>
-        <span aria-hidden="true">↓</span> Descargar plantilla
-      </Boton>
-    </div>
+  return (
+    <article className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-[var(--saie-shadow-1)]">
+      <header className="flex flex-col gap-1">
+        <h3 className="m-0 text-base font-bold text-saie-text">{plantilla.titulo}</h3>
+        <p className="m-0 text-sm text-saie-muted">{plantilla.descripcion}</p>
+      </header>
 
-    <Acordeon titulo={`Ver columnas (${plantilla.columnas.length})`}>
-      <div className="hidden overflow-x-auto sm:block">
-        <table className="w-full text-left text-xs">
-          <thead className="bg-saie-canvas uppercase tracking-wide text-saie-muted">
-            <tr>
-              <th scope="col" className="px-2 py-2">
-                Columna
-              </th>
-              <th scope="col" className="px-2 py-2">
-                Obligatoria
-              </th>
-              <th scope="col" className="px-2 py-2">
-                Qué es
-              </th>
-              <th scope="col" className="px-2 py-2">
-                Ejemplo
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {plantilla.columnas.map((columna) => (
-              <tr key={columna.nombre} className="border-t border-saie-divider align-top">
-                <td className="px-2 py-2 font-mono font-semibold text-saie-text">
-                  {columna.nombre}
-                </td>
-                <td className="px-2 py-2 text-saie-muted">{columna.obligatorio ? 'Sí' : 'No'}</td>
-                <td className="px-2 py-2 text-saie-muted">{columna.descripcion}</td>
-                <td className="px-2 py-2 font-mono text-saie-muted">{columna.ejemplo}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div>
+        <Boton variante="secundario" tamano="sm" onClick={() => descargarPlantilla(plantilla)}>
+          <span aria-hidden="true">↓</span> Descargar plantilla
+        </Boton>
       </div>
 
-      <dl className="m-0 flex flex-col gap-3 sm:hidden">
-        {plantilla.columnas.map((columna) => (
-          <div
-            key={columna.nombre}
-            className="rounded-lg border border-saie-divider bg-saie-canvas p-3"
-          >
-            <dt className="font-mono font-semibold text-saie-text">
-              {columna.nombre}{' '}
-              <span className="font-sans text-xs font-normal text-saie-muted">
-                ({columna.obligatorio ? 'obligatoria' : 'opcional'})
-              </span>
-            </dt>
-            <dd className="m-0 mt-1 text-sm text-saie-text">
-              {columna.descripcion}
-              <span className="mt-1 block font-mono text-xs text-saie-muted">
-                Ejemplo: {columna.ejemplo}
-              </span>
-            </dd>
+      <Acordeon titulo={`Ver columnas (${plantilla.columnas.length})`}>
+        {esPantallaAncha ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-saie-canvas uppercase tracking-wide text-saie-muted">
+                <tr>
+                  <th scope="col" className="px-2 py-2">
+                    Columna
+                  </th>
+                  <th scope="col" className="px-2 py-2">
+                    Obligatoria
+                  </th>
+                  <th scope="col" className="px-2 py-2">
+                    Qué es
+                  </th>
+                  <th scope="col" className="px-2 py-2">
+                    Ejemplo
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {plantilla.columnas.map((columna) => (
+                  <tr key={columna.nombre} className="border-t border-saie-divider align-top">
+                    <td className="px-2 py-2 font-mono font-semibold text-saie-text">
+                      {columna.nombre}
+                    </td>
+                    <td className="px-2 py-2 text-saie-muted">{columna.obligatorio ? 'Sí' : 'No'}</td>
+                    <td className="px-2 py-2 text-saie-muted">{columna.descripcion}</td>
+                    <td className="px-2 py-2 font-mono text-saie-muted">{columna.ejemplo}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </dl>
-    </Acordeon>
-  </article>
-);
+        ) : (
+          <dl className="m-0 flex flex-col gap-3">
+            {plantilla.columnas.map((columna) => (
+              <div
+                key={columna.nombre}
+                className="rounded-lg border border-saie-divider bg-saie-canvas p-3"
+              >
+                <dt className="font-mono font-semibold text-saie-text">
+                  {columna.nombre}{' '}
+                  <span className="font-sans text-xs font-normal text-saie-muted">
+                    ({columna.obligatorio ? 'obligatoria' : 'opcional'})
+                  </span>
+                </dt>
+                <dd className="m-0 mt-1 text-sm text-saie-text">
+                  {columna.descripcion}
+                  <span className="mt-1 block font-mono text-xs text-saie-muted">
+                    Ejemplo: {columna.ejemplo}
+                  </span>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </Acordeon>
+    </article>
+  );
+};
 
 /** Plantillas oficiales: encabezado exacto y una fila de ejemplo lista para editar. */
 const PlantillasCarga: React.FC = () => (

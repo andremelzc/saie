@@ -12,6 +12,7 @@ import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
 import { RUTAS } from '../../config/rutas';
 import { useAuth } from '../../context/useAuth';
 import { useCarga } from '../../hooks/useCarga';
+import { usePantallaAncha } from '../../hooks/usePantallaAncha';
 import { obtenerEspacios } from '../../services/admin';
 import type { EspacioAdminDTO, ResultadoEdicionEspacioDTO, TipoEspacio } from '../../types/admin';
 
@@ -42,6 +43,151 @@ const Dato: React.FC<{ etiqueta: string; children: React.ReactNode }> = ({
     <dd className="m-0 text-sm text-saie-text">{children}</dd>
   </div>
 );
+
+/** Capacidad del espacio: el número, o un guion si no está definida. */
+function celdaCapacidad(espacio: EspacioAdminDTO): React.ReactNode {
+  if (espacio.aforoNominal > 0) return espacio.aforoNominal;
+  return <span className="text-saie-muted">—</span>;
+}
+
+/** PCs malogradas: no aplica en un aula teórica, sin registrar o el número. */
+function celdaPcs(espacio: EspacioAdminDTO): React.ReactNode {
+  if (espacio.tipo === 'AULA_TEORICA') {
+    return <span className="text-saie-muted">No aplica</span>;
+  }
+  if (espacio.pcsMalogradas == null) {
+    return <BadgeEstado tono="neutro">Sin registrar</BadgeEstado>;
+  }
+  return espacio.pcsMalogradas;
+}
+
+/** Estado del espacio: en servicio o fuera de ella. */
+function celdaEstado(espacio: EspacioAdminDTO): React.ReactNode {
+  return (
+    <BadgeEstado tono={espacio.habilitado ? 'exito' : 'peligro'}>
+      {espacio.habilitado ? 'Habilitado' : 'Fuera de servicio'}
+    </BadgeEstado>
+  );
+}
+
+/** Título del drawer: el alta o el espacio que se está consultando. */
+function tituloDrawer(creando: boolean, seleccionado: EspacioAdminDTO | null): string {
+  if (creando) return 'Nuevo espacio';
+  return seleccionado?.identificador ?? 'Espacio';
+}
+
+/**
+ * Listado de espacios. En escritorio es una tabla (compara filas de un vistazo) y en móvil son
+ * tarjetas: una tabla de siete columnas no cabe a 320 px y obligaría a un scroll horizontal
+ * dentro de la tarjeta. Nunca coexisten las dos versiones en el DOM.
+ */
+const ListadoEspacios: React.FC<{
+  espacios: EspacioAdminDTO[];
+  onVer: (espacio: EspacioAdminDTO) => void;
+}> = ({ espacios, onVer }) => {
+  const esPantallaAncha = usePantallaAncha();
+
+  if (!esPantallaAncha) {
+    return (
+      <ul className="m-0 flex list-none flex-col gap-3 p-0" aria-label="Listado de espacios">
+        {espacios.map((e) => (
+          <li key={e.id}>
+            <article className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4">
+              <header className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h3 className="m-0 text-base font-bold text-saie-text">{e.identificador}</h3>
+                  <p className="m-0 text-xs text-saie-muted">
+                    {TIPO_ETIQUETA[e.tipo]} · {e.pabellon} · Piso {e.piso}
+                  </p>
+                </div>
+                {celdaEstado(e)}
+              </header>
+              <dl className="m-0 grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <dt className="text-xs text-saie-muted">Capacidad</dt>
+                  <dd className="m-0 font-medium text-saie-text">{celdaCapacidad(e)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-saie-muted">PCs malogradas</dt>
+                  <dd className="m-0 font-medium text-saie-text">{celdaPcs(e)}</dd>
+                </div>
+              </dl>
+              <div className="flex justify-end">
+                <Boton
+                  variante="fantasma"
+                  tamano="sm"
+                  onClick={() => onVer(e)}
+                  aria-label={`Ver detalle de ${e.identificador}`}
+                >
+                  Ver
+                </Boton>
+              </div>
+            </article>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  return (
+    <section
+      aria-label="Listado de espacios"
+      className="overflow-x-auto rounded-xl border border-saie-divider bg-white"
+    >
+      <table className="w-full text-left text-sm">
+        <thead className="bg-saie-canvas text-xs uppercase tracking-wide text-saie-muted">
+          <tr>
+            <th scope="col" className="px-4 py-3">
+              Espacio
+            </th>
+            <th scope="col" className="px-4 py-3">
+              Tipo
+            </th>
+            <th scope="col" className="px-4 py-3">
+              Ubicación
+            </th>
+            <th scope="col" className="px-4 py-3">
+              Capacidad
+            </th>
+            <th scope="col" className="px-4 py-3">
+              PCs malogradas
+            </th>
+            <th scope="col" className="px-4 py-3">
+              Estado
+            </th>
+            <th scope="col" className="px-4 py-3">
+              Detalle
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {espacios.map((e) => (
+            <tr key={e.id} className="border-t border-saie-divider">
+              <td className="px-4 py-3 font-semibold">{e.identificador}</td>
+              <td className="px-4 py-3">{TIPO_ETIQUETA[e.tipo]}</td>
+              <td className="px-4 py-3">
+                {e.pabellon} · Piso {e.piso}
+              </td>
+              <td className="px-4 py-3">{celdaCapacidad(e)}</td>
+              <td className="px-4 py-3">{celdaPcs(e)}</td>
+              <td className="px-4 py-3">{celdaEstado(e)}</td>
+              <td className="px-4 py-3">
+                <Boton
+                  variante="fantasma"
+                  tamano="sm"
+                  onClick={() => onVer(e)}
+                  aria-label={`Ver detalle de ${e.identificador}`}
+                >
+                  Ver
+                </Boton>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+};
 
 const DetalleEspacio: React.FC<{
   espacio: EspacioAdminDTO;
@@ -258,6 +404,44 @@ export const EspaciosAdmin: React.FC = () => {
   const laboratorios = (datos ?? []).filter((e) => e.tipo === 'LABORATORIO').length;
   const fueraDeServicio = (datos ?? []).filter((e) => !e.habilitado).length;
 
+  // El drawer muestra una de las tres vistas posibles: el alta, la edición o la consulta.
+  const contenidoDrawer = (() => {
+    if (creando) {
+      return (
+        <FormularioEspacio
+          modo="crear"
+          espacios={base}
+          onGuardado={manejarGuardado}
+          onCancelar={cerrarDetalle}
+        />
+      );
+    }
+    if (editando && seleccionado) {
+      return (
+        <FormularioEspacio
+          modo="editar"
+          espacio={seleccionado}
+          espacios={base}
+          onGuardado={manejarGuardado}
+          onCancelar={() => setEditando(false)}
+        />
+      );
+    }
+    if (seleccionado) {
+      return (
+        <DetalleEspacio
+          espacio={seleccionado}
+          espacios={base}
+          onEditar={() => {
+            setAlertas([]);
+            setEditando(true);
+          }}
+        />
+      );
+    }
+    return null;
+  })();
+
   return (
     <LayoutAdmin
       titulo="Espacios"
@@ -370,7 +554,7 @@ export const EspaciosAdmin: React.FC = () => {
             {laboratorios} laboratorio(s)
           </span>
           {fueraDeServicio > 0 && (
-            <span className="rounded-full bg-[#FBE9E9] px-2.5 py-1 font-semibold text-saie-danger">
+            <span className="rounded-full bg-saie-danger-soft px-2.5 py-1 font-semibold text-saie-danger-strong">
               {fueraDeServicio} fuera de servicio
             </span>
           )}
@@ -397,88 +581,13 @@ export const EspaciosAdmin: React.FC = () => {
           }
         />
       ) : (
-        <div
-          role="region"
-          aria-label="Listado de espacios"
-          tabIndex={0}
-          className="overflow-x-auto rounded-xl border border-saie-divider bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-saie-text"
-        >
-          <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="bg-saie-canvas text-xs uppercase tracking-wide text-saie-muted">
-              <tr>
-                <th scope="col" className="px-4 py-3">
-                  Espacio
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Tipo
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Ubicación
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Capacidad
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  PCs malogradas
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Estado
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Detalle
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {espacios.map((e) => (
-                <tr key={e.id} className="border-t border-saie-divider">
-                  <td className="px-4 py-3 font-semibold">{e.identificador}</td>
-                  <td className="px-4 py-3">{TIPO_ETIQUETA[e.tipo]}</td>
-                  <td className="px-4 py-3">
-                    {e.pabellon} · Piso {e.piso}
-                  </td>
-                  <td className="px-4 py-3">
-                    {e.aforoNominal > 0 ? (
-                      e.aforoNominal
-                    ) : (
-                      <span className="text-saie-muted">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {e.tipo === 'AULA_TEORICA' ? (
-                      <span className="text-saie-muted">No aplica</span>
-                    ) : e.pcsMalogradas == null ? (
-                      <BadgeEstado tono="neutro">Sin registrar</BadgeEstado>
-                    ) : (
-                      e.pcsMalogradas
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <BadgeEstado tono={e.habilitado ? 'exito' : 'peligro'}>
-                      {e.habilitado ? 'Habilitado' : 'Fuera de servicio'}
-                    </BadgeEstado>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Boton
-                      variante="fantasma"
-                      tamano="sm"
-                      onClick={() => abrirDetalle(e)}
-                      aria-label={`Ver detalle de ${e.identificador}`}
-                    >
-                      Ver
-                    </Boton>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ListadoEspacios espacios={espacios} onVer={abrirDetalle} />
       )}
 
       <Drawer
         abierto={seleccionado !== null || creando}
         onCerrar={cerrarDetalle}
-        titulo={creando ? 'Nuevo espacio' : (seleccionado?.identificador ?? 'Espacio')}
+        titulo={tituloDrawer(creando, seleccionado)}
       >
         {(seleccionado || creando) && (
           <div className="flex flex-col gap-4">
@@ -489,37 +598,13 @@ export const EspaciosAdmin: React.FC = () => {
                   {alertas.length === 1 ? 'una alerta' : `${alertas.length} alertas`}:
                 </p>
                 <ul className="m-0 mt-1 list-disc pl-5">
-                  {alertas.map((motivo, i) => (
-                    <li key={i}>{motivo}</li>
+                  {[...new Set(alertas)].map((motivo) => (
+                    <li key={motivo}>{motivo}</li>
                   ))}
                 </ul>
               </Aviso>
             )}
-            {creando ? (
-              <FormularioEspacio
-                modo="crear"
-                espacios={base}
-                onGuardado={manejarGuardado}
-                onCancelar={cerrarDetalle}
-              />
-            ) : editando && seleccionado ? (
-              <FormularioEspacio
-                modo="editar"
-                espacio={seleccionado}
-                espacios={base}
-                onGuardado={manejarGuardado}
-                onCancelar={() => setEditando(false)}
-              />
-            ) : seleccionado ? (
-              <DetalleEspacio
-                espacio={seleccionado}
-                espacios={base}
-                onEditar={() => {
-                  setAlertas([]);
-                  setEditando(true);
-                }}
-              />
-            ) : null}
+            {contenidoDrawer}
           </div>
         )}
       </Drawer>

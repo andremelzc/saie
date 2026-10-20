@@ -8,6 +8,11 @@ import { Boton } from '../ui/Boton';
 
 const MAX_CURSOS_VISIBLES = 2;
 
+/** «1 curso» o «3 cursos»: el número de cursos que quedan plegados. */
+function textoCursosOcultos(cantidad: number): string {
+  return cantidad === 1 ? 'curso' : 'cursos';
+}
+
 const ESTILO_TIPO: Record<
   TipoAlerta,
   { etiqueta: string; borde: string; chip: string; trazo: string }
@@ -120,9 +125,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
                 aria-expanded={mostrarTodos}
                 className="mt-2 min-h-11 cursor-pointer rounded-md px-1 text-xs font-semibold text-saie-primary hover:underline"
               >
-                {mostrarTodos
-                  ? 'Ver menos'
-                  : `+${ocultos} ${ocultos === 1 ? 'curso' : 'cursos'} más`}
+                {mostrarTodos ? 'Ver menos' : `+${ocultos} ${textoCursosOcultos(ocultos)} más`}
               </button>
             )}
           </>
@@ -136,10 +139,9 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
         {!resuelta && onResolver && (
           <div className="flex flex-wrap items-center justify-end gap-2">
             {confirmando ? (
-              <div
-                role="group"
+              <fieldset
                 aria-label="Confirmar resolución"
-                className="flex flex-wrap items-center justify-end gap-2"
+                className="flex flex-wrap items-center justify-end gap-2 border-0 p-0"
               >
                 <span className="text-sm font-semibold text-saie-text">¿Marcar como resuelta?</span>
                 <Boton
@@ -162,7 +164,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
                 >
                   Sí, resolver
                 </Boton>
-              </div>
+              </fieldset>
             ) : (
               <Boton
                 variante="primario"

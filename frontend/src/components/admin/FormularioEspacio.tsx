@@ -10,6 +10,7 @@ import type {
   CampoEspacio,
   CambiosEspacio,
   EspacioAdminDTO,
+  ListadoSoftwareDTO,
   ResultadoEdicionEspacioDTO,
   TipoEspacio,
 } from '../../types/admin';
@@ -23,6 +24,10 @@ import type {
  *
  * El alta es solo de Coordinación Académica (así lo define el endpoint) y sí envía todos los
  * campos del espacio, incluidos los de laboratorio cuando el tipo es laboratorio.
+ *
+ * La lógica (validación, cálculo de cambios y presentación) está partida en piezas pequeñas:
+ * cada campo se valida por separado y cada grupo de campos es un componente, para que el
+ * formulario se pueda leer y mantener por partes.
  */
 
 const CAMPOS_COORDINACION: CampoEspacio[] = [
@@ -91,8 +96,8 @@ function estadoInicialAlta(): EstadoFormulario {
 }
 
 function mismoConjunto(a: string[], b: string[]): boolean {
-  if (a.length !== b.length) return false;
   const conjuntoB = new Set(b);
+  if (a.length !== conjuntoB.size) return false;
   return a.every((id) => conjuntoB.has(id));
 }
 
@@ -106,6 +111,60 @@ function aforoEfectivo(form: EstadoFormulario, campos: Set<CampoEspacio>, actual
   return actual;
 }
 
+/* ------------------------------------------------------------------ *
+ * Validación: una función por campo. Cada una devuelve el mensaje de
+ * error o `undefined` cuando el valor es válido.
+ * ------------------------------------------------------------------ */
+
+function errorIdentificador(valor: string): string | undefined {
+  const limpio = valor.trim();
+  if (!limpio) return 'El código del espacio es obligatorio.';
+  if (limpio.length > 60) return 'El código no puede superar 60 caracteres.';
+  return undefined;
+}
+
+function errorPabellon(valor: string): string | undefined {
+  const limpio = valor.trim();
+  if (!limpio) return 'El pabellón es obligatorio.';
+  if (limpio.length > 40) return 'El pabellón no puede superar 40 caracteres.';
+  return undefined;
+}
+
+function errorPiso(valor: string): string | undefined {
+  if (!esEntero(valor)) return 'El piso debe ser un número entero.';
+  return undefined;
+}
+
+function errorAforo(valor: string, habilitado: boolean): string | undefined {
+  if (!esEntero(valor) || Number(valor) < 0) {
+    return 'El aforo debe ser un número entero mayor o igual a 0.';
+  }
+  if (habilitado && Number(valor) < 1) {
+    return 'Un espacio habilitado necesita un aforo mayor a 0.';
+  }
+  return undefined;
+}
+
+function errorPcs(valor: string, original: string, aforo: number): string | undefined {
+  const vacio = valor.trim() === '';
+  const teniaValor = original.trim() !== '';
+  if (vacio && teniaValor) {
+    return 'Escribe 0 si no hay PCs malogradas: el dato no se puede borrar.';
+  }
+  if (!vacio && (!esEntero(valor) || Number(valor) < 0)) {
+    return 'Las PCs malogradas deben ser un número entero mayor o igual a 0.';
+  }
+  if (!vacio && Number(valor) > aforo) {
+    return 'Las PCs malogradas no pueden superar el aforo nominal.';
+  }
+  return undefined;
+}
+
+function errorDescripcion(valor: string): string | undefined {
+  if (valor.trim().length > 120) return 'La descripción no puede superar 120 caracteres.';
+  return undefined;
+}
+
 function validar(
   form: EstadoFormulario,
   campos: Set<CampoEspacio>,
@@ -115,58 +174,44 @@ function validar(
   const errores: Record<string, string> = {};
 
   if (campos.has('identificador')) {
-    const valor = form.identificador.trim();
-    if (!valor) errores.identificador = 'El código del espacio es obligatorio.';
-    else if (valor.length > 60) errores.identificador = 'El código no puede superar 60 caracteres.';
+    const error = errorIdentificador(form.identificador);
+    if (error) errores.identificador = error;
   }
-
   if (campos.has('pabellon')) {
-    const valor = form.pabellon.trim();
-    if (!valor) errores.pabellon = 'El pabellón es obligatorio.';
-    else if (valor.length > 40) errores.pabellon = 'El pabellón no puede superar 40 caracteres.';
+    const error = errorPabellon(form.pabellon);
+    if (error) errores.pabellon = error;
   }
-
-  if (campos.has('piso') && !esEntero(form.piso)) {
-    errores.piso = 'El piso debe ser un número entero.';
+  if (campos.has('piso')) {
+    const error = errorPiso(form.piso);
+    if (error) errores.piso = error;
   }
-
   if (campos.has('aforoNominal')) {
-    if (!esEntero(form.aforoNominal) || Number(form.aforoNominal) < 0) {
-      errores.aforoNominal = 'El aforo debe ser un número entero mayor o igual a 0.';
-    } else if (form.habilitado && Number(form.aforoNominal) < 1) {
-      errores.aforoNominal = 'Un espacio habilitado necesita un aforo mayor a 0.';
-    }
+    const error = errorAforo(form.aforoNominal, form.habilitado);
+    if (error) errores.aforoNominal = error;
   }
-
   if (campos.has('pcsMalogradas')) {
-    const vacio = form.pcsMalogradas.trim() === '';
-    const teniaValor = original.pcsMalogradas.trim() !== '';
-    if (vacio && teniaValor) {
-      errores.pcsMalogradas = 'Escribe 0 si no hay PCs malogradas: el dato no se puede borrar.';
-    } else if (!vacio && (!esEntero(form.pcsMalogradas) || Number(form.pcsMalogradas) < 0)) {
-      errores.pcsMalogradas = 'Las PCs malogradas deben ser un número entero mayor o igual a 0.';
-    } else if (!vacio) {
-      const aforo = aforoEfectivo(form, campos, espacio?.aforoNominal ?? 0);
-      if (Number(form.pcsMalogradas) > aforo) {
-        errores.pcsMalogradas = 'Las PCs malogradas no pueden superar el aforo nominal.';
-      }
-    }
+    const aforo = aforoEfectivo(form, campos, espacio?.aforoNominal ?? 0);
+    const error = errorPcs(form.pcsMalogradas, original.pcsMalogradas, aforo);
+    if (error) errores.pcsMalogradas = error;
   }
-
-  if (campos.has('descripcionUso') && form.descripcionUso.trim().length > 120) {
-    errores.descripcionUso = 'La descripción no puede superar 120 caracteres.';
+  if (campos.has('descripcionUso')) {
+    const error = errorDescripcion(form.descripcionUso);
+    if (error) errores.descripcionUso = error;
   }
 
   return errores;
 }
 
-function calcularCambios(
+/* ------------------------------------------------------------------ *
+ * Cálculo de cambios: una función por grupo de campos.
+ * ------------------------------------------------------------------ */
+
+function cambiosDeIdentificacion(
   form: EstadoFormulario,
   original: EstadoFormulario,
   campos: Set<CampoEspacio>,
 ): CambiosEspacio {
   const cambios: CambiosEspacio = {};
-
   if (campos.has('identificador') && form.identificador.trim() !== original.identificador.trim()) {
     cambios.identificador = form.identificador.trim();
   }
@@ -176,6 +221,15 @@ function calcularCambios(
   if (campos.has('piso') && Number(form.piso) !== Number(original.piso)) {
     cambios.piso = Number(form.piso);
   }
+  return cambios;
+}
+
+function cambiosDeCapacidad(
+  form: EstadoFormulario,
+  original: EstadoFormulario,
+  campos: Set<CampoEspacio>,
+): CambiosEspacio {
+  const cambios: CambiosEspacio = {};
   if (campos.has('aforoNominal') && Number(form.aforoNominal) !== Number(original.aforoNominal)) {
     cambios.aforoNominal = Number(form.aforoNominal);
   }
@@ -189,17 +243,54 @@ function calcularCambios(
       cambios.descripcionUso = nuevo === '' ? null : nuevo;
     }
   }
-  if (campos.has('contiguos') && !mismoConjunto(form.contiguos, original.contiguos)) {
-    cambios.contiguos = [...form.contiguos];
-  }
+  return cambios;
+}
+
+function cambiosDeLaboratorio(
+  form: EstadoFormulario,
+  original: EstadoFormulario,
+  campos: Set<CampoEspacio>,
+): CambiosEspacio {
+  const cambios: CambiosEspacio = {};
   if (campos.has('softwareIds') && !mismoConjunto(form.softwareIds, original.softwareIds)) {
     cambios.softwareIds = [...form.softwareIds];
   }
   if (campos.has('pcsMalogradas') && form.pcsMalogradas.trim() !== original.pcsMalogradas.trim()) {
     cambios.pcsMalogradas = Number(form.pcsMalogradas);
   }
-
   return cambios;
+}
+
+function cambiosDeContiguos(
+  form: EstadoFormulario,
+  original: EstadoFormulario,
+  campos: Set<CampoEspacio>,
+): CambiosEspacio {
+  const cambios: CambiosEspacio = {};
+  if (campos.has('contiguos') && !mismoConjunto(form.contiguos, original.contiguos)) {
+    cambios.contiguos = [...form.contiguos];
+  }
+  return cambios;
+}
+
+function calcularCambios(
+  form: EstadoFormulario,
+  original: EstadoFormulario,
+  campos: Set<CampoEspacio>,
+): CambiosEspacio {
+  return {
+    ...cambiosDeIdentificacion(form, original, campos),
+    ...cambiosDeCapacidad(form, original, campos),
+    ...cambiosDeLaboratorio(form, original, campos),
+    ...cambiosDeContiguos(form, original, campos),
+  };
+}
+
+/** Motivo por el que no se puede guardar, o `undefined` si sí se puede. */
+function motivoDeGuardado(hayCambios: boolean, hayErrores: boolean): string | undefined {
+  if (!hayCambios) return 'No hay cambios para guardar.';
+  if (hayErrores) return 'Corrige los campos marcados antes de guardar.';
+  return undefined;
 }
 
 /** Casilla con su etiqueta: el patrón se repite en software y contiguos. */
@@ -259,7 +350,7 @@ const ErrorCampo: React.FC<{ id: string; children: React.ReactNode }> = ({ id, c
       strokeLinejoin="round"
       className="mt-0.5 h-4 w-4 shrink-0"
     >
-      <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+      <path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
     </svg>
     <span>{children}</span>
   </p>
@@ -269,6 +360,315 @@ const ErrorCampo: React.FC<{ id: string; children: React.ReactNode }> = ({ id, c
 function claseCampo(error?: string): string {
   return error ? `${CLASE_CAMPO} border-2 border-saie-danger` : CLASE_CAMPO;
 }
+
+type CambiarCampo = <K extends keyof EstadoFormulario>(
+  campo: K,
+  valor: EstadoFormulario[K],
+) => void;
+
+/** Identificación: código, pabellón y piso. */
+const GrupoIdentificacion: React.FC<{
+  form: EstadoFormulario;
+  errores: Record<string, string>;
+  cambiar: CambiarCampo;
+}> = ({ form, errores, cambiar }) => (
+  <fieldset className="flex flex-col gap-3 border-0 p-0">
+    <legend className="m-0 text-base font-bold text-saie-text">Identificación</legend>
+
+    <div className="flex flex-col gap-1">
+      <EtiquetaCampo htmlFor="espacio-identificador" obligatorio>
+        Código del espacio
+      </EtiquetaCampo>
+      <input
+        id="espacio-identificador"
+        type="text"
+        value={form.identificador}
+        onChange={(e) => cambiar('identificador', e.target.value)}
+        aria-required="true"
+        aria-invalid={errores.identificador ? true : undefined}
+        aria-describedby={errores.identificador ? 'error-identificador' : undefined}
+        className={claseCampo(errores.identificador)}
+      />
+      {errores.identificador && (
+        <ErrorCampo id="error-identificador">{errores.identificador}</ErrorCampo>
+      )}
+    </div>
+
+    <div className="flex flex-col gap-1">
+      <EtiquetaCampo htmlFor="espacio-pabellon" obligatorio>
+        Pabellón
+      </EtiquetaCampo>
+      <input
+        id="espacio-pabellon"
+        type="text"
+        value={form.pabellon}
+        onChange={(e) => cambiar('pabellon', e.target.value)}
+        aria-required="true"
+        aria-invalid={errores.pabellon ? true : undefined}
+        aria-describedby={errores.pabellon ? 'error-pabellon' : undefined}
+        className={claseCampo(errores.pabellon)}
+      />
+      {errores.pabellon && <ErrorCampo id="error-pabellon">{errores.pabellon}</ErrorCampo>}
+    </div>
+
+    <div className="flex flex-col gap-1">
+      <EtiquetaCampo htmlFor="espacio-piso" obligatorio>
+        Piso
+      </EtiquetaCampo>
+      <input
+        id="espacio-piso"
+        type="number"
+        inputMode="numeric"
+        step={1}
+        value={form.piso}
+        onChange={(e) => cambiar('piso', e.target.value)}
+        aria-required="true"
+        aria-invalid={errores.piso ? true : undefined}
+        aria-describedby={errores.piso ? 'error-piso' : undefined}
+        className={claseCampo(errores.piso)}
+      />
+      {errores.piso && <ErrorCampo id="error-piso">{errores.piso}</ErrorCampo>}
+    </div>
+  </fieldset>
+);
+
+/** Capacidad y estado: aforo, disponibilidad y rótulo. */
+const GrupoCapacidad: React.FC<{
+  form: EstadoFormulario;
+  errores: Record<string, string>;
+  cambiar: CambiarCampo;
+}> = ({ form, errores, cambiar }) => (
+  <fieldset className="flex flex-col gap-3 border-0 p-0">
+    <legend className="m-0 text-base font-bold text-saie-text">Capacidad y estado</legend>
+
+    <div className="flex flex-col gap-1">
+      <EtiquetaCampo htmlFor="espacio-aforo" obligatorio={form.habilitado}>
+        Capacidad (aforo nominal)
+      </EtiquetaCampo>
+      <input
+        id="espacio-aforo"
+        type="number"
+        inputMode="numeric"
+        min={0}
+        step={1}
+        value={form.aforoNominal}
+        onChange={(e) => cambiar('aforoNominal', e.target.value)}
+        aria-required={form.habilitado ? true : undefined}
+        aria-invalid={errores.aforoNominal ? true : undefined}
+        aria-describedby={errores.aforoNominal ? 'error-aforo' : 'ayuda-aforo'}
+        className={claseCampo(errores.aforoNominal)}
+      />
+      {errores.aforoNominal ? (
+        <ErrorCampo id="error-aforo">{errores.aforoNominal}</ErrorCampo>
+      ) : (
+        <p id="ayuda-aforo" className={CLASE_AYUDA}>
+          Al cambiarla se revisa si las secciones asignadas siguen cabiendo y se genera la alerta
+          correspondiente. Deja 0 solo si el espacio está fuera de servicio.
+        </p>
+      )}
+    </div>
+
+    <Casilla
+      id="espacio-habilitado"
+      marcada={form.habilitado}
+      onCambio={(marcada) => cambiar('habilitado', marcada)}
+    >
+      <span className="font-semibold text-saie-text">Espacio en servicio</span>
+      <span className="block text-xs text-saie-muted">
+        Si lo deshabilitas, el motor deja de asignarlo y queda fuera de la consulta de
+        disponibilidad.
+      </span>
+    </Casilla>
+
+    <div className="flex flex-col gap-1">
+      <EtiquetaCampo htmlFor="espacio-descripcion">Descripción de uso</EtiquetaCampo>
+      <input
+        id="espacio-descripcion"
+        type="text"
+        value={form.descripcionUso}
+        maxLength={120}
+        placeholder="Ej. Sala de investigación"
+        onChange={(e) => cambiar('descripcionUso', e.target.value)}
+        aria-invalid={errores.descripcionUso ? true : undefined}
+        aria-describedby={errores.descripcionUso ? 'error-descripcion' : 'ayuda-descripcion'}
+        className={claseCampo(errores.descripcionUso)}
+      />
+      {errores.descripcionUso ? (
+        <ErrorCampo id="error-descripcion">{errores.descripcionUso}</ErrorCampo>
+      ) : (
+        <p id="ayuda-descripcion" className={CLASE_AYUDA}>
+          Rótulo corto que aparece en el mapa. Si lo dejas vacío, se borra.
+        </p>
+      )}
+    </div>
+  </fieldset>
+);
+
+/** Software y PCs: solo tiene sentido en un laboratorio. */
+const GrupoLaboratorio: React.FC<{
+  form: EstadoFormulario;
+  errores: Record<string, string>;
+  original: EstadoFormulario;
+  cambiar: CambiarCampo;
+  alternarSoftware: (id: string, marcada: boolean) => void;
+  catalogo: { error: string | null; cargando: boolean; datos: ListadoSoftwareDTO | null };
+  softwareFiltrado: ListadoSoftwareDTO['items'];
+  busquedaSoftware: string;
+  onBusquedaSoftware: (valor: string) => void;
+}> = ({
+  form,
+  errores,
+  original,
+  cambiar,
+  alternarSoftware,
+  catalogo,
+  softwareFiltrado,
+  busquedaSoftware,
+  onBusquedaSoftware,
+}) => {
+  const sinCoincidencias = softwareFiltrado.length === 0;
+  const catalogoVacio = (catalogo.datos?.items.length ?? 0) === 0;
+  const mensajeVacio = catalogoVacio
+    ? 'El catálogo de software está vacío.'
+    : `No hay software que coincida con «${busquedaSoftware.trim()}».`;
+
+  return (
+    <fieldset className="flex flex-col gap-3 border-0 p-0">
+      <legend className="m-0 text-base font-bold text-saie-text">
+        Software y PCs del laboratorio
+      </legend>
+
+      <div className="flex flex-col gap-1">
+        <EtiquetaCampo htmlFor="espacio-pcs" obligatorio={original.pcsMalogradas !== ''}>
+          PCs fuera de servicio
+        </EtiquetaCampo>
+        <input
+          id="espacio-pcs"
+          type="number"
+          inputMode="numeric"
+          min={0}
+          step={1}
+          value={form.pcsMalogradas}
+          placeholder={original.pcsMalogradas === '' ? 'Sin registrar' : undefined}
+          onChange={(e) => cambiar('pcsMalogradas', e.target.value)}
+          aria-required={original.pcsMalogradas !== '' ? true : undefined}
+          aria-invalid={errores.pcsMalogradas ? true : undefined}
+          aria-describedby={errores.pcsMalogradas ? 'error-pcs' : 'ayuda-pcs'}
+          className={claseCampo(errores.pcsMalogradas)}
+        />
+        {errores.pcsMalogradas ? (
+          <ErrorCampo id="error-pcs">{errores.pcsMalogradas}</ErrorCampo>
+        ) : (
+          <p id="ayuda-pcs" className={CLASE_AYUDA}>
+            Baja el número si se repararon. Escribe 0 si no hay PCs malogradas.
+          </p>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <label htmlFor="buscar-software-espacio" className={CLASE_ETIQUETA}>
+            Buscar software
+          </label>
+          <span className="text-sm text-saie-muted">
+            <strong className="text-saie-text">{form.softwareIds.length}</strong> de{' '}
+            {catalogo.datos?.items.length ?? 0} seleccionados
+          </span>
+        </div>
+        <input
+          id="buscar-software-espacio"
+          type="search"
+          value={busquedaSoftware}
+          placeholder="Nombre o versión…"
+          onChange={(e) => onBusquedaSoftware(e.target.value)}
+          className={CLASE_CAMPO}
+        />
+        {catalogo.error ? (
+          <Aviso tono="error">No se pudo cargar el catálogo de software.</Aviso>
+        ) : sinCoincidencias ? (
+          <p className="m-0 text-sm text-saie-muted">{mensajeVacio}</p>
+        ) : (
+          <ul className="m-0 flex max-h-56 list-none flex-col gap-1 overflow-auto p-0">
+            {softwareFiltrado.map((s) => (
+              <li key={s.id}>
+                <Casilla
+                  id={`software-espacio-${s.id}`}
+                  marcada={form.softwareIds.includes(s.id)}
+                  onCambio={(marcada) => alternarSoftware(s.id, marcada)}
+                >
+                  {s.nombre}
+                  {s.version && <span className="text-saie-muted"> {s.version}</span>}
+                </Casilla>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </fieldset>
+  );
+};
+
+/** Espacios contiguos: solo del mismo tipo. */
+const GrupoContiguos: React.FC<{
+  form: EstadoFormulario;
+  alternarContiguo: (id: string, marcado: boolean) => void;
+  candidatos: EspacioAdminDTO[];
+  contiguosFiltrados: EspacioAdminDTO[];
+  busquedaContiguos: string;
+  onBusquedaContiguos: (valor: string) => void;
+}> = ({
+  form,
+  alternarContiguo,
+  candidatos,
+  contiguosFiltrados,
+  busquedaContiguos,
+  onBusquedaContiguos,
+}) => {
+  const sinCoincidencias = contiguosFiltrados.length === 0;
+  const mensajeVacio =
+    candidatos.length === 0
+      ? 'No hay otros espacios del mismo tipo.'
+      : `No hay espacios que coincidan con «${busquedaContiguos.trim()}».`;
+
+  return (
+    <fieldset className="flex flex-col gap-3 border-0 p-0">
+      <legend className="m-0 text-base font-bold text-saie-text">Espacios contiguos</legend>
+      <p className={CLASE_AYUDA}>
+        Solo puede ser contiguo a un espacio del mismo tipo. La relación se guarda en ambos
+        sentidos.
+      </p>
+      <input
+        id="buscar-contiguos"
+        type="search"
+        value={busquedaContiguos}
+        placeholder="Buscar por código…"
+        onChange={(e) => onBusquedaContiguos(e.target.value)}
+        className={CLASE_CAMPO}
+      />
+      {sinCoincidencias ? (
+        <p className="m-0 text-sm text-saie-muted">{mensajeVacio}</p>
+      ) : (
+        <ul className="m-0 flex max-h-56 list-none flex-col gap-1 overflow-auto p-0">
+          {contiguosFiltrados.map((e) => (
+            <li key={e.id}>
+              <Casilla
+                id={`contiguo-${e.id}`}
+                marcada={form.contiguos.includes(e.id)}
+                onCambio={(marcado) => alternarContiguo(e.id, marcado)}
+              >
+                {e.identificador}
+                <span className="text-saie-muted">
+                  {' '}
+                  · {e.pabellon}, piso {e.piso}
+                </span>
+              </Casilla>
+            </li>
+          ))}
+        </ul>
+      )}
+    </fieldset>
+  );
+};
 
 export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
   modo,
@@ -293,10 +693,8 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
   // laboratorio. Al editar manda el backend (`camposEditables`).
   const campos = useMemo(() => {
     if (modo === 'editar' && espacio) return new Set(espacio.camposEditables);
-    return new Set<CampoEspacio>([
-      ...CAMPOS_COORDINACION,
-      ...(form.tipo === 'LABORATORIO' ? CAMPOS_LABORATORIO : []),
-    ]);
+    const deLaboratorio = form.tipo === 'LABORATORIO' ? CAMPOS_LABORATORIO : [];
+    return new Set<CampoEspacio>([...CAMPOS_COORDINACION, ...deLaboratorio]);
   }, [modo, espacio, form.tipo]);
 
   const errores = useMemo(
@@ -331,11 +729,12 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
 
   function cambiarTipo(tipo: TipoEspacio) {
     // Un aula teórica no tiene software ni PCs: se limpian al cambiar el tipo.
+    const esLaboratorio = tipo === 'LABORATORIO';
     setForm((previo) => ({
       ...previo,
       tipo,
-      softwareIds: tipo === 'LABORATORIO' ? previo.softwareIds : [],
-      pcsMalogradas: tipo === 'LABORATORIO' ? previo.pcsMalogradas : '',
+      softwareIds: esLaboratorio ? previo.softwareIds : [],
+      pcsMalogradas: esLaboratorio ? previo.pcsMalogradas : '',
       contiguos: [],
     }));
     setError(null);
@@ -365,23 +764,7 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
     setError(null);
     try {
       if (modo === 'crear') {
-        const creado = await crearEspacio({
-          identificador: form.identificador.trim(),
-          tipo: form.tipo,
-          pabellon: form.pabellon.trim(),
-          piso: Number(form.piso),
-          aforoNominal: Number(form.aforoNominal),
-          habilitado: form.habilitado,
-          contiguos: form.contiguos,
-          ...(form.descripcionUso.trim() ? { descripcionUso: form.descripcionUso.trim() } : {}),
-          ...(form.tipo === 'LABORATORIO'
-            ? {
-                softwareIds: form.softwareIds,
-                pcsMalogradas:
-                  form.pcsMalogradas.trim() === '' ? 0 : Number(form.pcsMalogradas.trim()),
-              }
-            : {}),
-        });
+        const creado = await crearEspacio(espacioNuevo(form));
         onGuardado({ espacio: creado, alertas: [] });
         return;
       }
@@ -394,11 +777,7 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
     }
   }
 
-  const motivoDeshabilitado = !hayCambios
-    ? 'No hay cambios para guardar.'
-    : hayErrores
-      ? 'Corrige los campos marcados antes de guardar.'
-      : undefined;
+  const motivoDeshabilitado = motivoDeGuardado(hayCambios, hayErrores);
 
   if (modo === 'editar' && espacio && campos.size === 0) {
     return (
@@ -437,265 +816,36 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
       )}
 
       {campos.has('identificador') && (
-        <fieldset className="flex flex-col gap-3 border-0 p-0">
-          <legend className="m-0 text-base font-bold text-saie-text">Identificación</legend>
-
-          <div className="flex flex-col gap-1">
-            <EtiquetaCampo htmlFor="espacio-identificador" obligatorio>
-              Código del espacio
-            </EtiquetaCampo>
-            <input
-              id="espacio-identificador"
-              type="text"
-              value={form.identificador}
-              onChange={(e) => cambiar('identificador', e.target.value)}
-              aria-required="true"
-              aria-invalid={errores.identificador ? true : undefined}
-              aria-describedby={errores.identificador ? 'error-identificador' : undefined}
-              className={claseCampo(errores.identificador)}
-            />
-            {errores.identificador && (
-              <ErrorCampo id="error-identificador">{errores.identificador}</ErrorCampo>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <EtiquetaCampo htmlFor="espacio-pabellon" obligatorio>
-              Pabellón
-            </EtiquetaCampo>
-            <input
-              id="espacio-pabellon"
-              type="text"
-              value={form.pabellon}
-              onChange={(e) => cambiar('pabellon', e.target.value)}
-              aria-required="true"
-              aria-invalid={errores.pabellon ? true : undefined}
-              aria-describedby={errores.pabellon ? 'error-pabellon' : undefined}
-              className={claseCampo(errores.pabellon)}
-            />
-            {errores.pabellon && <ErrorCampo id="error-pabellon">{errores.pabellon}</ErrorCampo>}
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <EtiquetaCampo htmlFor="espacio-piso" obligatorio>
-              Piso
-            </EtiquetaCampo>
-            <input
-              id="espacio-piso"
-              type="number"
-              inputMode="numeric"
-              step={1}
-              value={form.piso}
-              onChange={(e) => cambiar('piso', e.target.value)}
-              aria-required="true"
-              aria-invalid={errores.piso ? true : undefined}
-              aria-describedby={errores.piso ? 'error-piso' : undefined}
-              className={claseCampo(errores.piso)}
-            />
-            {errores.piso && <ErrorCampo id="error-piso">{errores.piso}</ErrorCampo>}
-          </div>
-        </fieldset>
+        <GrupoIdentificacion form={form} errores={errores} cambiar={cambiar} />
       )}
 
       {(campos.has('aforoNominal') || campos.has('habilitado') || campos.has('descripcionUso')) && (
-        <fieldset className="flex flex-col gap-3 border-0 p-0">
-          <legend className="m-0 text-base font-bold text-saie-text">Capacidad y estado</legend>
-
-          {campos.has('aforoNominal') && (
-            <div className="flex flex-col gap-1">
-              <EtiquetaCampo htmlFor="espacio-aforo" obligatorio={form.habilitado}>
-                Capacidad (aforo nominal)
-              </EtiquetaCampo>
-              <input
-                id="espacio-aforo"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                step={1}
-                value={form.aforoNominal}
-                onChange={(e) => cambiar('aforoNominal', e.target.value)}
-                aria-required={form.habilitado ? true : undefined}
-                aria-invalid={errores.aforoNominal ? true : undefined}
-                aria-describedby={errores.aforoNominal ? 'error-aforo' : 'ayuda-aforo'}
-                className={claseCampo(errores.aforoNominal)}
-              />
-              {errores.aforoNominal ? (
-                <ErrorCampo id="error-aforo">{errores.aforoNominal}</ErrorCampo>
-              ) : (
-                <p id="ayuda-aforo" className={CLASE_AYUDA}>
-                  Al cambiarla se revisa si las secciones asignadas siguen cabiendo y se genera la
-                  alerta correspondiente. Deja 0 solo si el espacio está fuera de servicio.
-                </p>
-              )}
-            </div>
-          )}
-
-          {campos.has('habilitado') && (
-            <Casilla
-              id="espacio-habilitado"
-              marcada={form.habilitado}
-              onCambio={(marcada) => cambiar('habilitado', marcada)}
-            >
-              <span className="font-semibold text-saie-text">Espacio en servicio</span>
-              <span className="block text-xs text-saie-muted">
-                Si lo deshabilitas, el motor deja de asignarlo y queda fuera de la consulta de
-                disponibilidad.
-              </span>
-            </Casilla>
-          )}
-
-          {campos.has('descripcionUso') && (
-            <div className="flex flex-col gap-1">
-              <EtiquetaCampo htmlFor="espacio-descripcion">Descripción de uso</EtiquetaCampo>
-              <input
-                id="espacio-descripcion"
-                type="text"
-                value={form.descripcionUso}
-                maxLength={120}
-                placeholder="Ej. Sala de investigación"
-                onChange={(e) => cambiar('descripcionUso', e.target.value)}
-                aria-invalid={errores.descripcionUso ? true : undefined}
-                aria-describedby={
-                  errores.descripcionUso ? 'error-descripcion' : 'ayuda-descripcion'
-                }
-                className={claseCampo(errores.descripcionUso)}
-              />
-              {errores.descripcionUso ? (
-                <ErrorCampo id="error-descripcion">{errores.descripcionUso}</ErrorCampo>
-              ) : (
-                <p id="ayuda-descripcion" className={CLASE_AYUDA}>
-                  Rótulo corto que aparece en el mapa. Si lo dejas vacío, se borra.
-                </p>
-              )}
-            </div>
-          )}
-        </fieldset>
+        <GrupoCapacidad form={form} errores={errores} cambiar={cambiar} />
       )}
 
       {(campos.has('softwareIds') || campos.has('pcsMalogradas')) && (
-        <fieldset className="flex flex-col gap-3 border-0 p-0">
-          <legend className="m-0 text-base font-bold text-saie-text">
-            Software y PCs del laboratorio
-          </legend>
-
-          {campos.has('pcsMalogradas') && (
-            <div className="flex flex-col gap-1">
-              <EtiquetaCampo htmlFor="espacio-pcs" obligatorio={original.pcsMalogradas !== ''}>
-                PCs fuera de servicio
-              </EtiquetaCampo>
-              <input
-                id="espacio-pcs"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                step={1}
-                value={form.pcsMalogradas}
-                placeholder={original.pcsMalogradas === '' ? 'Sin registrar' : undefined}
-                onChange={(e) => cambiar('pcsMalogradas', e.target.value)}
-                aria-required={original.pcsMalogradas !== '' ? true : undefined}
-                aria-invalid={errores.pcsMalogradas ? true : undefined}
-                aria-describedby={errores.pcsMalogradas ? 'error-pcs' : 'ayuda-pcs'}
-                className={claseCampo(errores.pcsMalogradas)}
-              />
-              {errores.pcsMalogradas ? (
-                <ErrorCampo id="error-pcs">{errores.pcsMalogradas}</ErrorCampo>
-              ) : (
-                <p id="ayuda-pcs" className={CLASE_AYUDA}>
-                  Baja el número si se repararon. Escribe 0 si no hay PCs malogradas.
-                </p>
-              )}
-            </div>
-          )}
-
-          {campos.has('softwareIds') && (
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-end justify-between gap-2">
-                <label htmlFor="buscar-software-espacio" className={CLASE_ETIQUETA}>
-                  Buscar software
-                </label>
-                <span className="text-sm text-saie-muted">
-                  <strong className="text-saie-text">{form.softwareIds.length}</strong> de{' '}
-                  {catalogo.datos?.items.length ?? 0} seleccionados
-                </span>
-              </div>
-              <input
-                id="buscar-software-espacio"
-                type="search"
-                value={busquedaSoftware}
-                placeholder="Nombre o versión…"
-                onChange={(e) => setBusquedaSoftware(e.target.value)}
-                className={CLASE_CAMPO}
-              />
-              {catalogo.error ? (
-                <Aviso tono="error">No se pudo cargar el catálogo de software.</Aviso>
-              ) : softwareFiltrado.length === 0 ? (
-                <p className="m-0 text-sm text-saie-muted">
-                  {catalogo.datos?.items.length === 0
-                    ? 'El catálogo de software está vacío.'
-                    : `No hay software que coincida con «${busquedaSoftware.trim()}».`}
-                </p>
-              ) : (
-                <ul className="m-0 flex max-h-56 list-none flex-col gap-1 overflow-auto p-0">
-                  {softwareFiltrado.map((s) => (
-                    <li key={s.id}>
-                      <Casilla
-                        id={`software-espacio-${s.id}`}
-                        marcada={form.softwareIds.includes(s.id)}
-                        onCambio={(marcada) => alternarSoftware(s.id, marcada)}
-                      >
-                        {s.nombre}
-                        {s.version && <span className="text-saie-muted"> {s.version}</span>}
-                      </Casilla>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-        </fieldset>
+        <GrupoLaboratorio
+          form={form}
+          errores={errores}
+          original={original}
+          cambiar={cambiar}
+          alternarSoftware={alternarSoftware}
+          catalogo={catalogo}
+          softwareFiltrado={softwareFiltrado}
+          busquedaSoftware={busquedaSoftware}
+          onBusquedaSoftware={setBusquedaSoftware}
+        />
       )}
 
       {campos.has('contiguos') && (
-        <fieldset className="flex flex-col gap-3 border-0 p-0">
-          <legend className="m-0 text-base font-bold text-saie-text">Espacios contiguos</legend>
-          <p className={CLASE_AYUDA}>
-            Solo puede ser contiguo a un espacio del mismo tipo. La relación se guarda en ambos
-            sentidos.
-          </p>
-          <input
-            id="buscar-contiguos"
-            type="search"
-            value={busquedaContiguos}
-            placeholder="Buscar por código…"
-            onChange={(e) => setBusquedaContiguos(e.target.value)}
-            className={CLASE_CAMPO}
-          />
-          {contiguosFiltrados.length === 0 ? (
-            <p className="m-0 text-sm text-saie-muted">
-              {candidatos.length === 0
-                ? 'No hay otros espacios del mismo tipo.'
-                : `No hay espacios que coincidan con «${busquedaContiguos.trim()}».`}
-            </p>
-          ) : (
-            <ul className="m-0 flex max-h-56 list-none flex-col gap-1 overflow-auto p-0">
-              {contiguosFiltrados.map((e) => (
-                <li key={e.id}>
-                  <Casilla
-                    id={`contiguo-${e.id}`}
-                    marcada={form.contiguos.includes(e.id)}
-                    onCambio={(marcado) => alternarContiguo(e.id, marcado)}
-                  >
-                    {e.identificador}
-                    <span className="text-saie-muted">
-                      {' '}
-                      · {e.pabellon}, piso {e.piso}
-                    </span>
-                  </Casilla>
-                </li>
-              ))}
-            </ul>
-          )}
-        </fieldset>
+        <GrupoContiguos
+          form={form}
+          alternarContiguo={alternarContiguo}
+          candidatos={candidatos}
+          contiguosFiltrados={contiguosFiltrados}
+          busquedaContiguos={busquedaContiguos}
+          onBusquedaContiguos={setBusquedaContiguos}
+        />
       )}
 
       {error && <Aviso tono="error">{error}</Aviso>}
@@ -734,5 +884,27 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
     </section>
   );
 };
+
+/** Payload del alta: un aula teórica no lleva software ni PCs. */
+function espacioNuevo(form: EstadoFormulario) {
+  const descripcionUso = form.descripcionUso.trim();
+  const base = {
+    identificador: form.identificador.trim(),
+    tipo: form.tipo,
+    pabellon: form.pabellon.trim(),
+    piso: Number(form.piso),
+    aforoNominal: Number(form.aforoNominal),
+    habilitado: form.habilitado,
+    contiguos: form.contiguos,
+    ...(descripcionUso ? { descripcionUso } : {}),
+  };
+  if (form.tipo !== 'LABORATORIO') return base;
+  const pcs = form.pcsMalogradas.trim();
+  return {
+    ...base,
+    softwareIds: form.softwareIds,
+    pcsMalogradas: pcs === '' ? 0 : Number(pcs),
+  };
+}
 
 export default FormularioEspacio;

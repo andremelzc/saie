@@ -14,6 +14,7 @@ import {
   registrarSoftware,
 } from '../../services/admin';
 import { mensajeDeError } from '../../services/estudiante';
+import type { EspacioAdminDTO } from '../../types/admin';
 import { formatearFechaCorta } from '../../utils/admin';
 
 /**
@@ -29,6 +30,171 @@ function mismoConjunto(a: Set<string>, b: string[]): boolean {
   if (a.size !== conjuntoB.size) return false;
   return [...a].every((id) => conjuntoB.has(id));
 }
+
+/**
+ * Motivo por el que el botón de guardar no está disponible. Se calcula fuera del JSX para que
+ * cada estado tenga su propio texto y no haya que leer un ternario anidado.
+ */
+function motivoDeGuardado({
+  lab,
+  pcsValido,
+  hayCambios,
+}: {
+  lab: EspacioAdminDTO | null;
+  pcsValido: boolean;
+  hayCambios: boolean;
+}): string | undefined {
+  if (!lab) return 'Elige un laboratorio primero.';
+  if (!pcsValido) return 'Corrige el número de PCs.';
+  if (!hayCambios) return 'No hay cambios para guardar.';
+  return undefined;
+}
+
+/** Texto de la capacidad y las PCs del laboratorio elegido. */
+function resumenLaboratorio(lab: EspacioAdminDTO): string {
+  if (lab.pcsMalogradas == null) return 'PCs malogradas sin registrar';
+  return `${lab.pcsMalogradas} PCs malogradas registradas`;
+}
+
+/** Pista del catálogo vacío: sin catálogo o sin coincidencias con la búsqueda. */
+function mensajeCatalogoVacio(totalCatalogo: number, busqueda: string): string {
+  if (totalCatalogo === 0) {
+    return 'No hay software activo en el catálogo. Coordinación debe registrarlo primero.';
+  }
+  return `No hay software que coincida con «${busqueda.trim()}».`;
+}
+
+/** Distintivo del pie: si hay cambios pendientes o el formulario está limpio. */
+function insigniaCambios(lab: EspacioAdminDTO | null, hayCambios: boolean): React.ReactNode {
+  if (!lab) return null;
+  if (hayCambios) return <BadgeEstado tono="advertencia">Cambios sin guardar</BadgeEstado>;
+  return <BadgeEstado tono="neutro">Sin cambios</BadgeEstado>;
+}
+
+/** Pestaña de software: búsqueda, catálogo y selección. */
+const PanelSoftware: React.FC<{
+  hayLaboratorio: boolean;
+  busqueda: string;
+  onBusqueda: (valor: string) => void;
+  totalCatalogo: number;
+  softwareFiltrado: { id: string; nombre: string; version: string }[];
+  seleccionados: Set<string>;
+  alternar: (id: string) => void;
+  quitarTodos: () => void;
+  errorCatalogo: string | null;
+  onReintentarCatalogo: () => void;
+  cargandoCatalogo: boolean;
+}> = ({
+  hayLaboratorio,
+  busqueda,
+  onBusqueda,
+  totalCatalogo,
+  softwareFiltrado,
+  seleccionados,
+  alternar,
+  quitarTodos,
+  errorCatalogo,
+  onReintentarCatalogo,
+  cargandoCatalogo,
+}) => (
+  <div className="flex flex-col gap-3">
+    <div className="flex flex-wrap items-end justify-between gap-2">
+      <label htmlFor="buscar-software" className={`${CLASE_ETIQUETA} flex-1`}>
+        Buscar software
+      </label>
+      <span className="text-sm text-saie-muted">
+        <strong className="text-saie-text">{seleccionados.size}</strong> de {totalCatalogo}{' '}
+        seleccionados
+      </span>
+    </div>
+    <input
+      id="buscar-software"
+      type="search"
+      value={busqueda}
+      disabled={!hayLaboratorio}
+      onChange={(e) => onBusqueda(e.target.value)}
+      placeholder="Nombre o versión…"
+      className={CLASE_CAMPO}
+    />
+    {errorCatalogo ? (
+      <AvisoError mensaje={errorCatalogo} onReintentar={onReintentarCatalogo} />
+    ) : cargandoCatalogo ? (
+      <EsqueletoCarga texto="Cargando catálogo…" />
+    ) : softwareFiltrado.length === 0 ? (
+      <p className="m-0 text-sm text-saie-muted">{mensajeCatalogoVacio(totalCatalogo, busqueda)}</p>
+    ) : (
+      <ul className="m-0 flex max-h-80 list-none flex-col gap-1 overflow-auto p-0">
+        {softwareFiltrado.map((s) => (
+          <li key={s.id}>
+            <label
+              className={`flex min-h-11 items-center gap-3 rounded-lg px-2 text-sm ${
+                hayLaboratorio ? 'cursor-pointer hover:bg-saie-canvas' : 'opacity-50'
+              }`}
+            >
+              <input
+                type="checkbox"
+                className="h-5 w-5 accent-saie-primary"
+                disabled={!hayLaboratorio}
+                checked={seleccionados.has(s.id)}
+                onChange={() => alternar(s.id)}
+              />
+              <span>
+                {s.nombre}
+                {s.version && <span className="text-saie-muted"> {s.version}</span>}
+              </span>
+            </label>
+          </li>
+        ))}
+      </ul>
+    )}
+    {seleccionados.size > 0 && (
+      <div>
+        <Boton variante="fantasma" tamano="sm" disabled={!hayLaboratorio} onClick={quitarTodos}>
+          Quitar todos
+        </Boton>
+      </div>
+    )}
+  </div>
+);
+
+/** Pestaña de PCs: número de equipos fuera de servicio. */
+const PanelPcs: React.FC<{
+  hayLaboratorio: boolean;
+  valor: string;
+  onValor: (valor: string) => void;
+  valorOriginal: string;
+  valido: boolean;
+}> = ({ hayLaboratorio, valor, onValor, valorOriginal, valido }) => (
+  <div className="flex flex-col gap-3">
+    <label htmlFor="pcs" className={CLASE_ETIQUETA}>
+      Número total de PCs fuera de servicio
+    </label>
+    <input
+      id="pcs"
+      type="number"
+      inputMode="numeric"
+      min={0}
+      step={1}
+      value={valor}
+      disabled={!hayLaboratorio}
+      placeholder={valorOriginal === '' ? 'Sin registrar' : undefined}
+      onChange={(e) => onValor(e.target.value)}
+      className={CLASE_CAMPO}
+    />
+    <p className={CLASE_AYUDA}>Baja el número si se repararon. Si no hay PCs malogradas, escribe 0.</p>
+    {!valido && (
+      <p role="alert" className="m-0 text-sm font-medium text-saie-danger">
+        Ingresa un número entero mayor o igual a 0. No dejes el campo vacío si ya había un valor
+        registrado.
+      </p>
+    )}
+    {hayLaboratorio && valorOriginal === '' && (
+      <p className={CLASE_AYUDA}>
+        Este laboratorio aún no tiene un valor registrado. Guarda un número para registrarlo.
+      </p>
+    )}
+  </div>
+);
 
 export const CambioLaboratorio: React.FC = () => {
   const labs = useCarga(obtenerLaboratorios);
@@ -132,13 +298,7 @@ export const CambioLaboratorio: React.FC = () => {
     }
   }
 
-  const motivoDeshabilitado = !lab
-    ? 'Elige un laboratorio primero.'
-    : !pcsValido
-      ? 'Corrige el número de PCs.'
-      : !hayCambios
-        ? 'No hay cambios para guardar.'
-        : undefined;
+  const motivoDeshabilitado = motivoDeGuardado({ lab, pcsValido, hayCambios });
 
   return (
     <LayoutAdmin
@@ -173,10 +333,7 @@ export const CambioLaboratorio: React.FC = () => {
         </select>
         {lab ? (
           <p className={CLASE_AYUDA}>
-            Capacidad {lab.aforoNominal} ·{' '}
-            {lab.pcsMalogradas == null
-              ? 'PCs malogradas sin registrar'
-              : `${lab.pcsMalogradas} PCs malogradas registradas`}
+            Capacidad {lab.aforoNominal} · {resumenLaboratorio(lab)}
           </p>
         ) : (
           <Aviso tono="info">
@@ -203,127 +360,45 @@ export const CambioLaboratorio: React.FC = () => {
           />
         </div>
 
-        <div
-          role="region"
+        <section
           aria-label={pestana === 'software' ? 'Software instalado' : 'PCs malogradas'}
           className="p-5"
         >
           {pestana === 'software' ? (
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-end justify-between gap-2">
-                <label htmlFor="buscar-software" className={`${CLASE_ETIQUETA} flex-1`}>
-                  Buscar software
-                </label>
-                <span className="text-sm text-saie-muted">
-                  <strong className="text-saie-text">{seleccionActual.size}</strong> de{' '}
-                  {itemsCatalogo.length} seleccionados
-                </span>
-              </div>
-              <input
-                id="buscar-software"
-                type="search"
-                value={busqueda}
-                disabled={!lab}
-                onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Nombre o versión…"
-                className={CLASE_CAMPO}
-              />
-              {catalogo.error ? (
-                <AvisoError mensaje={catalogo.error} onReintentar={catalogo.recargar} />
-              ) : catalogo.cargando && !catalogo.datos ? (
-                <EsqueletoCarga texto="Cargando catálogo…" />
-              ) : catalogoFiltrado.length === 0 ? (
-                <p className="m-0 text-sm text-saie-muted">
-                  {itemsCatalogo.length === 0
-                    ? 'No hay software activo en el catálogo. Coordinación debe registrarlo primero.'
-                    : `No hay software que coincida con «${busqueda.trim()}».`}
-                </p>
-              ) : (
-                <ul className="m-0 flex max-h-80 list-none flex-col gap-1 overflow-auto p-0">
-                  {catalogoFiltrado.map((s) => (
-                    <li key={s.id}>
-                      <label
-                        className={`flex min-h-11 items-center gap-3 rounded-lg px-2 text-sm ${
-                          lab ? 'cursor-pointer hover:bg-saie-canvas' : 'opacity-50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          className="h-5 w-5 accent-saie-primary"
-                          disabled={!lab}
-                          checked={seleccionActual.has(s.id)}
-                          onChange={() => alternar(s.id)}
-                        />
-                        <span>
-                          {s.nombre}
-                          {s.version && <span className="text-saie-muted"> {s.version}</span>}
-                        </span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {seleccionActual.size > 0 && (
-                <div>
-                  <Boton
-                    variante="fantasma"
-                    tamano="sm"
-                    disabled={!lab}
-                    onClick={() => {
-                      setSeleccion(new Set());
-                      setMensaje(null);
-                    }}
-                  >
-                    Quitar todos
-                  </Boton>
-                </div>
-              )}
-            </div>
+            <PanelSoftware
+              hayLaboratorio={Boolean(lab)}
+              busqueda={busqueda}
+              onBusqueda={setBusqueda}
+              totalCatalogo={itemsCatalogo.length}
+              softwareFiltrado={catalogoFiltrado}
+              seleccionados={seleccionActual}
+              alternar={alternar}
+              quitarTodos={() => {
+                setSeleccion(new Set());
+                setMensaje(null);
+              }}
+              errorCatalogo={catalogo.error}
+              onReintentarCatalogo={catalogo.recargar}
+              cargandoCatalogo={catalogo.cargando && !catalogo.datos}
+            />
           ) : (
-            <div className="flex flex-col gap-3">
-              <label htmlFor="pcs" className={CLASE_ETIQUETA}>
-                Número total de PCs fuera de servicio
-              </label>
-              <input
-                id="pcs"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                step={1}
-                value={pcs}
-                disabled={!lab}
-                placeholder={pcsOriginal === '' ? 'Sin registrar' : undefined}
-                onChange={(e) => cambiarPcs(e.target.value)}
-                className={CLASE_CAMPO}
-              />
-              <p className={CLASE_AYUDA}>
-                Baja el número si se repararon. Si no hay PCs malogradas, escribe 0.
-              </p>
-              {!pcsValido && (
-                <p role="alert" className="m-0 text-sm font-medium text-saie-danger">
-                  Ingresa un número entero mayor o igual a 0. No dejes el campo vacío si ya había un
-                  valor registrado.
-                </p>
-              )}
-              {lab && pcsOriginal === '' && (
-                <p className={CLASE_AYUDA}>
-                  Este laboratorio aún no tiene un valor registrado. Guarda un número para
-                  registrarlo.
-                </p>
-              )}
-            </div>
+            <PanelPcs
+              hayLaboratorio={Boolean(lab)}
+              valor={pcs}
+              onValor={cambiarPcs}
+              valorOriginal={pcsOriginal}
+              valido={pcsValido}
+            />
           )}
-        </div>
+        </section>
 
         <footer className="flex flex-col gap-3 border-t border-saie-divider p-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-col gap-2">
             {mensaje ? (
               <Aviso tono={mensaje.tipo}>{mensaje.texto}</Aviso>
-            ) : lab && hayCambios ? (
-              <BadgeEstado tono="advertencia">Cambios sin guardar</BadgeEstado>
-            ) : lab ? (
-              <BadgeEstado tono="neutro">Sin cambios</BadgeEstado>
-            ) : null}
+            ) : (
+              insigniaCambios(lab, hayCambios)
+            )}
             {ultimaGuardado && !hayCambios && (
               <p className={CLASE_AYUDA}>
                 Última actualización: {formatearFechaCorta(ultimaGuardado)}

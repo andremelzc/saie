@@ -8,7 +8,7 @@ import { useAuth } from '../../context/useAuth';
 import { useCarga } from '../../hooks/useCarga';
 import { obtenerAlertas, resolverAlerta } from '../../services/admin';
 import { mensajeDeError } from '../../services/estudiante';
-import type { TipoAlerta } from '../../types/admin';
+import type { AlertaDTO, TipoAlerta } from '../../types/admin';
 
 type Filtro = 'TODAS' | TipoAlerta;
 
@@ -23,6 +23,57 @@ const ETIQUETAS_FILTRO: Record<Filtro, string> = {
  * Al resolver una alerta se quita de la lista local y se confirma con un aviso; no se inventa
  * un estado «Resuelta» que el backend no devuelve.
  */
+/**
+ * Lista de alertas: distingue el vacío real (no hay ninguna alerta) del vacío por filtro
+ * (hay alertas, pero ninguna del tipo elegido) y ofrece la acción que lo resuelve.
+ */
+const ListaAlertas: React.FC<{
+  hayAlertas: boolean;
+  hayCoincidencias: boolean;
+  error: boolean;
+  filtro: Filtro;
+  alertas: AlertaDTO[];
+  onResolver: (id: string) => void;
+  reintentando: string | null;
+  onVerTodas: () => void;
+}> = ({ hayAlertas, hayCoincidencias, error, filtro, alertas, onResolver, reintentando, onVerTodas }) => {
+  if (!error && !hayAlertas) {
+    return (
+      <EstadoVacio
+        titulo="Sin alertas pendientes"
+        descripcion="No hay alertas de software ni de capacidad en este momento."
+      />
+    );
+  }
+
+  if (!error && !hayCoincidencias) {
+    return (
+      <EstadoVacio
+        titulo="Sin alertas de este tipo"
+        descripcion={`No hay alertas de ${ETIQUETAS_FILTRO[filtro].toLowerCase()} por ahora.`}
+        accion={
+          <Boton variante="secundario" tamano="sm" onClick={onVerTodas}>
+            Ver todas
+          </Boton>
+        }
+      />
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {alertas.map((a) => (
+        <TarjetaAlerta
+          key={a.id}
+          alerta={a}
+          onResolver={onResolver}
+          resolviendo={reintentando === a.id}
+        />
+      ))}
+    </div>
+  );
+};
+
 export const AlertasAdmin: React.FC = () => {
   const { sesion } = useAuth();
   const { datos, cargando, error, recargar } = useCarga(obtenerAlertas);
@@ -106,12 +157,14 @@ export const AlertasAdmin: React.FC = () => {
                   }`}
                 >
                   <span>{ETIQUETAS_FILTRO[f]}</span>
+                  {/* El número va entre paréntesis para que el texto visible sea el mismo que
+                      el nombre accesible del botón (regla label-content-name-mismatch). */}
                   <span
                     className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${
                       activo ? 'bg-white/20 text-white' : 'bg-saie-canvas text-saie-text'
                     }`}
                   >
-                    {conteos[f]}
+                    ({conteos[f]})
                   </span>
                 </button>
               );
@@ -138,32 +191,17 @@ export const AlertasAdmin: React.FC = () => {
 
       {cargando && !datos ? (
         <EsqueletoCarga texto="Cargando alertas…" />
-      ) : base.length === 0 && !error ? (
-        <EstadoVacio
-          titulo="Sin alertas pendientes"
-          descripcion="No hay alertas de software ni de capacidad en este momento."
-        />
-      ) : alertas.length === 0 && !error ? (
-        <EstadoVacio
-          titulo="Sin alertas de este tipo"
-          descripcion={`No hay alertas de ${ETIQUETAS_FILTRO[filtro].toLowerCase()} por ahora.`}
-          accion={
-            <Boton variante="secundario" tamano="sm" onClick={() => setFiltro('TODAS')}>
-              Ver todas
-            </Boton>
-          }
-        />
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {alertas.map((a) => (
-            <TarjetaAlerta
-              key={a.id}
-              alerta={a}
-              onResolver={manejarResolver}
-              resolviendo={enCurso === a.id}
-            />
-          ))}
-        </div>
+        <ListaAlertas
+          hayAlertas={base.length > 0}
+          hayCoincidencias={alertas.length > 0}
+          error={Boolean(error)}
+          filtro={filtro}
+          alertas={alertas}
+          onResolver={manejarResolver}
+          reintentando={enCurso}
+          onVerTodas={() => setFiltro('TODAS')}
+        />
       )}
     </LayoutAdmin>
   );

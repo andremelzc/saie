@@ -21,9 +21,9 @@ export const InicioDocentePage: React.FC = () => (
         aria-label="Portal en preparación"
         className="flex flex-col gap-4 rounded-2xl border border-saie-divider bg-white p-6 shadow-[var(--saie-shadow-1)]"
       >
-        <p role="status" className="m-0 text-base font-bold text-saie-primary">
+        <output className="m-0 block text-base font-bold text-saie-primary">
           {MENSAJE_EN_DESARROLLO}
-        </p>
+        </output>
         <p className="m-0 text-sm text-saie-muted">{PREVISION_EN_DESARROLLO}</p>
         <div className="flex flex-wrap gap-3">
           <Link

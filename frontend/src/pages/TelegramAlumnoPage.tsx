@@ -145,8 +145,8 @@ export const TelegramAlumnoPage: React.FC = () => {
                   <span
                     className={`inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${
                       estado.vinculado
-                        ? 'bg-[#E8F3E9] text-saie-success'
-                        : 'bg-[#FDF0E1] text-[#B45309]'
+                        ? 'bg-saie-success-soft text-saie-success-strong'
+                        : 'bg-saie-warning-soft text-saie-warning-strong'
                     }`}
                   >
                     <span aria-hidden="true">{estado.vinculado ? '✓' : '•'}</span>
@@ -235,8 +235,8 @@ export const TelegramAlumnoPage: React.FC = () => {
                   role={mensaje.tipo === 'error' ? 'alert' : 'status'}
                   className={`flex flex-wrap items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium ${
                     mensaje.tipo === 'error'
-                      ? 'bg-[#FBE9E9] text-saie-danger'
-                      : 'bg-[#E8F3E9] text-saie-success'
+                      ? 'bg-saie-danger-soft text-saie-danger-strong'
+                      : 'bg-saie-success-soft text-saie-success-strong'
                   }`}
                 >
                   <span aria-hidden="true">{mensaje.tipo === 'error' ? '⚠' : '✓'}</span>

@@ -15,7 +15,11 @@ import {
   reintentarSeccion,
 } from '../../services/admin';
 import { mensajeDeError } from '../../services/estudiante';
-import type { ResumenAsignacionDTO, SeccionEscaladaDTO } from '../../types/admin';
+import type {
+  ResumenAsignacionDTO,
+  ResultadoVerificacionDTO,
+  SeccionEscaladaDTO,
+} from '../../types/admin';
 import { describirMotivoEscalamiento, formatearFechaCorta } from '../../utils/admin';
 
 const Acceso: React.FC<{ to: string; titulo: string; descripcion: string }> = ({
@@ -25,7 +29,7 @@ const Acceso: React.FC<{ to: string; titulo: string; descripcion: string }> = ({
 }) => (
   <Link
     to={to}
-    aria-label={`${titulo}. ${descripcion}`}
+    aria-label={`${titulo}. ${descripcion}. Abrir`}
     className="group flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-5 no-underline shadow-[var(--saie-shadow-1)] transition-shadow hover:border-saie-primary hover:shadow-[var(--saie-shadow-3)]"
   >
     <span className="text-base font-bold text-saie-text">{titulo}</span>
@@ -88,6 +92,125 @@ const InicioJefatura: React.FC = () => {
         </Link>
       </p>
     </LayoutAdmin>
+  );
+};
+
+/** Texto del distintivo del verificador según el resultado de la corrida. */
+function textoVerificador(verificacion: ResultadoVerificacionDTO | null): string {
+  if (!verificacion) return 'Verificador: sin asignaciones que revisar';
+  if (verificacion.conforme) {
+    return `✓ Verificador conforme · ${verificacion.totalRevisadas} revisadas`;
+  }
+  return `✗ Verificador no conforme · ${verificacion.totalViolaciones} violación(es)`;
+}
+
+/** Colores del distintivo del verificador. */
+function claseVerificador(verificacion: ResultadoVerificacionDTO | null): string {
+  if (!verificacion) return 'bg-white/15 text-white';
+  if (verificacion.conforme) return 'bg-saie-success-soft text-saie-success-strong';
+  return 'bg-saie-danger-soft text-saie-danger-strong';
+}
+
+/** Resultado de reintentar una sección: sigue en revisión, se le asignó aula o conserva la suya. */
+function textoResultadoSeccion(resumen: ResumenAsignacionDTO): string {
+  if (resumen.escaladas > 0) return 'Esta sección sigue en revisión.';
+  if (resumen.asignadas > 0) return 'Se le asignó un aula a esta sección.';
+  return 'Esta sección conserva el aula que ya tenía.';
+}
+
+/** Una sección escalada: motivo, descripción y las acciones para resolverla. */
+const FilaEscalada: React.FC<{
+  seccion: SeccionEscaladaDTO;
+  reintentando: boolean;
+  deshabilitado: boolean;
+  onReintentar: (seccion: SeccionEscaladaDTO) => void;
+}> = ({ seccion, reintentando, deshabilitado, onReintentar }) => {
+  const motivo = describirMotivoEscalamiento(seccion.motivoEscalamiento);
+  const alumnos = seccion.seccion.alumnosMatriculados;
+
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-saie-divider bg-white p-4">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <p className="m-0 font-semibold text-saie-text">
+          {seccion.seccion.codigoCurso} · {seccion.seccion.codigoSeccion} —{' '}
+          {seccion.seccion.nombreCurso}
+        </p>
+        <span className="w-fit rounded-full bg-saie-warning-soft px-2 py-0.5 text-xs font-bold text-saie-warning-strong">
+          {motivo.etiqueta}
+        </span>
+        <p className="m-0 text-sm text-saie-text">No se le asignó aula.</p>
+        <p className="m-0 text-sm text-saie-muted">{motivo.descripcion}</p>
+        <p className="m-0 text-xs text-saie-muted">
+          {alumnos} {alumnos === 1 ? 'alumno matriculado' : 'alumnos matriculados'}
+          {motivo.codigo && (
+            <>
+              {' · '}
+              <span className="font-mono text-[10px]" title="Código interno del motivo">
+                {motivo.codigo}
+              </span>
+            </>
+          )}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {motivo.accion && (
+          <Link
+            to={motivo.accion.to}
+            className="rounded-lg bg-saie-primary px-3 py-1.5 text-sm font-semibold text-white no-underline hover:bg-saie-primary-dark"
+          >
+            {motivo.accion.etiqueta}
+          </Link>
+        )}
+        <Boton
+          variante="secundario"
+          tamano="sm"
+          onClick={() => onReintentar(seccion)}
+          cargando={reintentando}
+          textoCargando="Reintentando…"
+          disabled={deshabilitado}
+          title={
+            motivo.codigo === 'SIN_HORARIOS_DEFINIDOS'
+              ? 'Vuelve a intentar después de cargar el horario'
+              : 'Vuelve a ejecutar la asignación de esta sección'
+          }
+        >
+          Reintentar
+        </Boton>
+      </div>
+    </li>
+  );
+};
+
+/** Lista de secciones que el motor dejó sin aula. */
+const ListaEscaladas: React.FC<{
+  secciones: SeccionEscaladaDTO[];
+  cargando: boolean;
+  haySecciones: boolean;
+  reintentando: string | null;
+  onReintentar: (seccion: SeccionEscaladaDTO) => void;
+}> = ({ secciones, cargando, haySecciones, reintentando, onReintentar }) => {
+  if (cargando) return <EsqueletoCarga texto="Cargando secciones pendientes…" />;
+
+  if (!haySecciones) {
+    return (
+      <p className="m-0 rounded-xl border border-dashed border-saie-divider bg-white p-6 text-center text-sm text-saie-muted">
+        No hay secciones pendientes de revisión. Todas tienen un espacio asignado.
+      </p>
+    );
+  }
+
+  return (
+    <ul className="m-0 flex list-none flex-col gap-2 p-0">
+      {secciones.map((s) => (
+        <FilaEscalada
+          key={s.asignacionId}
+          seccion={s}
+          reintentando={reintentando === s.seccion.id}
+          deshabilitado={reintentando !== null && reintentando !== s.seccion.id}
+          onReintentar={onReintentar}
+        />
+      ))}
+    </ul>
   );
 };
 
@@ -188,19 +311,9 @@ const InicioCoordinacion: React.FC = () => {
             {resumenCorrida && (
               <p className="m-0 mt-2">
                 <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
-                    resumenCorrida.verificacion?.conforme
-                      ? 'bg-[#E8F3E9] text-saie-success'
-                      : resumenCorrida.verificacion
-                        ? 'bg-[#FBE9E9] text-saie-danger'
-                        : 'bg-white/15 text-white'
-                  }`}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${claseVerificador(resumenCorrida.verificacion)}`}
                 >
-                  {resumenCorrida.verificacion
-                    ? resumenCorrida.verificacion.conforme
-                      ? `✓ Verificador conforme · ${resumenCorrida.verificacion.totalRevisadas} revisadas`
-                      : `✗ Verificador no conforme · ${resumenCorrida.verificacion.totalViolaciones} violación(es)`
-                    : 'Verificador: sin asignaciones que revisar'}
+                  {textoVerificador(resumenCorrida.verificacion)}
                 </span>
               </p>
             )}
@@ -260,13 +373,7 @@ const InicioCoordinacion: React.FC = () => {
             Nuevo intento para {resultadoSeccion.seccion.seccion.codigoCurso} ·{' '}
             {resultadoSeccion.seccion.seccion.codigoSeccion}
           </p>
-          <p className="m-0 mt-1 text-sm">
-            {resultadoSeccion.resumen.escaladas > 0
-              ? 'Esta sección sigue en revisión.'
-              : resultadoSeccion.resumen.asignadas > 0
-                ? 'Se le asignó un aula a esta sección.'
-                : 'Esta sección conserva el aula que ya tenía.'}
-          </p>
+          <p className="m-0 mt-1 text-sm">{textoResultadoSeccion(resultadoSeccion.resumen)}</p>
         </Aviso>
       )}
 
@@ -307,73 +414,13 @@ const InicioCoordinacion: React.FC = () => {
         {escaladas.error && (
           <AvisoError mensaje={escaladas.error} onReintentar={escaladas.recargar} />
         )}
-        {escaladas.cargando && !escaladas.datos ? (
-          <EsqueletoCarga texto="Cargando secciones pendientes…" />
-        ) : escaladas.datos && secciones.length === 0 ? (
-          <p className="m-0 rounded-xl border border-dashed border-saie-divider bg-white p-6 text-center text-sm text-saie-muted">
-            No hay secciones pendientes de revisión. Todas tienen un espacio asignado.
-          </p>
-        ) : (
-          <ul className="m-0 flex list-none flex-col gap-2 p-0">
-            {visibles.map((s) => {
-              const motivo = describirMotivoEscalamiento(s.motivoEscalamiento);
-              const alumnos = s.seccion.alumnosMatriculados;
-              return (
-                <li
-                  key={s.asignacionId}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-saie-divider bg-white p-4"
-                >
-                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    <p className="m-0 font-semibold text-saie-text">
-                      {s.seccion.codigoCurso} · {s.seccion.codigoSeccion} — {s.seccion.nombreCurso}
-                    </p>
-                    <span className="w-fit rounded-full bg-[#FDF0E1] px-2 py-0.5 text-xs font-bold text-[#B45309]">
-                      {motivo.etiqueta}
-                    </span>
-                    <p className="m-0 text-sm text-saie-text">No se le asignó aula.</p>
-                    <p className="m-0 text-sm text-saie-muted">{motivo.descripcion}</p>
-                    <p className="m-0 text-xs text-saie-muted">
-                      {alumnos} {alumnos === 1 ? 'alumno matriculado' : 'alumnos matriculados'}
-                      {motivo.codigo && (
-                        <>
-                          {' · '}
-                          <span className="font-mono text-[10px]" title="Código interno del motivo">
-                            {motivo.codigo}
-                          </span>
-                        </>
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {motivo.accion && (
-                      <Link
-                        to={motivo.accion.to}
-                        className="rounded-lg bg-saie-primary px-3 py-1.5 text-sm font-semibold text-white no-underline hover:bg-saie-primary-dark"
-                      >
-                        {motivo.accion.etiqueta}
-                      </Link>
-                    )}
-                    <Boton
-                      variante="secundario"
-                      tamano="sm"
-                      onClick={() => reintentar(s)}
-                      cargando={reintentando === s.seccion.id}
-                      textoCargando="Reintentando…"
-                      disabled={reintentando !== null && reintentando !== s.seccion.id}
-                      title={
-                        motivo.codigo === 'SIN_HORARIOS_DEFINIDOS'
-                          ? 'Vuelve a intentar después de cargar el horario'
-                          : 'Vuelve a ejecutar la asignación de esta sección'
-                      }
-                    >
-                      Reintentar
-                    </Boton>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <ListaEscaladas
+          secciones={visibles}
+          cargando={escaladas.cargando && !escaladas.datos}
+          haySecciones={secciones.length > 0}
+          reintentando={reintentando}
+          onReintentar={reintentar}
+        />
       </section>
 
       <section aria-labelledby="titulo-accesos" className="flex flex-col gap-3">

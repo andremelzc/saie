@@ -17,10 +17,17 @@ export interface AvisoProps {
   role?: 'alert' | 'status';
 }
 
+/** Rol por defecto del aviso: `alert` para error, `status` para éxito y ninguno para el resto. */
+function rolPorDefecto(tono: TonoAviso): 'alert' | 'status' | undefined {
+  if (tono === 'error') return 'alert';
+  if (tono === 'exito') return 'status';
+  return undefined;
+}
+
 /** Mensaje inline uniforme. Los errores que exigen corregir algo van junto al control. */
 export const Aviso: React.FC<AvisoProps> = ({ tono = 'info', children, className = '', role }) => (
   <div
-    role={role ?? (tono === 'error' ? 'alert' : tono === 'exito' ? 'status' : undefined)}
+    role={role ?? rolPorDefecto(tono)}
     className={`rounded-xl border px-4 py-3 text-sm ${ESTILOS[tono]} ${className}`}
   >
     {children}

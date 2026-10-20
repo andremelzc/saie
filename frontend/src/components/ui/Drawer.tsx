@@ -65,6 +65,12 @@ export const Drawer: React.FC<DrawerProps> = ({ abierto, onCerrar, titulo, child
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
       <div className="absolute inset-0 bg-saie-text/40" onClick={onCerrar} aria-hidden="true" />
+      {/*
+        Se usa `role="dialog"` en un div y no el elemento `<dialog>`: el nativo exige
+        `showModal()` (que jsdom no implementa) y reimplementa el foco, lo que rompería el
+        cierre con Escape y la devolución del foco al elemento que lo abrió. La excepción
+        está documentada en `sonar-project.properties` (regla typescript:S6819).
+      */}
       <div
         ref={panelRef}
         role="dialog"
