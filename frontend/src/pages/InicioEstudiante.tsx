@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BotonCerrarSesion from '../components/auth/BotonCerrarSesion';
 import {
@@ -11,6 +11,7 @@ import logoBlanco from '../assets/logo-blanco.svg';
 import { RUTAS } from '../config/rutas';
 import { useAuth } from '../context/useAuth';
 import { obtenerHorario } from '../services/estudiante';
+import { mensajeDeError } from '../services/estudiante';
 import type { DiaSemana } from '../types/consulta';
 import type { HorarioSemanalDTO, SesionDTO } from '../types/horario';
 import {
@@ -37,6 +38,7 @@ import {
   todasLasSesiones,
 } from '../utils/horario';
 
+const TRAZO_ALERTA = 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
 const TRAZO_CALENDARIO =
   'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5';
 /** Silueta de persona: el icono de «Mi perfil». */
@@ -50,6 +52,15 @@ const TRAZO_LIBRO =
   'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25';
 const TRAZO_BIRRETE =
   'M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342';
+/** Silueta de mapa plegado: el icono del "Mapa de ocupación". */
+const TRAZO_MAPA =
+  'M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z';
+/** Flecha con desvío: el icono de "Ruta hacia mi aula". */
+const TRAZO_RUTA =
+  'M9 6.75V15m6-6v8.25m0 0a3 3 0 11-6 0 3 3 0 016 0zM15 9.75a3 3 0 11-6 0 3 3 0 016 0z';
+/** Avión de papel: el icono de "Avisos por Telegram". */
+const TRAZO_TELEGRAM =
+  'M6 12 3.269 3.126A59.768 59.768 0 0 1 21.485 12 59.77 59.77 0 0 1 3.27 20.876L5.999 12Zm0 0h7.5';
 
 interface Servicio {
   titulo: string;
@@ -81,6 +92,33 @@ const SERVICIOS: Servicio[] = [
     trazo: TRAZO_PERFIL,
     fondo: '#F3E5F5',
     color: '#8E24AA',
+  },
+  {
+    titulo: 'Mapa de ocupación',
+    descripcion: 'Ubica tus aulas y laboratorios en el plano de cada pabellón.',
+    enlace: RUTAS.mapaAlumno,
+    etiquetaEnlace: 'Ver el mapa',
+    trazo: TRAZO_MAPA,
+    fondo: '#E8F5E9',
+    color: '#1B5E20',
+  },
+  {
+    titulo: 'Ruta hacia mi aula',
+    descripcion: 'Cómo llegar a tu espacio asignado, con el tiempo estimado.',
+    enlace: RUTAS.rutaAlumno,
+    etiquetaEnlace: 'Ver mi ruta',
+    trazo: TRAZO_RUTA,
+    fondo: '#FFF3E0',
+    color: '#E65100',
+  },
+  {
+    titulo: 'Avisos por Telegram',
+    descripcion: 'Entérate al instante si tu clase cambia de aula o laboratorio.',
+    enlace: RUTAS.telegramAlumno,
+    etiquetaEnlace: 'Configurar avisos',
+    trazo: TRAZO_TELEGRAM,
+    fondo: '#E1F5FE',
+    color: '#0277BD',
   },
 ];
 
@@ -366,7 +404,27 @@ export const InicioEstudiante: React.FC = () => {
   const { sesion } = useAuth();
   const [horario, setHorario] = useState<HorarioSemanalDTO | null>(null);
   const [cargandoHorario, setCargandoHorario] = useState(true);
+  const [errorHorario, setErrorHorario] = useState<string | null>(null);
   const [ahora, setAhora] = useState<Date>(fechaActual);
+
+  /**
+   * Encadena la respuesta del horario a los estados de la pantalla. Los cambios de estado
+   * ocurren al resolverse la petición, nunca de forma síncrona.
+   */
+  const aplicarHorario = useCallback((peticion: Promise<HorarioSemanalDTO>) => {
+    peticion
+      .then((h) => {
+        setHorario(h);
+        setErrorHorario(null);
+      })
+      .catch((e: unknown) => {
+        setHorario(null);
+        setErrorHorario(mensajeDeError(e));
+      })
+      .finally(() => {
+        setCargandoHorario(false);
+      });
+  }, []);
 
   useEffect(() => {
     let activo = true;
@@ -374,8 +432,9 @@ export const InicioEstudiante: React.FC = () => {
       .then((h) => {
         if (activo) setHorario(h);
       })
-      .catch(() => {
+      .catch((e: unknown) => {
         // Sin horario no pasa nada: se muestran solo los accesos.
+        if (activo) setErrorHorario(mensajeDeError(e));
       })
       .finally(() => {
         if (activo) setCargandoHorario(false);
@@ -384,6 +443,13 @@ export const InicioEstudiante: React.FC = () => {
       activo = false;
     };
   }, []);
+
+  /** Vuelve a pedir el horario tras un fallo. */
+  const reintentarHorario = () => {
+    setCargandoHorario(true);
+    setErrorHorario(null);
+    aplicarHorario(obtenerHorario());
+  };
 
   // Mantiene al día «Empieza en…» y los estados de las clases.
   useEffect(() => {
@@ -482,6 +548,25 @@ export const InicioEstudiante: React.FC = () => {
       </section>
 
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 pt-8 pb-10">
+        {errorHorario && (
+          <div
+            role="alert"
+            className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-saie-danger"
+          >
+            <p className="m-0 flex items-start gap-2">
+              <Icono trazo={TRAZO_ALERTA} className="mt-0.5 h-5 w-5 shrink-0" />
+              <span>{`No pudimos cargar tu horario. ${errorHorario}`}</span>
+            </p>
+            <button
+              type="button"
+              onClick={reintentarHorario}
+              className="min-h-11 cursor-pointer rounded-xl bg-saie-primary px-5 text-sm font-medium text-white hover:bg-saie-primary-dark"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+
         <ResumenSemanal horario={horario} cargando={cargandoHorario} />
 
         {horario && hayClases && (

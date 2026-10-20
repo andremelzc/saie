@@ -58,13 +58,13 @@ describe('Servicios de administración', () => {
     const resumen = { modo: 'periodo', asignadas: 3 };
     post.mockResolvedValue({ data: { data: resumen } });
     expect(await ejecutarCorrida()).toEqual(resumen);
-    expect(post).toHaveBeenCalledWith('/v1/asignacion/batch', {}, { timeout: 60000 });
+    expect(post).toHaveBeenCalledWith('/v1/asignaciones/batch', {}, { timeout: 60000 });
   });
 
   it('reintentarSeccion hace POST sobre la sección indicada', async () => {
     post.mockResolvedValue({ data: { data: { modo: 'seccion' } } });
     await reintentarSeccion('s 1');
-    expect(post).toHaveBeenCalledWith('/v1/asignacion/seccion/s%201', {}, { timeout: 30000 });
+    expect(post).toHaveBeenCalledWith('/v1/asignaciones/seccion/s%201', {}, { timeout: 30000 });
   });
 
   it('importarCsv envía el CSV como text/csv', async () => {

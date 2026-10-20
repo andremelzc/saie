@@ -153,6 +153,62 @@ describe('Servicio de Consulta Pública (#3.2 y #3.4)', () => {
       expect(resultado?.alumno.movilidadReducida).toBe(true);
     });
 
+    it('ordena las asignaciones por cercanía a la hora actual', async () => {
+      // Martes 13/10/2026, 10:30 en hora de Lima (UTC-5).
+      const ahora = new Date('2026-10-13T15:30:00Z');
+
+      const matricula = (
+        codigoCurso: string,
+        codigoSeccion: string,
+        horarios: { diaSemana: string; horaInicio: string; horaFin: string }[],
+      ) => ({
+        movilidadReducida: false,
+        seccion: {
+          codigoSeccion,
+          periodo: '2026-2',
+          curso: { codigo: codigoCurso, nombre: `Curso ${codigoCurso}` },
+          docente: null,
+          horarios,
+          asignaciones: [],
+        },
+      });
+
+      mockPrisma.alumno.findUnique.mockResolvedValue({
+        id: 'alu-orden',
+        codigo: '20200005',
+        nombre: 'Orden De Prueba',
+        correo: 'orden@unmsm.edu.pe',
+        matriculas: [
+          // Ya pasó esta semana: es la última.
+          matricula('LUN-1', '1', [{ diaSemana: 'LUNES', horaInicio: '08:00', horaFin: '10:00' }]),
+          // Mañana.
+          matricula('MIE-1', '1', [
+            { diaSemana: 'MIERCOLES', horaInicio: '08:00', horaFin: '10:00' },
+          ]),
+          // En curso ahora mismo: es la primera.
+          matricula('MAR-1', '1', [{ diaSemana: 'MARTES', horaInicio: '10:00', horaFin: '12:00' }]),
+          // Hoy más tarde.
+          matricula('TAR-1', '1', [{ diaSemana: 'MARTES', horaInicio: '14:00', horaFin: '16:00' }]),
+          // Sin horario: no se puede situar en el tiempo, va al final.
+          matricula('SIN-1', '1', []),
+        ],
+      });
+
+      const resultado = await obtenerAsignacionPorAlumno(
+        '20200005',
+        mockPrisma as unknown as PrismaClient,
+        ahora,
+      );
+
+      expect(resultado?.asignaciones.map((a) => a.codigoCurso)).toEqual([
+        'MAR-1', // en curso
+        'TAR-1', // hoy más tarde
+        'MIE-1', // mañana
+        'LUN-1', // el lunes de la semana que viene
+        'SIN-1', // sin horario
+      ]);
+    });
+
     it('gestiona correctamente secciones sin asignación aún (estado PENDIENTE)', async () => {
       mockPrisma.alumno.findUnique.mockResolvedValue({
         id: 'alu-3',
@@ -284,6 +340,8 @@ describe('Servicio de Consulta Pública (#3.2 y #3.4)', () => {
       const resultado = await obtenerAsignacionPorCurso(
         'CC-101',
         mockPrisma as unknown as PrismaClient,
+        // Lunes 19/10/2026, 08:00 en hora de Lima (UTC-5): la sección 1 está en curso.
+        new Date('2026-10-19T13:00:00Z'),
       );
 
       expect(resultado).not.toBeNull();
@@ -291,18 +349,54 @@ describe('Servicio de Consulta Pública (#3.2 y #3.4)', () => {
       expect(resultado?.curso.nombre).toBe('Introducción a la Computación');
       expect(resultado?.secciones).toHaveLength(2);
 
-      // Sección 1 (Vigente con espacio)
+      // Sección 1 (Vigente con espacio): su clase es la de ahora, va primera.
       expect(resultado?.secciones[0].codigoSeccion).toBe('1');
       expect(resultado?.secciones[0].estadoAsignacion).toBe('VIGENTE');
       expect(resultado?.secciones[0].docenteNombre).toBe('Dr. Roberto Torres');
       expect(resultado?.secciones[0].espacios).toHaveLength(1);
       expect(resultado?.secciones[0].espacios[0].identificador).toBe('Aula 201');
 
-      // Sección 2 (Sin asignación - Pendiente)
+      // Sección 2 (Sin asignación - Pendiente): su clase es del miércoles.
       expect(resultado?.secciones[1].codigoSeccion).toBe('2');
       expect(resultado?.secciones[1].estadoAsignacion).toBe('PENDIENTE');
       expect(resultado?.secciones[1].docenteNombre).toBeNull();
       expect(resultado?.secciones[1].espacios).toEqual([]);
+    });
+
+    it('ordena las secciones del curso por cercanía a la hora actual', async () => {
+      mockPrisma.curso.findUnique.mockResolvedValue({
+        id: 'cur-orden',
+        codigo: 'CC-101',
+        nombre: 'Introducción a la Computación',
+        secciones: [
+          {
+            id: 'sec-lun',
+            codigoSeccion: 'LUN',
+            periodo: '2026-2',
+            docente: null,
+            horarios: [{ diaSemana: 'LUNES', horaInicio: '08:00', horaFin: '10:00' }],
+            asignaciones: [],
+          },
+          {
+            id: 'sec-mar',
+            codigoSeccion: 'MAR',
+            periodo: '2026-2',
+            docente: null,
+            horarios: [{ diaSemana: 'MARTES', horaInicio: '10:00', horaFin: '12:00' }],
+            asignaciones: [],
+          },
+        ],
+      });
+
+      const resultado = await obtenerAsignacionPorCurso(
+        'CC-101',
+        mockPrisma as unknown as PrismaClient,
+        // Martes 13/10/2026, 10:30 en hora de Lima (UTC-5).
+        new Date('2026-10-13T15:30:00Z'),
+      );
+
+      // La sección del martes está en curso; la del lunes ya pasó y va de última.
+      expect(resultado?.secciones.map((s) => s.codigoSeccion)).toEqual(['MAR', 'LUN']);
     });
   });
 });

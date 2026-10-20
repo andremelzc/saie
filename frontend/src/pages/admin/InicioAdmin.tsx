@@ -82,6 +82,11 @@ const InicioJefatura: React.FC = () => {
           titulo="Reportar cambio de laboratorio"
           descripcion="Software instalado y PCs malogradas o reparadas."
         />
+        <Acceso
+          to={RUTAS.incidenciasAdmin}
+          titulo="Revisión de incidencias"
+          descripcion="Atiende las fallas de equipos y espacios reportadas por docentes."
+        />
       </div>
     </LayoutAdmin>
   );
@@ -165,7 +170,7 @@ const InicioCoordinacion: React.FC = () => {
 
       {errorAccion && <AvisoError mensaje={errorAccion} />}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Acceso
           to={RUTAS.cargaAdmin}
           titulo="Carga de datos maestros"
@@ -181,6 +186,11 @@ const InicioCoordinacion: React.FC = () => {
           titulo="Alertas de aforo y software"
           descripcion="Casos que requieren atención."
           extra={pendientes ? String(pendientes) : undefined}
+        />
+        <Acceso
+          to={RUTAS.proximamenteAdmin}
+          titulo="Próximamente"
+          descripcion="Mapa por piso, altas, claves, catálogo y solicitudes de software."
         />
       </div>
 

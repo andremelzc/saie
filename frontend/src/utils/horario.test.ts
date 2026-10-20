@@ -5,6 +5,7 @@ import type { SesionDTO } from '../types/horario';
 import {
   PALETA_CURSOS,
   aMinutos,
+  agruparPorCurso,
   asignarColoresCursos,
   diaDeFecha,
   diaLectivoInicial,
@@ -86,6 +87,21 @@ describe('utilidades del horario del alumno (Issue #145 / 3.16)', () => {
 
     expect(ordenadas.map((s) => s.codigoCurso)).toEqual(['C', 'A', 'B']);
     expect(original.map((s) => s.codigoCurso)).toEqual(['B', 'A', 'C']);
+  });
+
+  it('agrupa por curso: la sección cuelga del curso y el orden es estable', () => {
+    const secciones = [
+      { codigoCurso: 'CC-101', nombreCurso: 'Programación', codigoSeccion: '1-LAB' },
+      { codigoCurso: 'SI-201', nombreCurso: 'Bases de Datos', codigoSeccion: '1' },
+      { codigoCurso: 'CC-101', nombreCurso: 'Programación', codigoSeccion: '1' },
+    ];
+
+    const grupos = agruparPorCurso(secciones);
+
+    expect(grupos.map((g) => g.codigoCurso)).toEqual(['CC-101', 'SI-201']);
+    expect(grupos[0].nombreCurso).toBe('Programación');
+    expect(grupos[0].secciones.map((s) => s.codigoSeccion)).toEqual(['1', '1-LAB']);
+    expect(grupos[1].secciones).toHaveLength(1);
   });
 
   it('resume la ubicación y decide qué estado de asignación destacar', () => {

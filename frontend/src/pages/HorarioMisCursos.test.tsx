@@ -4,6 +4,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import HorarioMisCursos from './HorarioMisCursos';
 import { CURSOS_FIXTURE, HORARIO_FIXTURE } from '../test/fixtures/horario';
+import type { CursoMatriculadoDTO } from '../types/horario';
 
 /** Martes 13/10/2026, 10:30 (hora local). */
 const MARTES_10_30 = new Date(2026, 9, 13, 10, 30);
@@ -140,12 +141,37 @@ describe('HorarioMisCursos (Issue #145 / 3.16)', () => {
       expect(screen.getByText('6 cursos matriculados')).toBeVisible();
 
       const calculo = screen.getByRole('article', { name: 'Cálculo II' });
-      expect(within(calculo).getByText('MA-201 · Sección B · Periodo 2026-II')).toBeVisible();
+      expect(within(calculo).getByText('MA-201 · 1 sección · Periodo 2026-II')).toBeVisible();
+      expect(within(calculo).getByText('Sección B')).toBeVisible();
       expect(within(calculo).getByText('Mg. Jorge Salazar Ruiz')).toBeVisible();
       expect(within(calculo).getByText('Mar 08:00 – 10:00')).toBeVisible();
       expect(within(calculo).getByText('Jue 08:00 – 10:00')).toBeVisible();
       expect(within(calculo).getByText('Martes, 08:00 – 10:00')).toBeVisible();
       expect(within(calculo).getByText('Aula teórica A-105')).toBeVisible();
+    });
+
+    it('agrupa las secciones de un mismo curso en un solo bloque', () => {
+      const conLaboratorio: CursoMatriculadoDTO[] = [
+        CURSOS_FIXTURE[1],
+        {
+          ...CURSOS_FIXTURE[1],
+          codigoSeccion: 'B-LAB',
+          espacios: [
+            { id: 'esp-l301', identificador: 'L-301', tipo: 'LABORATORIO', pabellon: 'L', piso: 3 },
+          ],
+          estadoAsignacion: 'VIGENTE',
+        },
+      ];
+      renderizar({ cursos: conLaboratorio });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Mis cursos' }));
+
+      // Un solo curso (no dos secciones): el bloque es el curso.
+      expect(screen.getByText('1 curso matriculado')).toBeVisible();
+      const calculo = screen.getByRole('article', { name: 'Cálculo II' });
+      expect(within(calculo).getByText('MA-201 · 2 secciones · Periodo 2026-II')).toBeVisible();
+      expect(within(calculo).getByText('Sección B')).toBeVisible();
+      expect(within(calculo).getByText('Sección B-LAB')).toBeVisible();
     });
 
     it('avisa cuando el espacio está pendiente o la asignación está en revisión', () => {
