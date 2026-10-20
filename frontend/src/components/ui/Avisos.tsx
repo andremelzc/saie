@@ -14,6 +14,12 @@ interface AvisoItem {
 }
 
 /**
+ * Secuencia incremental para identificar cada aviso. No se usa un número aleatorio: el id solo
+ * sirve para distinguir los avisos dentro de la sesión y un contador es suficiente.
+ */
+let secuencia = 0;
+
+/**
  * Región viva siempre montada para confirmaciones y errores transitorios.
  * Los errores que exigen corregir algo deben ir inline junto al control, no solo en un toast.
  */
@@ -34,7 +40,7 @@ export const ProveedorAvisos: React.FC<{ children: React.ReactNode }> = ({ child
 
   const mostrar = useCallback(
     (tono: TonoAvisoGlobal, texto: string) => {
-      const id = Date.now() + Math.random();
+      const id = (secuencia += 1);
       setAvisos((previos) => [...previos, { id, tono, texto }]);
       const temporizador = setTimeout(
         () => {
