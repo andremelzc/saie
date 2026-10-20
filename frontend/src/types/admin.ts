@@ -79,7 +79,41 @@ export interface SeccionesEscaladasDTO {
   secciones: SeccionEscaladaDTO[];
 }
 
-/** Respuesta de POST /v1/asignacion/batch y /seccion/:id (Issue 2.15). */
+/** Reglas duras que comprueba el verificador (Issue 2.17). */
+export type ReglaVerificacion =
+  | 'DOBLE_RESERVA'
+  | 'CAPACIDAD_SUFICIENTE'
+  | 'TIPO_HOMOGENEO'
+  | 'BLOQUE_CONTIGUO'
+  | 'SOFTWARE_COMPLETO'
+  | 'ESCALADA_CON_MOTIVO'
+  | 'UNA_VIGENTE_POR_SECCION';
+
+export interface ViolacionVerificacionDTO {
+  regla: ReglaVerificacion;
+  asignacionId: string;
+  seccionId: string;
+  codigoSeccion: string;
+  detalle: string;
+}
+
+export interface ResultadoReglaVerificacionDTO {
+  regla: ReglaVerificacion;
+  descripcion: string;
+  revisadas: number;
+  cumplen: number;
+  violaciones: ViolacionVerificacionDTO[];
+}
+
+/** Issue 2.17: veredicto del verificador sobre las asignaciones de una corrida. */
+export interface ResultadoVerificacionDTO {
+  conforme: boolean;
+  totalRevisadas: number;
+  totalViolaciones: number;
+  reglas: ResultadoReglaVerificacionDTO[];
+}
+
+/** Respuesta de POST /v1/asignaciones/batch y /seccion/:id (Issue 2.15). */
 export interface ResumenAsignacionDTO {
   modo: 'seccion' | 'periodo';
   periodo: string | null;
@@ -88,6 +122,8 @@ export interface ResumenAsignacionDTO {
   asignadas: number;
   mantenidas: number;
   escaladas: number;
+  /** Issue 2.17: veredicto del verificador posterior a la corrida. */
+  verificacion: ResultadoVerificacionDTO | null;
 }
 
 export type TipoImportacion = 'cursos-secciones' | 'horarios' | 'matriculas' | 'docentes';

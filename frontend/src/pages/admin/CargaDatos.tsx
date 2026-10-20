@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import LayoutAdmin from '../../components/admin/LayoutAdmin';
+import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
 import { importarCsv } from '../../services/admin';
 import { mensajeDeError } from '../../services/estudiante';
 import { PLANTILLAS, descargarPlantilla } from '../../config/plantillas';
@@ -147,6 +148,10 @@ export const ZonaCarga: React.FC<{
             </p>
           )}
         </div>
+      )}
+
+      {resultado?.asignacion?.resumen && (
+        <VeredictoVerificacion verificacion={resultado.asignacion.resumen.verificacion} />
       )}
     </section>
   );

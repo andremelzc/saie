@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
+import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
 import { EsqueletoCarga } from '../../components/estudiante/ElementosHorario';
 import { RUTAS } from '../../config/rutas';
 import { useAuth } from '../../context/useAuth';
@@ -99,7 +100,10 @@ const InicioCoordinacion: React.FC = () => {
   const [corriendo, setCorriendo] = useState(false);
   const [reintentando, setReintentando] = useState<string | null>(null);
   const [resumen, setResumen] = useState<ResumenAsignacionDTO | null>(null);
-  const [errorAccion, setErrorAccion] = useState<string | null>(null);
+  const [errorAccion, setErrorAccion] = useState<{
+    mensaje: string;
+    reintentar: () => void;
+  } | null>(null);
 
   const pendientes = alertas.datos?.filter((a) => a.estado === 'PENDIENTE').length ?? 0;
 
@@ -110,7 +114,7 @@ const InicioCoordinacion: React.FC = () => {
       setResumen(await ejecutarCorrida());
       escaladas.recargar();
     } catch (e) {
-      setErrorAccion(mensajeDeError(e));
+      setErrorAccion({ mensaje: mensajeDeError(e), reintentar: correr });
     } finally {
       setCorriendo(false);
     }
@@ -123,7 +127,7 @@ const InicioCoordinacion: React.FC = () => {
       setResumen(await reintentarSeccion(seccionId));
       escaladas.recargar();
     } catch (e) {
-      setErrorAccion(mensajeDeError(e));
+      setErrorAccion({ mensaje: mensajeDeError(e), reintentar: () => reintentar(seccionId) });
     } finally {
       setReintentando(null);
     }
@@ -156,6 +160,25 @@ const InicioCoordinacion: React.FC = () => {
                 escaladas a revisión
               </p>
             )}
+            {resumen && (
+              <p className="m-0 mt-2">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+                    resumen.verificacion?.conforme
+                      ? 'bg-[#E8F3E9] text-saie-success'
+                      : resumen.verificacion
+                        ? 'bg-[#FBE9E9] text-saie-danger'
+                        : 'bg-white/15 text-white'
+                  }`}
+                >
+                  {resumen.verificacion
+                    ? resumen.verificacion.conforme
+                      ? `✓ Verificador conforme · ${resumen.verificacion.totalRevisadas} revisadas`
+                      : `✗ Verificador no conforme · ${resumen.verificacion.totalViolaciones} violación(es)`
+                    : 'Verificador: sin asignaciones que revisar'}
+                </span>
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -168,7 +191,11 @@ const InicioCoordinacion: React.FC = () => {
         </div>
       </section>
 
-      {errorAccion && <AvisoError mensaje={errorAccion} />}
+      {errorAccion && (
+        <AvisoError mensaje={errorAccion.mensaje} onReintentar={errorAccion.reintentar} />
+      )}
+
+      {resumen && <VeredictoVerificacion verificacion={resumen.verificacion} />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Acceso

@@ -95,6 +95,20 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
           asignadas: 4,
           mantenidas: 0,
           escaladas: 1,
+          verificacion: {
+            conforme: true,
+            totalRevisadas: 4,
+            totalViolaciones: 0,
+            reglas: [
+              {
+                regla: 'DOBLE_RESERVA',
+                descripcion: 'Ningún espacio queda reservado dos veces.',
+                revisadas: 4,
+                cumplen: 4,
+                violaciones: [],
+              },
+            ],
+          },
         },
       },
     });
@@ -104,6 +118,8 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     expect(
       await screen.findByText('Asignación ejecutada: 4 asignadas, 1 escaladas.'),
     ).toBeInTheDocument();
+    expect(await screen.findByText('CONFORME')).toBeInTheDocument();
+    expect(screen.getByText('Sin doble reserva')).toBeInTheDocument();
   });
 
   it('informa el motivo cuando la asignación no se ejecutó', async () => {
