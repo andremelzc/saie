@@ -52,6 +52,15 @@ const TRAZO_LIBRO =
   'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25';
 const TRAZO_BIRRETE =
   'M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342';
+/** Silueta de mapa plegado: el icono del "Mapa de ocupación". */
+const TRAZO_MAPA =
+  'M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z';
+/** Flecha con desvío: el icono de "Ruta hacia mi aula". */
+const TRAZO_RUTA =
+  'M9 6.75V15m6-6v8.25m0 0a3 3 0 11-6 0 3 3 0 016 0zM15 9.75a3 3 0 11-6 0 3 3 0 016 0z';
+/** Avión de papel: el icono de "Avisos por Telegram". */
+const TRAZO_TELEGRAM =
+  'M6 12 3.269 3.126A59.768 59.768 0 0 1 21.485 12 59.77 59.77 0 0 1 3.27 20.876L5.999 12Zm0 0h7.5';
 
 interface Servicio {
   titulo: string;
@@ -83,6 +92,33 @@ const SERVICIOS: Servicio[] = [
     trazo: TRAZO_PERFIL,
     fondo: '#F3E5F5',
     color: '#8E24AA',
+  },
+  {
+    titulo: 'Mapa de ocupación',
+    descripcion: 'Ubica tus aulas y laboratorios en el plano de cada pabellón.',
+    enlace: RUTAS.mapaAlumno,
+    etiquetaEnlace: 'Ver el mapa',
+    trazo: TRAZO_MAPA,
+    fondo: '#E8F5E9',
+    color: '#1B5E20',
+  },
+  {
+    titulo: 'Ruta hacia mi aula',
+    descripcion: 'Cómo llegar a tu espacio asignado, con el tiempo estimado.',
+    enlace: RUTAS.rutaAlumno,
+    etiquetaEnlace: 'Ver mi ruta',
+    trazo: TRAZO_RUTA,
+    fondo: '#FFF3E0',
+    color: '#E65100',
+  },
+  {
+    titulo: 'Avisos por Telegram',
+    descripcion: 'Entérate al instante si tu clase cambia de aula o laboratorio.',
+    enlace: RUTAS.telegramAlumno,
+    etiquetaEnlace: 'Configurar avisos',
+    trazo: TRAZO_TELEGRAM,
+    fondo: '#E1F5FE',
+    color: '#0277BD',
   },
 ];
 

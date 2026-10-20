@@ -88,6 +88,46 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
     });
   });
 
+  describe('pantallas en desarrollo', () => {
+    it.each([
+      ['ALUMNO', '/estudiante/telegram', 'Avisos por Telegram'],
+      ['DOCENTE', '/docente', 'Portal del docente'],
+      ['DOCENTE', '/docente/horario', 'Mi horario y asignaciones'],
+      ['DOCENTE', '/docente/espacios', 'Explorar espacios y equipos'],
+      ['DOCENTE', '/docente/incidencias', 'Reportar una incidencia'],
+      ['COORDINACION_ACADEMICA', '/admin/proximamente', 'Próximamente'],
+      ['COORDINACION_ACADEMICA', '/admin/mapa', 'Mapa de ocupación por piso'],
+      ['COORDINACION_ACADEMICA', '/admin/laboratorios', 'Laboratorios y equipos'],
+      ['COORDINACION_ACADEMICA', '/admin/alumnos/nuevo', 'Alta de alumnos'],
+      ['COORDINACION_ACADEMICA', '/admin/docentes/nuevo', 'Alta de docentes'],
+      ['COORDINACION_ACADEMICA', '/admin/claves', 'Claves y contraseñas'],
+      ['COORDINACION_ACADEMICA', '/admin/software', 'Catálogo de software'],
+      ['COORDINACION_ACADEMICA', '/admin/solicitudes-software', 'Solicitudes de software'],
+      ['JEFATURA_LABORATORIOS', '/admin/incidencias', 'Revisión de incidencias'],
+      ['JEFATURA_LABORATORIOS', '/admin/claves', 'Claves y contraseñas'],
+    ] as const)('%s autorizado ve "%s"', (rol, ruta, titulo) => {
+      iniciarSesionDePrueba(rol);
+      renderizar(ruta);
+
+      expect(screen.getByRole('heading', { name: titulo })).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent(/planes de desarrollo/i);
+    });
+
+    it('un alumno no entra a las pantallas del panel', () => {
+      iniciarSesionDePrueba('ALUMNO');
+      renderizar('/admin/mapa');
+
+      expect(screen.getByRole('heading', { name: 'Acceso no autorizado' })).toBeInTheDocument();
+    });
+
+    it('Coordinación no entra a la revisión de incidencias de Jefatura', () => {
+      iniciarSesionDePrueba('COORDINACION_ACADEMICA');
+      renderizar('/admin/incidencias');
+
+      expect(screen.getByRole('heading', { name: 'Acceso no autorizado' })).toBeInTheDocument();
+    });
+  });
+
   describe('inicio de sesión', () => {
     function iniciarSesionPorFormulario(
       respuesta: { rol: RolCuenta; debeCambiarClave: boolean },
