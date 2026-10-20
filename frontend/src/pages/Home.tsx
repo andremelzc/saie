@@ -34,6 +34,7 @@ const PortalCard: React.FC<{ portal: Portal; indice: number }> = ({ portal: p, i
       <Link
         to={p.loginPath}
         data-testid={`portal-${p.id}`}
+        aria-label={`Ingresar al ${p.titulo}`}
         onMouseMove={seguirCursor}
         className="group relative overflow-hidden h-full flex flex-col bg-white rounded-xl p-5 shadow-[0_2px_8px_rgba(34,34,34,0.08)] hover:shadow-[0_8px_24px_rgba(34,34,34,0.16)] hover:-translate-y-1 active:translate-y-0 active:bg-saie-canvas transition-all duration-300 no-underline text-saie-text"
       >
@@ -68,9 +69,9 @@ const PortalCard: React.FC<{ portal: Portal; indice: number }> = ({ portal: p, i
         <h4 className="relative mt-2 text-lg font-bold">{p.titulo}</h4>
         <p className="relative mt-1 text-sm text-saie-muted">{p.descripcion}</p>
 
-        {/* En pantallas bajas la lista de funciones se oculta para que la portada entre entera,
-            como la pantalla de login. Si aun así no cabe, la página crece hacia abajo. */}
-        <ul className="relative mt-3 space-y-1 text-sm list-none p-0 [@media(max-height:820px)]:hidden">
+        {/* La lista de funciones se muestra siempre: en pantallas bajas la página crece
+            hacia abajo en lugar de ocultar contenido. */}
+        <ul className="relative mt-3 space-y-1 text-sm list-none p-0">
           {p.funciones.map((f) => (
             <li key={f} className="flex items-start gap-2">
               <span

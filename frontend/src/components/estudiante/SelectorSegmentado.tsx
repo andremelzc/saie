@@ -9,6 +9,8 @@ export interface SelectorSegmentadoProps<T extends string> {
   onCambiar: (valor: T) => void;
   /** Etiqueta accesible del grupo (p. ej. «Tipo de vista del horario»). */
   etiquetaGrupo: string;
+  /** Deshabilita todas las opciones (p. ej. mientras no hay un laboratorio elegido). */
+  deshabilitado?: boolean;
   className?: string;
 }
 
@@ -22,6 +24,7 @@ export function SelectorSegmentado<T extends string>({
   valor,
   onCambiar,
   etiquetaGrupo,
+  deshabilitado = false,
   className = '',
 }: SelectorSegmentadoProps<T>) {
   const total = Math.max(opciones.length, 1);
@@ -51,8 +54,9 @@ export function SelectorSegmentado<T extends string>({
               key={opcion.valor}
               type="button"
               aria-pressed={activa}
+              disabled={deshabilitado}
               onClick={() => onCambiar(opcion.valor)}
-              className={`relative min-h-11 min-w-24 cursor-pointer whitespace-nowrap rounded-lg bg-transparent px-4 text-sm transition-colors duration-200 ${
+              className={`relative min-h-11 min-w-24 cursor-pointer whitespace-nowrap rounded-lg bg-transparent px-4 text-sm transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
                 activa
                   ? 'font-bold text-white'
                   : 'font-medium text-saie-text hover:bg-saie-primary/5'

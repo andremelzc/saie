@@ -39,17 +39,17 @@ const ESTILOS_ASIGNACION: Record<
   { etiqueta: string; clases: string; trazo: string }
 > = {
   VIGENTE: {
-    etiqueta: 'Espacio asignado',
+    etiqueta: 'Espacio confirmado',
     clases: 'bg-[#E8F5E9] text-[#1B5E20]',
     trazo: TRAZO_CHECK,
   },
   ESCALADA: {
-    etiqueta: 'Asignación en revisión',
+    etiqueta: 'Clase en revisión',
     clases: 'bg-[#C0CA33] text-[#222222]',
     trazo: TRAZO_LUPA,
   },
   PENDIENTE: {
-    etiqueta: 'Espacio pendiente de asignación',
+    etiqueta: 'Sin aula asignada',
     clases: 'bg-[#F57C00] text-[#222222]',
     trazo: TRAZO_RELOJ,
   },
@@ -84,7 +84,7 @@ export interface UbicacionEspaciosProps {
   className?: string;
 }
 
-/** Lista de espacios asignados, o el badge de «Espacio pendiente de asignación». */
+/** Lista de espacios asignados, o el badge de «Sin aula asignada». */
 export const UbicacionEspacios: React.FC<UbicacionEspaciosProps> = ({
   espacios,
   estado,
@@ -115,10 +115,12 @@ export const UbicacionEspacios: React.FC<UbicacionEspaciosProps> = ({
 export interface EstadoVacioProps {
   titulo: string;
   descripcion: string;
+  /** Acción que resuelve el vacío (p. ej. «Limpiar filtros» o «Ir a Carga de datos»). */
+  accion?: React.ReactNode;
 }
 
-/** Estado vacío uniforme (Guía de diseño 1.7): título breve y explicación. */
-export const EstadoVacio: React.FC<EstadoVacioProps> = ({ titulo, descripcion }) => (
+/** Estado vacío uniforme (Guía de diseño 1.7): título breve, explicación y salida. */
+export const EstadoVacio: React.FC<EstadoVacioProps> = ({ titulo, descripcion, accion }) => (
   <div
     role="status"
     className="saie-fundido flex flex-col items-center gap-2 rounded-2xl border border-dashed border-saie-divider bg-white px-6 py-10 text-center"
@@ -131,6 +133,7 @@ export const EstadoVacio: React.FC<EstadoVacioProps> = ({ titulo, descripcion })
     </span>
     <h3 className="m-0 font-serif text-xl font-bold text-saie-text">{titulo}</h3>
     <p className="m-0 max-w-sm text-sm text-saie-muted">{descripcion}</p>
+    {accion && <div className="mt-2">{accion}</div>}
   </div>
 );
 

@@ -13,6 +13,18 @@ export function formatearFechaAlerta(iso: string): string {
   });
 }
 
+/** Fecha compacta para «Última carga: 12 oct, 10:32». */
+export function formatearFechaCorta(iso: string): string {
+  const fecha = new Date(iso);
+  if (Number.isNaN(fecha.getTime())) return iso;
+  return fecha.toLocaleString('es-PE', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 const T_INICIO = 'M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10';
 const T_ALERTA =
   'M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z';
@@ -47,4 +59,24 @@ export function etiquetaRol(rol?: RolCuenta): string {
   if (rol === 'JEFATURA_LABORATORIOS') return 'Jefatura de Laboratorios';
   if (rol === 'COORDINACION_ACADEMICA') return 'Coordinación Académica';
   return 'Administrativo';
+}
+
+const MOTIVOS_ESCALAMIENTO: Record<string, string> = {
+  SIN_HORARIOS_DEFINIDOS: 'La sección no tiene horarios registrados.',
+  SIN_ESPACIOS_DISPONIBLES: 'No hay espacios de ese tipo registrados en el campus.',
+  CAPACIDAD_INSUFICIENTE: 'La capacidad disponible no alcanza para los estudiantes matriculados.',
+  HORARIO_BLOQUEADO: 'Todos los espacios están ocupados en el horario de la sección.',
+  SOFTWARE_FALTANTE: 'Ningún laboratorio disponible tiene el software que necesita la sección.',
+  CONTIGUEDAD_NO_ALCANZADA: 'Hay capacidad suficiente, pero no en espacios contiguos.',
+};
+
+/**
+ * Convierte el motivo guardado por el motor (`[TIPO] detalle técnico`) en una frase para el panel.
+ * Los motivos escritos a mano se muestran tal cual.
+ */
+export function motivoEscalamientoLegible(motivo?: string | null): string {
+  if (!motivo) return 'Sin motivo registrado.';
+  const conCodigo = /^\[([A-Z_]+)\]\s*(.*)$/.exec(motivo);
+  if (!conCodigo) return motivo;
+  return MOTIVOS_ESCALAMIENTO[conCodigo[1]] ?? 'Requiere revisión manual.';
 }
