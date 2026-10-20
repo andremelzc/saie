@@ -37,7 +37,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
 
   return (
     <div
-      className={`min-h-screen bg-saie-canvas text-saie-text lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] ${className}`}
+      className={`min-h-screen bg-saie-canvas text-saie-text lg:grid lg:h-screen lg:min-h-0 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:overflow-hidden ${className}`}
     >
       {/* Panel de marca (solo escritorio) */}
       <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-saie-primary to-saie-primary-dark text-white px-12 xl:px-16 py-10">
@@ -105,19 +105,15 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
       </aside>
 
       {/* Columna del formulario */}
-      <div className="relative flex min-h-screen flex-col overflow-hidden">
-        {/* Manchas de color suaves de fondo */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-28 -right-28 hidden lg:block h-80 w-80 rounded-full bg-saie-primary/5 blur-3xl"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-32 -left-24 h-72 w-72 rounded-full bg-saie-primary/5 blur-3xl"
-        />
+      <div className="relative flex min-h-screen flex-col overflow-hidden lg:h-full lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto">
+        {/* Manchas de color suaves de fondo (recortadas para que no generen scroll) */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-28 -right-28 hidden lg:block h-80 w-80 rounded-full bg-saie-primary/5 blur-3xl" />
+          <div className="absolute -bottom-32 -left-24 h-72 w-72 rounded-full bg-saie-primary/5 blur-3xl" />
+        </div>
 
         {/* Franja guinda en móvil/tablet; en escritorio solo queda el enlace de volver */}
-        <header className="relative flex items-center justify-between px-4 md:px-8 pt-4 pb-16 bg-gradient-to-br from-saie-primary to-saie-primary-dark text-white lg:bg-none lg:text-saie-primary lg:justify-end lg:px-10 lg:pt-8 lg:pb-0">
+        <header className="relative flex items-center justify-between px-4 md:px-8 pt-4 pb-16 bg-gradient-to-br from-saie-primary to-saie-primary-dark text-white lg:bg-none lg:text-saie-primary lg:justify-end lg:px-10 lg:pt-4 lg:pb-0">
           <Link to="/" className="lg:hidden rounded-lg">
             <img src={logoBlanco} alt="SAIE" className="h-10 w-auto" />
           </Link>
@@ -132,31 +128,33 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
 
         <main
           aria-label={ariaLabel}
-          className="relative z-10 flex flex-1 flex-col items-center justify-center gap-5 px-4 pb-8 -mt-10 lg:mt-0 lg:py-8"
+          className="relative z-10 flex flex-1 flex-col items-center gap-5 px-4 pb-8 -mt-10 lg:mt-0 lg:py-4"
         >
-          {children}
+          <div className="my-auto flex w-full flex-col items-center gap-5">
+            {children}
 
-          {/* Salida hacia los otros portales */}
-          <nav
-            aria-label="Otros portales"
-            className="saie-rise flex flex-wrap items-center justify-center gap-2 text-sm text-saie-muted"
-            style={{ animationDelay: '0.25s' }}
-          >
-            <span>¿Buscas otro portal?</span>
-            {otros.map((p) => (
-              <Link
-                key={p.id}
-                to={p.loginPath}
-                className="inline-flex items-center gap-1.5 h-11 px-4 rounded-full border border-saie-divider bg-white text-saie-text font-medium no-underline hover:border-saie-primary hover:text-saie-primary transition-colors"
-              >
-                <IconoPortal portal={p.id} className="h-4 w-4 text-saie-primary" />
-                {p.etiqueta}
-              </Link>
-            ))}
-          </nav>
+            {/* Salida hacia los otros portales */}
+            <nav
+              aria-label="Otros portales"
+              className="saie-rise flex flex-wrap items-center justify-center gap-2 text-sm text-saie-muted"
+              style={{ animationDelay: '0.25s' }}
+            >
+              <span>¿Buscas otro portal?</span>
+              {otros.map((p) => (
+                <Link
+                  key={p.id}
+                  to={p.loginPath}
+                  className="inline-flex items-center gap-1.5 h-11 px-4 rounded-full border border-saie-divider bg-white text-saie-text font-medium no-underline hover:border-saie-primary hover:text-saie-primary transition-colors"
+                >
+                  <IconoPortal portal={p.id} className="h-4 w-4 text-saie-primary" />
+                  {p.etiqueta}
+                </Link>
+              ))}
+            </nav>
+          </div>
         </main>
 
-        <footer className="relative px-4 pb-6 text-center text-xs text-saie-muted">
+        <footer className="relative px-4 pb-4 text-center text-xs text-saie-muted">
           SAIE &copy; {new Date().getFullYear()} · UNMSM · Grupo 6
         </footer>
       </div>
