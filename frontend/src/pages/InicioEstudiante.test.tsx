@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import InicioEstudiante from './InicioEstudiante';
 import api from '../services/api';
@@ -90,6 +90,22 @@ describe('InicioEstudiante', () => {
       expect(await screen.findByRole('link', { name: /Ir a mi horario/ })).toBeVisible();
       expect(screen.getByRole('link', { name: /Ir a mi perfil/ })).toBeVisible();
       expect(screen.queryByRole('region', { name: 'Resumen de tu semana' })).toBeNull();
+    });
+
+    it('si la API falla, avisa del error y permite reintentar', async () => {
+      const get = vi.spyOn(api, 'get').mockRejectedValueOnce(new Error('caída'));
+      montar();
+
+      const alerta = await screen.findByRole('alert');
+      expect(alerta).toHaveTextContent('No pudimos cargar tu horario.');
+
+      // El reintento vuelve a pedir el horario y, si responde, la pantalla se recupera.
+      responder(horarioCon({ [LUNES]: [sesion('MAT101', 'Matemática I', '09:00', '11:00')] }));
+      fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+
+      expect(await screen.findByText('Clase en curso')).toBeVisible();
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(get).toHaveBeenCalledTimes(2);
     });
 
     it('con el horario vacío muestra el periodo pero no resumen ni semana', async () => {

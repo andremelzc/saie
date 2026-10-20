@@ -271,7 +271,6 @@ export interface ResumenSemana {
   /** Total de minutos de clase a la semana. */
   minutos: number;
 }
-
 export function resumenSemana(horario: HorarioSemanalDTO): ResumenSemana {
   const sesiones = todasLasSesiones(horario);
   return {
@@ -294,4 +293,45 @@ export function progresoClase(
   const duracion = aMinutos(sesion.horaFin) - inicio;
   if (duracion <= 0) return 0;
   return Math.min(1, Math.max(0, (ahoraEnMinutos - inicio) / duracion));
+}
+
+/** Un curso con las secciones que lo componen (p. ej. la teórica y su laboratorio). */
+export interface GrupoCurso<T> {
+  codigoCurso: string;
+  nombreCurso: string;
+  secciones: T[];
+}
+
+/**
+ * Agrupa por curso: el bloque real es el curso (identificado por su código) y las secciones son
+ * sus partes. Sin esta agrupación, un curso con teoría y laboratorio aparecería duplicado y se
+ * contaría como dos cursos distintos. Los grupos se ordenan por código de curso y las secciones
+ * por código de sección.
+ */
+export function agruparPorCurso<
+  T extends { codigoCurso: string; nombreCurso: string; codigoSeccion: string },
+>(items: T[]): GrupoCurso<T>[] {
+  const grupos = new Map<string, GrupoCurso<T>>();
+
+  for (const item of items) {
+    const existente = grupos.get(item.codigoCurso);
+    if (existente) {
+      existente.secciones.push(item);
+    } else {
+      grupos.set(item.codigoCurso, {
+        codigoCurso: item.codigoCurso,
+        nombreCurso: item.nombreCurso,
+        secciones: [item],
+      });
+    }
+  }
+
+  return [...grupos.values()]
+    .map((grupo) => ({
+      ...grupo,
+      secciones: [...grupo.secciones].sort((a, b) =>
+        a.codigoSeccion.localeCompare(b.codigoSeccion, 'es', { numeric: true }),
+      ),
+    }))
+    .sort((a, b) => a.codigoCurso.localeCompare(b.codigoCurso));
 }

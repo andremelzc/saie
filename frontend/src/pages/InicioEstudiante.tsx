@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BotonCerrarSesion from '../components/auth/BotonCerrarSesion';
 import {
@@ -11,6 +11,7 @@ import logoBlanco from '../assets/logo-blanco.svg';
 import { RUTAS } from '../config/rutas';
 import { useAuth } from '../context/useAuth';
 import { obtenerHorario } from '../services/estudiante';
+import { mensajeDeError } from '../services/estudiante';
 import type { DiaSemana } from '../types/consulta';
 import type { HorarioSemanalDTO, SesionDTO } from '../types/horario';
 import {
@@ -37,6 +38,7 @@ import {
   todasLasSesiones,
 } from '../utils/horario';
 
+const TRAZO_ALERTA = 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
 const TRAZO_CALENDARIO =
   'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5';
 /** Silueta de persona: el icono de «Mi perfil». */
@@ -366,7 +368,27 @@ export const InicioEstudiante: React.FC = () => {
   const { sesion } = useAuth();
   const [horario, setHorario] = useState<HorarioSemanalDTO | null>(null);
   const [cargandoHorario, setCargandoHorario] = useState(true);
+  const [errorHorario, setErrorHorario] = useState<string | null>(null);
   const [ahora, setAhora] = useState<Date>(fechaActual);
+
+  /**
+   * Encadena la respuesta del horario a los estados de la pantalla. Los cambios de estado
+   * ocurren al resolverse la petición, nunca de forma síncrona.
+   */
+  const aplicarHorario = useCallback((peticion: Promise<HorarioSemanalDTO>) => {
+    peticion
+      .then((h) => {
+        setHorario(h);
+        setErrorHorario(null);
+      })
+      .catch((e: unknown) => {
+        setHorario(null);
+        setErrorHorario(mensajeDeError(e));
+      })
+      .finally(() => {
+        setCargandoHorario(false);
+      });
+  }, []);
 
   useEffect(() => {
     let activo = true;
@@ -374,8 +396,9 @@ export const InicioEstudiante: React.FC = () => {
       .then((h) => {
         if (activo) setHorario(h);
       })
-      .catch(() => {
+      .catch((e: unknown) => {
         // Sin horario no pasa nada: se muestran solo los accesos.
+        if (activo) setErrorHorario(mensajeDeError(e));
       })
       .finally(() => {
         if (activo) setCargandoHorario(false);
@@ -384,6 +407,13 @@ export const InicioEstudiante: React.FC = () => {
       activo = false;
     };
   }, []);
+
+  /** Vuelve a pedir el horario tras un fallo. */
+  const reintentarHorario = () => {
+    setCargandoHorario(true);
+    setErrorHorario(null);
+    aplicarHorario(obtenerHorario());
+  };
 
   // Mantiene al día «Empieza en…» y los estados de las clases.
   useEffect(() => {
@@ -482,6 +512,25 @@ export const InicioEstudiante: React.FC = () => {
       </section>
 
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 pt-8 pb-10">
+        {errorHorario && (
+          <div
+            role="alert"
+            className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-saie-danger"
+          >
+            <p className="m-0 flex items-start gap-2">
+              <Icono trazo={TRAZO_ALERTA} className="mt-0.5 h-5 w-5 shrink-0" />
+              <span>{`No pudimos cargar tu horario. ${errorHorario}`}</span>
+            </p>
+            <button
+              type="button"
+              onClick={reintentarHorario}
+              className="min-h-11 cursor-pointer rounded-xl bg-saie-primary px-5 text-sm font-medium text-white hover:bg-saie-primary-dark"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+
         <ResumenSemanal horario={horario} cargando={cargandoHorario} />
 
         {horario && hayClases && (

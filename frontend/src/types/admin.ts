@@ -90,7 +90,7 @@ export interface ResumenAsignacionDTO {
   escaladas: number;
 }
 
-export type TipoImportacion = 'cursos-secciones' | 'horarios' | 'matriculas';
+export type TipoImportacion = 'cursos-secciones' | 'horarios' | 'matriculas' | 'docentes';
 
 /** POST /v1/import/:tipo (Issue 1.6). */
 export interface ResultadoImportacionDTO {

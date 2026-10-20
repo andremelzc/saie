@@ -55,7 +55,9 @@ describe('Gestión de espacios (Issue 4.15)', () => {
     expect(await screen.findByText('AULA-101')).toBeInTheDocument();
     expect(screen.getByText('Aula teórica')).toBeInTheDocument();
     expect(screen.getByText('Laboratorio')).toBeInTheDocument();
-    expect(screen.getAllByText(/Pab\. A · Piso/)).toHaveLength(2);
+    // El pabellón se muestra tal como viene en la base ("Antiguo Pabellón"), sin prefijos.
+    expect(screen.getAllByText(/^A · Piso 1$/)).toHaveLength(2);
+    expect(screen.queryByText(/Pab\./)).toBeNull();
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.getByText('Habilitado')).toBeInTheDocument();

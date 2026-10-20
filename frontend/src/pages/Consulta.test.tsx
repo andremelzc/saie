@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Consulta } from './Consulta';
 import api from '../services/api';
@@ -134,6 +134,31 @@ describe('Consulta (Issue #136 / 3.7)', () => {
     expect(api.get).toHaveBeenCalledWith('/v1/consulta/alumno/20200001');
     // No se muestran datos personales que la consulta no necesita
     expect(screen.queryByText(/alumno@ejemplo\.edu/i)).not.toBeInTheDocument();
+  });
+
+  it('agrupa en un solo bloque las secciones del mismo curso', async () => {
+    const laboratorioDelMismoCurso: AsignacionConsultaItemDTO = {
+      ...laboratorio,
+      asignacionId: 'a3',
+      codigoCurso: 'CC-101',
+      nombreCurso: 'Fundamentos de Programación',
+      codigoSeccion: 'S1-LAB',
+    };
+    vi.mocked(api.get).mockResolvedValueOnce({
+      data: { success: true, data: datosAlumno([aula, laboratorioDelMismoCurso]) },
+    });
+    renderizar();
+
+    buscar('20200001');
+
+    // El bloque es el curso, no la sección: un solo grupo con sus dos secciones.
+    const bloque = await screen.findByRole('region', { name: 'Curso Fundamentos de Programación' });
+    expect(within(bloque).getByText('CC-101 · 2 secciones')).toBeVisible();
+    expect(within(bloque).getByText('Sección S1')).toBeVisible();
+    expect(within(bloque).getByText('Sección S1-LAB')).toBeVisible();
+    expect(
+      screen.getByText('1 curso · 2 clases encontradas para el código 20200001.'),
+    ).toBeVisible();
   });
 
   it('flujo completo con un código de curso: lista una tarjeta por sección', async () => {

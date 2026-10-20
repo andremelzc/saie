@@ -161,7 +161,24 @@ const MINUTOS_SEMANA = 7 * 24 * 60;
 export function proximaSesion<
   T extends { diaSemana: DiaSemana; horaInicio: string; horaFin: string },
 >(horarios: T[], ahora: Date): T | null {
-  if (horarios.length === 0) return null;
+  return buscarProximaSesion(horarios, ahora).sesion;
+}
+
+/**
+ * Minutos que faltan para la próxima sesión: 0 si hay una clase en curso, el número de
+ * minutos hasta la que sigue si viene una, y `Infinity` si la sección no tiene horarios
+ * (en ese caso no se puede ordenar por fecha).
+ */
+export function minutosHastaProximaSesion<
+  T extends { diaSemana: DiaSemana; horaInicio: string; horaFin: string },
+>(horarios: T[], ahora: Date): number {
+  return buscarProximaSesion(horarios, ahora).espera;
+}
+
+function buscarProximaSesion<
+  T extends { diaSemana: DiaSemana; horaInicio: string; horaFin: string },
+>(horarios: T[], ahora: Date): { sesion: T | null; espera: number } {
+  if (horarios.length === 0) return { sesion: null, espera: Infinity };
 
   const { dia, minutos } = diaYMinutosEnLima(ahora);
   const minutoActualSemana = ORDEN_DIAS.indexOf(dia) * 1440 + minutos;
@@ -187,5 +204,5 @@ export function proximaSesion<
     }
   }
 
-  return mejor;
+  return { sesion: mejor, espera: mejorEspera };
 }

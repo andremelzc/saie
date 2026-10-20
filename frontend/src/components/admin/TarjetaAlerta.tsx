@@ -69,7 +69,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
               {alerta.espacio.identificador}
             </h3>
             <p className="m-0 text-xs text-saie-muted">
-              Pabellón {alerta.espacio.pabellon} · Piso {alerta.espacio.piso}
+              {alerta.espacio.pabellon} · Piso {alerta.espacio.piso}
             </p>
           </div>
         </div>

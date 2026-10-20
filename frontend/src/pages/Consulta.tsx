@@ -4,6 +4,7 @@ import FormularioBusqueda from '../components/consulta/FormularioBusqueda';
 import TarjetaResultado from '../components/consulta/TarjetaResultado';
 import logoBlanco from '../assets/logo-blanco.svg';
 import type { ResultadoConsulta } from '../types/consulta';
+import { agruparPorCurso } from '../utils/horario';
 
 /** Fases de la consulta: la vista muestra solo una a la vez. */
 type Fase =
@@ -38,6 +39,8 @@ const Resultados: React.FC<{ resultado: ResultadoConsulta }> = ({ resultado }) =
         </EstadoUnico>
       );
     }
+    // El bloque es el curso; las secciones (teórica y laboratorio) cuelgan de él.
+    const grupos = agruparPorCurso(asignaciones);
     return (
       <section aria-labelledby="titulo-resultado" className="flex flex-col gap-3">
         <div>
@@ -45,14 +48,36 @@ const Resultados: React.FC<{ resultado: ResultadoConsulta }> = ({ resultado }) =
             Tus clases
           </h2>
           <p role="status" className="m-0 mt-1 text-sm text-saie-muted">
-            {plural(asignaciones.length, 'clase encontrada', 'clases encontradas')} para el código{' '}
-            {alumno.codigo}.
+            {`${plural(grupos.length, 'curso', 'cursos')} · ${plural(
+              asignaciones.length,
+              'clase encontrada',
+              'clases encontradas',
+            )} para el código ${alumno.codigo}.`}
           </p>
         </div>
-        <ul className="m-0 p-0 list-none flex flex-col gap-3">
-          {asignaciones.map((a) => (
-            <li key={a.asignacionId ?? `${a.codigoCurso}-${a.codigoSeccion}`}>
-              <TarjetaResultado asignacion={a} />
+        <ul className="m-0 p-0 list-none flex flex-col gap-6">
+          {grupos.map((grupo) => (
+            <li key={grupo.codigoCurso}>
+              <section
+                aria-label={`Curso ${grupo.nombreCurso}`}
+                className="flex flex-col gap-3 rounded-2xl border border-saie-divider bg-saie-canvas/40 p-4"
+              >
+                <header className="flex flex-col gap-1">
+                  <h3 className="m-0 text-lg font-bold text-saie-text">{grupo.nombreCurso}</h3>
+                  <p className="m-0 text-sm text-saie-muted">
+                    {`${grupo.codigoCurso} · ${grupo.secciones.length} ${
+                      grupo.secciones.length === 1 ? 'sección' : 'secciones'
+                    }`}
+                  </p>
+                </header>
+                <ul className="m-0 flex list-none flex-col gap-3 p-0">
+                  {grupo.secciones.map((a) => (
+                    <li key={a.asignacionId ?? `${a.codigoCurso}-${a.codigoSeccion}`}>
+                      <TarjetaResultado asignacion={a} ocultarCurso />
+                    </li>
+                  ))}
+                </ul>
+              </section>
             </li>
           ))}
         </ul>

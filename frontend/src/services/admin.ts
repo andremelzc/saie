@@ -43,10 +43,10 @@ export async function obtenerEscaladas(): Promise<SeccionesEscaladasDTO> {
   return data.data;
 }
 
-/** POST /v1/asignacion/batch — corrida del periodo vigente (Issue 2.15). */
+/** POST /v1/asignaciones/batch - corrida del periodo vigente (Issue 2.15). */
 export async function ejecutarCorrida(): Promise<ResumenAsignacionDTO> {
   const { data } = await api.post<Respuesta<ResumenAsignacionDTO>>(
-    '/v1/asignacion/batch',
+    '/v1/asignaciones/batch',
     {},
     {
       timeout: 60000,
@@ -55,10 +55,10 @@ export async function ejecutarCorrida(): Promise<ResumenAsignacionDTO> {
   return data.data;
 }
 
-/** POST /v1/asignacion/seccion/:id — reintenta una sección escalada (Issue 2.15). */
+/** POST /v1/asignaciones/seccion/:id - reintenta una sección escalada (Issue 2.15). */
 export async function reintentarSeccion(seccionId: string): Promise<ResumenAsignacionDTO> {
   const { data } = await api.post<Respuesta<ResumenAsignacionDTO>>(
-    `/v1/asignacion/seccion/${encodeURIComponent(seccionId)}`,
+    `/v1/asignaciones/seccion/${encodeURIComponent(seccionId)}`,
     {},
     { timeout: 30000 },
   );

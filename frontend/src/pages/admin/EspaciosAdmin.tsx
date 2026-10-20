@@ -74,7 +74,7 @@ export const EspaciosAdmin: React.FC = () => {
                     {e.tipo === 'LABORATORIO' ? 'Laboratorio' : 'Aula teórica'}
                   </td>
                   <td className="px-4 py-3">
-                    Pab. {e.pabellon} · Piso {e.piso}
+                    {e.pabellon} · Piso {e.piso}
                   </td>
                   <td className="px-4 py-3">{e.aforoNominal}</td>
                   <td className="px-4 py-3">{e.pcsMalogradas ?? '—'}</td>

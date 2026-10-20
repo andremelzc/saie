@@ -9,6 +9,11 @@ export interface TarjetaResultadoProps {
   cargando?: boolean;
   /** Estado de error: muestra este mensaje en lugar del resultado. */
   error?: string | null;
+  /**
+   * Oculta la cabecera del curso: se usa cuando la tarjeta va dentro de un bloque de curso y el
+   * nombre ya aparece en el título del bloque (evita repetirlo en cada sección).
+   */
+  ocultarCurso?: boolean;
   className?: string;
 }
 
@@ -137,6 +142,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
   mensajeSinResultado,
   cargando = false,
   error = null,
+  ocultarCurso = false,
   className = '',
 }) => {
   // Estado "Cargando": esqueleto accesible (sin animación si el usuario la redujo)
@@ -254,15 +260,19 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
       <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 border-b border-[#E6DFD0] pb-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-bold text-[#7B1113] bg-[#FAF6ED] px-2 py-0.5 rounded-sm border border-[#E6DFD0]">
-              {codigoCurso || 'CURSO'}
-            </span>
+            {!ocultarCurso && (
+              <span className="text-sm font-bold text-[#7B1113] bg-[#FAF6ED] px-2 py-0.5 rounded-sm border border-[#E6DFD0]">
+                {codigoCurso || 'CURSO'}
+              </span>
+            )}
             <span className="text-sm font-medium text-[#666666]">Sección {codigoSeccion}</span>
             {periodo && <span className="text-sm text-[#666666]">• {periodo}</span>}
           </div>
-          <h3 className="text-base sm:text-lg font-bold text-[#222222] mt-1 leading-snug break-words">
-            {nombreCurso || 'Curso sin denominación'}
-          </h3>
+          {!ocultarCurso && (
+            <h3 className="text-base sm:text-lg font-bold text-[#222222] mt-1 leading-snug break-words">
+              {nombreCurso || 'Curso sin denominación'}
+            </h3>
+          )}
         </div>
 
         <div className="self-start sm:self-auto shrink-0">

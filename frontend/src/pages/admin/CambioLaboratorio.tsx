@@ -118,7 +118,7 @@ export const CambioLaboratorio: React.FC = () => {
           <option value="">{labs.cargando ? 'Cargando…' : 'Selecciona un laboratorio'}</option>
           {labs.datos?.map((l) => (
             <option key={l.id} value={l.id}>
-              {l.identificador} — Pab. {l.pabellon}, piso {l.piso}
+              {l.identificador} — {l.pabellon}, piso {l.piso}
             </option>
           ))}
         </select>

@@ -102,7 +102,7 @@ export const UbicacionEspacios: React.FC<UbicacionEspaciosProps> = ({
               {`${etiquetaTipoEspacio(espacio.tipo)} ${espacio.identificador}`}
             </strong>
             <span className="text-saie-muted">
-              {` · Pabellón ${espacio.pabellon}, piso ${espacio.piso}`}
+              {` · ${espacio.pabellon}, piso ${espacio.piso}`}
             </span>
           </span>
         </p>
