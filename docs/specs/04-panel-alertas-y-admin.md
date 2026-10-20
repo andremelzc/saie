@@ -48,7 +48,8 @@ Todas las rutas de `/api/v1/admin/*` exigen JWT válido de `COORDINACION_ACADEMI
 * **Mapa 3D (Issue 4.23, three.js):** Maqueta extruida navegable a partir de los mismos planos SVG; detalle del componente en [Spec 07](07-ui-ux-y-activos.md) §2.4. La conexión con los datos reales, el detalle y la accesibilidad por teclado son del Issue 4.24.
 
 ### 2.3 Gestión de Espacios y Secciones Escaladas (#4.15, #4.16, #4.17, #4.18, #4.20, #4.21, #4.22, #4.25, #4.26)
-* **Espacios deshabilitados:** `Espacio.habilitado` (por defecto `true`). Un espacio con `habilitado = false` está fuera de servicio: el motor no lo asigna (queda fuera del grafo de contigüidad y de la consulta de disponibilidad), el explorador del docente y la vista del alumno no lo muestran, y el mapa del panel lo marca como `DESHABILITADO` (con `resumen.deshabilitados`). Solo Coordinación lo cambia, con `habilitado` en `POST` y `PATCH /api/v1/admin/espacios`. Las asignaciones vigentes de un espacio que se deshabilita después no se reubican automáticamente. `Espacio.descripcionUso` (texto opcional, máx. 120) es un rótulo visual (ej. "Sala de investigación") que el mapa muestra aunque el espacio esté deshabilitado; `PATCH` con `null` lo borra. **Aforo:** `aforoNominal` puede omitirse o ser `0` ("sin definir") solo si el espacio está deshabilitado; habilitar un espacio con aforo 0 responde 422.
+* **Espacios deshabilitados:** `Espacio.habilitado` (por defecto `true`). Un espacio con `habilitado = false` está **fuera de servicio**: el motor no lo asigna (queda fuera del grafo de contigüidad y de la consulta de disponibilidad), el explorador del docente y la vista del alumno no lo muestran, y el mapa del panel lo marca como `DESHABILITADO` (con `resumen.deshabilitados`). Solo Coordinación lo cambia, con `habilitado` en `POST` y `PATCH /api/v1/admin/espacios`. Las asignaciones vigentes de un espacio que se deshabilita después no se reubican automáticamente. `Espacio.descripcionUso` (texto opcional, máx. 120) es un rótulo visual (ej. "Sala de investigación") que el mapa muestra aunque el espacio esté deshabilitado; `PATCH` con `null` lo borra. **Aforo:** `aforoNominal` puede omitirse o ser `0` ("sin definir") solo si el espacio está deshabilitado; habilitar un espacio con aforo 0 responde 422.
+  * **Vocabulario en la interfaz (Issue 4.35):** el estado se muestra como **«Habilitado» / «No asignable»** y el contador como «N no asignables». El rótulo «fuera de servicio» queda solo en la documentación técnica: lo que la persona que coordina necesita leer es el **efecto** (el motor no puede asignar ese espacio), no la causa administrativa.
 * `GET /api/v1/admin/secciones-escaladas[?periodo=2026-1]` (Issue 4.22)
   * Lista las secciones cuya asignación más reciente quedó `ESCALADA` y requieren revisión manual, las más antiguas primero. Por defecto el periodo vigente.
   * Cada elemento: `{ asignacionId, fechaEscalamiento, motivoEscalamiento, seccion: { id, codigoCurso, nombreCurso, codigoSeccion, periodo, docenteNombre, tipoEspacioRequerido, softwareRequerido: [{ id, nombre, version, comparacionVersion }], alumnosMatriculados, horarios } }`. Una sección reasignada deja de aparecer.
@@ -70,6 +71,78 @@ Todas las rutas de `/api/v1/admin/*` exigen JWT válido de `COORDINACION_ACADEMI
   * Errores: 404 si no existe; 409 si el correo corresponde a más de una persona (debe usarse el código); 403 si es una cuenta de Coordinación o Jefatura (cuentas de sistema); 422 si el alumno o docente no tiene cuenta de acceso; 400 si falta `usuario` o se envían campos desconocidos. Jefatura, alumno y docente reciben 403 y sin token 401.
   * Limitaciones: no queda registro en `RegistroAuditoria` (no tiene referencia a cuentas) y los JWT ya emitidos siguen siendo válidos hasta que expiren.
 
+### 2.4 Gestión individual de secciones (Issue 4.31)
+
+Hasta ahora las secciones solo se manageban por carga masiva: no había forma de verlas una por
+una ni de cambiarles el software requerido. Estas rutas lo resuelven sin reimportar el CSV.
+
+* `GET /api/v1/admin/secciones[?periodo=&q=&tipo=&pagina=&limite=]`
+  * Lista paginada de las secciones del periodo (por defecto, el vigente). `q` busca por código
+    de curso, nombre de curso o código de sección.
+  * Cada elemento: `{ id, codigoCurso, nombreCurso, codigoSeccion, periodo, tipoEspacioRequerido,
+    docente: { id, codigoDocente, nombre } | null, alumnosMatriculados, horarios[],
+    softwareRequerido: [{ id, nombre, version, comparacionVersion }],
+    asignacion: { id, estado, fechaAsignacion, corridaId, motivoEscalamiento, espacios[] } | null,
+    camposEditables }`.
+  * La asignación es la más reciente `VIGENTE` o `ESCALADA` de la sección.
+* `GET /api/v1/admin/secciones/:id` — el detalle de una sección. 404 si no existe.
+* `PATCH /api/v1/admin/secciones/:id` (**solo Coordinación Académica**; 403 para Jefatura)
+  * Cuerpo: `{ tipoEspacioRequerido?, docenteId?, softwareRequerido?: [{ softwareId, comparacionVersion }] }`.
+  * `docenteId` acepta `null` para quitar al docente; un id inexistente responde 404.
+  * `softwareRequerido` **reemplaza** el conjunto: los ids se resuelven contra el catálogo
+    (404 si no existe, 422 si está dado de baja) y cada uno lleva su regla de comparación de
+    versión (`CUALQUIERA`, `MINIMA`, `EXACTA`).
+  * Si la sección ya tiene aula asignada y el software nuevo no está instalado en ella, se
+    genera la alerta de software correspondiente: el cambio no se queda solo en la sección.
+  * Respuesta: `{ seccion, alertas }`.
+* `GET /api/v1/admin/docentes` — listado mínimo (id, código, nombre, departamento) para el
+  selector de docente. No expone correos ni claves.
+
+### 2.5 Auditoría e historial de asignaciones (Issue 4.32)
+
+Los datos ya existían: `RegistroAuditoria` deja constancia de cada evento del motor y
+`Asignacion` conserva el estado `HISTORICA` de las asignaciones que dejaron de estar vigentes.
+Lo que faltaba era poder consultarlos.
+
+* `GET /api/v1/admin/auditoria[?tipo=&desde=&hasta=&pagina=&limite=]`
+  * Lista paginada, de la más reciente a la más antigua. `tipo` ∈ `ASIGNACION`, `ESCALAMIENTO`,
+    `ALERTA`, `VERIFICACION`.
+  * Cada asiento: `{ id, tipoEvento, detalle, fechaHora, asignacionId, alertaId,
+    seccion: { id, codigoCurso, codigoSeccion, nombreCurso } | null }`.
+* `GET /api/v1/admin/asignaciones/historial[?seccionId=&periodo=&estado=&pagina=]`
+  * Historial completo de asignaciones **incluidas las `HISTORICA`**: `{ id, seccionId,
+    codigoCurso, nombreCurso, codigoSeccion, periodo, estado, fechaAsignacion, corridaId,
+    motivoEscalamiento, espacios[] }`.
+
+### 2.6 Informe de salones (Issue 4.33)
+
+* `GET /api/v1/admin/reporte/asignaciones[?periodo=]`
+  * Una fila por sección del periodo con el aula que tiene asignada:
+    `{ codigoCurso, nombreCurso, codigoSeccion, tipoEspacioRequerido, docente,
+    aula: { identificador, pabellon, piso } | null, sinAula, horarios[], alumnosMatriculados,
+    softwareRequerido[] }`.
+  * Totales: `{ secciones, asignadas, sinAula, aulasDistintas, alumnos }`.
+  * Las secciones sin aula van **marcadas**: es justo lo que hay que revisar antes de presentar
+    el cuadro.
+  * La pantalla es una **vista imprimible**: el mismo HTML sirve en pantalla y para generar el
+    PDF con el diálogo del navegador («Guardar como PDF»), sin dependencias nuevas.
+
+### 2.7 Exportación a CSV (Issue 4.34)
+
+* `npm run prisma:export` (script `backend/prisma/exportar-csv.ts`) vuelca la base a
+  `backend/prisma/export/`:
+  * `01-espacios.csv`, `02-cursos-secciones.csv`, `03-horarios.csv`, `04-matriculas.csv`,
+    `05-docentes.csv` — con los encabezados exactos de los importadores: se pueden volver a subir.
+  * `06-asignaciones.csv` — el estado de las asignaciones vigentes y escaladas.
+  * `fallos-01-asignacion.csv` — las secciones que el motor no pudo asignar, con el código y la
+    descripción del motivo.
+  * `fallos-02-software.csv` — los laboratorios asignados que no tienen el software que exige
+    su sección.
+  * `fallos-03-capacidad.csv` — los bloques cuya capacidad real no alcanza.
+  * `fallos-04-auditoria.csv` — la bitácora del motor.
+* Variables opcionales: `EXPORT_DIR` (otra carpeta) y `EXPORT_PERIODO` (un solo periodo).
+* La guía completa está en [`docs/guia-csv.md`](../guia-csv.md).
+
 ---
 
 ## 3. Seguridad y Control por Rol (#4.8, #4.21, #4.25)
@@ -84,3 +157,6 @@ Todas las rutas de `/api/v1/admin/*` exigen JWT válido de `COORDINACION_ACADEMI
 - [ ] Alertas automáticas persistidas transaccionalmente tras actualizar PCs o software.
 - [ ] Rendimiento del mapa visual $< 100\text{ ms}$ en cambio de piso.
 - [ ] Cobertura de tests unitarios/integración de controladores $\ge 85\%$.
+- [ ] La pantalla de inicio del panel cabe en una ventana de 1280×800 sin scroll vertical.
+- [ ] Los motivos de escalamiento se muestran con su etiqueta legible; el código interno queda
+      plegado bajo «Código de soporte» y no se muestra ningún número de issue al usuario final.

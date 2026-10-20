@@ -54,10 +54,10 @@ rectangle "SAIE" {
     usecase "Resolver incidencias" as CU13 <<pendiente>>
   }
 
-  package "Avisos (planificado)" {
-    usecase "Vincular Telegram" as CU14 <<planificado>>
-    usecase "Recibir aviso de cambio\nde aula" as CU15 <<planificado>>
-    usecase "Recibir resumen\ndiario de clases" as CU16 <<planificado>>
+  package "Avisos (implementado)" {
+    usecase "Vincular Telegram" as CU14
+    usecase "Recibir aviso de cambio\nde aula" as CU15
+    usecase "Recibir resumen\ndiario de clases" as CU16
   }
 }
 
@@ -106,5 +106,4 @@ legend right
   | <back:#F2F2F2>     </back> | Pendiente (issue abierto) |
   | <back:#FFF4D6>     </back> | Planificado (no construido) |
 endlegend
-
 @enduml

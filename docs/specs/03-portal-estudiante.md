@@ -28,6 +28,28 @@ El **Portal del Estudiante** es la interfaz web/móvil responsiva donde los alum
   * Lista de cursos matriculados del ciclo actual.
 * `GET /api/v1/estudiante/perfil`
   * Datos personales, código, carrera y ficha médica (flag de movilidad reducida).
+* **Condición de accesibilidad declarada por el alumno (Issue 3.30):** la ficha médica tiene un
+  campo booleano `condicionAccesible`: «¿tienes alguna condición física que te impide subir a
+  pisos superiores o usar escaleras?». Describe un **requisito de acceso al espacio**, no un
+  diagnóstico, para no obligar al alumno a declarar más de lo necesario (RNF-09).
+  * Al activarlo, el backend propaga `MovilidadReducida = true` a **todas** las matrículas del
+    alumno, que es lo que consume el motor (`reglas/accesibilidad.ts` → `priorizarBloquesPiso1`).
+    Así el alumno no necesita reimportar el CSV de matrículas para que se le priorice el Piso 1.
+  * Al desactivarlo, el flag solo se limpia si la declaración anterior estaba activa: si el
+    `movilidadReducida` lo puso una carga de datos de Coordinación, se respeta y no se toca.
+  * El dato nunca sale de la ficha del propio alumno (RNF-09) y **nunca llega a Telegram** (RNF-11).
+  * `FichaMedica.condicionAccesible` (columna `condicion_accesible`, migración
+    `20261021000000_ficha_accesible`) es la fuente de verdad de la declaración.
+* **Sesión compartida entre pestañas (Issue 3.29):** el token vive en `sessionStorage`, que es
+  **por pestaña**, así que abrir `/estudiante/horario` con control+clic abría una pestaña sin
+  sesión y el guard la echaba al login. Para resolverlo **sin mover el token a `localStorage`**
+  (que persistiría entre reinicios del navegador y ampliaría la ventana de robo por XSS), las
+  pestañas se avisan con un `BroadcastChannel('saie.sesion')`:
+  * la pestaña que inicia sesión **anuncia** su sesión y las demás la adoptan;
+  * una pestaña que abre sin sesión **pregunta** y la primera que responde se la entrega;
+  * al cerrar sesión en una pestaña, las demás también lo hacen.
+  * El token nunca sale de `sessionStorage` de cada pestaña: solo se copia de una a otra dentro
+    del mismo navegador y el mismo origen.
 
 ### 2.3 Mapa de Ocupación Estudiantil y Ruta de Referencia (#3.13, #3.14, #3.15)
 * `GET /api/v1/estudiante/mapa-ocupacion?pabellon=A&piso=1[&dia=LUNES&horaInicio=08:00&horaFin=10:00]` (Issue 3.13, rol `ALUMNO`)
@@ -63,6 +85,24 @@ Canal opcional y voluntario de avisos al alumno (decisión D-06). Contexto y sec
 * `GridHorarioSemanal`: Vista de calendario interactivo con colores por curso.
 * `VistaMapaRuta`: Renderizado del plano SVG con el trazado resaltado hacia el aula/laboratorio asignado.
 * `LoginEstudiante`: Formulario de autenticación con código de alumno y clave inicial.
+
+### 3.2 Pantallas en modo tablero (Issue 3.29)
+
+Las pantallas de inicio —del alumno y del panel— son **tableros**: en escritorio (≥1280 px) todo
+el contenido cabe en la ventana **sin scroll**, y las listas largas llevan su propio scroll
+interno. Por debajo de ese ancho el diseño vuelve al flujo vertical con scroll normal.
+
+* **Alumno (`/estudiante`):** tres filas — la clase en curso o la próxima y las cifras de la
+  semana; las clases del día y el acceso rápido a cada sección; la tira de la semana completa.
+  Los accesos a las demás pantallas (horario, perfil, mapa, ruta, Telegram) están en una barra
+  de navegación fija, de modo que no hace falta volver al inicio para cambiar de sección.
+* **Administración (`/admin`):** tres filas — las cuatro cifras de la asignación; el estado de
+  la corrida y el veredicto; las secciones que requieren revisión y los accesos a las demás
+  pantallas.
+* El detalle del verificador (las siete reglas duras) queda **plegado** tras un `<details>`: el
+  tablero no crece por ello y la información sigue a un clic.
+* Criterio verificable: en 1440×900 y 1280×800, `document.documentElement.scrollHeight` no
+  supera la altura de la ventana. Hay una prueba de Playwright que lo comprueba.
 
 ---
 

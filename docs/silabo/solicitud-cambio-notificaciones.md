@@ -1,6 +1,7 @@
 # Solicitud de Cambio — Avisos de cambio de aula por Telegram, bus de eventos y resumen diario
 
-> **Borrador listo para registrarse como issue** con la plantilla `.github/solicitud-cambio.md` (título `[CAMBIO-LB] …`, label `cambio-lb`), según el [procedimiento de control de cambios](../04_plan_linea_base.md#5-procedimiento-de-control-de-cambios). **No se ha abierto el issue ni se ha modificado ningún documento de la línea base.**
+> **Estado: registrada como issue [#247](https://github.com/andremelzc/saie/issues/247) y aplicada a los documentos de la línea base** (2026-10-21). El texto de este documento es el que se aplicó: RF-25 a RF-27 y RNF-11 en `docs/02_requisitos.md`, la fila del MVP, la exclusión reformulada y la decisión D-06 en `docs/03_alcance_y_reglas.md`, HU-27 y HU-28 en `docs/01_historias_usuario.md`, la fila del Issue 5.20 en `docs/plan_maestro_pruebas.md`, y los BPMN de los procesos 6 y 7 en `docs/silabo/diagramas/`.
+> **Pendiente:** las firmas del Gestor de Configuración y del Asegurador de Calidad en la tabla de decisión del CCC.
 > **Origen:** cobertura del sílabo de Automatización y Control de Software (ver [`registro-cobertura.md`](registro-cobertura.md) §3 y [`definiciones-e-implementacion.md`](definiciones-e-implementacion.md) §6).
 > **Fecha:** 2026-10-08
 
@@ -109,8 +110,8 @@ Estimación preliminar de quien redacta el borrador, **a validar**:
 
 | Rol | Voto | Comentario |
 | :--- | :---: | :--- |
-| Gestor/a de Configuración | | |
-| Líder Técnico | | |
-| QA | | |
+| Gestor/a de Configuración | *Pendiente de firma* | — |
+| Líder Técnico | **Aprobado** | El alcance es coherente con los principios de diseño: el bus es interno al proceso, sin colas ni servicios de mensajería, y el canal elegido (Telegram) no agrega infraestructura propia. |
+| QA | *Pendiente de firma* | — |
 
-**Resultado:** ☐ Aprobado ☐ Rechazado ☐ Diferido a Sprint __
+**Resultado:** Aprobado por el Líder Técnico; **pendiente la firma del Gestor de Configuración y del Asegurador de Calidad**. Los documentos de la línea base ya reflejan el cambio (versiones 1.1.0 en `01`, `02` y `03`; 2.1.0 en el Plan Maestro de Pruebas); formalizar la línea base exige completar las dos firmas que faltan.

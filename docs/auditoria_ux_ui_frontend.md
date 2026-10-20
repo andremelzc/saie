@@ -83,6 +83,18 @@ filas guardadas. La carga de datos lo muestra con esas palabras («10 filas leí
 
 **Pendiente de proceso:** el registro de estos ajustes en el Registro de Versiones lo hace el maintainer al cerrar el sprint.
 
+**Continuación de la auditoría (2026-10-21, rama `feature/sprint3-cierre-panel-gestion-individual`):**
+
+| Ajuste | Qué se hizo |
+|---|---|
+| Pantallas de inicio en modo tablero | El inicio del panel (`pages/admin/InicioAdmin.tsx`) y el del estudiante (`pages/InicioEstudiante.tsx`) se reorganizaron en tres filas que caben en la ventana sin scroll vertical (≥1280 px). Los paneles largos llevan scroll interno. |
+| Navegación del área del estudiante | Se añadió una barra de navegación fija (`components/estudiante/NavegacionEstudiante.tsx`) en todas las pantallas del alumno: antes cada una solo tenía un enlace de «volver al inicio». |
+| Vocabulario del estado de un espacio | «Fuera de servicio» pasó a «No asignable»: el rótulo describe el **efecto** en el motor, no la causa administrativa. |
+| Motivos de escalamiento | El código interno del motivo queda plegado bajo «Código de soporte»; la presentación principal es la etiqueta legible, la descripción y la acción sugerida. |
+| Números de issue en la interfaz | Se quitaron de la vista del verificador y del detalle de auditoría. |
+| Tipografía | Se cargó el peso 600 de Inter: `font-semibold` se usa 54 veces y no estaba en la familia, así que el navegador lo sintetizaba. |
+| Ficha médica del alumno | Nueva casilla «¿tienes alguna condición física que te impide subir a pisos superiores?» (`pages/PerfilAlumno.tsx`), que se propaga al motor como prioridad de Piso 1. |
+
 ---
 
 ## 1. Resumen general

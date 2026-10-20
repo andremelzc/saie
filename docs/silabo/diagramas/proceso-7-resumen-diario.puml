@@ -1,0 +1,96 @@
+@startuml proceso-7-resumen-diario
+' SAIE — Proceso 7: resumen diario de clases por Telegram
+' Modela el flujo construido en backend/src/telegram/resumenDiario.service.ts y disparado por
+' .github/workflows/resumen-diario.yml (07:30 hora de Lima, de lunes a sábado).
+' Render: java -jar plantuml.jar -tpng docs/silabo/diagramas/proceso-7-resumen-diario.puml
+
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #444444
+skinparam activity {
+  BackgroundColor #E8F1FA
+  BorderColor #1F4E79
+}
+skinparam activityDiamond {
+  BackgroundColor #FFF4D6
+  BorderColor #B8860B
+}
+skinparam note {
+  BackgroundColor #F2F2F2
+  BorderColor #7F7F7F
+}
+
+title SAIE — Proceso 7: resumen diario de clases
+
+start
+
+:Tarea programada de GitHub Actions
+(07:30 hora de Lima, lunes a sábado);
+:Invocar POST /api/v1/telegram/resumen-diario
+con el token de servicio;
+note right
+  El disparo viene de fuera porque el
+  contenedor gratuito se suspende tras
+  15 minutos sin tráfico: un temporizador
+  interno no sería confiable.
+end note
+
+if (¿El token es válido?) then (no)
+  :401 y fin;
+  stop
+else (sí)
+endif
+
+:Calcular el día y la hora
+de Lima y el periodo vigente;
+
+if (¿Hay un periodo vigente?) then (no)
+  :Sin destinatarios; fin;
+  stop
+else (sí)
+endif
+
+:Buscar vinculaciones **activas**
+cuyo día de resumen no esté reclamado;
+
+for cada vinculación
+  :Reclamar el día con una actualización
+  condicional (idempotencia);
+  if (¿El día ya estaba reclamado?) then (sí)
+    :Omitir: otra ejecución
+    ya envió este resumen;
+  else (no)
+    :Buscar las clases del día
+    (periodo vigente y día en Lima);
+    if (¿Tiene clases hoy?) then (no)
+      :No recibe nada
+      (quien no tiene clases no recibe resumen);
+    else (sí)
+      :Preparar el mensaje
+      (clases del día, hora y aula);
+      note right
+        **Sin** datos de ficha médica ni de
+        movilidad reducida (RNF-11).
+      end note
+      :Enviar por la cola global
+      (40 ms entre mensajes);
+      if (¿Telegram responde 403?) then (sí)
+        :Desactivar la vinculación;
+      else (no)
+      endif
+      if (¿El envío falló?) then (sí)
+        :Liberar el día para que
+        otra ejecución lo reintente;
+      else (no)
+      endif
+    endif
+  endif
+endfor
+
+:Responder el conteo
+(destinatarios, enviados, sin clases,
+desactivados y fallidos);
+
+stop
+
+@enduml

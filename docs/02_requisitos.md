@@ -66,7 +66,15 @@ Las reglas de negocio que el motor aplica (R-01 a R-11) se definen en [`03_alcan
 | **RF-22** | El sistema debe mostrar un mapa de ocupación de aulas y laboratorios por pabellón y piso, con las alertas pendientes. | COO, JEF | S |
 | **RF-23** | El sistema debe registrar de forma inmutable los eventos de asignación, escalamiento y alerta. | SIS | M |
 
-> **Nota de numeración:** RF-24 se ubica en la sección 2.1 por afinidad temática; la numeración no implica orden de implementación.
+### 2.5. Avisos al estudiante
+
+| ID | Requisito | Actor | Prioridad |
+| :--- | :--- | :---: | :---: |
+| **RF-25** | El sistema debe permitir al alumno vincular su cuenta con el bot de Telegram identificándose con su código y su clave, y desvincularla en cualquier momento. | EST | S |
+| **RF-26** | Cuando una corrida de asignación cambie los espacios de una sección con asignación vigente, el sistema debe avisar por Telegram a los matriculados con cuenta vinculada, indicando el aula anterior, la nueva y el horario. | SIS | S |
+| **RF-27** | El sistema debe enviar cada día, a quienes lo tengan vinculado y tengan clase, un resumen con sus clases y aulas. | SIS | C |
+
+> **Nota de numeración:** RF-24 se ubica en la sección 2.1 por afinidad temática; RF-25 a RF-27 se ubican en la sección 2.5 por el canal que los soporta. La numeración no implica orden de implementación.
 
 ---
 
@@ -84,6 +92,7 @@ Las reglas de negocio que el motor aplica (R-01 a R-11) se definen en [`03_alcan
 | **RNF-08** | Explicabilidad | Toda asignación escalada indica la regla que no se pudo cumplir; ninguna sección queda sin estado. | Pruebas unitarias del motor |
 | **RNF-09** | Privacidad | Los datos de salud del alumno residen solo en `FichaMédica` y ningún endpoint de consulta pública los expone. | Pruebas de integración de endpoints públicos |
 | **RNF-10** | Mantenibilidad | Código en TypeScript estricto, con ESLint/Prettier y Conventional Commits verificados en CI. | Pipeline CI |
+| **RNF-11** | Privacidad | Los mensajes de Telegram no incluyen datos de la ficha médica ni la condición de movilidad reducida; el envío es voluntario y revocable. | Pruebas unitarias del notificador |
 
 ---
 
@@ -92,3 +101,4 @@ Las reglas de negocio que el motor aplica (R-01 a R-11) se definen en [`03_alcan
 | Versión | Fecha | Autor | Descripción |
 | :--- | :--- | :--- | :--- |
 | 1.0.0 | 2026-09-23 | Grupo 6 | Versión inicial para la línea base funcional. |
+| 1.1.0 | 2026-10-21 | Grupo 6 | Cambio de alcance aprobado por el CCC (Solicitud #247): se incorporan RF-25 a RF-27 (avisos al estudiante por Telegram) y RNF-11 (privacidad de esos mensajes). |
