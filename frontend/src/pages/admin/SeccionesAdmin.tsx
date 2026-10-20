@@ -95,7 +95,10 @@ const TarjetaSeccion: React.FC<{
   seccion: SeccionAdminDTO;
   onVer: (s: SeccionAdminDTO) => void;
 }> = ({ seccion, onVer }) => (
-  <article className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4">
+  <article
+    aria-label={`${seccion.codigoCurso} · ${seccion.codigoSeccion}`}
+    className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4"
+  >
     <header className="flex flex-wrap items-start justify-between gap-2">
       <div className="min-w-0">
         <h3 className="m-0 text-base font-bold text-saie-text">

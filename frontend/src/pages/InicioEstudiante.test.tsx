@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import InicioEstudiante from './InicioEstudiante';
 import api from '../services/api';
@@ -108,6 +108,28 @@ describe('InicioEstudiante', () => {
       expect(await screen.findByText('Clase en curso')).toBeVisible();
       expect(screen.queryByRole('alert')).toBeNull();
       expect(get).toHaveBeenCalledTimes(2);
+    });
+
+    it('si el horario llega vacío, avisa en vez de mostrar una pantalla en blanco', async () => {
+      vi.spyOn(api, 'get').mockRejectedValue(new Error('caída'));
+      montar();
+
+      const alerta = await screen.findByRole('alert');
+      expect(alerta).toHaveTextContent('No pudimos cargar tu horario.');
+      // Aun sin horario, los accesos a las demás pantallas siguen disponibles.
+      expect(screen.getByRole('link', { name: /Mi horario/ })).toBeVisible();
+    });
+
+    it('si el reintento también falla, vuelve a avisar sin romper la pantalla', async () => {
+      vi.spyOn(api, 'get').mockRejectedValue(new Error('caída'));
+      montar();
+
+      const alerta = await screen.findByRole('alert');
+      fireEvent.click(within(alerta).getByRole('button', { name: 'Reintentar' }));
+
+      // Sigue habiendo un aviso y la pantalla no se queda a medio cargar.
+      await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+      expect(screen.getByRole('link', { name: /Mi horario/ })).toBeVisible();
     });
 
     it('con el horario vacío muestra el periodo pero no resumen ni semana', async () => {

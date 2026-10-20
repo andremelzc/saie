@@ -292,6 +292,38 @@ describe('Inicio del panel administrativo', () => {
       await waitFor(() => expect(escaladas).toHaveBeenCalledTimes(2));
     });
 
+    it('informa el resultado del reintento cuando la sección sigue en revisión', async () => {
+      reintento.mockResolvedValue({
+        ...resumen,
+        modo: 'seccion',
+        asignadas: 0,
+        mantenidas: 0,
+        escaladas: 1,
+      });
+      montar();
+      await screen.findByText(/IS101/);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Reintentar' })[0]);
+
+      expect(await screen.findByText('Esta sección sigue en revisión.')).toBeInTheDocument();
+    });
+
+    it('informa el resultado del reintento cuando la sección conserva su aula', async () => {
+      reintento.mockResolvedValue({
+        ...resumen,
+        modo: 'seccion',
+        asignadas: 0,
+        mantenidas: 1,
+        escaladas: 0,
+      });
+      montar();
+      await screen.findByText(/IS101/);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Reintentar' })[0]);
+
+      expect(
+        await screen.findByText('Esta sección conserva el aula que ya tenía.'),
+      ).toBeInTheDocument();
+    });
+
     it('muestra el error si el reintento falla', async () => {
       reintento.mockRejectedValue(new Error('x'));
       montar();

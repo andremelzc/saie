@@ -178,4 +178,132 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
 
     expect(await screen.findByText(/generó 1 alerta/)).toBeInTheDocument();
   });
+
+  it('muestra la tarjeta de una sección sin asignación', async () => {
+    listar.mockResolvedValue({
+      items: [seccion({ id: 's3', codigoCurso: 'IS303', asignacion: null })],
+      total: 1,
+      pagina: 1,
+      limite: 200,
+    });
+    montar();
+    expect(await screen.findByText('Sin asignar')).toBeInTheDocument();
+  });
+
+  it('filtra el software del catálogo por su nombre', async () => {
+    catalogo.mockResolvedValue({
+      items: [
+        { id: 'sw1', nombre: 'Docker', version: '24.0', activo: true },
+        { id: 'sw2', nombre: 'Python', version: '3.12', activo: true },
+      ],
+      total: 2,
+      page: 1,
+      limit: 100,
+    });
+    montar();
+    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    const panel = await screen.findByRole('dialog');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
+
+    await within(panel).findByRole('checkbox', { name: /Docker/ });
+    fireEvent.change(within(panel).getByLabelText('Buscar software del catálogo'), {
+      target: { value: 'pyth' },
+    });
+
+    expect(within(panel).getByRole('checkbox', { name: /Python/ })).toBeInTheDocument();
+    expect(within(panel).queryByRole('checkbox', { name: /Docker/ })).toBeNull();
+  });
+
+  it('envía el tipo de aula, el docente y el periodo filtrado', async () => {
+    editar.mockResolvedValue({ seccion: seccion({}), alertas: [] });
+    montar();
+    fireEvent.change(screen.getByLabelText('Periodo'), { target: { value: '2026-1' } });
+    await waitFor(() =>
+      expect(listar).toHaveBeenCalledWith(expect.objectContaining({ periodo: '2026-1' })),
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    const panel = await screen.findByRole('dialog');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
+
+    fireEvent.change(within(panel).getByLabelText('Tipo de espacio que necesita'), {
+      target: { value: 'AULA_TEORICA' },
+    });
+    fireEvent.change(within(panel).getByLabelText('Docente'), { target: { value: 'd1' } });
+    fireEvent.click(within(panel).getByRole('button', { name: 'Guardar cambios' }));
+
+    await waitFor(() =>
+      expect(editar).toHaveBeenCalledWith(
+        's1',
+        expect.objectContaining({ tipoEspacioRequerido: 'AULA_TEORICA', docenteId: 'd1' }),
+      ),
+    );
+  });
+
+  it('desmarcar el software lo quita de la lista a guardar', async () => {
+    editar.mockResolvedValue({ seccion: seccion({}), alertas: [] });
+    montar();
+    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    const panel = await screen.findByRole('dialog');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
+
+    const casilla = await within(panel).findByRole('checkbox', { name: /Docker/ });
+    fireEvent.click(casilla);
+    fireEvent.click(casilla); // marcar y desmarcar
+    fireEvent.click(within(panel).getByRole('button', { name: 'Guardar cambios' }));
+
+    await waitFor(() =>
+      expect(editar).toHaveBeenCalledWith('s1', expect.objectContaining({ softwareRequerido: [] })),
+    );
+  });
+
+  it('avisa si el backend rechaza el cambio y deja el formulario abierto', async () => {
+    editar.mockRejectedValue(new Error('El laboratorio no tiene ese software'));
+    montar();
+    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    const panel = await screen.findByRole('dialog');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
+    fireEvent.click(await within(panel).findByRole('checkbox', { name: /Docker/ }));
+    fireEvent.click(within(panel).getByRole('button', { name: 'Guardar cambios' }));
+
+    expect(await within(panel).findByRole('alert')).toHaveTextContent(
+      'Inténtalo de nuevo en unos minutos.',
+    );
+  });
+
+  it('cerrar el detalle deja de editar y hides la sección', async () => {
+    montar();
+    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    const panel = await screen.findByRole('dialog');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
+    fireEvent.click(within(panel).getByRole('button', { name: 'Cancelar' }));
+
+    expect(within(panel).getByRole('button', { name: 'Editar sección' })).toBeInTheDocument();
+  });
+
+  it('en pantallas estrechas el listado pasa a tarjetas', async () => {
+    const anchoOriginal = window.innerWidth;
+    window.innerWidth = 500;
+    window.dispatchEvent(new Event('resize'));
+
+    try {
+      montar();
+      const articulo = await screen.findByRole('article', { name: /IS101/ });
+      expect(within(articulo).getByText('IS101 · 1')).toBeInTheDocument();
+      expect(within(articulo).getByText('Lab 03')).toBeInTheDocument();
+      expect(screen.queryByRole('table')).toBeNull();
+    } finally {
+      window.innerWidth = anchoOriginal;
+      window.dispatchEvent(new Event('resize'));
+    }
+  });
+
+  it('cerrar el panel de detalle lo oculta', async () => {
+    montar();
+    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    const panel = await screen.findByRole('dialog');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Cerrar' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
 });

@@ -1,13 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import api from './api';
 import {
+  editarSeccion,
   ejecutarCorrida,
   importarCsv,
   obtenerAlertas,
+  obtenerAuditoria,
   obtenerCatalogoActivo,
+  obtenerDocentes,
   obtenerEscaladas,
   obtenerEspacios,
+  obtenerHistorial,
   obtenerLaboratorios,
+  obtenerReporteAsignaciones,
+  obtenerSecciones,
   registrarPcsMalogradas,
   registrarSoftware,
   reintentarSeccion,
@@ -111,6 +117,65 @@ describe('Servicios de administración', () => {
     await registrarPcsMalogradas('lab1', 4);
     expect(post).toHaveBeenLastCalledWith('/v1/admin/laboratorios/lab1/pcs-malogradas', {
       pcsMalogradas: 4,
+    });
+  });
+
+  describe('modulos nuevos del panel (Issues 4.31, 4.32 y 4.33)', () => {
+    it('obtenerSecciones envia los filtros indicados', async () => {
+      const listado = { items: [], total: 0, pagina: 1, limite: 50 };
+      get.mockResolvedValue({ data: { data: listado } });
+
+      expect(await obtenerSecciones({ q: 'algorit', periodo: '2026-2' })).toEqual(listado);
+      expect(get).toHaveBeenCalledWith('/v1/admin/secciones', {
+        params: { q: 'algorit', periodo: '2026-2' },
+      });
+    });
+
+    it('editarSeccion hace PATCH sobre la seccion indicada', async () => {
+      patch.mockResolvedValue({ data: { data: { seccion: { id: 's1' }, alertas: [] } } });
+
+      await editarSeccion('s 1', { docenteId: 'd1' });
+      expect(patch).toHaveBeenCalledWith('/v1/admin/secciones/s%201', { docenteId: 'd1' });
+    });
+
+    it('obtenerDocentes pide el listado de docentes', async () => {
+      const docentes = [
+        { id: 'd1', codigoDocente: 'D001', nombre: 'Dra. García', departamento: 'IS' },
+      ];
+      get.mockResolvedValue({ data: { data: docentes } });
+
+      expect(await obtenerDocentes()).toEqual(docentes);
+      expect(get).toHaveBeenCalledWith('/v1/admin/docentes');
+    });
+
+    it('obtenerAuditoria envia el filtro de tipo', async () => {
+      const listado = { items: [], total: 0, pagina: 1, limite: 50 };
+      get.mockResolvedValue({ data: { data: listado } });
+
+      expect(await obtenerAuditoria({ tipo: 'ASIGNACION' })).toEqual(listado);
+      expect(get).toHaveBeenCalledWith('/v1/admin/auditoria', {
+        params: { tipo: 'ASIGNACION' },
+      });
+    });
+
+    it('obtenerHistorial envia los filtros del historial', async () => {
+      const listado = { items: [], total: 0, pagina: 1, limite: 50 };
+      get.mockResolvedValue({ data: { data: listado } });
+
+      expect(await obtenerHistorial({ periodo: '2026-2', estado: 'HISTORICA' })).toEqual(listado);
+      expect(get).toHaveBeenCalledWith('/v1/admin/asignaciones/historial', {
+        params: { periodo: '2026-2', estado: 'HISTORICA' },
+      });
+    });
+
+    it('obtenerReporteAsignaciones pide el informe del periodo', async () => {
+      const reporte = { periodo: '2026-2', secciones: [], totales: {} };
+      get.mockResolvedValue({ data: { data: reporte } });
+
+      expect(await obtenerReporteAsignaciones('2026-2')).toEqual(reporte);
+      expect(get).toHaveBeenCalledWith('/v1/admin/reporte/asignaciones', {
+        params: { periodo: '2026-2' },
+      });
     });
   });
 });
