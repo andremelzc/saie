@@ -14,6 +14,7 @@ import {
 } from '../../services/admin';
 import { mensajeDeError } from '../../services/estudiante';
 import type { ResumenAsignacionDTO } from '../../types/admin';
+import { describirMotivoEscalamiento } from '../../utils/admin';
 
 const Acceso: React.FC<{ to: string; titulo: string; descripcion: string; extra?: string }> = ({
   to,
@@ -249,30 +250,61 @@ const InicioCoordinacion: React.FC = () => {
           </p>
         ) : (
           <ul className="m-0 flex list-none flex-col gap-2 p-0">
-            {escaladas.datos?.secciones.map((s) => (
-              <li
-                key={s.asignacionId}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-saie-divider bg-white p-4"
-              >
-                <div className="min-w-0">
-                  <p className="m-0 font-semibold text-saie-text">
-                    {s.seccion.codigoCurso} · {s.seccion.codigoSeccion} — {s.seccion.nombreCurso}
-                  </p>
-                  <p className="m-0 text-sm text-saie-muted">
-                    {s.motivoEscalamiento ?? 'Sin motivo registrado'} ·{' '}
-                    {s.seccion.alumnosMatriculados} alumnos
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => reintentar(s.seccion.id)}
-                  disabled={reintentando === s.seccion.id}
-                  className="rounded-lg border border-saie-primary px-3 py-1.5 text-sm font-semibold text-saie-primary hover:bg-saie-primary hover:text-white disabled:opacity-60"
+            {escaladas.datos?.secciones.map((s) => {
+              const motivo = describirMotivoEscalamiento(s.motivoEscalamiento);
+              const alumnos = s.seccion.alumnosMatriculados;
+              return (
+                <li
+                  key={s.asignacionId}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-saie-divider bg-white p-4"
                 >
-                  {reintentando === s.seccion.id ? 'Reintentando…' : 'Reintentar'}
-                </button>
-              </li>
-            ))}
+                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <p className="m-0 font-semibold text-saie-text">
+                      {s.seccion.codigoCurso} · {s.seccion.codigoSeccion} — {s.seccion.nombreCurso}
+                    </p>
+                    <span className="w-fit rounded-full bg-[#FDF0E1] px-2 py-0.5 text-xs font-bold text-[#B45309]">
+                      {motivo.etiqueta}
+                    </span>
+                    <p className="m-0 text-sm text-saie-text">No se le asignó aula.</p>
+                    <p className="m-0 text-sm text-saie-muted">{motivo.descripcion}</p>
+                    <p className="m-0 text-xs text-saie-muted">
+                      {alumnos} {alumnos === 1 ? 'alumno matriculado' : 'alumnos matriculados'}
+                      {motivo.codigo && (
+                        <>
+                          {' · '}
+                          <span className="font-mono text-[10px]" title="Código interno del motivo">
+                            {motivo.codigo}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {motivo.accion && (
+                      <Link
+                        to={motivo.accion.to}
+                        className="rounded-lg bg-saie-primary px-3 py-1.5 text-sm font-semibold text-white no-underline hover:bg-saie-primary-dark"
+                      >
+                        {motivo.accion.etiqueta}
+                      </Link>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => reintentar(s.seccion.id)}
+                      disabled={reintentando === s.seccion.id}
+                      title={
+                        motivo.codigo === 'SIN_HORARIOS_DEFINIDOS'
+                          ? 'Vuelve a intentar después de cargar el horario'
+                          : 'Vuelve a ejecutar la asignación de esta sección'
+                      }
+                      className="rounded-lg border border-saie-primary px-3 py-1.5 text-sm font-semibold text-saie-primary hover:bg-saie-primary hover:text-white disabled:opacity-60"
+                    >
+                      {reintentando === s.seccion.id ? 'Reintentando…' : 'Reintentar'}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
