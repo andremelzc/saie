@@ -30,6 +30,9 @@ blob-report/
 # Base de datos y contenedores
 postgres_data/
 
+# Exportaciones a CSV del estado real de la base (se regeneran con `npm run prisma:export`)
+backend/prisma/export/
+
 # Vercel CLI (vínculo local con el proyecto)
 .vercel/
 
