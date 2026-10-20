@@ -19,6 +19,7 @@ export const PERFIL_FIXTURE: PerfilAlumnoDTO = {
     alergias: 'Penicilina',
     condicionEspecial: null,
     contactoEmergencia: 'Rosa Ramos (madre) · 999 888 777',
+    condicionAccesible: false,
   },
 };
 

@@ -1,4 +1,4 @@
-import { DiaSemana, PrismaClient } from '@prisma/client';
+import { DiaSemana, Prisma, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { HttpError } from '../lib/http';
 import {
@@ -167,6 +167,14 @@ export const ActualizarPerfilSchema = z
         alergias: textoOpcional(500),
         condicionEspecial: textoOpcional(500),
         contactoEmergencia: textoOpcional(200),
+        /**
+         * Declaración propia del alumno: tiene una condición que le impide subir a pisos
+         * superiores o usar escaleras. Es un requisito de acceso al espacio, no un
+         * diagnóstico: el campo de texto libre sigue siendo el lugar de la información clínica.
+         */
+        condicionAccesible: z
+          .boolean({ error: 'condicionAccesible debe ser verdadero o falso' })
+          .optional(),
       })
       .strict()
       .optional(),
@@ -190,6 +198,7 @@ function armarPerfil(
     alergias: string | null;
     condicionEspecial: string | null;
     contactoEmergencia: string | null;
+    condicionAccesible: boolean;
   } | null,
 ): PerfilAlumnoDTO {
   return {
@@ -210,6 +219,7 @@ function armarPerfil(
           alergias: ficha.alergias,
           condicionEspecial: ficha.condicionEspecial,
           contactoEmergencia: ficha.contactoEmergencia,
+          condicionAccesible: ficha.condicionAccesible,
         }
       : null,
   };
@@ -262,16 +272,57 @@ export async function actualizarPerfilAlumno(
         })
       : alumno;
 
+    // La ficha anterior se lee antes del `upsert`: sirve para saber si el flag de las
+    // matrículas lo puso esta declaración o una carga de datos de Coordinación.
+    const fichaPrevia = await tx.fichaMedica.findUnique({ where: { alumnoId: alumno.id } });
+
     const ficha = fichaMedica
       ? await tx.fichaMedica.upsert({
           where: { alumnoId: alumno.id },
           create: { alumnoId: alumno.id, ...fichaMedica },
           update: fichaMedica,
         })
-      : await tx.fichaMedica.findUnique({ where: { alumnoId: alumno.id } });
+      : fichaPrevia;
+
+    await propagarCondicionAccesible(alumno.id, fichaMedica?.condicionAccesible, fichaPrevia, tx);
 
     return armarPerfil(alumnoActualizado, ficha);
   });
+}
+
+/**
+ * Traduce la declaración de accesibilidad de la ficha al flag que consume el motor
+ * (`Matricula.movilidadReducida`).
+ *
+ * - Declarar `true` marca todas las matrículas del alumno: el motor prioriza el Piso 1.
+ * - Declarar `false` solo limpia el flag si la declaración anterior estaba activa; si el flag
+ *   venía de una carga de datos de Coordinación, se respeta y no se toca.
+ *
+ * Así el alumno puede corregir su declaración sin perder un dato que otro puso, y a la vez
+ * su declaración manda mientras está activa.
+ */
+async function propagarCondicionAccesible(
+  alumnoId: string,
+  declarado: boolean | undefined,
+  fichaPrevia: { condicionAccesible: boolean } | null,
+  tx: Prisma.TransactionClient,
+): Promise<void> {
+  if (declarado === undefined) return;
+
+  if (declarado) {
+    await tx.matricula.updateMany({
+      where: { alumnoId },
+      data: { movilidadReducida: true },
+    });
+    return;
+  }
+
+  if (fichaPrevia?.condicionAccesible) {
+    await tx.matricula.updateMany({
+      where: { alumnoId },
+      data: { movilidadReducida: false },
+    });
+  }
 }
 
 /**

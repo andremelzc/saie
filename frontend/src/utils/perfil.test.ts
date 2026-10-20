@@ -166,6 +166,7 @@ describe('aplicarCambios', () => {
         alergias: null,
         condicionEspecial: null,
         contactoEmergencia: null,
+        condicionAccesible: false,
       },
     });
     expect(nuevo.fichaMedica?.tipoSangre).toBe('B+');

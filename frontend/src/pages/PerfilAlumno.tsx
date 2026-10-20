@@ -58,6 +58,13 @@ const CAMPOS_DATOS_PERSONALES: CampoPerfil[] = [
 ];
 
 const CAMPOS_FICHA_MEDICA: CampoPerfil[] = [
+  {
+    clave: 'condicionAccesible',
+    etiqueta: '¿Tienes alguna condición física que te impide subir a pisos superiores?',
+    tipo: 'checkbox',
+    ayuda:
+      'Si la marcas, el sistema te prioriza las aulas del primer piso. Describe un requisito de acceso al espacio, no un diagnóstico.',
+  },
   { clave: 'tipoSangre', etiqueta: 'Tipo de sangre', tipo: 'select', opciones: TIPOS_SANGRE },
   {
     clave: 'alergias',

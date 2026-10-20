@@ -182,6 +182,32 @@ describe('PerfilAlumno (Issue 3.17)', () => {
       expect(within(ficha).getByText(/Aún no registras tu ficha médica/i)).toBeVisible();
       expect(within(ficha).getByRole('button', { name: /Completar ficha médica/i })).toBeVisible();
     });
+
+    it('muestra la declaración de accesibilidad en modo lectura', () => {
+      renderizar();
+      const ficha = seccion(/^Ficha médica$/i);
+      expect(within(ficha).getByText('No')).toBeVisible();
+    });
+
+    it('permite declarar una condición de accesibilidad y la envía al backend', async () => {
+      const onGuardar = vi.fn((cambios) =>
+        Promise.resolve(aplicarCambios(PERFIL_FIXTURE, cambios)),
+      );
+      renderizar({ onGuardar });
+      fireEvent.click(screen.getByRole('button', { name: /Editar ficha médica/i }));
+
+      const casilla = screen.getByRole('checkbox', {
+        name: /condición física que te impide subir a pisos superiores/i,
+      });
+      expect(casilla).not.toBeChecked();
+      fireEvent.click(casilla);
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+      await waitFor(() => expect(onGuardar).toHaveBeenCalledTimes(1));
+      expect(onGuardar).toHaveBeenCalledWith({
+        fichaMedica: expect.objectContaining({ condicionAccesible: true }),
+      });
+    });
   });
 
   describe('estados de carga', () => {
