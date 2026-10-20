@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import CargaDatos from './CargaDatos';
 import { importarCsv } from '../../services/admin';
@@ -35,17 +35,22 @@ function elegirArchivo(tipo: string, contenido = 'a,b\n1,2') {
   fireEvent.change(input, { target: { files: [archivo] } });
 }
 
-const botonDe = (titulo: string) =>
-  screen.getByRole('region', { name: titulo }).querySelector('button') as HTMLButtonElement;
+const regionDe = (titulo: string) => screen.getByRole('region', { name: titulo });
+const botonImportar = (titulo: string) =>
+  within(regionDe(titulo)).getByRole('button', { name: 'Importar' });
 
 describe('Carga de datos maestros (Issue 1.9)', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
 
-  it('muestra los tres flujos con el botón deshabilitado hasta elegir un archivo', () => {
+  it('muestra los cuatro flujos con el botón de importar deshabilitado hasta elegir un archivo', () => {
     montar();
-    for (const t of ['1. Cursos y secciones', '2. Horarios', '3. Matrículas']) {
-      expect(botonDe(t)).toBeDisabled();
+    for (const t of ['1. Cursos y secciones', '2. Horarios', '3. Matrículas', '4. Docentes']) {
+      expect(botonImportar(t)).toBeDisabled();
     }
+    expect(screen.getByRole('button', { name: 'Guía y plantillas' })).toBeInTheDocument();
   });
 
   it('muestra nombre y tamaño del archivo elegido', () => {
@@ -53,20 +58,24 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     elegirArchivo('horarios');
     expect(screen.getByText('horarios.csv')).toBeInTheDocument();
     expect(screen.getByText(/KB/)).toBeInTheDocument();
-    expect(botonDe('2. Horarios')).toBeEnabled();
+    expect(botonImportar('2. Horarios')).toBeEnabled();
   });
 
-  it('importa el CSV y muestra el resultado exitoso con los procesados', async () => {
+  it('importa el CSV y muestra el resultado legible con los procesados', async () => {
     importar.mockResolvedValue(base);
     montar();
     elegirArchivo('horarios', 'x,y');
-    fireEvent.click(botonDe('2. Horarios'));
-    expect(await screen.findByText('Importación exitosa: 10 filas.')).toBeInTheDocument();
+    fireEvent.click(botonImportar('2. Horarios'));
+
+    expect(await screen.findByText('Carga completada sin errores')).toBeInTheDocument();
     expect(importar).toHaveBeenCalledWith('horarios', 'x,y');
-    expect(screen.getByText('bloques: 10')).toBeInTheDocument();
+    expect(screen.getByText('bloques de horario')).toBeInTheDocument();
+    expect(screen.getByText('10')).toBeInTheDocument();
+    expect(screen.getByText('Cargado')).toBeInTheDocument();
+    expect(screen.getByText(/Última carga:/)).toBeInTheDocument();
   });
 
-  it('lista las filas rechazadas cuando la importación no es exitosa', async () => {
+  it('lista las filas rechazadas y desactiva la continuación', async () => {
     importar.mockResolvedValue({
       ...base,
       exitosa: false,
@@ -75,10 +84,15 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     });
     montar();
     elegirArchivo('matriculas');
-    fireEvent.click(botonDe('3. Matrículas'));
-    expect(await screen.findByText('2 fila(s) rechazada(s) de 10.')).toBeInTheDocument();
+    fireEvent.click(botonImportar('3. Matrículas'));
+
+    expect(await screen.findByText('La carga tiene 2 filas con problemas')).toBeInTheDocument();
+    expect(screen.getByText(/No se asignaron aulas/)).toBeInTheDocument();
     expect(screen.getByText('Fila 2: código inválido')).toBeInTheDocument();
     expect(screen.getByText('Fila 5: falta columna')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Descargar errores (CSV)' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Continuar con/ })).toBeNull();
+    expect(screen.getByText('Con errores')).toBeInTheDocument();
   });
 
   it('informa si la asignación se ejecutó tras importar', async () => {
@@ -100,9 +114,12 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     });
     montar();
     elegirArchivo('cursos-secciones');
-    fireEvent.click(botonDe('1. Cursos y secciones'));
+    fireEvent.click(botonImportar('1. Cursos y secciones'));
+
     expect(
-      await screen.findByText('Asignación ejecutada: 4 asignadas, 1 escaladas.'),
+      await screen.findByText(
+        'Asignación de aulas: 4 secciones con aula nueva, 0 secciones que conservan la suya y 1 sección pendiente de revisión.',
+      ),
     ).toBeInTheDocument();
   });
 
@@ -113,9 +130,10 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     });
     montar();
     elegirArchivo('horarios');
-    fireEvent.click(botonDe('2. Horarios'));
+    fireEvent.click(botonImportar('2. Horarios'));
+
     expect(
-      await screen.findByText('Asignación no ejecutada: Faltan matrículas'),
+      await screen.findByText('No se asignaron aulas: Faltan matrículas.'),
     ).toBeInTheDocument();
   });
 
@@ -123,10 +141,12 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     importar.mockRejectedValue(new Error('boom'));
     montar();
     elegirArchivo('horarios');
-    fireEvent.click(botonDe('2. Horarios'));
+    fireEvent.click(botonImportar('2. Horarios'));
+
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Inténtalo de nuevo en unos minutos.',
     );
+
     elegirArchivo('horarios');
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
   });
@@ -135,7 +155,69 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     montar();
     const input = document.getElementById('archivo-horarios') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [] } });
-    expect(botonDe('2. Horarios')).toBeDisabled();
+    expect(botonImportar('2. Horarios')).toBeDisabled();
     expect(importar).not.toHaveBeenCalled();
+  });
+
+  it('rechaza archivos que no son CSV antes de llamar al servicio', () => {
+    montar();
+    const input = document.getElementById('archivo-horarios') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: { files: [new File(['x'], 'datos.txt', { type: 'text/plain' })] },
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('El archivo debe ser un CSV (.csv).');
+    expect(botonImportar('2. Horarios')).toBeDisabled();
+    expect(importar).not.toHaveBeenCalled();
+  });
+
+  it('abre la guía y las plantillas desde el encabezado', () => {
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: 'Guía y plantillas' }));
+
+    const dialogo = screen.getByRole('dialog', { name: 'Guía y plantillas' });
+    expect(within(dialogo).getByText('¿Cómo funciona la carga?')).toBeInTheDocument();
+    expect(within(dialogo).getByText('1. Orden de carga')).toBeInTheDocument();
+    expect(within(dialogo).getByText('2. El periodo académico')).toBeInTheDocument();
+
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Plantillas' }));
+    expect(
+      within(dialogo).getByRole('heading', { name: 'Plantillas de carga' }),
+    ).toBeInTheDocument();
+    expect(within(dialogo).getByText('Cursos y secciones')).toBeInTheDocument();
+    expect(within(dialogo).getByText('Horarios')).toBeInTheDocument();
+
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('ofrece continuar con la siguiente zona y mueve el foco', async () => {
+    importar.mockResolvedValue(base);
+    montar();
+    elegirArchivo('cursos-secciones');
+    fireEvent.click(botonImportar('1. Cursos y secciones'));
+
+    const continuar = await screen.findByRole('button', { name: /Continuar con Horarios/ });
+    fireEvent.click(continuar);
+
+    expect(screen.getByRole('region', { name: '2. Horarios' })).toHaveFocus();
+  });
+
+  it('permite corregir y reintentar tras una carga con errores', async () => {
+    importar.mockResolvedValue({
+      ...base,
+      exitosa: false,
+      procesados: {},
+      errores: ['Fila 2: código inválido'],
+    });
+    montar();
+    elegirArchivo('matriculas');
+    fireEvent.click(botonImportar('3. Matrículas'));
+    await screen.findByText('La carga tiene 1 fila con problemas');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Corregir y volver a subir' }));
+
+    expect(screen.queryByText(/La carga tiene 1 fila/)).toBeNull();
+    expect(botonImportar('3. Matrículas')).toBeDisabled();
   });
 });
