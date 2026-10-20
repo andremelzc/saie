@@ -89,6 +89,7 @@ const resumen: ResumenAsignacionDTO = {
   mantenidas: 2,
   escaladas: 2,
   verificacion: null,
+  resultados: [],
 };
 
 const REGLAS: ReglaVerificacion[] = [
@@ -179,6 +180,7 @@ describe('Inicio del panel administrativo', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Ejecutar asignación del periodo' }));
       expect(await screen.findByText('8')).toBeInTheDocument();
       expect(screen.getByText(/escaladas de/)).toBeInTheDocument();
+      expect(screen.getByText(/6 nueva\(s\) · 2 mantenida\(s\)/)).toBeInTheDocument();
       await waitFor(() => expect(escaladas).toHaveBeenCalledTimes(2));
     });
 

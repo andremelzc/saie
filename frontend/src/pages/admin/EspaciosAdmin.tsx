@@ -18,6 +18,10 @@ export const EspaciosAdmin: React.FC = () => {
     .filter((e) => filtro === 'TODOS' || e.tipo === filtro)
     .filter((e) => e.identificador.toLowerCase().includes(texto.trim().toLowerCase()));
 
+  const aulas = (datos ?? []).filter((e) => e.tipo === 'AULA_TEORICA').length;
+  const laboratorios = (datos ?? []).filter((e) => e.tipo === 'LABORATORIO').length;
+  const fueraDeServicio = (datos ?? []).filter((e) => !e.habilitado).length;
+
   return (
     <LayoutAdmin
       titulo="Gestión de espacios"
@@ -43,6 +47,25 @@ export const EspaciosAdmin: React.FC = () => {
           <option value="LABORATORIO">Laboratorios</option>
         </select>
       </div>
+
+      {datos && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-full border border-saie-divider bg-white px-2.5 py-1 font-semibold text-saie-text">
+            {datos.length} espacio(s)
+          </span>
+          <span className="rounded-full border border-saie-divider bg-white px-2.5 py-1 text-saie-muted">
+            {aulas} aula(s) teórica(s)
+          </span>
+          <span className="rounded-full border border-saie-divider bg-white px-2.5 py-1 text-saie-muted">
+            {laboratorios} laboratorio(s)
+          </span>
+          {fueraDeServicio > 0 && (
+            <span className="rounded-full bg-[#FBE9E9] px-2.5 py-1 font-semibold text-saie-danger">
+              {fueraDeServicio} fuera de servicio
+            </span>
+          )}
+        </div>
+      )}
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
 
@@ -77,7 +100,13 @@ export const EspaciosAdmin: React.FC = () => {
                     {e.pabellon} · Piso {e.piso}
                   </td>
                   <td className="px-4 py-3">{e.aforoNominal}</td>
-                  <td className="px-4 py-3">{e.pcsMalogradas ?? '—'}</td>
+                  <td className="px-4 py-3">
+                    {e.pcsMalogradas ? (
+                      <span className="font-semibold text-saie-danger">{e.pcsMalogradas}</span>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={`rounded-full px-2.5 py-1 text-xs font-semibold ${e.habilitado ? 'bg-[#E8F3E9] text-saie-success' : 'bg-[#FBE9E9] text-saie-danger'}`}

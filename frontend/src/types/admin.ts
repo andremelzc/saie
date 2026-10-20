@@ -113,6 +113,17 @@ export interface ResultadoVerificacionDTO {
   reglas: ResultadoReglaVerificacionDTO[];
 }
 
+/** Resultado por sección de una corrida (Issue 2.15). */
+export interface ResultadoSeccionDTO {
+  seccionId: string;
+  codigoSeccion: string;
+  estado: 'VIGENTE' | 'ESCALADA';
+  espacioIds: string[];
+  motivoEscalamiento: string | null;
+  /** `true` si se conservó la asignación vigente porque los requerimientos no cambiaron. */
+  conservada: boolean;
+}
+
 /** Respuesta de POST /v1/asignaciones/batch y /seccion/:id (Issue 2.15). */
 export interface ResumenAsignacionDTO {
   modo: 'seccion' | 'periodo';
@@ -124,6 +135,7 @@ export interface ResumenAsignacionDTO {
   escaladas: number;
   /** Issue 2.17: veredicto del verificador posterior a la corrida. */
   verificacion: ResultadoVerificacionDTO | null;
+  resultados: ResultadoSeccionDTO[];
 }
 
 export type TipoImportacion = 'cursos-secciones' | 'horarios' | 'matriculas' | 'docentes';

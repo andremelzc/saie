@@ -95,6 +95,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
           asignadas: 4,
           mantenidas: 0,
           escaladas: 1,
+          resultados: [],
           verificacion: {
             conforme: true,
             totalRevisadas: 4,

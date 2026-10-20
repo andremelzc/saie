@@ -121,10 +121,15 @@ export const ZonaCarga: React.FC<{
           role="status"
           className={`flex flex-col gap-2 rounded-lg px-3 py-2 text-sm ${resultado.exitosa ? 'bg-[#E8F3E9] text-saie-success' : 'bg-[#FDF0E1] text-[#B45309]'}`}
         >
-          <p className="m-0 font-semibold">
-            {resultado.exitosa
-              ? `Importación exitosa: ${resultado.filasRecibidas} filas.`
-              : `${resultado.errores.length} fila(s) rechazada(s) de ${resultado.filasRecibidas}.`}
+          <p className="m-0 flex items-start gap-2 font-semibold">
+            <span aria-hidden="true" className="shrink-0">
+              {resultado.exitosa ? '✓' : '⚠'}
+            </span>
+            <span>
+              {resultado.exitosa
+                ? `Importación exitosa: ${resultado.filasRecibidas} filas.`
+                : `${resultado.errores.length} fila(s) rechazada(s) de ${resultado.filasRecibidas}.`}
+            </span>
           </p>
           {Object.keys(resultado.procesados).length > 0 && (
             <p className="m-0 text-xs">
