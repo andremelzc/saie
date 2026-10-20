@@ -12,7 +12,6 @@ export const AltaDocentePage: React.FC = () => (
         'Creación de la cuenta de acceso al portal docente.',
         'Asociación de los cursos y secciones que tiene a cargo.',
       ]}
-      issue="#169 (4.18)"
     />
   </LayoutAdmin>
 );

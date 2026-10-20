@@ -171,31 +171,54 @@ describe('Inicio del panel administrativo', () => {
         '/admin/carga#carga-horarios',
       );
       expect(screen.getByText('Sin motivo registrado.')).toBeInTheDocument();
-      expect(await screen.findByText('2', { selector: 'span' })).toBeInTheDocument();
+      const atencion = screen.getByRole('region', { name: 'Requieren tu atención' });
+      expect(within(atencion).getByText(/alertas pendientes/).parentElement).toHaveTextContent(
+        '2 alertas pendientes',
+      );
     });
 
     it('muestra el estado vacío cuando no hay escaladas', async () => {
       escaladas.mockResolvedValue({ periodo: null, total: 0, secciones: [] });
       montar();
-      expect(await screen.findByText(/No hay secciones escaladas/)).toBeInTheDocument();
+      expect(
+        await screen.findByText(/No hay secciones pendientes de revisión/),
+      ).toBeInTheDocument();
     });
 
-    it('ejecuta la corrida y muestra el resumen', async () => {
+    it('pide confirmación, ejecuta la corrida y muestra el desglose', async () => {
       corrida.mockResolvedValue(resumen);
       montar();
       await screen.findByText(/IS101/);
-      fireEvent.click(screen.getByRole('button', { name: 'Ejecutar asignación del periodo' }));
-      expect(await screen.findByText('8')).toBeInTheDocument();
-      expect(screen.getByText(/escaladas de/)).toBeInTheDocument();
-      expect(screen.getByText(/6 nueva\(s\) · 2 mantenida\(s\)/)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
+      expect(screen.getByText(/Se volverán a asignar las aulas/)).toBeInTheDocument();
+      expect(corrida).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
+      const estado = await screen.findByRole('status');
+      expect(estado).toHaveTextContent(
+        /6\s*con aula nueva · 2\s*conservan la suya · 2\s*necesitan revisión de 10 secciones/,
+      );
       await waitFor(() => expect(escaladas).toHaveBeenCalledTimes(2));
+      expect(alertas).toHaveBeenCalledTimes(2);
+    });
+
+    it('permite cancelar la corrida sin llamar al backend', async () => {
+      montar();
+      await screen.findByText(/IS101/);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+      expect(screen.queryByText(/Se volverán a asignar las aulas/)).toBeNull();
+      expect(corrida).not.toHaveBeenCalled();
     });
 
     it('muestra el veredicto conforme del verificador (Issue 2.17)', async () => {
       corrida.mockResolvedValue({ ...resumen, verificacion: verificacionConforme });
       montar();
       await screen.findByText(/IS101/);
-      fireEvent.click(screen.getByRole('button', { name: 'Ejecutar asignación del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
 
       expect(
         await screen.findByText('Conforme: la corrida cumple las 7 reglas duras.'),
@@ -213,7 +236,8 @@ describe('Inicio del panel administrativo', () => {
       corrida.mockResolvedValue({ ...resumen, verificacion: verificacionNoConforme });
       montar();
       await screen.findByText(/IS101/);
-      fireEvent.click(screen.getByRole('button', { name: 'Ejecutar asignación del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
 
       expect(
         await screen.findByText('No conforme: 1 violación(es) en 1 regla(s).'),
@@ -228,7 +252,8 @@ describe('Inicio del panel administrativo', () => {
       corrida.mockResolvedValue({ ...resumen, verificacion: null });
       montar();
       await screen.findByText(/IS101/);
-      fireEvent.click(screen.getByRole('button', { name: 'Ejecutar asignación del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
 
       expect(
         await screen.findByText('No hubo asignaciones que verificar en esta corrida.'),
@@ -240,7 +265,8 @@ describe('Inicio del panel administrativo', () => {
       corrida.mockRejectedValue(new Error('x'));
       montar();
       await screen.findByText(/IS101/);
-      fireEvent.click(screen.getByRole('button', { name: 'Ejecutar asignación del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
       expect(await screen.findByText('Inténtalo de nuevo en unos minutos.')).toBeInTheDocument();
     });
 
@@ -248,12 +274,14 @@ describe('Inicio del panel administrativo', () => {
       corrida.mockRejectedValueOnce(new Error('x')).mockResolvedValueOnce(resumen);
       montar();
       await screen.findByText(/IS101/);
-      fireEvent.click(screen.getByRole('button', { name: 'Ejecutar asignación del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
 
       const aviso = await screen.findByRole('alert');
       fireEvent.click(within(aviso).getByRole('button', { name: 'Reintentar' }));
       await waitFor(() => expect(corrida).toHaveBeenCalledTimes(2));
-      expect(await screen.findByText('8')).toBeInTheDocument();
+      const estado = await screen.findByRole('status');
+      expect(estado).toHaveTextContent(/6\s*con aula nueva/);
     });
 
     it('reintenta una sección escalada', async () => {
@@ -280,13 +308,18 @@ describe('Inicio del panel administrativo', () => {
       expect(await screen.findByText(/IS101/)).toBeInTheDocument();
     });
 
-    it('enlaza a carga de datos, espacios y alertas con el contador pendiente', async () => {
+    it('enlaza a carga de datos, espacios y alertas sin duplicar el contador pendiente', async () => {
       montar();
       await screen.findByText(/IS101/);
-      expect(screen.getByRole('link', { name: /Carga de datos maestros/ })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Gestión de espacios/ })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Alertas de aforo y software/ })).toHaveTextContent(
-        '2',
+      expect(screen.getByRole('link', { name: /Carga de datos/ })).toBeInTheDocument();
+      expect(
+        // El nombre accesible del enlace es su contenido visible (título + descripción).
+        screen.getByRole('link', { name: /Espacios.*Aulas y laboratorios/ }),
+      ).toBeInTheDocument();
+      const enlaceAlertas = screen.getByRole('link', { name: /Alertas.*Casos de capacidad/ });
+      expect(enlaceAlertas).not.toHaveTextContent(/\d/);
+      expect(screen.getByText(/alertas pendientes/).parentElement).toHaveTextContent(
+        '2 alertas pendientes',
       );
     });
   });

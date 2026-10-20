@@ -12,7 +12,6 @@ export const IncidenciasAdminPage: React.FC = () => (
         'Cambio de estado: en revisión, resuelta o descartada.',
         'Registro del responsable y de la solución aplicada.',
       ]}
-      issue="#208 (7.11)"
     />
   </LayoutAdmin>
 );

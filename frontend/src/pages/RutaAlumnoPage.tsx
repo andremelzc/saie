@@ -17,7 +17,6 @@ export const RutaAlumnoPage: React.FC = () => (
       'Ruta accesible (ascensor y rampas) cuando la necesites.',
     ]}
     volverA={{ to: RUTAS.inicioAlumno, etiqueta: 'Volver al inicio' }}
-    issue="#148 (3.19)"
   />
 );
 

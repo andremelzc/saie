@@ -31,18 +31,25 @@ const Icono: React.FC<{ trazo: string }> = ({ trazo }) => (
 export interface LayoutAdminProps {
   titulo: string;
   subtitulo?: string;
+  /** Acciones de la pantalla (p. ej. «Actualizar» o «Guía y plantillas»). */
+  acciones?: React.ReactNode;
   children: React.ReactNode;
 }
 
-export const LayoutAdmin: React.FC<LayoutAdminProps> = ({ titulo, subtitulo, children }) => {
+export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
+  titulo,
+  subtitulo,
+  acciones,
+  children,
+}) => {
   const { sesion } = useAuth();
   const pestanas = pestanasDeRol(sesion?.rol);
 
   const claseLink = ({ isActive }: { isActive: boolean }) =>
-    `flex flex-1 flex-col items-center gap-0.5 px-2 py-2 text-xs font-medium transition-colors md:flex-none md:flex-row md:gap-2 md:rounded-lg md:px-4 md:text-sm ${
+    `flex flex-1 flex-col items-center gap-0.5 px-2 py-2 text-xs transition-colors md:flex-none md:flex-row md:gap-2 md:rounded-lg md:px-4 md:text-sm ${
       isActive
-        ? 'text-saie-primary md:bg-saie-primary md:text-white'
-        : 'text-saie-muted hover:text-saie-primary'
+        ? 'bg-saie-primary/10 font-bold text-saie-primary md:bg-saie-primary md:font-medium md:text-white'
+        : 'font-medium text-saie-muted hover:text-saie-primary'
     }`;
 
   return (
@@ -57,8 +64,10 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({ titulo, subtitulo, chi
           </div>
           <div className="flex items-center gap-4">
             <p className="m-0 hidden text-right text-xs leading-4 text-white/80 sm:block">
-              Sesión activa
-              <strong className="block text-sm font-bold text-white">{sesion?.rol}</strong>
+              <span>Sesión activa</span>
+              <strong className="block text-sm font-bold text-white">
+                {etiquetaRol(sesion?.rol)}
+              </strong>
             </p>
             <BotonCerrarSesion className="h-10! border-white/30! bg-white/10! px-4! text-sm! text-white! hover:bg-white/20!" />
           </div>
@@ -82,9 +91,14 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({ titulo, subtitulo, chi
       </nav>
 
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-6">
-        <div>
-          <h1 className="m-0 font-serif text-2xl font-bold text-saie-text sm:text-3xl">{titulo}</h1>
-          {subtitulo && <p className="m-0 mt-1 text-sm text-saie-muted">{subtitulo}</p>}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="m-0 font-serif text-2xl font-bold text-saie-text sm:text-3xl">
+              {titulo}
+            </h1>
+            {subtitulo && <p className="m-0 mt-1 text-sm text-saie-muted">{subtitulo}</p>}
+          </div>
+          {acciones}
         </div>
         {children}
       </main>
@@ -99,7 +113,7 @@ export const AvisoError: React.FC<{ mensaje: string; onReintentar?: () => void }
 }) => (
   <div
     role="alert"
-    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-saie-danger/30 bg-[#FBE9E9] px-4 py-3 text-sm text-saie-danger"
+    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-saie-danger/30 bg-saie-danger-soft px-4 py-3 text-sm text-saie-danger-strong"
   >
     <span>{mensaje}</span>
     {onReintentar && (

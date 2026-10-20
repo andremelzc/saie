@@ -12,7 +12,6 @@ export const AltaAlumnoPage: React.FC = () => (
         'Validación de código de matrícula y correo institucional.',
         'Asignación del alumno a sus secciones del periodo.',
       ]}
-      issue="#168 (4.17)"
     />
   </LayoutAdmin>
 );

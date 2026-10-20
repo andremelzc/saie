@@ -34,14 +34,14 @@ const GRUPOS: GrupoPreguntas[] = [
         ),
       },
       {
-        pregunta: '¿Qué significa «Asignación en revisión» o «Espacio pendiente de asignación»?',
+        pregunta: '¿Qué significa «En revisión» o «Sin asignar»?',
         respuesta:
-          'Tu curso todavía no tiene un aula o laboratorio confirmado. «Pendiente» quiere decir que aún no se asigna; «en revisión» que Coordinación Académica lo está resolviendo a mano. Cuando se confirme, el estado cambia solo.',
+          'Tu curso todavía no tiene un aula o laboratorio confirmado. «Sin asignar» quiere decir que aún no se asigna; «en revisión» que Coordinación Académica lo está resolviendo a mano. Cuando se confirme, el estado cambia solo.',
       },
       {
         pregunta: '¿Por qué mi aula cambió?',
         respuesta:
-          'Coordinación puede reasignar espacios, por ejemplo si un laboratorio queda fuera de servicio. Tu horario siempre muestra el aula vigente, así que conviene revisarlo antes de salir.',
+          'Coordinación puede reasignar espacios, por ejemplo si un laboratorio queda fuera de servicio. Tu horario siempre muestra el aula actual, así que conviene revisarlo antes de salir.',
       },
     ],
   },

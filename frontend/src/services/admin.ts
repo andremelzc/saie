@@ -1,8 +1,11 @@
 import api from './api';
 import type {
   AlertaDTO,
+  CambiosEspacio,
   EspacioAdminDTO,
   ListadoSoftwareDTO,
+  NuevoEspacioDTO,
+  ResultadoEdicionEspacioDTO,
   ResultadoImportacionDTO,
   ResumenAsignacionDTO,
   SeccionesEscaladasDTO,
@@ -83,6 +86,39 @@ export async function obtenerEspacios(tipo?: TipoEspacio): Promise<EspacioAdminD
   const { data } = await api.get<Respuesta<EspacioAdminDTO[]>>('/v1/admin/espacios', {
     params: tipo ? { tipo } : undefined,
   });
+  return data.data;
+}
+
+/** GET /v1/admin/espacios/:id (Issue 4.15). */
+export async function obtenerEspacio(id: string): Promise<EspacioAdminDTO> {
+  const { data } = await api.get<Respuesta<EspacioAdminDTO>>(
+    `/v1/admin/espacios/${encodeURIComponent(id)}`,
+  );
+  return data.data;
+}
+
+/**
+ * POST /v1/admin/espacios (Issue 4.15, solo Coordinación Académica).
+ * Un aula teórica no se envía con software ni PCs; el backend lo rechaza con 400.
+ */
+export async function crearEspacio(campos: NuevoEspacioDTO): Promise<EspacioAdminDTO> {
+  const { data } = await api.post<Respuesta<EspacioAdminDTO>>('/v1/admin/espacios', campos);
+  return data.data;
+}
+
+/**
+ * PATCH /v1/admin/espacios/:id (Issue 4.15).
+ * Solo se envían los campos que cambian: el backend rechaza con 403 cualquier campo
+ * fuera de `camposEditables` del rol, y exige al menos un campo modificado.
+ */
+export async function editarEspacio(
+  id: string,
+  cambios: CambiosEspacio,
+): Promise<ResultadoEdicionEspacioDTO> {
+  const { data } = await api.patch<Respuesta<ResultadoEdicionEspacioDTO>>(
+    `/v1/admin/espacios/${encodeURIComponent(id)}`,
+    cambios,
+  );
   return data.data;
 }
 

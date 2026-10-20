@@ -13,6 +13,18 @@ export function formatearFechaAlerta(iso: string): string {
   });
 }
 
+/** Fecha compacta para «Última carga: 12 oct, 10:32». */
+export function formatearFechaCorta(iso: string): string {
+  const fecha = new Date(iso);
+  if (Number.isNaN(fecha.getTime())) return iso;
+  return fecha.toLocaleString('es-PE', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export interface MotivoEscalamientoInfo {
   codigo: string | null;
   etiqueta: string;

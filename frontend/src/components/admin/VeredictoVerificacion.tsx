@@ -60,14 +60,14 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({ ve
   const { conforme, totalRevisadas, totalViolaciones, reglas } = verificacion;
   const tono = conforme
     ? {
-        caja: 'border-saie-success/40 bg-[#F1F8F2]',
+        caja: 'border-saie-success/40 bg-saie-success-soft',
         icono: 'bg-saie-success text-white',
-        texto: 'text-saie-success',
+        texto: 'text-saie-success-strong',
       }
     : {
-        caja: 'border-saie-danger/40 bg-[#FDF0F0]',
+        caja: 'border-saie-danger/40 bg-saie-danger-soft',
         icono: 'bg-saie-danger text-white',
-        texto: 'text-saie-danger',
+        texto: 'text-saie-danger-strong',
       };
 
   return (
@@ -118,7 +118,9 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({ ve
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span
                   className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-                    cumple ? 'bg-[#E8F3E9] text-saie-success' : 'bg-[#FBE9E9] text-saie-danger'
+                    cumple
+                      ? 'bg-saie-success-soft text-saie-success-strong'
+                      : 'bg-saie-danger-soft text-saie-danger-strong'
                   }`}
                 >
                   <IconoEstado conforme={cumple} />
@@ -138,7 +140,7 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({ ve
                     {regla.violaciones.map((violacion, indice) => (
                       <li
                         key={`${violacion.asignacionId}-${indice}`}
-                        className="rounded-lg bg-[#FBE9E9] px-2.5 py-1.5"
+                        className="rounded-lg bg-saie-danger-soft px-2.5 py-1.5"
                       >
                         <strong className="font-semibold">{violacion.codigoSeccion}</strong>:{' '}
                         {violacion.detalle}

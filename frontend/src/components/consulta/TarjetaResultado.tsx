@@ -88,7 +88,7 @@ const BadgeEstadoAsignacion: React.FC<{
             clipRule="evenodd"
           />
         </svg>
-        <span>Vigente</span>
+        <span>Espacio confirmado</span>
       </span>
     );
   }
@@ -110,7 +110,7 @@ const BadgeEstadoAsignacion: React.FC<{
             d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
           />
         </svg>
-        <span>Escalada</span>
+        <span>En revisión</span>
       </span>
     );
   }
@@ -131,7 +131,7 @@ const BadgeEstadoAsignacion: React.FC<{
           d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
         />
       </svg>
-      <span>Pendiente</span>
+      <span>Sin asignar</span>
     </span>
   );
 };
@@ -242,7 +242,6 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
     horarios = [],
     espacios = [],
     estadoAsignacion,
-    motivoEscalamiento,
   } = asignacion;
 
   const tieneEspacios = espacios.length > 0;
@@ -284,7 +283,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
       {estadoAsignacion === 'ESCALADA' && (
         <div
           role="note"
-          aria-label="Detalle de asignación escalada"
+          aria-label="Detalle de la revisión de esta clase"
           className="p-3 bg-amber-50 border-l-4 border-amber-500 rounded-r-md text-sm text-amber-900 flex items-start gap-2"
         >
           <svg
@@ -303,11 +302,11 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
           </svg>
           <div>
             <p className="font-semibold text-sm uppercase tracking-wide text-amber-800">
-              Asignación en estado de escalamiento
+              Tu clase está en revisión
             </p>
             <p className="text-sm text-amber-900 mt-0.5">
-              {motivoEscalamiento ||
-                'El espacio asignado se encuentra en revisión por Coordinación Académica.'}
+              Coordinación Académica está revisando el aula o laboratorio de esta sección. Cuando se
+              confirme, aparecerá aquí.
             </p>
           </div>
         </div>
@@ -317,7 +316,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
       {(!tieneEspacios || estadoAsignacion === 'PENDIENTE') && (
         <div
           role="note"
-          aria-label="Aviso de espacio pendiente"
+          aria-label="Aviso de aula sin asignar"
           className="p-3.5 bg-rose-50 border border-rose-200 rounded-lg text-sm text-rose-900 flex items-center gap-2.5"
         >
           <svg
@@ -335,9 +334,10 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
             />
           </svg>
           <div>
-            <p className="font-semibold text-sm text-rose-800">Espacio pendiente de asignación</p>
+            <p className="font-semibold text-sm text-rose-800">Aún no hay aula asignada</p>
             <p className="text-sm text-rose-700">
-              El aula o laboratorio aún no ha sido asignado por la facultad para esta sección.
+              La facultad todavía no confirma el aula o laboratorio de esta sección. Vuelve a
+              consultar más tarde.
             </p>
           </div>
         </div>
@@ -363,7 +363,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
                 <path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
               </svg>
               <span>
-                {esBloqueMultiple ? 'Espacios Asignados (Bloque Múltiple)' : 'Espacio Asignado'}
+                {esBloqueMultiple ? 'Varios espacios para esta clase' : 'Espacio asignado'}
               </span>
             </span>
 

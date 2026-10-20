@@ -180,10 +180,10 @@ describe('HorarioMisCursos (Issue #145 / 3.16)', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Mis cursos' }));
 
       const redaccion = screen.getByRole('article', { name: 'Redacción y Comunicación' });
-      expect(within(redaccion).getByText('Espacio pendiente de asignación')).toBeVisible();
+      expect(within(redaccion).getByText('Sin aula asignada')).toBeVisible();
 
       const software = screen.getByRole('article', { name: 'Ingeniería de Software' });
-      expect(within(software).getByText('Asignación en revisión')).toBeVisible();
+      expect(within(software).getByText('Clase en revisión')).toBeVisible();
       expect(within(software).getByText('Por asignar')).toBeVisible();
     });
 

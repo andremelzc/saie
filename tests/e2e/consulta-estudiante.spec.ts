@@ -142,8 +142,9 @@ test.describe('Flujo de Consulta Pública del Estudiante (Issue #181 / 5.9)', ()
     const inputCodigo = page.locator('#codigo-consulta');
     const botonBuscar = page.getByRole('button', { name: 'Buscar' });
 
-    // El botón empieza deshabilitado
-    await expect(botonBuscar).toBeDisabled();
+    // El botón ya no se deshabilita con el campo vacío: la validación se muestra al enviar,
+    // para que el mensaje de error sea visible y no dependa de un atributo `disabled`.
+    await expect(botonBuscar).toBeEnabled();
 
     // Escribir código válido de 8 dígitos
     await inputCodigo.fill('20200001');
@@ -205,9 +206,20 @@ test.describe('Flujo de Consulta Pública del Estudiante (Issue #181 / 5.9)', ()
     await inputCodigo.fill('1234');
     await inputCodigo.blur();
 
-    await expect(botonBuscar).toBeDisabled();
     await expect(
       page.getByText('Ingresa 8 dígitos (alumno) o un código de curso como CC-101'),
+    ).toBeVisible();
+    // El botón sigue disponible: al enviar de nuevo se muestra el error sin consultar al backend.
+    await expect(botonBuscar).toBeEnabled();
+  });
+
+  test('Caso Código vacío: avisa al enviar sin consultar al backend', async ({ page }) => {
+    await page.goto('/consulta');
+
+    await page.getByRole('button', { name: 'Buscar' }).click();
+
+    await expect(
+      page.getByText('Escribe tu código de alumno o el código de un curso.'),
     ).toBeVisible();
   });
 
@@ -220,7 +232,9 @@ test.describe('Flujo de Consulta Pública del Estudiante (Issue #181 / 5.9)', ()
     await expect(page.getByText('Curso detectado')).toBeVisible();
     await page.getByRole('button', { name: 'Buscar' }).click();
 
-    await expect(page.getByRole('heading', { name: /CC-101 · Introducción a la Computación/i })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /CC-101 · Introducción a la Computación/i }),
+    ).toBeVisible();
     await expect(page.getByText(/1 sección encontrada/i)).toBeVisible();
   });
 

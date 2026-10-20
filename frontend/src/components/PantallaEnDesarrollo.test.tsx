@@ -23,7 +23,6 @@ function montar(props: Partial<React.ComponentProps<typeof PantallaEnDesarrollo>
         descripcion="Ubica tus aulas en el plano."
         funciones={['Mapa por piso', 'Ocupación de cada espacio']}
         volverA={{ to: '/estudiante', etiqueta: 'Volver al inicio' }}
-        issue="#147 (3.18)"
         {...props}
       />
     </MemoryRouter>,
@@ -40,13 +39,14 @@ describe('PantallaEnDesarrollo', () => {
     expect(screen.getByText(PREVISION_EN_DESARROLLO)).toBeVisible();
   });
 
-  it('lista las funcionalidades previstas y el issue de seguimiento', () => {
+  it('lista las funcionalidades previstas sin jerga técnica', () => {
     montar();
 
     expect(screen.getByRole('heading', { name: 'Lo que incluirá' })).toBeVisible();
     expect(screen.getByText('Mapa por piso')).toBeVisible();
     expect(screen.getByText('Ocupación de cada espacio')).toBeVisible();
-    expect(screen.getByText('#147 (3.18)')).toBeVisible();
+    expect(screen.queryByText(/Issue|RF-?\d/)).toBeNull();
+    expect(screen.queryByText(/Seguimiento en el repositorio/)).toBeNull();
   });
 
   it('el botón principal vuelve a la ruta indicada', () => {
@@ -58,8 +58,8 @@ describe('PantallaEnDesarrollo', () => {
     );
   });
 
-  it('sin funciones ni issue omite esas secciones', () => {
-    montar({ funciones: [], issue: undefined });
+  it('sin funciones omite la sección de funcionalidades previstas', () => {
+    montar({ funciones: [] });
 
     expect(screen.queryByRole('heading', { name: 'Lo que incluirá' })).toBeNull();
     expect(screen.queryByText(/Seguimiento en el repositorio/)).toBeNull();

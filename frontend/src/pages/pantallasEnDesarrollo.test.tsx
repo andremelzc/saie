@@ -85,57 +85,42 @@ describe('pantallas en desarrollo', () => {
 });
 
 describe('InicioDocentePage', () => {
-  it('enlaza las pantallas pendientes del portal docente', () => {
+  it('explica que el portal estará disponible y ofrece salidas claras', () => {
     auth.sesion = { rol: 'DOCENTE' };
     montar(<InicioDocentePage />);
 
     expect(screen.getByRole('heading', { name: 'Portal del docente' })).toBeVisible();
     expect(screen.getByRole('status')).toHaveTextContent(MENSAJE_EN_DESARROLLO);
-    expect(screen.getByRole('link', { name: /Mi horario y asignaciones/ })).toHaveAttribute(
+    expect(screen.getByText(PREVISION_EN_DESARROLLO)).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Volver al inicio' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Consultar espacios' })).toHaveAttribute(
       'href',
-      '/docente/horario',
+      '/consulta',
     );
-    expect(screen.getByRole('link', { name: /Explorar espacios y equipos/ })).toHaveAttribute(
-      'href',
-      '/docente/espacios',
-    );
-    expect(screen.getByRole('link', { name: /Reportar una incidencia/ })).toHaveAttribute(
-      'href',
-      '/docente/incidencias',
-    );
+    expect(screen.queryByRole('link', { name: /Mi horario y asignaciones/ })).toBeNull();
   });
 });
 
 describe('ProximamenteAdminPage', () => {
-  it('Coordinación ve sus pantallas pendientes y no las de Jefatura', () => {
+  it('Coordinación ve su hoja de ruta sin enlaces a pantallas vacías', () => {
     montar(<ProximamenteAdminPage />);
 
-    expect(screen.getByRole('heading', { name: 'Próximamente' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Hoja de ruta' })).toBeVisible();
     expect(screen.getByRole('status')).toHaveTextContent(MENSAJE_EN_DESARROLLO);
     expect(screen.getByText(PREVISION_EN_DESARROLLO)).toBeVisible();
-    expect(screen.getByRole('link', { name: /Mapa de ocupación por piso/ })).toHaveAttribute(
-      'href',
-      '/admin/mapa',
-    );
-    expect(screen.getByRole('link', { name: /Alta de alumnos/ })).toHaveAttribute(
-      'href',
-      '/admin/alumnos/nuevo',
-    );
-    expect(screen.queryByRole('link', { name: /Revisión de incidencias/ })).toBeNull();
+    expect(screen.getByText('Mapa de ocupación por piso')).toBeVisible();
+    expect(screen.getByText('Alta de alumnos y docentes')).toBeVisible();
+    expect(screen.queryByText('Revisión de incidencias')).toBeNull();
+    expect(screen.queryByRole('link', { name: /Mapa de ocupación por piso/ })).toBeNull();
   });
 
-  it('Jefatura ve solo la revisión de incidencias y el cambio de clave', () => {
+  it('Jefatura ve solo sus pendientes', () => {
     auth.sesion = { rol: 'JEFATURA_LABORATORIOS' };
     montar(<ProximamenteAdminPage />);
 
-    expect(screen.getByRole('link', { name: /Revisión de incidencias/ })).toHaveAttribute(
-      'href',
-      '/admin/incidencias',
-    );
-    expect(screen.getByRole('link', { name: /Claves y contraseñas/ })).toHaveAttribute(
-      'href',
-      '/admin/claves',
-    );
-    expect(screen.queryByRole('link', { name: /Mapa de ocupación por piso/ })).toBeNull();
+    expect(screen.getByText('Revisión de incidencias')).toBeVisible();
+    expect(screen.getByText('Claves y contraseñas')).toBeVisible();
+    expect(screen.queryByText('Mapa de ocupación por piso')).toBeNull();
+    expect(screen.queryByRole('link', { name: /Revisión de incidencias/ })).toBeNull();
   });
 });

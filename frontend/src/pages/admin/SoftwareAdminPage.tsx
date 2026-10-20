@@ -12,7 +12,6 @@ export const SoftwareAdminPage: React.FC = () => (
         'Asociación del software a uno o más laboratorios.',
         'Control de vigencia de licencias y versiones.',
       ]}
-      issue="#276 (4.30)"
     />
   </LayoutAdmin>
 );

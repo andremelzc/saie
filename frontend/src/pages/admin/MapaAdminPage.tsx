@@ -12,7 +12,6 @@ export const MapaAdminPage: React.FC = () => (
         'Filtro por pabellón, piso, tipo de espacio y franja horaria.',
         'Acceso al detalle del espacio y a la sección que lo ocupa.',
       ]}
-      issue="#164, #165 (4.13 y 4.14)"
     />
   </LayoutAdmin>
 );

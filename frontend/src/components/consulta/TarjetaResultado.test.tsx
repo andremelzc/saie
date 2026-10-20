@@ -79,7 +79,7 @@ describe('TarjetaResultado (Issue #135 / 3.6)', () => {
     expect(screen.getByText('D001 - Carlos Mendoza')).toBeInTheDocument();
 
     // Estado vigente
-    expect(screen.getByText('Vigente')).toBeInTheDocument();
+    expect(screen.getByText('Espacio confirmado')).toBeInTheDocument();
   });
 
   it('muestra correctamente los 6 campos requeridos diferenciando un laboratorio con ícono y etiqueta', () => {
@@ -118,7 +118,7 @@ describe('TarjetaResultado (Issue #135 / 3.6)', () => {
 
     render(<TarjetaResultado asignacion={mockBloqueMultiple} />);
 
-    expect(screen.getByText('Espacios Asignados (Bloque Múltiple)')).toBeInTheDocument();
+    expect(screen.getByText('Varios espacios para esta clase')).toBeInTheDocument();
     expect(screen.getByText('ANT-lab-1')).toBeInTheDocument();
     expect(screen.getByText('ANT-lab-2')).toBeInTheDocument();
     expect(screen.getAllByText('Laboratorio')).toHaveLength(2);
@@ -144,14 +144,14 @@ describe('TarjetaResultado (Issue #135 / 3.6)', () => {
 
     render(<TarjetaResultado asignacion={mockPendiente} />);
 
-    expect(screen.getByText('Pendiente')).toBeInTheDocument();
-    expect(screen.getByText('Espacio pendiente de asignación')).toBeInTheDocument();
+    expect(screen.getByText('Sin asignar')).toBeInTheDocument();
+    expect(screen.getByText('Aún no hay aula asignada')).toBeInTheDocument();
     expect(
-      screen.getByText(/El aula o laboratorio aún no ha sido asignado por la facultad/i),
+      screen.getByText(/La facultad todavía no confirma el aula o laboratorio/i),
     ).toBeInTheDocument();
   });
 
-  it('caso borde: maneja asignación en estado ESCALADA mostrando el badge y el motivo', () => {
+  it('caso borde: maneja una asignación en revisión con un aviso claro', () => {
     const mockEscalada: AsignacionConsultaItemDTO = {
       ...mockAulaVigente,
       estadoAsignacion: 'ESCALADA',
@@ -160,8 +160,11 @@ describe('TarjetaResultado (Issue #135 / 3.6)', () => {
 
     render(<TarjetaResultado asignacion={mockEscalada} />);
 
-    expect(screen.getByText('Escalada')).toBeInTheDocument();
-    expect(screen.getByText('Conflicto por aforo excedido')).toBeInTheDocument();
+    expect(screen.getByText('En revisión')).toBeInTheDocument();
+    expect(screen.getByText('Tu clase está en revisión')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Coordinación Académica está revisando el aula o laboratorio/i),
+    ).toBeInTheDocument();
   });
 
   it('caso borde: muestra "Docente por asignar" cuando no hay nombre de docente registrado', () => {

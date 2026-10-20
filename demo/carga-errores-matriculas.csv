@@ -1,0 +1,10 @@
+codigoAlumno,nombre,correo,movilidadReducida,codigoCurso,codigoSeccion,periodo,crearCuentaAcceso
+99999999,ALUMNO DEMO ERROR,alumno.demo@example.edu,false,202SW0104,1,2026-2,true
+,ALUMNO SIN CODIGO,alumno.sin.codigo@example.edu,false,202SW0104,1,2026-2,true
+99999998,,alumno.sin.nombre@example.edu,false,202SW0104,1,2026-2,true
+99999997,ALUMNO CORREO MALO,correo-invalido,false,202SW0104,1,2026-2,true
+99999996,ALUMNO SIN CURSO,alumno.sin.curso@example.edu,false,,1,2026-2,true
+99999995,ALUMNO SIN SECCION,alumno.sin.seccion@example.edu,false,202SW0104,,2026-2,true
+99999994,ALUMNO SIN PERIODO,alumno.sin.periodo@example.edu,false,202SW0104,1,,true
+99999993,ALUMNO CURSO NO EXISTE,alumno.curso.noexiste@example.edu,false,NOEXISTE,1,2026-2,true
+99999992,ALUMNO SECCION NO EXISTE,alumno.seccion.noexiste@example.edu,false,202SW0104,99,2026-2,true
