@@ -232,7 +232,9 @@ test.describe('Flujo de Consulta Pública del Estudiante (Issue #181 / 5.9)', ()
     await expect(page.getByText('Curso detectado')).toBeVisible();
     await page.getByRole('button', { name: 'Buscar' }).click();
 
-    await expect(page.getByRole('heading', { name: /CC-101 · Introducción a la Computación/i })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /CC-101 · Introducción a la Computación/i }),
+    ).toBeVisible();
     await expect(page.getByText(/1 sección encontrada/i)).toBeVisible();
   });
 

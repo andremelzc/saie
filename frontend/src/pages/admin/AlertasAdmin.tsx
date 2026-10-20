@@ -36,7 +36,16 @@ const ListaAlertas: React.FC<{
   onResolver: (id: string) => void;
   reintentando: string | null;
   onVerTodas: () => void;
-}> = ({ hayAlertas, hayCoincidencias, error, filtro, alertas, onResolver, reintentando, onVerTodas }) => {
+}> = ({
+  hayAlertas,
+  hayCoincidencias,
+  error,
+  filtro,
+  alertas,
+  onResolver,
+  reintentando,
+  onVerTodas,
+}) => {
   if (!error && !hayAlertas) {
     return (
       <EstadoVacio

@@ -54,8 +54,14 @@ test.describe('Accesibilidad del panel con axe en navegador real (Issue 3.23)', 
 
     const drawer = page.getByRole('dialog');
     await expect(drawer).toBeVisible();
+    // El drawer entra con una animación: se espera a que se estabilice antes de auditar.
+    await page.waitForTimeout(400);
+    const handle = await drawer.elementHandle();
+    expect(handle).not.toBeNull();
 
-    const resultados = await new AxeBuilder({ page }).include(await drawer.elementHandle()).analyze();
+    const resultados = await new AxeBuilder({ page })
+      .include(handle!)
+      .analyze();
     const graves = resultados.violations.filter((v) =>
       IMPACTOS_GRAVES.includes(v.impact ?? 'minor'),
     );

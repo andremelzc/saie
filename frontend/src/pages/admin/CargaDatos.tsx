@@ -174,7 +174,9 @@ const ZonaArchivo: React.FC<{
     >
       {archivo ? (
         <>
-          <span className="max-w-full break-all font-semibold text-saie-primary">{archivo.name}</span>
+          <span className="max-w-full break-all font-semibold text-saie-primary">
+            {archivo.name}
+          </span>
           <span className="text-xs text-saie-muted">
             {(archivo.size / 1024).toFixed(1)} KB · listo para importar
           </span>
@@ -241,15 +243,23 @@ const PanelResultado: React.FC<{
         </BadgeEstado>
       </div>
       <p className="m-0 text-sm text-saie-muted">
+        {/*
+          Cada importador genera una entrada por fila rechazada (las varias incidencias de
+          validación de una misma fila se unen en un solo mensaje), así que la resta es
+          exacta: son las filas que sí se guardaron.
+        */}
         {resultado.filasRecibidas} filas leídas ·{' '}
-        {resultado.filasRecibidas - resultado.errores.length} sin errores
+        {resultado.filasRecibidas - resultado.errores.length} guardadas
+        {resultado.errores.length > 0 && ` · ${resultado.errores.length} con problemas`}
       </p>
 
       {Object.keys(resultado.procesados).length > 0 && (
         <dl className="m-0 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
           {Object.entries(resultado.procesados).map(([clave, valor]) => (
             <div key={clave} className="rounded-lg bg-white px-3 py-2">
-              <dt className="text-xs text-saie-muted">{ETIQUETAS_PROCESADOS[clave] ?? humanizar(clave)}</dt>
+              <dt className="text-xs text-saie-muted">
+                {ETIQUETAS_PROCESADOS[clave] ?? humanizar(clave)}
+              </dt>
               <dd className="m-0 text-lg font-bold text-saie-text">{valor}</dd>
             </div>
           ))}
@@ -260,9 +270,7 @@ const PanelResultado: React.FC<{
         <>
           <Aviso tono="advertencia">
             {tipo !== 'docentes' && (
-              <strong>
-                No se asignaron aulas porque el archivo tiene filas con problemas.{' '}
-              </strong>
+              <strong>No se asignaron aulas porque el archivo tiene filas con problemas. </strong>
             )}
             Corrige esas filas y sube el archivo de nuevo; las demás ya se guardaron.
           </Aviso>
@@ -278,7 +286,10 @@ const PanelResultado: React.FC<{
               Corregir y volver a subir
             </Boton>
           </div>
-          <Acordeon titulo={`Ver ${textoFilasConProblemas(resultado.errores.length)}`} abiertoInicial>
+          <Acordeon
+            titulo={`Ver ${textoFilasConProblemas(resultado.errores.length)}`}
+            abiertoInicial
+          >
             <ul className="m-0 max-h-48 list-disc overflow-auto pl-5 text-sm text-saie-text">
               {resultado.errores.map((e, i) => (
                 <li key={i}>{e}</li>
@@ -654,7 +665,9 @@ const TarjetaPlantilla: React.FC<{ plantilla: PlantillaCSV }> = ({ plantilla }) 
                     <td className="px-2 py-2 font-mono font-semibold text-saie-text">
                       {columna.nombre}
                     </td>
-                    <td className="px-2 py-2 text-saie-muted">{columna.obligatorio ? 'Sí' : 'No'}</td>
+                    <td className="px-2 py-2 text-saie-muted">
+                      {columna.obligatorio ? 'Sí' : 'No'}
+                    </td>
                     <td className="px-2 py-2 text-saie-muted">{columna.descripcion}</td>
                     <td className="px-2 py-2 font-mono text-saie-muted">{columna.ejemplo}</td>
                   </tr>

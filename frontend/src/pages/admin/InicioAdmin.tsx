@@ -22,6 +22,12 @@ import type {
 } from '../../types/admin';
 import { describirMotivoEscalamiento, formatearFechaCorta } from '../../utils/admin';
 
+/**
+ * Enlace de acceso a una pantalla del panel. El nombre accesible es el contenido visible
+ * (título, descripción y «Abrir»): un `aria-label` propio se descarta en la cola y además
+ * incumple la regla «label-content-name-mismatch» de axe (WCAG 2.5.3), que exige que el texto
+ * visible forme parte del nombre accesible.
+ */
 const Acceso: React.FC<{ to: string; titulo: string; descripcion: string }> = ({
   to,
   titulo,
@@ -29,7 +35,6 @@ const Acceso: React.FC<{ to: string; titulo: string; descripcion: string }> = ({
 }) => (
   <Link
     to={to}
-    aria-label={`${titulo}. ${descripcion}. Abrir`}
     className="group flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-5 no-underline shadow-[var(--saie-shadow-1)] transition-shadow hover:border-saie-primary hover:shadow-[var(--saie-shadow-3)]"
   >
     <span className="text-base font-bold text-saie-text">{titulo}</span>

@@ -118,7 +118,9 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({ ve
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span
                   className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-                    cumple ? 'bg-saie-success-soft text-saie-success-strong' : 'bg-saie-danger-soft text-saie-danger-strong'
+                    cumple
+                      ? 'bg-saie-success-soft text-saie-success-strong'
+                      : 'bg-saie-danger-soft text-saie-danger-strong'
                   }`}
                 >
                   <IconoEstado conforme={cumple} />

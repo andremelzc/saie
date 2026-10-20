@@ -313,7 +313,8 @@ describe('Inicio del panel administrativo', () => {
       await screen.findByText(/IS101/);
       expect(screen.getByRole('link', { name: /Carga de datos/ })).toBeInTheDocument();
       expect(
-        screen.getByRole('link', { name: /Espacios\. Aulas y laboratorios/ }),
+        // El nombre accesible del enlace es su contenido visible (título + descripción).
+        screen.getByRole('link', { name: /Espacios.*Aulas y laboratorios/ }),
       ).toBeInTheDocument();
       const enlaceAlertas = screen.getByRole('link', { name: /Alertas.*Casos de capacidad/ });
       expect(enlaceAlertas).not.toHaveTextContent(/\d/);

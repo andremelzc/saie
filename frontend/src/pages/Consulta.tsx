@@ -153,7 +153,7 @@ const QueVeras: React.FC = () => (
           key={dato.titulo}
           className="flex sm:flex-col items-start gap-3 p-4 bg-white border border-saie-divider rounded-xl"
         >
-          <span className="shrink-0 w-10 h-10 rounded-lg bg-[#FAF6ED] border border-saie-divider text-saie-primary flex items-center justify-center">
+          <span className="shrink-0 w-10 h-10 rounded-lg bg-saie-canvas border border-saie-divider text-saie-primary flex items-center justify-center">
             <svg
               className="w-5 h-5"
               fill="none"

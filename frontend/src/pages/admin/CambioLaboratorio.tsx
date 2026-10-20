@@ -181,7 +181,9 @@ const PanelPcs: React.FC<{
       onChange={(e) => onValor(e.target.value)}
       className={CLASE_CAMPO}
     />
-    <p className={CLASE_AYUDA}>Baja el número si se repararon. Si no hay PCs malogradas, escribe 0.</p>
+    <p className={CLASE_AYUDA}>
+      Baja el número si se repararon. Si no hay PCs malogradas, escribe 0.
+    </p>
     {!valido && (
       <p role="alert" className="m-0 text-sm font-medium text-saie-danger">
         Ingresa un número entero mayor o igual a 0. No dejes el campo vacío si ya había un valor

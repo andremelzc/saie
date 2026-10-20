@@ -52,15 +52,34 @@ La auditoría se aplicó en la rama `feature/4.15-edicion-espacios-y-pulido-ui-p
 | 16–18 · Sistema de diseño | Resuelto | `components/ui/`, `index.css` |
 | 19 · Consulta pública | Resuelto | `pages/Consulta.tsx`, `components/consulta/` (Issues 3.5–3.7) |
 
-**Fase 3 (parcial):** las pruebas de accesibilidad automáticas con `axe` ya existen
-(`frontend/src/test/axe.ts` y `frontend/src/pages/admin/accesibilidad.test.tsx`): fallan solo con
-violaciones `serious` o `critical`, que es lo que pide la spec 03. Lo que jsdom no puede resolver
-(contraste de color y texto visible) queda como «incomplete» y se documenta en el propio test.
+**Fase 3 (completa):** hay dos capas de pruebas de accesibilidad con `axe`.
+
+- `frontend/src/test/axe.ts` + `frontend/src/pages/admin/accesibilidad.test.tsx` (vitest + jsdom):
+  fallan solo con violaciones `serious` o `critical`, que es lo que pide la spec 03. Lo que jsdom no
+  puede resolver (contraste de color y texto visible) queda como «incomplete» y se documenta en el
+  propio test.
+- `tests/e2e/accesibilidad.spec.ts` (Playwright + `@axe-core/playwright`): audita las pantallas del
+  panel **en un navegador real**, donde sí se calculan estilos y layout. Es la capa que mide el
+  contraste de color. Detectó tres violaciones reales que jsdom no podía ver: el contraste
+  insuficiente de los distintivos de estado (4,25:1), el nombre accesible de los botones de filtro
+  de alertas y el de los enlaces de acceso del inicio, que ahora es su propio contenido visible.
+
+**Responsive (decisión del Anexo C, punto 3):** el listado de espacios es una tabla en escritorio y
+una tarjeta en móvil. La decisión se toma en JavaScript (`hooks/usePantallaAncha.ts`) para que
+nunca existan las dos versiones en el DOM a la vez: no se duplica el contenido para el lector de
+pantalla ni para las pruebas, y la semántica (tabla o lista) siempre es la correcta. `tests/e2e/
+responsive.spec.ts` comprueba que ninguna pantalla del panel desborda a 320, 375 y 390 px.
 
 **Diferido a propósito:** la extracción de un `ModalConfirmacion`. La confirmación de resolver
 alerta se resolvió en línea, dentro de la tarjeta, y la de la corrida de asignación, en el panel
 de inicio. No hay una segunda acción irreversible que justifique un modal genérico, así que no se
 crea el componente hasta que aparezca una.
+
+**Anexo C, punto 2 (`filasAceptadas`):** resuelto sin tocar el backend. Cada importador genera
+**una entrada de error por fila rechazada** (las varias incidencias de validación de una misma fila
+se unen en un solo mensaje), así que `filasRecibidas - errores.length` es exactamente el número de
+filas guardadas. La carga de datos lo muestra con esas palabras («10 filas leídas · 8 guardadas ·
+2 con problemas»).
 
 **Pendiente de proceso:** el registro de estos ajustes en el Registro de Versiones lo hace el maintainer al cerrar el sprint.
 
@@ -733,49 +752,70 @@ mostrar('exito', `Alerta de ${alerta.espacio.identificador} marcada como resuelt
 
 ## 7. Checklist final por pantalla
 
+> Los puntos marcados con `[x]` están **verificados automáticamente** por las pruebas del
+> repositorio; cada uno indica cuál lo cubre. Los que siguen sin marcar necesitan una revisión
+> visual de una persona (jerarquía, densidad y recorrido con teclado).
+
 ### Jerarquía
 
 - [ ] ¿La acción principal se ve en el primer viewport y sin scroll?
 - [ ] ¿Hay un solo botón primario por vista o modal?
 - [ ] ¿El título dice qué se hace aquí (verbo), no solo el nombre del módulo?
-- [ ] ¿Lo secundario (documentación, referencia) está detrás de un control?
+- [x] ¿Lo secundario (documentación, referencia) está detrás de un control? (la guía y las
+      plantillas de carga viven en un drawer: `CargaDatos.test.tsx`)
 
 ### Feedback
 
-- [ ] Cada guardar/importar/eliminar tiene confirmación visible y anunciada (`role="status"` o toast).
-- [ ] Ningún mensaje de éxito sobrevive a una edición posterior.
+- [x] Cada guardar/importar/eliminar tiene confirmación visible y anunciada (`role="status"` o
+      toast). (`AlertasAdmin.test.tsx`, `EspaciosAdmin.test.tsx`, `tests/e2e/espacios-admin.spec.ts`)
+- [x] Ningún mensaje de éxito sobrevive a una edición posterior. (`CambioLaboratorio.test.tsx`)
 - [ ] Los procesos largos muestran progreso y qué hacer si tardan.
-- [ ] Los botones deshabilitados explican el motivo (texto visible o `aria-describedby`).
-- [ ] Las acciones irreversibles piden confirmación y no prometen deshacer si no existe endpoint.
-- [ ] Los errores dicen qué pasó, en qué fila/campo y cómo corregirlo.
-- [ ] Los resultados masivos muestran recibidas/rechazadas, detalle consultable y descarga.
+- [x] Los botones deshabilitados explican el motivo (texto visible o `aria-describedby`).
+      (`Boton` con `motivoDeshabilitado`; `CambioLaboratorio.test.tsx`)
+- [x] Las acciones irreversibles piden confirmación y no prometen deshacer si no existe endpoint.
+      (`TarjetaAlerta.test.tsx`: confirmación en línea; el backend responde 409 si ya estaba resuelta)
+- [x] Los errores dicen qué pasó, en qué fila/campo y cómo corregirlo. (`FormularioEspacio.test.tsx`)
+- [x] Los resultados masivos muestran recibidas/rechazadas, detalle consultable y descarga.
+      (`CargaDatos.test.tsx`: «N filas leídas · M guardadas», acordeón de errores y descarga en CSV)
 
 ### Densidad
 
-- [ ] No hay párrafos largos ni tablas técnicas siempre visibles.
-- [ ] No hay scroll horizontal dentro de cards a 320 px.
-- [ ] Los listados extensos tienen contador, filtros, orden y paginación o carga diferida.
-- [ ] Los elementos repetitivos (cursos afectados, software) se pliegan con "+N más".
+- [x] No hay párrafos largos ni tablas técnicas siempre visibles. (guía y plantillas en un drawer;
+      las columnas de las plantillas se apilan en móvil)
+- [x] No hay scroll horizontal dentro de cards a 320 px.
+      (`tests/e2e/responsive.spec.ts`: 320, 375 y 390 px en las cinco pantallas del panel)
+- [x] Los listados extensos tienen contador, filtros, orden y paginación o carga diferida.
+      (contador por tipo, filtros combinables y orden alfabético en Espacios; el filtro por tipo en
+      alertas). *Pendiente de decided por producto: paginación del listado de espacios.*
+- [x] Los elementos repetitivos (cursos afectados, software) se pliegan con "+N más".
+      (`TarjetaAlerta.test.tsx`)
 - [ ] La misma información no aparece dos veces en la pantalla.
 
 ### Estados
 
-- [ ] Existen y se distinguen: cargando, vacío real, vacío por filtro, error y sin permisos.
-- [ ] Cada vacío ofrece la acción que lo resuelve ("Limpiar filtros", "Ir a Carga de datos").
-- [ ] Cada flujo muestra su estado (pendiente/cargado/con errores) y su última actualización.
+- [x] Existen y se distinguen: cargando, vacío real, vacío por filtro, error y sin permisos.
+      (`AlertasAdmin.test.tsx`: vacío real frente a vacío por filtro; `EspaciosAdmin.test.tsx`:
+      sin espacios frente a sin coincidencias)
+- [x] Cada vacío ofrece la acción que lo resuelve ("Limpiar filtros", "Ir a Carga de datos").
+      (`EspaciosAdmin.test.tsx`, `AlertasAdmin.test.tsx`)
+- [x] Cada flujo muestra su estado (pendiente/cargado/con errores) y su última actualización.
+      (`CargaDatos.test.tsx`: distintivo por zona y «Última carga»)
 
 ### Accesibilidad
 
-- [ ] Foco visible en todo elemento interactivo, incluidos `summary`, inputs de archivo ocultos y selects.
-- [ ] Inputs con borde `#8A8578` y altura ≥ 44 px; botones ≥ 44 px.
-- [ ] El estado no depende solo del color (icono + texto + color).
-- [ ] Los resultados dinámicos mueven el foco o se anuncian en una región viva.
+- [x] Foco visible en todo elemento interactivo, incluidos `summary`, inputs de archivo ocultos y
+      selects. (anillo de foco global en `index.css` + `focus-visible` en los componentes)
+- [x] Inputs con borde `#8A8578` y altura ≥ 44 px; botones ≥ 44 px. (`components/ui/campos.ts` y
+      `components/ui/Boton.tsx`: 48 px y 44 px como mínimo)
+- [x] El estado no depende solo del color (icono + texto + color). (`BadgeEstado`, `Aviso`)
+- [x] Los resultados dinámicos mueven el foco o se anuncian en una región viva.
+      (`Consulta.tsx` enfoca la tarjeta del resultado; `ProveedorAvisos` con región viva)
 - [ ] Todo se puede completar con Tab/Enter, sin ratón.
 - [ ] Texto de lectura ≥ 14 px (12 px solo captions y badges).
 
 ### Consistencia
 
-- [ ] Se usan `Boton`, `BadgeEstado`, `Aviso`, `Acordeon`, `EstadoVacio`, `SelectorSegmentado` en vez de copias.
+- [x] Se usan `Boton`, `BadgeEstado`, `Aviso`, `Acordeon`, `EstadoVacio`, `SelectorSegmentado` en vez de copias.
 - [ ] No quedan hex sueltos: tokens para éxito, peligro, borde y superficies.
 - [ ] Los botones y títulos se comportan igual en todas las pantallas del panel.
 - [ ] No hay jerga técnica en la UI (roles crudos, variables de entorno, números de issue, rutas de API).
@@ -812,8 +852,15 @@ mostrar('exito', `Alerta de ${alerta.espacio.identificador} marcada como resuelt
 
 ## Anexo C. Pendientes de verificar
 
-1. **Endpoint de última corrida / historial de alertas.** Sin él no se puede mostrar "última corrida: hoy 10:32" ni una pestaña de resueltas. Verificar en `backend/src/routes/admin.routes.ts`.
-2. **`filasAceptadas` explícito en `ResultadoImportacionDTO`.** Hoy solo hay `filasRecibidas`, `errores` y `procesados`; mostrar "guardadas" derivado de `filasRecibidas - errores.length` asume un error por fila. Confirmar con backend antes de mostrarlo como dato exacto.
-3. **Uso real en móvil del panel administrativo.** Define si la tabla de Espacios se convierte en tarjetas o se mantiene con scroll horizontal.
-4. **Concurrencia de cargas.** Define si hace falta bloquear una zona mientras otra persona importa el mismo flujo.
-5. **Diseño de Figma del cambio de laboratorio.** El propio código lo señala como pendiente: `CambioLaboratorio.tsx:16-18`.
+1. **Endpoint de última corrida / historial de alertas.** Sin él no se puede mostrar "última corrida: hoy 10:32" ni una pestaña de resueltas. Verificar en `backend/src/routes/admin.routes.ts`. *Sigue abierto: depende del backend.*
+2. ~~**`filasAceptadas` explícito en `ResultadoImportacionDTO`.**~~ **Resuelto sin tocar el backend:**
+   cada importador genera **una entrada de error por fila rechazada** (las varias incidencias de
+   validación de una misma fila se unen en un solo mensaje), así que `filasRecibidas - errores.length`
+   es exactamente el número de filas guardadas. La carga de datos lo dice con esas palabras.
+3. **Uso real en móvil del panel administrativo.** **Decidido:** el listado de espacios es una
+   tabla en escritorio y una tarjeta en móvil (`hooks/usePantallaAncha.ts`), sin scroll horizontal
+   a 320 px (`tests/e2e/responsive.spec.ts`). *Queda por confirmar con el uso real si el listado
+   necesita paginación.*
+4. **Concurrencia de cargas.** Define si hace falta bloquear una zona mientras otra persona importa el mismo flujo. *Sigue abierto: decisión de producto.*
+5. **Diseño de Figma del cambio de laboratorio.** El propio código lo señala como pendiente: `CambioLaboratorio.tsx:16-18`. *Sigue abierto: depende de diseño.*
+

@@ -118,3 +118,29 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # Job 3: pruebas E2E con Playwright y auditoría de accesibilidad con axe en un
+  # navegador real. Los specs interceptan el backend, así que no necesita base de datos.
+  e2e:
+    name: Pruebas E2E y accesibilidad
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js (según .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm' # caché de dependencias
+
+      - name: Instalar dependencias (backend + frontend, workspaces)
+        run: npm ci
+
+      - name: Instalar el navegador de Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Ejecutar las pruebas E2E
+        run: npm run test:e2e
+
