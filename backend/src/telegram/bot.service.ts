@@ -2,6 +2,11 @@ import { PrismaClient } from '@prisma/client';
 import { ClienteTelegram } from './cliente';
 import { LimitadorIntentos } from './limitador';
 import { desvincularChat, vincularChat } from './vinculacion.service';
+import {
+  consultarClaseActual,
+  consultarClasesHoy,
+  consultarHorarioSemanal,
+} from './consultasBot.service';
 
 /** Lo mínimo que SAIE lee de una actualización de Telegram. */
 export interface ActualizacionTelegram {
@@ -22,13 +27,21 @@ export interface DependenciasBot {
 export const MENSAJES = {
   bienvenida:
     'Hola, soy el bot de avisos de SAIE.\n\n' +
-    'Para recibir avisos de cambio de aula y el resumen diario de tus clases, vincula tu cuenta ' +
-    'enviándome en un solo mensaje tu código de alumno y tu clave de SAIE, separados por un ' +
-    'espacio. Por ejemplo:\n\n22200101 miClave\n\n' +
-    'Borraré ese mensaje de este chat apenas lo reciba. Para dejar de recibir avisos, envía /baja.',
+    'Para vincular tu cuenta, envíame en un solo mensaje tu código de alumno y tu clave de SAIE, separados por un espacio. Por ejemplo:\n\n' +
+    '22200101 miClave\n\n' +
+    'Una vez vinculado, podrás consultar:\n' +
+    '• /hoy — Tus clases de hoy\n' +
+    '• /ahora — Tu clase actual o la siguiente\n' +
+    '• /horario — Tu horario semanal completo\n' +
+    '• /baja — Dejar de recibir avisos\n\n' +
+    'Borraré el mensaje con tu clave apenas lo reciba.',
   vinculado: (nombre: string) =>
-    `Listo, ${nombre}. Tu Telegram quedó vinculado y recibirás avisos de cambio de aula. ` +
-    'Cuando quieras dejar de recibirlos, envía /baja.',
+    `Listo, ${nombre}. Tu Telegram quedó vinculado con éxito.\n\n` +
+    'Puedes consultar:\n' +
+    '• /hoy — Tus clases de hoy\n' +
+    '• /ahora — Tu clase en este momento\n' +
+    '• /horario — Tu horario semanal\n' +
+    '• /baja — Desvincular tu cuenta',
   // Mismo texto para cualquier fallo: no revela si el código existe ni cuál dato falló.
   credencialesInvalidas:
     'No pudimos verificar tus datos. Revisa tu código y tu clave e inténtalo de nuevo.',
@@ -40,8 +53,13 @@ export const MENSAJES = {
   baja: 'Listo, ya no recibirás avisos. Puedes volver a vincularte cuando quieras.',
   sinVinculacion: 'No tenías una vinculación activa en este chat.',
   noEntendido:
-    'No entendí ese mensaje. Para vincularte envía tu código y tu clave separados por un espacio; ' +
-    'para darte de baja, /baja.',
+    'No entendí ese mensaje.\n\n' +
+    'Comandos disponibles:\n' +
+    '• /hoy — Clases de hoy\n' +
+    '• /ahora — Clase en curso o siguiente\n' +
+    '• /horario — Horario de la semana\n' +
+    '• /baja — Desvincularte\n\n' +
+    'Si aún no te has vinculado, envía tu código y tu clave separados por un espacio.',
 };
 
 /** `/baja@mi_bot argumentos` -> `/baja` */
@@ -69,7 +87,7 @@ async function ignorandoErrores(tarea: Promise<void>): Promise<void> {
 
 /**
  * Issue 3.25: procesa una actualización del webhook de Telegram. Atiende `/start`, `/ayuda`,
- * `/baja` y el mensaje de credenciales ("código clave"). Solo conversaciones privadas.
+ * `/baja`, `/hoy`, `/ahora`, `/horario` y el mensaje de credenciales ("código clave"). Solo conversaciones privadas.
  *
  * - El mensaje con la clave se borra del chat apenas se recibe, haya o no éxito.
  * - Credenciales inválidas: respuesta genérica y se cuenta el fallo; tras varios, el chat se
@@ -93,6 +111,21 @@ export async function procesarActualizacion(
   if (comando === '/baja' || comando === '/stop') {
     const habia = await desvincularChat(chatId, prisma);
     await responder(habia ? MENSAJES.baja : MENSAJES.sinVinculacion);
+    return;
+  }
+  if (comando === '/hoy') {
+    const respuesta = await consultarClasesHoy(chatId, prisma);
+    await responder(respuesta);
+    return;
+  }
+  if (comando === '/ahora') {
+    const respuesta = await consultarClaseActual(chatId, prisma);
+    await responder(respuesta);
+    return;
+  }
+  if (comando === '/horario') {
+    const respuesta = await consultarHorarioSemanal(chatId, prisma);
+    await responder(respuesta);
     return;
   }
 
