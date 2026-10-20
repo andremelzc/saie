@@ -4,6 +4,7 @@ import type {
   CambiosEspacio,
   EspacioAdminDTO,
   ListadoSoftwareDTO,
+  NuevoEspacioDTO,
   ResultadoEdicionEspacioDTO,
   ResultadoImportacionDTO,
   ResumenAsignacionDTO,
@@ -93,6 +94,15 @@ export async function obtenerEspacio(id: string): Promise<EspacioAdminDTO> {
   const { data } = await api.get<Respuesta<EspacioAdminDTO>>(
     `/v1/admin/espacios/${encodeURIComponent(id)}`,
   );
+  return data.data;
+}
+
+/**
+ * POST /v1/admin/espacios (Issue 4.15, solo Coordinación Académica).
+ * Un aula teórica no se envía con software ni PCs; el backend lo rechaza con 400.
+ */
+export async function crearEspacio(campos: NuevoEspacioDTO): Promise<EspacioAdminDTO> {
+  const { data } = await api.post<Respuesta<EspacioAdminDTO>>('/v1/admin/espacios', campos);
   return data.data;
 }
 

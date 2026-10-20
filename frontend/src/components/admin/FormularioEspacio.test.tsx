@@ -2,15 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import FormularioEspacio from './FormularioEspacio';
-import { editarEspacio, obtenerCatalogoActivo } from '../../services/admin';
+import { crearEspacio, editarEspacio, obtenerCatalogoActivo } from '../../services/admin';
 import type { EspacioAdminDTO, ResultadoEdicionEspacioDTO } from '../../types/admin';
 
 vi.mock('../../services/admin', () => ({
   editarEspacio: vi.fn(),
+  crearEspacio: vi.fn(),
   obtenerCatalogoActivo: vi.fn(),
 }));
 
 const editar = vi.mocked(editarEspacio);
+const crear = vi.mocked(crearEspacio);
 const catalogo = vi.mocked(obtenerCatalogoActivo);
 
 const espacio = (o: Partial<EspacioAdminDTO> = {}): EspacioAdminDTO => ({
@@ -44,6 +46,7 @@ const montar = (props: Partial<ComponentProps<typeof FormularioEspacio>> = {}) =
   const onCancelar = vi.fn();
   render(
     <FormularioEspacio
+      modo="editar"
       espacio={espacio()}
       espacios={[espacio(), espacio({ id: 'e2', identificador: 'LAB-302' })]}
       onGuardado={onGuardado}
@@ -54,7 +57,7 @@ const montar = (props: Partial<ComponentProps<typeof FormularioEspacio>> = {}) =
   return { onGuardado, onCancelar };
 };
 
-describe('Formulario de edición de espacios (Issue 4.15)', () => {
+describe('Formulario de espacios (Issue 4.15)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     catalogo.mockResolvedValue({
@@ -126,6 +129,23 @@ describe('Formulario de edición de espacios (Issue 4.15)', () => {
     expect(
       screen.getByText('Un espacio habilitado necesita un aforo mayor a 0.'),
     ).toBeInTheDocument();
+  });
+
+  it('permite guardar un aforo de 0 si el espacio queda fuera de servicio', async () => {
+    montar({ espacio: espacio({ pcsMalogradas: null }) });
+    fireEvent.click(screen.getByLabelText(/Espacio en servicio/));
+    fireEvent.change(screen.getByLabelText(/Capacidad \(aforo nominal\)/), {
+      target: { value: '0' },
+    });
+
+    editar.mockResolvedValue({
+      espacio: espacio({ aforoNominal: 0, habilitado: false }),
+      alertas: [],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+    await waitFor(() => expect(editar).toHaveBeenCalledTimes(1));
+    expect(editar).toHaveBeenCalledWith('e1', { aforoNominal: 0, habilitado: false });
   });
 
   it('no permite dejar las PCs malogradas vacías si ya tenían valor', () => {
@@ -236,5 +256,101 @@ describe('Formulario de edición de espacios (Issue 4.15)', () => {
       'true',
     );
     expect(screen.getAllByText('(obligatorio)').length).toBeGreaterThan(0);
+  });
+
+  describe('alta de un espacio', () => {
+    const montarAlta = (props: Partial<ComponentProps<typeof FormularioEspacio>> = {}) => {
+      const onGuardado = vi.fn();
+      render(
+        <FormularioEspacio
+          modo="crear"
+          espacios={[espacio(), espacio({ id: 'e2', identificador: 'LAB-302' })]}
+          onGuardado={onGuardado}
+          onCancelar={vi.fn()}
+          {...props}
+        />,
+      );
+      return { onGuardado };
+    };
+
+    it('ofrece el tipo de espacio y no muestra software ni PCs en un aula', () => {
+      montarAlta();
+      expect(screen.getByLabelText('Tipo de espacio')).toBeInTheDocument();
+      expect(screen.queryByLabelText(/PCs fuera de servicio/)).toBeNull();
+      expect(screen.queryByLabelText('Buscar software')).toBeNull();
+      expect(screen.getByRole('button', { name: 'Crear espacio' })).toBeInTheDocument();
+    });
+
+    it('muestra software y PCs cuando el tipo es laboratorio', () => {
+      montarAlta();
+      fireEvent.change(screen.getByLabelText('Tipo de espacio'), {
+        target: { value: 'LABORATORIO' },
+      });
+      expect(screen.getByLabelText(/PCs fuera de servicio/)).toBeInTheDocument();
+      expect(screen.getByLabelText('Buscar software')).toBeInTheDocument();
+    });
+
+    it('exige los campos obligatorios antes de crear', () => {
+      montarAlta();
+      const boton = screen.getByRole('button', { name: 'Crear espacio' });
+      expect(boton).toBeDisabled();
+      expect(screen.getByText('El código del espacio es obligatorio.')).toBeInTheDocument();
+      expect(screen.getByText('El pabellón es obligatorio.')).toBeInTheDocument();
+    });
+
+    it('crea el espacio con todos sus campos', async () => {
+      const { onGuardado } = montarAlta();
+      fireEvent.change(screen.getByLabelText('Tipo de espacio'), {
+        target: { value: 'LABORATORIO' },
+      });
+      fireEvent.change(screen.getByLabelText(/Código del espacio/), {
+        target: { value: 'LAB-401' },
+      });
+      fireEvent.change(screen.getByLabelText(/Pabellón/), { target: { value: 'B' } });
+      fireEvent.change(screen.getByLabelText(/^Piso/), { target: { value: '4' } });
+      fireEvent.change(screen.getByLabelText(/Capacidad \(aforo nominal\)/), {
+        target: { value: '25' },
+      });
+
+      const creado = espacio({ id: 'e3', identificador: 'LAB-401', pabellon: 'B', piso: 4 });
+      crear.mockResolvedValue(creado);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Crear espacio' }));
+
+      await waitFor(() => expect(crear).toHaveBeenCalledTimes(1));
+      expect(crear).toHaveBeenCalledWith({
+        identificador: 'LAB-401',
+        tipo: 'LABORATORIO',
+        pabellon: 'B',
+        piso: 4,
+        aforoNominal: 25,
+        habilitado: true,
+        contiguos: [],
+        softwareIds: [],
+        pcsMalogradas: 0,
+      });
+      expect(onGuardado).toHaveBeenCalledWith({ espacio: creado, alertas: [] });
+    });
+
+    it('no manda software ni PCs cuando el tipo es aula teórica', async () => {
+      montarAlta();
+      fireEvent.change(screen.getByLabelText(/Código del espacio/), {
+        target: { value: 'AULA-9' },
+      });
+      fireEvent.change(screen.getByLabelText(/Pabellón/), { target: { value: 'A' } });
+      fireEvent.change(screen.getByLabelText(/^Piso/), { target: { value: '1' } });
+      fireEvent.change(screen.getByLabelText(/Capacidad \(aforo nominal\)/), {
+        target: { value: '20' },
+      });
+
+      crear.mockResolvedValue(espacio({ identificador: 'AULA-9' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Crear espacio' }));
+
+      await waitFor(() => expect(crear).toHaveBeenCalledTimes(1));
+      const enviado = crear.mock.calls[0][0];
+      expect(enviado.tipo).toBe('AULA_TEORICA');
+      expect(enviado.softwareIds).toBeUndefined();
+      expect(enviado.pcsMalogradas).toBeUndefined();
+    });
   });
 });

@@ -103,6 +103,23 @@ export interface CambiosEspacio {
   pcsMalogradas?: number;
 }
 
+/**
+ * Alta de un espacio (POST /v1/admin/espacios, solo Coordinación).
+ * Un aula teórica no admite `softwareIds` ni `pcsMalogradas`.
+ */
+export interface NuevoEspacioDTO {
+  identificador: string;
+  tipo: TipoEspacio;
+  pabellon: string;
+  piso: number;
+  aforoNominal: number;
+  habilitado: boolean;
+  contiguos: string[];
+  descripcionUso?: string;
+  softwareIds?: string[];
+  pcsMalogradas?: number;
+}
+
 /** GET /v1/admin/secciones-escaladas (Issue 4.22). */
 export interface SeccionEscaladaDTO {
   asignacionId: string;

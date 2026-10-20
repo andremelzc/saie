@@ -4,24 +4,40 @@ import { BadgeEstado } from '../ui/BadgeEstado';
 import { Boton } from '../ui/Boton';
 import { CLASE_AYUDA, CLASE_CAMPO, CLASE_ETIQUETA } from '../ui/campos';
 import { useCarga } from '../../hooks/useCarga';
-import { editarEspacio, obtenerCatalogoActivo } from '../../services/admin';
+import { crearEspacio, editarEspacio, obtenerCatalogoActivo } from '../../services/admin';
 import { mensajeDeError } from '../../services/estudiante';
 import type {
   CampoEspacio,
   CambiosEspacio,
   EspacioAdminDTO,
   ResultadoEdicionEspacioDTO,
+  TipoEspacio,
 } from '../../types/admin';
 
 /**
- * Issue 4.15 — edición de un espacio con los campos acotados por el rol.
+ * Issue 4.15 — alta y edición de un espacio con los campos acotados por el rol.
  *
  * El backend decide qué se puede editar (`camposEditables`); el formulario solo muestra esos
- * campos y envía únicamente los que cambian. Un campo fuera de lo permitido se rechaza con
- * 403, así que mandarlos «por si acaso» rompería el guardado.
+ * campos y, al editar, envía únicamente los que cambian. Un campo fuera de lo permitido se
+ * rechaza con 403, así que mandarlos «por si acaso» rompería el guardado.
+ *
+ * El alta es solo de Coordinación Académica (así lo define el endpoint) y sí envía todos los
+ * campos del espacio, incluidos los de laboratorio cuando el tipo es laboratorio.
  */
 
+const CAMPOS_COORDINACION: CampoEspacio[] = [
+  'identificador',
+  'pabellon',
+  'piso',
+  'aforoNominal',
+  'contiguos',
+  'habilitado',
+  'descripcionUso',
+];
+const CAMPOS_LABORATORIO: CampoEspacio[] = ['softwareIds', 'pcsMalogradas'];
+
 interface EstadoFormulario {
+  tipo: TipoEspacio;
   identificador: string;
   pabellon: string;
   piso: string;
@@ -34,7 +50,10 @@ interface EstadoFormulario {
 }
 
 export interface FormularioEspacioProps {
-  espacio: EspacioAdminDTO;
+  /** `crear` habilita el alta (solo Coordinación); `editar` respeta `camposEditables`. */
+  modo: 'crear' | 'editar';
+  /** Espacio a editar. En el alta no existe todavía. */
+  espacio?: EspacioAdminDTO;
   /** Espacios visibles en el panel: permiten elegir contiguos y mostrar su identificador. */
   espacios: EspacioAdminDTO[];
   onGuardado: (resultado: ResultadoEdicionEspacioDTO) => void;
@@ -43,6 +62,7 @@ export interface FormularioEspacioProps {
 
 function estadoInicial(espacio: EspacioAdminDTO): EstadoFormulario {
   return {
+    tipo: espacio.tipo,
     identificador: espacio.identificador,
     pabellon: espacio.pabellon,
     piso: String(espacio.piso),
@@ -52,6 +72,21 @@ function estadoInicial(espacio: EspacioAdminDTO): EstadoFormulario {
     pcsMalogradas: espacio.pcsMalogradas == null ? '' : String(espacio.pcsMalogradas),
     softwareIds: (espacio.softwareInstalado ?? []).map((s) => s.id),
     contiguos: [...espacio.contiguos],
+  };
+}
+
+function estadoInicialAlta(): EstadoFormulario {
+  return {
+    tipo: 'AULA_TEORICA',
+    identificador: '',
+    pabellon: '',
+    piso: '',
+    aforoNominal: '',
+    descripcionUso: '',
+    habilitado: true,
+    pcsMalogradas: '',
+    softwareIds: [],
+    contiguos: [],
   };
 }
 
@@ -75,7 +110,7 @@ function validar(
   form: EstadoFormulario,
   campos: Set<CampoEspacio>,
   original: EstadoFormulario,
-  espacio: EspacioAdminDTO,
+  espacio: EspacioAdminDTO | undefined,
 ): Record<string, string> {
   const errores: Record<string, string> = {};
 
@@ -111,7 +146,7 @@ function validar(
     } else if (!vacio && (!esEntero(form.pcsMalogradas) || Number(form.pcsMalogradas) < 0)) {
       errores.pcsMalogradas = 'Las PCs malogradas deben ser un número entero mayor o igual a 0.';
     } else if (!vacio) {
-      const aforo = aforoEfectivo(form, campos, espacio.aforoNominal);
+      const aforo = aforoEfectivo(form, campos, espacio?.aforoNominal ?? 0);
       if (Number(form.pcsMalogradas) > aforo) {
         errores.pcsMalogradas = 'Las PCs malogradas no pueden superar el aforo nominal.';
       }
@@ -236,13 +271,16 @@ function claseCampo(error?: string): string {
 }
 
 export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
+  modo,
   espacio,
   espacios,
   onGuardado,
   onCancelar,
 }) => {
-  const campos = useMemo(() => new Set(espacio.camposEditables), [espacio.camposEditables]);
-  const original = useMemo(() => estadoInicial(espacio), [espacio]);
+  const original = useMemo(
+    () => (modo === 'editar' && espacio ? estadoInicial(espacio) : estadoInicialAlta()),
+    [modo, espacio],
+  );
   const [form, setForm] = useState<EstadoFormulario>(original);
   const [busquedaSoftware, setBusquedaSoftware] = useState('');
   const [busquedaContiguos, setBusquedaContiguos] = useState('');
@@ -251,17 +289,27 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
 
   const catalogo = useCarga(obtenerCatalogoActivo);
 
+  // En el alta decide Coordinación qué campos existen: los de laboratorio solo si el tipo es
+  // laboratorio. Al editar manda el backend (`camposEditables`).
+  const campos = useMemo(() => {
+    if (modo === 'editar' && espacio) return new Set(espacio.camposEditables);
+    return new Set<CampoEspacio>([
+      ...CAMPOS_COORDINACION,
+      ...(form.tipo === 'LABORATORIO' ? CAMPOS_LABORATORIO : []),
+    ]);
+  }, [modo, espacio, form.tipo]);
+
   const errores = useMemo(
     () => validar(form, campos, original, espacio),
     [form, campos, original, espacio],
   );
   const cambios = useMemo(() => calcularCambios(form, original, campos), [form, original, campos]);
-  const hayCambios = Object.keys(cambios).length > 0;
+  const hayCambios = modo === 'crear' ? true : Object.keys(cambios).length > 0;
   const hayErrores = Object.keys(errores).length > 0;
 
   const candidatos = useMemo(
-    () => espacios.filter((e) => e.tipo === espacio.tipo && e.id !== espacio.id),
-    [espacios, espacio],
+    () => espacios.filter((e) => e.tipo === form.tipo && e.id !== espacio?.id),
+    [espacios, form.tipo, espacio?.id],
   );
   const contiguosFiltrados = useMemo(() => {
     const termino = busquedaContiguos.trim().toLowerCase();
@@ -278,6 +326,18 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
 
   function cambiar<K extends keyof EstadoFormulario>(campo: K, valor: EstadoFormulario[K]) {
     setForm((previo) => ({ ...previo, [campo]: valor }));
+    setError(null);
+  }
+
+  function cambiarTipo(tipo: TipoEspacio) {
+    // Un aula teórica no tiene software ni PCs: se limpian al cambiar el tipo.
+    setForm((previo) => ({
+      ...previo,
+      tipo,
+      softwareIds: tipo === 'LABORATORIO' ? previo.softwareIds : [],
+      pcsMalogradas: tipo === 'LABORATORIO' ? previo.pcsMalogradas : '',
+      contiguos: [],
+    }));
     setError(null);
   }
 
@@ -304,7 +364,28 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
     setGuardando(true);
     setError(null);
     try {
-      const resultado = await editarEspacio(espacio.id, cambios);
+      if (modo === 'crear') {
+        const creado = await crearEspacio({
+          identificador: form.identificador.trim(),
+          tipo: form.tipo,
+          pabellon: form.pabellon.trim(),
+          piso: Number(form.piso),
+          aforoNominal: Number(form.aforoNominal),
+          habilitado: form.habilitado,
+          contiguos: form.contiguos,
+          ...(form.descripcionUso.trim() ? { descripcionUso: form.descripcionUso.trim() } : {}),
+          ...(form.tipo === 'LABORATORIO'
+            ? {
+                softwareIds: form.softwareIds,
+                pcsMalogradas:
+                  form.pcsMalogradas.trim() === '' ? 0 : Number(form.pcsMalogradas.trim()),
+              }
+            : {}),
+        });
+        onGuardado({ espacio: creado, alertas: [] });
+        return;
+      }
+      const resultado = await editarEspacio(espacio!.id, cambios);
       onGuardado(resultado);
     } catch (e) {
       setError(mensajeDeError(e));
@@ -319,7 +400,7 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
       ? 'Corrige los campos marcados antes de guardar.'
       : undefined;
 
-  if (campos.size === 0) {
+  if (modo === 'editar' && espacio && campos.size === 0) {
     return (
       <Aviso tono="info">
         Tu rol no puede editar este espacio. Puedes consultarlo, pero no cambiar sus datos.
@@ -328,7 +409,33 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
   }
 
   return (
-    <section aria-label={`Editar ${espacio.identificador}`} className="flex flex-col gap-6">
+    <section
+      aria-label={modo === 'crear' ? 'Nuevo espacio' : `Editar ${espacio?.identificador}`}
+      className="flex flex-col gap-6"
+    >
+      {modo === 'crear' && (
+        <fieldset className="flex flex-col gap-3 border-0 p-0">
+          <legend className="m-0 text-base font-bold text-saie-text">Tipo de espacio</legend>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="espacio-tipo" className={CLASE_ETIQUETA}>
+              Tipo de espacio
+            </label>
+            <select
+              id="espacio-tipo"
+              value={form.tipo}
+              onChange={(e) => cambiarTipo(e.target.value as TipoEspacio)}
+              className={CLASE_CAMPO}
+            >
+              <option value="AULA_TEORICA">Aula teórica</option>
+              <option value="LABORATORIO">Laboratorio</option>
+            </select>
+            <p className={CLASE_AYUDA}>
+              Un aula teórica no tiene software ni PCs malogradas; un laboratorio sí.
+            </p>
+          </div>
+        </fieldset>
+      )}
+
       {campos.has('identificador') && (
         <fieldset className="flex flex-col gap-3 border-0 p-0">
           <legend className="m-0 text-base font-bold text-saie-text">Identificación</legend>
@@ -417,7 +524,7 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
               ) : (
                 <p id="ayuda-aforo" className={CLASE_AYUDA}>
                   Al cambiarla se revisa si las secciones asignadas siguen cabiendo y se genera la
-                  alerta correspondiente.
+                  alerta correspondiente. Deja 0 solo si el espacio está fuera de servicio.
                 </p>
               )}
             </div>
@@ -596,11 +703,13 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
       <footer className="flex flex-col gap-3 border-t border-saie-divider pt-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-col gap-2">
           {hayCambios ? (
-            <BadgeEstado tono="advertencia">Cambios sin guardar</BadgeEstado>
+            <BadgeEstado tono="advertencia">
+              {modo === 'crear' ? 'Espacio por crear' : 'Cambios sin guardar'}
+            </BadgeEstado>
           ) : (
             <BadgeEstado tono="neutro">Sin cambios</BadgeEstado>
           )}
-          {hayCambios && (
+          {hayCambios && modo === 'editar' && (
             <p className={CLASE_AYUDA}>
               Se guardará: {Object.keys(cambios).length}{' '}
               {Object.keys(cambios).length === 1 ? 'campo' : 'campos'}.
@@ -618,7 +727,7 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
             textoCargando="Guardando…"
             motivoDeshabilitado={motivoDeshabilitado}
           >
-            Guardar cambios
+            {modo === 'crear' ? 'Crear espacio' : 'Guardar cambios'}
           </Boton>
         </div>
       </footer>

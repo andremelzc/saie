@@ -10,6 +10,7 @@ import { Drawer } from '../../components/ui/Drawer';
 import { useAvisos } from '../../components/ui/useAvisos';
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
 import { RUTAS } from '../../config/rutas';
+import { useAuth } from '../../context/useAuth';
 import { useCarga } from '../../hooks/useCarga';
 import { obtenerEspacios } from '../../services/admin';
 import type { EspacioAdminDTO, ResultadoEdicionEspacioDTO, TipoEspacio } from '../../types/admin';
@@ -62,7 +63,13 @@ const DetalleEspacio: React.FC<{
           <Dato etiqueta="Ubicación">
             {espacio.pabellon} · Piso {espacio.piso}
           </Dato>
-          <Dato etiqueta="Capacidad">{espacio.aforoNominal} estudiantes</Dato>
+          <Dato etiqueta="Capacidad">
+            {espacio.aforoNominal > 0 ? (
+              `${espacio.aforoNominal} estudiantes`
+            ) : (
+              <span className="text-saie-muted">Sin definir</span>
+            )}
+          </Dato>
           <Dato etiqueta="PCs malogradas">
             {espacio.tipo === 'AULA_TEORICA' ? (
               <span className="text-saie-muted">No aplica: es un aula teórica.</span>
@@ -167,13 +174,19 @@ export const EspaciosAdmin: React.FC = () => {
   const cargar = React.useCallback(() => obtenerEspacios(), []);
   const { datos, cargando, error, recargar } = useCarga(cargar);
   const { mostrar } = useAvisos();
+  const { sesion } = useAuth();
   const [filtro, setFiltro] = useState<Filtro>('TODOS');
   const [pabellon, setPabellon] = useState('TODOS');
   const [piso, setPiso] = useState('TODOS');
   const [texto, setTexto] = useState('');
+  const [soloDeshabilitados, setSoloDeshabilitados] = useState(false);
   const [seleccionado, setSeleccionado] = useState<EspacioAdminDTO | null>(null);
   const [editando, setEditando] = useState(false);
+  const [creando, setCreando] = useState(false);
   const [alertas, setAlertas] = useState<string[]>([]);
+
+  // El alta es solo de Coordinación Académica (así lo define el endpoint del backend).
+  const esCoordinacion = sesion?.rol === 'COORDINACION_ACADEMICA';
 
   const base = datos ?? [];
   const pabellones = [...new Set(base.map((e) => e.pabellon))].sort((a, b) =>
@@ -185,38 +198,60 @@ export const EspaciosAdmin: React.FC = () => {
     .filter((e) => filtro === 'TODOS' || e.tipo === filtro)
     .filter((e) => pabellon === 'TODOS' || e.pabellon === pabellon)
     .filter((e) => piso === 'TODOS' || String(e.piso) === piso)
+    .filter((e) => !soloDeshabilitados || !e.habilitado)
     .filter((e) => e.identificador.toLowerCase().includes(texto.trim().toLowerCase()))
     .sort((a, b) => a.identificador.localeCompare(b.identificador, 'es', { numeric: true }));
 
   const hayFiltros =
-    filtro !== 'TODOS' || pabellon !== 'TODOS' || piso !== 'TODOS' || texto.trim() !== '';
+    filtro !== 'TODOS' ||
+    pabellon !== 'TODOS' ||
+    piso !== 'TODOS' ||
+    soloDeshabilitados ||
+    texto.trim() !== '';
 
   function limpiarFiltros() {
     setFiltro('TODOS');
     setPabellon('TODOS');
     setPiso('TODOS');
+    setSoloDeshabilitados(false);
     setTexto('');
   }
 
   function abrirDetalle(espacio: EspacioAdminDTO) {
     setSeleccionado(espacio);
     setEditando(false);
+    setCreando(false);
     setAlertas([]);
   }
 
   function cerrarDetalle() {
     setSeleccionado(null);
     setEditando(false);
+    setCreando(false);
+    setAlertas([]);
+  }
+
+  function abrirAlta() {
+    setSeleccionado(null);
+    setEditando(false);
+    setCreando(true);
     setAlertas([]);
   }
 
   function manejarGuardado(resultado: ResultadoEdicionEspacioDTO) {
+    const esNuevo = creando;
     setSeleccionado(resultado.espacio);
     setEditando(false);
+    setCreando(false);
     setAlertas(resultado.alertas.map((a) => a.motivo));
     // Los contiguos son bidireccionales: la lista completa puede haber cambiado.
     recargar();
-    mostrar('exito', `Espacio ${resultado.espacio.identificador} actualizado.`);
+    mostrar(
+      'exito',
+      esNuevo
+        ? `Espacio ${resultado.espacio.identificador} creado.`
+        : `Espacio ${resultado.espacio.identificador} actualizado.`,
+    );
   }
 
   return (
@@ -224,14 +259,21 @@ export const EspaciosAdmin: React.FC = () => {
       titulo="Espacios"
       subtitulo="Aulas teóricas y laboratorios del pabellón."
       acciones={
-        <Boton
-          variante="secundario"
-          onClick={recargar}
-          cargando={cargando}
-          textoCargando="Actualizando…"
-        >
-          Actualizar
-        </Boton>
+        <div className="flex flex-wrap gap-2">
+          {esCoordinacion && (
+            <Boton variante="primario" onClick={abrirAlta}>
+              Nuevo espacio
+            </Boton>
+          )}
+          <Boton
+            variante="secundario"
+            onClick={recargar}
+            cargando={cargando}
+            textoCargando="Actualizando…"
+          >
+            Actualizar
+          </Boton>
+        </div>
       }
     >
       <section aria-label="Filtros de espacios" className="flex flex-col gap-3">
@@ -293,11 +335,22 @@ export const EspaciosAdmin: React.FC = () => {
               coinciden
             </p>
           )}
-          {hayFiltros && (
-            <Boton variante="secundario" tamano="sm" onClick={limpiarFiltros}>
-              Limpiar filtros
-            </Boton>
-          )}
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-6 w-6 accent-saie-primary"
+                checked={soloDeshabilitados}
+                onChange={(e) => setSoloDeshabilitados(e.target.checked)}
+              />
+              <span>Solo deshabilitados</span>
+            </label>
+            {hayFiltros && (
+              <Boton variante="secundario" tamano="sm" onClick={limpiarFiltros}>
+                Limpiar filtros
+              </Boton>
+            )}
+          </div>
         </div>
       </section>
 
@@ -361,7 +414,13 @@ export const EspaciosAdmin: React.FC = () => {
                   <td className="px-4 py-3">
                     {e.pabellon} · Piso {e.piso}
                   </td>
-                  <td className="px-4 py-3">{e.aforoNominal}</td>
+                  <td className="px-4 py-3">
+                    {e.aforoNominal > 0 ? (
+                      e.aforoNominal
+                    ) : (
+                      <span className="text-saie-muted">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     {e.tipo === 'AULA_TEORICA' ? (
                       <span className="text-saie-muted">No aplica</span>
@@ -394,11 +453,11 @@ export const EspaciosAdmin: React.FC = () => {
       )}
 
       <Drawer
-        abierto={seleccionado !== null}
+        abierto={seleccionado !== null || creando}
         onCerrar={cerrarDetalle}
-        titulo={seleccionado?.identificador ?? 'Espacio'}
+        titulo={creando ? 'Nuevo espacio' : (seleccionado?.identificador ?? 'Espacio')}
       >
-        {seleccionado && (
+        {(seleccionado || creando) && (
           <div className="flex flex-col gap-4">
             {alertas.length > 0 && (
               <Aviso tono="advertencia">
@@ -413,14 +472,22 @@ export const EspaciosAdmin: React.FC = () => {
                 </ul>
               </Aviso>
             )}
-            {editando ? (
+            {creando ? (
               <FormularioEspacio
+                modo="crear"
+                espacios={base}
+                onGuardado={manejarGuardado}
+                onCancelar={cerrarDetalle}
+              />
+            ) : editando && seleccionado ? (
+              <FormularioEspacio
+                modo="editar"
                 espacio={seleccionado}
                 espacios={base}
                 onGuardado={manejarGuardado}
                 onCancelar={() => setEditando(false)}
               />
-            ) : (
+            ) : seleccionado ? (
               <DetalleEspacio
                 espacio={seleccionado}
                 espacios={base}
@@ -429,7 +496,7 @@ export const EspaciosAdmin: React.FC = () => {
                   setEditando(true);
                 }}
               />
-            )}
+            ) : null}
           </div>
         )}
       </Drawer>
