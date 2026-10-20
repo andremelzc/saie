@@ -14,7 +14,6 @@ export const IncidenciasDocentePage: React.FC = () => (
       'Aviso a Jefatura de Laboratorios para su atención.',
     ]}
     volverA={{ to: RUTAS.inicioDocente, etiqueta: 'Volver al portal' }}
-    issue="#207 (7.10)"
   />
 );
 

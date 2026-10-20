@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import CabeceraPortal from './CabeceraPortal';
 
 /** Texto único de todas las pantallas aún no construidas. */
-export const MENSAJE_EN_DESARROLLO = 'Está en planes de desarrollo para la siguiente funcionalidad';
+export const MENSAJE_EN_DESARROLLO = 'Esta sección estará disponible próximamente.';
 
-/** Segunda línea que aclara cuándo se verá la pantalla terminada. */
-export const PREVISION_EN_DESARROLLO = 'Se va a tener listo para otra presentación.';
+/** Segunda línea: salida clara en lugar de una promesa vaga. */
+export const PREVISION_EN_DESARROLLO =
+  'Mientras tanto, puedes volver al inicio y seguir usando el resto del sistema.';
 
 const TRAZO_HERRAMIENTA =
   'M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z';
@@ -20,8 +21,6 @@ export interface AvisoEnDesarrolloProps {
   descripcion: string;
   /** Funcionalidades previstas (se listan como viñetas). */
   funciones?: string[];
-  /** Issue(s) del repositorio donde se implementará la pantalla. */
-  issue?: string;
 }
 
 /**
@@ -32,12 +31,11 @@ export const AvisoEnDesarrollo: React.FC<AvisoEnDesarrolloProps> = ({
   titulo,
   descripcion,
   funciones = [],
-  issue,
 }) => (
   <section
     aria-label={titulo ? undefined : 'Funcionalidad en desarrollo'}
     aria-labelledby={titulo ? 'titulo-pantalla' : undefined}
-    className="relative overflow-hidden rounded-2xl border border-saie-divider bg-white p-6 shadow-[0_2px_8px_rgba(34,34,34,0.08)] sm:p-8"
+    className="relative overflow-hidden rounded-2xl border border-saie-divider bg-white p-6 shadow-[var(--saie-shadow-1)] sm:p-8"
   >
     <span
       aria-hidden="true"
@@ -93,12 +91,6 @@ export const AvisoEnDesarrollo: React.FC<AvisoEnDesarrolloProps> = ({
           </ul>
         </div>
       )}
-
-      {issue && (
-        <p className="m-0 text-xs text-saie-muted">
-          Seguimiento en el repositorio: <span className="font-semibold">{issue}</span>
-        </p>
-      )}
     </div>
   </section>
 );
@@ -122,7 +114,6 @@ export const PantallaEnDesarrollo: React.FC<PantallaEnDesarrolloProps> = ({
   descripcion,
   funciones = [],
   volverA,
-  issue,
   portal = 'Estudiante',
 }) => (
   <div className="min-h-screen bg-saie-canvas text-saie-text">
@@ -141,12 +132,7 @@ export const PantallaEnDesarrollo: React.FC<PantallaEnDesarrolloProps> = ({
         </Link>
       </nav>
 
-      <AvisoEnDesarrollo
-        titulo={titulo}
-        descripcion={descripcion}
-        funciones={funciones}
-        issue={issue}
-      />
+      <AvisoEnDesarrollo titulo={titulo} descripcion={descripcion} funciones={funciones} />
     </main>
   </div>
 );

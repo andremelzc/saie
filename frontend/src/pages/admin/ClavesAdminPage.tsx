@@ -12,7 +12,6 @@ export const ClavesAdminPage: React.FC = () => (
         'Restablecimiento de la clave de un alumno o docente.',
         'Aviso al usuario para que defina una nueva contraseña.',
       ]}
-      issue="#213, #218 (4.21 y 4.26)"
     />
   </LayoutAdmin>
 );

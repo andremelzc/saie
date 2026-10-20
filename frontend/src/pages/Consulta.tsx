@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import FormularioBusqueda from '../components/consulta/FormularioBusqueda';
 import TarjetaResultado from '../components/consulta/TarjetaResultado';
@@ -20,7 +20,9 @@ const plural = (n: number, singular: string, pluralTexto: string) =>
 /** Agrupa un estado de una sola tarjeta bajo un <h2> (solo lectores de pantalla): h1 → h2 → h3. */
 const EstadoUnico: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <section aria-label="Resultado de la consulta">
-    <h2 className="sr-only">Resultado de la consulta</h2>
+    <h2 className="sr-only" tabIndex={-1}>
+      Resultado de la consulta
+    </h2>
     {children}
   </section>
 );
@@ -44,7 +46,7 @@ const Resultados: React.FC<{ resultado: ResultadoConsulta }> = ({ resultado }) =
     return (
       <section aria-labelledby="titulo-resultado" className="flex flex-col gap-3">
         <div>
-          <h2 id="titulo-resultado" className="m-0 text-xl font-bold">
+          <h2 id="titulo-resultado" className="m-0 text-xl font-bold" tabIndex={-1}>
             Tus clases
           </h2>
           <p role="status" className="m-0 mt-1 text-sm text-saie-muted">
@@ -99,7 +101,7 @@ const Resultados: React.FC<{ resultado: ResultadoConsulta }> = ({ resultado }) =
   return (
     <section aria-labelledby="titulo-resultado" className="flex flex-col gap-3">
       <div>
-        <h2 id="titulo-resultado" className="m-0 text-xl font-bold break-words">
+        <h2 id="titulo-resultado" className="m-0 text-xl font-bold break-words" tabIndex={-1}>
           {curso.codigo} · {curso.nombre}
         </h2>
         <p role="status" className="m-0 mt-1 text-sm text-saie-muted">
@@ -177,6 +179,15 @@ const QueVeras: React.FC = () => (
 
 export const Consulta: React.FC = () => {
   const [fase, setFase] = useState<Fase>({ tipo: 'inicial' });
+  const zonaResultado = useRef<HTMLDivElement>(null);
+
+  // Al pasar a resultado, el foco va al título: quien navega con teclado o lector de pantalla
+  // no se queda en el formulario sin saber que la respuesta ya llegó.
+  useEffect(() => {
+    if (fase.tipo !== 'resultado') return;
+    const titulo = zonaResultado.current?.querySelector<HTMLElement>('h2');
+    titulo?.focus();
+  }, [fase]);
 
   return (
     <div className="min-h-screen bg-saie-canvas text-saie-text">
@@ -268,7 +279,11 @@ export const Consulta: React.FC = () => {
           </EstadoUnico>
         )}
 
-        {fase.tipo === 'resultado' && <Resultados resultado={fase.resultado} />}
+        {fase.tipo === 'resultado' && (
+          <div ref={zonaResultado}>
+            <Resultados resultado={fase.resultado} />
+          </div>
+        )}
       </main>
     </div>
   );

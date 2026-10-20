@@ -12,7 +12,6 @@ export const SolicitudesSoftwareAdminPage: React.FC = () => (
         'Aprobación o rechazo con motivo registrado.',
         'Aviso al docente cuando su solicitud cambia de estado.',
       ]}
-      issue="#275 (4.29)"
     />
   </LayoutAdmin>
 );

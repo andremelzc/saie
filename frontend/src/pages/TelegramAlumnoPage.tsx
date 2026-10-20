@@ -16,7 +16,6 @@ export const TelegramAlumnoPage: React.FC = () => (
       'Historial de los avisos que recibiste.',
     ]}
     volverA={{ to: RUTAS.perfilAlumno, etiqueta: 'Volver a mi perfil' }}
-    issue="#254 (3.28)"
   />
 );
 

@@ -43,7 +43,7 @@ describe('FormularioBusqueda (Issue #134 / 3.5)', () => {
     vi.clearAllMocks();
   });
 
-  it('renderiza correctamente el campo accesible y botón deshabilitado al inicio', () => {
+  it('renderiza el campo accesible y el botón habilitado desde el inicio', () => {
     render(<FormularioBusqueda />);
 
     const input = screen.getByLabelText(/Código de alumno o curso/i);
@@ -51,7 +51,7 @@ describe('FormularioBusqueda (Issue #134 / 3.5)', () => {
 
     expect(input).toBeInTheDocument();
     expect(input).toHaveAttribute('placeholder', 'Ej. 20200001 o CC-101');
-    expect(boton).toBeDisabled();
+    expect(boton).toBeEnabled();
 
     // Texto de ayuda en 14 px (text-sm) visible inicialmente
     expect(
@@ -61,28 +61,28 @@ describe('FormularioBusqueda (Issue #134 / 3.5)', () => {
     ).toBeInTheDocument();
   });
 
-  it('mantiene el botón deshabilitado con formatos inválidos y lo habilita con código válido', () => {
+  it('mantiene el botón habilitado y valida el formato al intentar enviar', () => {
     render(<FormularioBusqueda />);
 
     const input = screen.getByLabelText(/Código de alumno o curso/i);
     const boton = screen.getByRole('button', { name: /buscar/i });
 
-    // Entrada inválida: solo 4 números
+    // El botón no se deshabilita por el formato: al pulsarlo se explica qué corregir.
     fireEvent.change(input, { target: { value: '1234' } });
-    expect(boton).toBeDisabled();
-
-    // Entrada inválida: contiene espacios
-    fireEvent.change(input, { target: { value: '2020 0001' } });
-    expect(boton).toBeDisabled();
+    expect(boton).toBeEnabled();
+    fireEvent.click(boton);
+    expect(
+      screen.getByText('Ingresa 8 dígitos (alumno) o un código de curso como CC-101'),
+    ).toBeInTheDocument();
 
     // Entrada válida de alumno (8 dígitos)
     fireEvent.change(input, { target: { value: '20200001' } });
-    expect(boton).not.toBeDisabled();
+    expect(boton).toBeEnabled();
     expect(screen.getByText('Estudiante detectado')).toBeInTheDocument();
 
     // Entrada válida de curso (CC-101)
     fireEvent.change(input, { target: { value: 'CC-101' } });
-    expect(boton).not.toBeDisabled();
+    expect(boton).toBeEnabled();
     expect(screen.getByText('Curso detectado')).toBeInTheDocument();
   });
 

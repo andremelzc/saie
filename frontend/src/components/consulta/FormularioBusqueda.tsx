@@ -231,7 +231,7 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
 
           <button
             type="submit"
-            disabled={!esValido || cargando}
+            disabled={cargando}
             aria-busy={cargando}
             className="w-full lg:w-auto min-w-[120px] h-12 px-6 rounded-[12px] font-medium text-base text-white transition-all duration-150 flex items-center justify-center gap-2 shadow-[0_2px_8px_rgba(123,17,19,0.25)] focus:outline-hidden focus:ring-3 focus:ring-[#222222] focus:ring-offset-2 bg-[#7B1113] hover:bg-[#5C0D0E] active:bg-[#5C0D0E] disabled:bg-[#E6DFD0] disabled:text-[#666666] disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
           >

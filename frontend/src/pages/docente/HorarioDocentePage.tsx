@@ -10,11 +10,10 @@ export const HorarioDocentePage: React.FC = () => (
     descripcion="Consulta los cursos y secciones que tienes a cargo, con el aula o laboratorio asignado para cada clase."
     funciones={[
       'Horario semanal con curso, sección, aula y laboratorio.',
-      'Detalle del espacio asignado: aforo, piso y equipamiento.',
+      'Detalle del espacio asignado: capacidad, piso y equipamiento.',
       'Cambios de aula o laboratorio notificados por Telegram.',
     ]}
     volverA={{ to: RUTAS.inicioDocente, etiqueta: 'Volver al portal' }}
-    issue="#205 (7.8)"
   />
 );
 

@@ -14,10 +14,9 @@ export const MapaOcupacionPage: React.FC = () => (
     funciones={[
       'Mapa interactivo por piso y pabellón (aulas teóricas y laboratorios).',
       'Ocupación de cada espacio en la franja de tu clase.',
-      'Detalle del espacio asignado y su aforo real.',
+      'Detalle del espacio asignado y cuántos estudiantes caben.',
     ]}
     volverA={{ to: RUTAS.inicioAlumno, etiqueta: 'Volver al inicio' }}
-    issue="#147 (3.18)"
   />
 );
 

@@ -95,7 +95,7 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
       ['DOCENTE', '/docente/horario', 'Mi horario y asignaciones'],
       ['DOCENTE', '/docente/espacios', 'Explorar espacios y equipos'],
       ['DOCENTE', '/docente/incidencias', 'Reportar una incidencia'],
-      ['COORDINACION_ACADEMICA', '/admin/proximamente', 'Próximamente'],
+      ['COORDINACION_ACADEMICA', '/admin/proximamente', 'Hoja de ruta'],
       ['COORDINACION_ACADEMICA', '/admin/mapa', 'Mapa de ocupación por piso'],
       ['COORDINACION_ACADEMICA', '/admin/laboratorios', 'Laboratorios y equipos'],
       ['COORDINACION_ACADEMICA', '/admin/alumnos/nuevo', 'Alta de alumnos'],
@@ -110,7 +110,7 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
       renderizar(ruta);
 
       expect(screen.getByRole('heading', { name: titulo })).toBeInTheDocument();
-      expect(screen.getByRole('status')).toHaveTextContent(/planes de desarrollo/i);
+      expect(screen.getByRole('status')).toHaveTextContent(/próximamente/i);
     });
 
     it('un alumno no entra a las pantallas del panel', () => {
