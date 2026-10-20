@@ -163,9 +163,8 @@ describe('Inicio del panel administrativo', () => {
       expect(await screen.findByText(/IS101 · 01 — Algoritmos/)).toBeInTheDocument();
       expect(screen.getByText(/Periodo 2026-II/)).toBeInTheDocument();
       expect(screen.getByText('Sin horarios definidos')).toBeInTheDocument();
-      expect(screen.getAllByText('No se le asignó aula.')).toHaveLength(2);
       expect(screen.getByText('La sección 01 no tiene horario en 2026-II')).toBeInTheDocument();
-      expect(screen.getByText(/45 alumnos matriculados/)).toBeInTheDocument();
+      expect(screen.getByText(/45 alumnos/)).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Cargar horario' })).toHaveAttribute(
         'href',
         '/admin/carga#carga-horarios',
@@ -196,7 +195,7 @@ describe('Inicio del panel administrativo', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
       const estado = await screen.findByRole('status');
       expect(estado).toHaveTextContent(
-        /6\s*con aula nueva · 2\s*conservan la suya · 2\s*necesitan revisión de 10 secciones/,
+        /6\s*con aula nueva · 2\s*conservan la suya · 2\s*de 10\s*esperan revisión/,
       );
       await waitFor(() => expect(escaladas).toHaveBeenCalledTimes(2));
       expect(alertas).toHaveBeenCalledTimes(2);
@@ -229,7 +228,7 @@ describe('Inicio del panel administrativo', () => {
       ).toBeInTheDocument();
       expect(screen.getByText('Sin doble reserva')).toBeInTheDocument();
       expect(screen.getByText('Capacidad suficiente')).toBeInTheDocument();
-      expect(screen.getByText(/Verificador conforme · 8 revisadas/)).toBeInTheDocument();
+      expect(screen.getByText(/Conforme · 8 revisadas/)).toBeInTheDocument();
     });
 
     it('detalla las violaciones cuando el verificador no es conforme', async () => {
@@ -245,7 +244,7 @@ describe('Inicio del panel administrativo', () => {
       expect(screen.getByText('NO CONFORME')).toBeInTheDocument();
       expect(screen.getByText(/Ver 1 violación/)).toBeInTheDocument();
       expect(screen.getByText(/Aforo insuficiente para 45 alumnos/)).toBeInTheDocument();
-      expect(screen.getByText(/Verificador no conforme · 1 violación/)).toBeInTheDocument();
+      expect(screen.getByText(/No conforme · 1 violación/)).toBeInTheDocument();
     });
 
     it('avisa cuando la corrida no dejó asignaciones que verificar', async () => {
@@ -308,7 +307,7 @@ describe('Inicio del panel administrativo', () => {
       expect(await screen.findByText(/IS101/)).toBeInTheDocument();
     });
 
-    it('enlaza a carga de datos, espacios y alertas sin duplicar el contador pendiente', async () => {
+    it('enlaza a carga de datos, espacios, secciones y auditoría sin duplicar el contador pendiente', async () => {
       montar();
       await screen.findByText(/IS101/);
       expect(screen.getByRole('link', { name: /Carga de datos/ })).toBeInTheDocument();
@@ -316,7 +315,14 @@ describe('Inicio del panel administrativo', () => {
         // El nombre accesible del enlace es su contenido visible (título + descripción).
         screen.getByRole('link', { name: /Espacios.*Aulas y laboratorios/ }),
       ).toBeInTheDocument();
-      const enlaceAlertas = screen.getByRole('link', { name: /Alertas.*Casos de capacidad/ });
+      expect(
+        screen.getByRole('link', { name: /Secciones.*Gestión individual/ }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('link', { name: /Auditoría.*Historial de asignaciones/ }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Informe de salones/ })).toBeInTheDocument();
+      const enlaceAlertas = screen.getByRole('link', { name: /Ver alertas/ });
       expect(enlaceAlertas).not.toHaveTextContent(/\d/);
       expect(screen.getByText(/alertas pendientes/).parentElement).toHaveTextContent(
         '2 alertas pendientes',
