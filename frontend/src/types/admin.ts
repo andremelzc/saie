@@ -40,6 +40,18 @@ export interface ListadoSoftwareDTO {
   limit: number;
 }
 
+/** Campos de un espacio que el backend permite editar según el rol (Issue 4.15). */
+export type CampoEspacio =
+  | 'identificador'
+  | 'pabellon'
+  | 'piso'
+  | 'aforoNominal'
+  | 'contiguos'
+  | 'habilitado'
+  | 'descripcionUso'
+  | 'softwareIds'
+  | 'pcsMalogradas';
+
 /** GET /v1/admin/espacios (Issue 4.15). */
 export interface EspacioAdminDTO {
   id: string;
@@ -52,8 +64,43 @@ export interface EspacioAdminDTO {
   pcsMalogradas: number | null;
   habilitado: boolean;
   descripcionUso: string | null;
+  /** Ids de los espacios contiguos (siempre del mismo tipo). */
   contiguos: string[];
-  camposEditables: string[];
+  camposEditables: CampoEspacio[];
+}
+
+/** Alerta que el backend genera al cambiar el aforo, el software o las PCs (Issue 4.15). */
+export interface AlertaRegistradaDTO {
+  id: string;
+  tipo: TipoAlerta;
+  espacioId: string;
+  motivo: string;
+  asignacionesAfectadas: number;
+  /** `false` cuando se actualizó una alerta pendiente idéntica en lugar de crear otra. */
+  creada: boolean;
+}
+
+/** PATCH /v1/admin/espacios/:id (Issue 4.15). */
+export interface ResultadoEdicionEspacioDTO {
+  espacio: EspacioAdminDTO;
+  alertas: AlertaRegistradaDTO[];
+}
+
+/**
+ * Campos enviados en el PATCH. Solo se incluyen los que cambian y el rol puede editar:
+ * el backend rechaza con 403 cualquier campo fuera de `camposEditables`.
+ */
+export interface CambiosEspacio {
+  identificador?: string;
+  pabellon?: string;
+  piso?: number;
+  aforoNominal?: number;
+  contiguos?: string[];
+  habilitado?: boolean;
+  /** `null` borra el rótulo. */
+  descripcionUso?: string | null;
+  softwareIds?: string[];
+  pcsMalogradas?: number;
 }
 
 /** GET /v1/admin/secciones-escaladas (Issue 4.22). */
