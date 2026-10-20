@@ -171,6 +171,12 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
           findUnique: jest.fn().mockResolvedValue(seccion({ asignaciones: [] })),
         },
         espacio: { findUnique: jest.fn() },
+        asignacion: { findMany: jest.fn().mockResolvedValue([]) },
+        alerta: {
+          findMany: jest.fn().mockResolvedValue([]),
+          create: jest.fn(),
+          update: jest.fn(),
+        },
         $transaction: jest.fn(async (fn: any) => fn(tx)),
       } as any;
       return { prisma, tx };
@@ -260,6 +266,78 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
           prisma,
         ),
       ).rejects.toMatchObject({ status: 422 });
+    });
+
+    it('avisa con una alerta si el aula asignada no tiene el software nuevo', async () => {
+      const { prisma, tx } = prismaEdicion();
+
+      // La sección conserva su asignación vigente, con un laboratorio asignado.
+      prisma.seccion.findUnique.mockResolvedValue(seccion());
+      prisma.espacio.findUnique.mockResolvedValue({
+        id: 'esp-1',
+        identificador: 'Lab 03',
+        pabellon: 'A',
+        piso: 2,
+        tipo: TipoEspacio.LABORATORIO,
+        softwareInstaladoCatalogo: [],
+      });
+      // La asignación vigente usa ese laboratorio y no tiene el software instalado.
+      prisma.asignacion.findMany.mockResolvedValue([
+        {
+          id: 'asig-1',
+          seccionId: 'sec-1',
+          codigoSeccion: '1',
+          codigoCurso: 'IS101',
+          nombreCurso: 'Algoritmos',
+          seccion: {
+            curso: { codigo: 'IS101', nombre: 'Algoritmos' },
+            _count: { matriculas: 30 },
+            softwareRequerido: [
+              {
+                softwareId: 'sw-python',
+                comparacionVersion: 'CUALQUIERA',
+                software: { nombre: 'Python', nombreNormalizado: 'python', version: '3.12' },
+              },
+            ],
+          },
+          softwareRequerido: [{ nombre: 'Python', nombreNormalizado: 'python', version: '3.12' }],
+          alumnosMatriculados: 30,
+          espacios: [
+            {
+              espacio: {
+                id: 'esp-1',
+                identificador: 'Lab 03',
+                tipo: TipoEspacio.LABORATORIO,
+                pabellon: 'A',
+                piso: 2,
+                aforoNominal: 40,
+                pcsMalogradas: 0,
+                softwareInstaladoCatalogo: [],
+              },
+            },
+          ],
+        },
+      ]);
+      prisma.alerta.findMany.mockResolvedValue([]);
+      prisma.alerta.create.mockResolvedValue({
+        id: 'al-1',
+        tipo: 'SOFTWARE',
+        espacioId: 'esp-1',
+        motivo: 'Software incompatible en Lab 03: Python 3.12',
+      });
+      tx.software.findMany.mockResolvedValue([
+        { id: 'sw-python', nombre: 'Python', version: '3.12', activo: true },
+      ]);
+
+      const resultado = await actualizarSeccion(
+        'sec-1',
+        { softwareRequerido: [{ softwareId: 'sw-python', comparacionVersion: 'CUALQUIERA' }] },
+        COORDINACION,
+        prisma,
+      );
+
+      expect(resultado.alertas).toHaveLength(1);
+      expect(resultado.alertas[0].motivo).toContain('Lab 03');
     });
   });
 });
