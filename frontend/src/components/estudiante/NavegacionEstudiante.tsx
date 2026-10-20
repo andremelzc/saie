@@ -29,7 +29,7 @@ const ENLACES_ESTUDIANTE: EnlaceEstudiante[] = [
 ];
 
 const claseLink = ({ isActive }: { isActive: boolean }) =>
-  `flex flex-1 flex-col items-center gap-0.5 px-2 py-2 text-xs transition-colors md:flex-none md:flex-row md:gap-2 md:rounded-lg md:px-4 md:text-sm ${
+  `flex flex-1 flex-col items-center gap-0.5 px-1 py-2 text-[11px] transition-colors md:flex-none md:flex-row md:gap-2 md:rounded-lg md:px-4 md:text-sm ${
     isActive
       ? 'bg-saie-primary/10 font-bold text-saie-primary md:bg-saie-primary md:font-medium md:text-white'
       : 'font-medium text-saie-muted hover:text-saie-primary'

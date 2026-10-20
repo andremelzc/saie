@@ -106,6 +106,12 @@ interface Pestana {
   to: string;
   etiqueta: string;
   trazo: string;
+  /**
+   * La pestaña solo aparece desde el ancho de escritorio. A 320 px la barra inferior del
+   * panel no cabe con las siete secciones, y una barra con scroll horizontal es peor que
+   * una barra de cuatro destinos: las demas se llegan desde los accesos del inicio.
+   */
+  soloEscritorio?: boolean;
 }
 
 export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
@@ -119,11 +125,26 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
   return [
     { to: RUTAS.inicioAdmin, etiqueta: 'Inicio', trazo: T_INICIO },
     { to: RUTAS.espaciosAdmin, etiqueta: 'Espacios', trazo: T_ESPACIOS },
-    { to: RUTAS.seccionesAdmin, etiqueta: 'Secciones', trazo: T_SECCIONES },
+    {
+      to: RUTAS.seccionesAdmin,
+      etiqueta: 'Secciones',
+      trazo: T_SECCIONES,
+      soloEscritorio: true,
+    },
     { to: RUTAS.alertasAdmin, etiqueta: 'Alertas', trazo: T_ALERTA },
     { to: RUTAS.cargaAdmin, etiqueta: 'Carga', trazo: T_CARGA },
-    { to: RUTAS.auditoriaAdmin, etiqueta: 'Auditoría', trazo: T_AUDITORIA },
-    { to: RUTAS.reporteSalonesAdmin, etiqueta: 'Informe', trazo: T_REPORTE },
+    {
+      to: RUTAS.auditoriaAdmin,
+      etiqueta: 'Auditoría',
+      trazo: T_AUDITORIA,
+      soloEscritorio: true,
+    },
+    {
+      to: RUTAS.reporteSalonesAdmin,
+      etiqueta: 'Informe',
+      trazo: T_REPORTE,
+      soloEscritorio: true,
+    },
   ];
 }
 

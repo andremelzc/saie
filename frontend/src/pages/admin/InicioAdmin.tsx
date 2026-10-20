@@ -131,13 +131,18 @@ const FilaEscalada: React.FC<{
           <span>
             {alumnos} {alumnos === 1 ? 'alumno' : 'alumnos'}
           </span>
-          {motivo.codigo && (
-            <details className="w-fit">
-              <summary className="cursor-pointer">Código de soporte</summary>
-              <span className="font-mono text-[10px]">{motivo.codigo}</span>
-            </details>
-          )}
         </p>
+        {/*
+          El código del motivo es interno (lo escribe el motor). Se muestra plegado y bajo una
+          etiqueta de "soporte" para que la persona que coordina lea primero la causa en
+          lenguaje llano y solo abra el código si necesita pasarlo a soporte técnico.
+        */}
+        {motivo.codigo && (
+          <details className="w-fit text-xs text-saie-muted">
+            <summary className="cursor-pointer">Código de soporte</summary>
+            <span className="font-mono text-[10px]">{motivo.codigo}</span>
+          </details>
+        )}
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">
         {motivo.accion && (

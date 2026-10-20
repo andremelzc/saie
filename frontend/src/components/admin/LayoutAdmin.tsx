@@ -91,7 +91,10 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
       >
         <ul className="mx-auto m-0 flex w-full max-w-6xl list-none gap-1 p-0 md:px-4 md:py-2">
           {pestanas.map((p) => (
-            <li key={p.to} className="flex flex-1 md:flex-none">
+            <li
+              key={p.to}
+              className={`flex flex-1 md:flex-none ${p.soloEscritorio ? 'hidden md:flex' : ''}`}
+            >
               <NavLink to={p.to} end className={claseLink}>
                 <Icono trazo={p.trazo} />
                 {p.etiqueta}
