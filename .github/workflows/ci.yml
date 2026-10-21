@@ -114,6 +114,10 @@ jobs:
 
       - name: Analisis en SonarCloud
         # Issue 5.10b: Quality Gate (cobertura >= 85%, 0 bugs)
+        # La rama principal de SonarCloud es develop y el plan no deja consultar el Quality Gate
+        # de otras ramas ("Organization is not allowed to access data from non main branches").
+        # El push a main lleva el mismo código que ya pasó el gate en el PR develop → main.
+        if: github.ref != 'refs/heads/main'
         uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
