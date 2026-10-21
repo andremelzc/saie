@@ -349,7 +349,7 @@ export const InicioEstudiante: React.FC = () => {
       titulo="Área del estudiante"
       subtitulo={horario?.periodo ? `Periodo lectivo ${horario.periodo}` : undefined}
     >
-      <div className="grid content-start gap-4 lg:h-full lg:min-h-0">
+      <div className="grid content-start gap-4 lg:min-h-0 lg:flex-1">
         {/* FILA 1 — la clase en curso o la próxima y las cifras de la semana */}
         <div className="grid gap-4 lg:grid-cols-12">
           <section

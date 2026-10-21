@@ -350,7 +350,11 @@ const InicioCoordinacion: React.FC = () => {
       titulo="Área administrativa"
       subtitulo="Estado de la asignación de aulas"
     >
-      <div className="grid gap-4 lg:h-full lg:min-h-0 lg:grid-cols-12 lg:grid-rows-[auto_1fr]">
+      {/*
+        El tablero ocupa lo que queda del `main` (una columna flex) tras el título: con
+        `lg:h-full` sumaba el 100 % de `main` al título y la última fila quedaba recortada.
+      */}
+      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-12 lg:grid-rows-[auto_1fr]">
         {/* Qué está pasando: la asignación del periodo y su acción principal */}
         <section
           aria-label="Estado de la asignación"

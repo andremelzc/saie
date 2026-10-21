@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import LayoutAdmin from '../../components/admin/LayoutAdmin';
-import { ResumenVerificacion } from '../../components/admin/VeredictoVerificacion';
+import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
 import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
 import { Acordeon } from '../../components/ui/Acordeon';
 import { Aviso } from '../../components/ui/Aviso';
@@ -15,6 +15,7 @@ import { importarCsv } from '../../services/admin';
 import { mensajeDeError } from '../../services/estudiante';
 import type { ResultadoImportacionDTO, TipoImportacion } from '../../types/admin';
 import { formatearFechaCorta } from '../../utils/admin';
+import { textoResumenVerificacion } from '../../utils/etiquetas';
 
 /**
  * Issue 1.9 — cuatro flujos de carga independientes. Las zonas van primero y en orden; la guía
@@ -217,61 +218,48 @@ const ZonaArchivo: React.FC<{
   </>
 );
 
-/** Filas con problemas que se muestran en la tarjeta; el resto se consulta en el detalle. */
-const MAX_ERRORES_VISIBLES = 3;
-
-/**
- * Resultado de la importación. Primero el veredicto en una línea y lo que se guardó; después,
- * solo lo que pide una acción (corregir filas, continuar). La lista completa de filas
- * rechazadas vive en un panel lateral bajo demanda.
- */
+/** Resultado de la importación dentro del drawer: resumen, errores descargables y pasos. */
 const PanelResultado: React.FC<{
   resultado: ResultadoImportacionDTO;
   tipo: TipoImportacion;
   onCorregir: () => void;
-  onSiguiente?: () => void;
-  etiquetaSiguiente?: string;
-}> = ({ resultado, tipo, onCorregir, onSiguiente, etiquetaSiguiente }) => {
-  const [detalleAbierto, setDetalleAbierto] = useState(false);
-  const errores = resultado.errores;
-  const conProblemas = errores.length > 0;
-  const haySiguiente = resultado.exitosa && Boolean(onSiguiente) && Boolean(etiquetaSiguiente);
-  const procesados = Object.entries(resultado.procesados);
-  const resumenAsignacion = resultado.asignacion?.resumen ?? null;
+}> = ({ resultado, tipo, onCorregir }) => {
+  const conProblemas = resultado.errores.length > 0;
 
   return (
-    <div className="flex flex-col gap-3 border-t border-saie-divider pt-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <output className="m-0 block text-sm font-bold text-saie-text">
-            {resultado.exitosa
-              ? 'Carga completada sin errores'
-              : `La carga tiene ${textoFilasConProblemas(errores.length)}`}
-          </output>
-          {/*
-            Cada importador genera una entrada por fila rechazada (las varias incidencias de
-            validación de una misma fila se unen en un solo mensaje), así que la resta es
-            exacta: son las filas que sí se guardaron.
-          */}
-          <p className="m-0 text-xs text-saie-muted">
-            {resultado.filasRecibidas} filas leídas · {resultado.filasRecibidas - errores.length}{' '}
-            guardadas
-          </p>
-        </div>
+    <div className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-saie-canvas p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <output className="m-0 block text-sm font-bold text-saie-text">
+          {resultado.exitosa
+            ? 'Carga completada sin errores'
+            : `La carga tiene ${textoFilasConProblemas(resultado.errores.length)}`}
+        </output>
         <BadgeEstado tono={resultado.exitosa ? 'exito' : 'advertencia'}>
-          {resultado.exitosa ? 'Sin errores' : `${errores.length} con problemas`}
+          {resultado.exitosa ? 'Sin errores' : `${resultado.errores.length} con problemas`}
         </BadgeEstado>
       </div>
+      <p className="m-0 text-sm text-saie-muted">
+        {/*
+          Cada importador genera una entrada por fila rechazada (las varias incidencias de
+          validación de una misma fila se unen en un solo mensaje), así que la resta es
+          exacta: son las filas que sí se guardaron.
+        */}
+        {resultado.filasRecibidas} filas leídas ·{' '}
+        {resultado.filasRecibidas - resultado.errores.length} guardadas
+        {resultado.errores.length > 0 && ` · ${resultado.errores.length} con problemas`}
+      </p>
 
-      {procesados.length > 0 && (
-        <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0 text-sm text-saie-muted">
-          {procesados.map(([clave, valor]) => (
-            <li key={clave}>
-              <strong className="text-saie-text">{valor}</strong>{' '}
-              <span>{ETIQUETAS_PROCESADOS[clave] ?? humanizar(clave)}</span>
-            </li>
+      {Object.keys(resultado.procesados).length > 0 && (
+        <dl className="m-0 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+          {Object.entries(resultado.procesados).map(([clave, valor]) => (
+            <div key={clave} className="rounded-lg bg-white px-3 py-2">
+              <dt className="text-xs text-saie-muted">
+                {ETIQUETAS_PROCESADOS[clave] ?? humanizar(clave)}
+              </dt>
+              <dd className="m-0 text-lg font-bold text-saie-text">{valor}</dd>
+            </div>
           ))}
-        </ul>
+        </dl>
       )}
 
       {conProblemas && (
@@ -282,72 +270,86 @@ const PanelResultado: React.FC<{
             )}
             Corrige esas filas y sube el archivo de nuevo; las demás ya se guardaron.
           </Aviso>
-          <ul className="m-0 list-disc pl-5 text-sm text-saie-text">
-            {errores.slice(0, MAX_ERRORES_VISIBLES).map((e, i) => (
-              <li key={i}>{e}</li>
-            ))}
-          </ul>
           <div className="flex flex-wrap gap-2">
-            <Boton variante="primario" tamano="sm" onClick={onCorregir}>
-              Corregir y volver a subir
-            </Boton>
             <Boton
               variante="secundario"
               tamano="sm"
-              onClick={() => descargarErrores(tipo, errores)}
+              onClick={() => descargarErrores(tipo, resultado.errores)}
             >
               Descargar errores (CSV)
             </Boton>
-            {errores.length > MAX_ERRORES_VISIBLES && (
-              <Boton variante="fantasma" tamano="sm" onClick={() => setDetalleAbierto(true)}>
-                Ver las {errores.length} filas
-              </Boton>
-            )}
+            <Boton variante="fantasma" tamano="sm" onClick={onCorregir}>
+              Corregir y volver a subir
+            </Boton>
           </div>
+          {/*
+            Sin tope de altura ni scroll interno: la lista vive en el drawer y es el drawer
+            el que se desplaza. Un scroll dentro de la tarjeta escondía las filas y era un
+            parche para que el tablero no creciera.
+          */}
+          <ul className="m-0 list-disc pl-5 text-sm text-saie-text">
+            {resultado.errores.map((e, i) => (
+              <li key={i}>{e}</li>
+            ))}
+          </ul>
         </>
       )}
 
       {resultado.asignacion && (
         <p className="m-0 text-sm text-saie-text">{textoAsignacion(resultado.asignacion)}</p>
       )}
-      {resumenAsignacion && <ResumenVerificacion verificacion={resumenAsignacion.verificacion} />}
+    </div>
+  );
+};
 
-      {haySiguiente && (
-        <div>
-          <Boton variante="secundario" tamano="sm" onClick={onSiguiente}>
+/**
+ * Resumen compacto del resultado que vive dentro de la tarjeta. El detalle completo (procesados,
+ * errores descargables y veredicto) abre un drawer con un clic: así la carga de un archivo no
+ * apila el resultado hacia abajo ni desplaza las demás zonas.
+ */
+const ResumenResultado: React.FC<{
+  resultado: ResultadoImportacionDTO;
+  onSiguiente?: () => void;
+  etiquetaSiguiente?: string;
+  onAbrir: () => void;
+}> = ({ resultado, onSiguiente, etiquetaSiguiente, onAbrir }) => {
+  const haySiguiente = resultado.exitosa && Boolean(onSiguiente) && Boolean(etiquetaSiguiente);
+
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-saie-canvas p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <output className="m-0 block text-sm font-bold text-saie-text">
+          {resultado.exitosa
+            ? 'Carga completada sin errores'
+            : `La carga tiene ${textoFilasConProblemas(resultado.errores.length)}`}
+        </output>
+        <BadgeEstado tono={resultado.exitosa ? 'exito' : 'advertencia'}>
+          {resultado.exitosa ? 'Sin errores' : `${resultado.errores.length} con problemas`}
+        </BadgeEstado>
+      </div>
+      <p className="m-0 text-sm text-saie-muted">
+        {resultado.filasRecibidas} filas leídas ·{' '}
+        {resultado.filasRecibidas - resultado.errores.length} guardadas
+        {resultado.errores.length > 0 && ` · ${resultado.errores.length} con problemas`}
+      </p>
+      {resultado.asignacion && (
+        <p className="m-0 text-sm text-saie-text">{textoAsignacion(resultado.asignacion)}</p>
+      )}
+      {resultado.asignacion?.resumen && (
+        <p className="m-0 text-sm font-semibold text-saie-text">
+          {textoResumenVerificacion(resultado.asignacion.resumen.verificacion)}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Boton variante="secundario" tamano="sm" onClick={onAbrir}>
+          Ver el resultado completo
+        </Boton>
+        {haySiguiente && (
+          <Boton variante="primario" tamano="sm" onClick={onSiguiente}>
             Continuar con {etiquetaSiguiente} →
           </Boton>
-        </div>
-      )}
-
-      <Drawer
-        abierto={detalleAbierto}
-        onCerrar={() => setDetalleAbierto(false)}
-        titulo="Filas con problemas"
-      >
-        <div className="flex flex-col gap-3">
-          <p className="m-0 text-sm text-saie-muted">
-            Estas filas no se guardaron. Corrígelas en tu archivo y vuelve a subirlo: las filas
-            correctas no se duplican.
-          </p>
-          <ol className="m-0 flex list-none flex-col divide-y divide-saie-divider rounded-xl border border-saie-divider bg-white p-0 text-sm">
-            {errores.map((e, i) => (
-              <li key={i} className="px-4 py-2.5 text-saie-text">
-                {e}
-              </li>
-            ))}
-          </ol>
-          <div>
-            <Boton
-              variante="secundario"
-              tamano="sm"
-              onClick={() => descargarErrores(tipo, errores)}
-            >
-              Descargar errores (CSV)
-            </Boton>
-          </div>
-        </div>
-      </Drawer>
+        )}
+      </div>
     </div>
   );
 };
@@ -377,6 +379,8 @@ export const ZonaCarga: React.FC<{
   const [resultado, setResultado] = useState<ResultadoImportacionDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [errorArchivo, setErrorArchivo] = useState<string | null>(null);
+  // El detalle del resultado vive en un drawer: la tarjeta solo conserva el resumen.
+  const [detalleAbierto, setDetalleAbierto] = useState(false);
   const idInput = `archivo-${tipo}`;
   const idAyuda = `ayuda-${tipo}`;
 
@@ -440,8 +444,11 @@ export const ZonaCarga: React.FC<{
     setError(null);
     setErrorArchivo(null);
     setArchivo(null);
+    setDetalleAbierto(false);
     limpiarInput();
-    document.getElementById(idInput)?.focus();
+    // Tras el cierre del drawer, este devuelve el foco a quien lo abrió (que ya no existe):
+    // el foco manda al campo de archivo, que es el siguiente paso natural.
+    setTimeout(() => document.getElementById(idInput)?.focus(), 0);
   }
 
   const insignia = insigniaDeEstado(estado, enviando);
@@ -497,14 +504,33 @@ export const ZonaCarga: React.FC<{
       </div>
 
       {resultado && (
-        <PanelResultado
+        <ResumenResultado
           resultado={resultado}
-          tipo={tipo}
-          onCorregir={corregir}
           onSiguiente={onSiguiente}
           etiquetaSiguiente={etiquetaSiguiente}
+          onAbrir={() => setDetalleAbierto(true)}
         />
       )}
+
+      {/*
+        El detalle del resultado (procesados, errores descargables y veredicto del verificador)
+        se consulta bajo demanda en el drawer: no se apila dentro de la tarjeta ni desplaza
+        las demás zonas de carga hacia abajo.
+      */}
+      <Drawer
+        abierto={detalleAbierto}
+        onCerrar={() => setDetalleAbierto(false)}
+        titulo={`Resultado de la carga · ${titulo}`}
+      >
+        {resultado ? (
+          <div className="flex flex-col gap-4">
+            <PanelResultado resultado={resultado} tipo={tipo} onCorregir={corregir} />
+            {resultado.asignacion?.resumen?.verificacion && (
+              <VeredictoVerificacion verificacion={resultado.asignacion.resumen.verificacion} />
+            )}
+          </div>
+        ) : null}
+      </Drawer>
     </section>
   );
 };
