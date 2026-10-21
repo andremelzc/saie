@@ -40,7 +40,7 @@ export const ReporteSalones: React.FC = () => {
             Actualizar
           </Boton>
           <Boton variante="primario" onClick={imprimir} disabled={!datos}>
-            Descargar PDF
+            Imprimir o guardar como PDF
           </Boton>
         </div>
       }
@@ -69,7 +69,7 @@ export const ReporteSalones: React.FC = () => {
           <article className="flex flex-col gap-5">
             <header className="flex flex-wrap items-end justify-between gap-3 border-b border-saie-divider pb-4">
               <div>
-                <h2 className="m-0 font-serif text-2xl font-bold text-saie-text">
+                <h2 className="m-0 text-2xl font-bold text-saie-text">
                   Cuadro de asignación de aulas
                 </h2>
                 <p className="m-0 mt-1 text-sm text-saie-muted">
@@ -106,8 +106,9 @@ export const ReporteSalones: React.FC = () => {
 
             {datos.totales.sinAula > 0 && (
               <p className="saie-no-imprimir m-0 rounded-xl border border-saie-warning-strong/30 bg-saie-warning-soft p-3 text-sm font-medium text-saie-warning-strong">
-                {datos.totales.sinAula} sección(es) todavía no tienen aula: están marcadas en la
-                tabla y conviene resolverlas antes de presentar el cuadro.
+                {datos.totales.sinAula === 1
+                  ? '1 sección todavía no tiene aula: está marcada en la tabla y conviene resolverla antes de presentar el cuadro.'
+                  : `${datos.totales.sinAula} secciones todavía no tienen aula: están marcadas en la tabla y conviene resolverlas antes de presentar el cuadro.`}
               </p>
             )}
 
@@ -159,12 +160,14 @@ export const ReporteSalones: React.FC = () => {
                             </span>
                           </span>
                         ) : (
-                          <BadgeEstado tono="advertencia">Sin aula</BadgeEstado>
+                          <BadgeEstado tono="advertencia">Sin aula asignada</BadgeEstado>
                         )}
                       </td>
                       <td className="px-3 py-2 text-xs">{s.horarios.join(' · ') || '—'}</td>
                       <td className="px-3 py-2 text-xs">{s.docente ?? '—'}</td>
-                      <td className="px-3 py-2 text-center">{s.alumnosMatriculados}</td>
+                      <td className="px-3 py-2 text-center tabular-nums">
+                        {s.alumnosMatriculados}
+                      </td>
                       <td className="px-3 py-2 text-xs">{s.softwareRequerido.join(', ') || '—'}</td>
                     </tr>
                   ))}

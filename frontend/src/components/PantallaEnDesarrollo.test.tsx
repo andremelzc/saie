@@ -69,6 +69,6 @@ describe('PantallaEnDesarrollo', () => {
     montar({ portal: 'Docente' });
 
     expect(screen.getByText('Docente')).toBeVisible();
-    expect(screen.getByText('ALUMNO')).toBeVisible();
+    expect(screen.getByText('Estudiante')).toBeVisible();
   });
 });

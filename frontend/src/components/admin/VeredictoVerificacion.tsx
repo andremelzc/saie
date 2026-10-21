@@ -1,16 +1,7 @@
 import React from 'react';
-import type { ReglaVerificacion, ResultadoVerificacionDTO } from '../../types/admin';
-
-/** Nombre legible de cada regla dura del verificador (Issue 2.17). */
-const ETIQUETAS: Record<ReglaVerificacion, string> = {
-  DOBLE_RESERVA: 'Sin doble reserva',
-  CAPACIDAD_SUFICIENTE: 'Capacidad suficiente',
-  TIPO_HOMOGENEO: 'Tipo de espacio correcto',
-  BLOQUE_CONTIGUO: 'Bloque contiguo',
-  SOFTWARE_COMPLETO: 'Software completo',
-  ESCALADA_CON_MOTIVO: 'Escaladas con motivo',
-  UNA_VIGENTE_POR_SECCION: 'Una asignación vigente por sección',
-};
+import type { ResultadoVerificacionDTO } from '../../types/admin';
+import { etiquetaReglaVerificacion } from '../../utils/diccionarios';
+import { plural } from '../../utils/texto';
 
 const TRAZO_CHECK = 'M4.5 12.75l6 6 9-13.5';
 const TRAZO_X = 'M6 18L18 6M6 6l12 12';
@@ -34,6 +25,8 @@ const IconoEstado: React.FC<{ conforme: boolean; className?: string }> = ({
 );
 
 export interface VeredictoVerificacionProps {
+  /** Dentro de un drawer el título ya lo muestra el drawer: así no se repite. */
+  ocultarTitulo?: boolean;
   /** Resultado del verificador; `null` cuando la corrida no tuvo nada que verificar. */
   verificacion: ResultadoVerificacionDTO | null;
 }
@@ -45,14 +38,17 @@ export interface VeredictoVerificacionProps {
  * detalle de las siete reglas duras. Las reglas con hallazgos se despliegan para leer la sección
  * afectada y el motivo, de modo que el panel explique por sí mismo el resultado de la corrida.
  */
-export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({ verificacion }) => {
+export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
+  verificacion,
+  ocultarTitulo = false,
+}) => {
   if (!verificacion) {
     return (
       <section
         aria-label="Veredicto del verificador"
         className="rounded-xl border border-dashed border-saie-divider bg-white px-4 py-3 text-sm text-saie-muted"
       >
-        No hubo asignaciones que verificar en esta corrida.
+        No hubo asignaciones que comprobar en esta asignación automática.
       </section>
     );
   }
@@ -72,7 +68,8 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({ ve
 
   return (
     <section
-      aria-labelledby="titulo-verificador"
+      aria-labelledby={ocultarTitulo ? undefined : 'titulo-verificador'}
+      aria-label={ocultarTitulo ? 'Veredicto del verificador' : undefined}
       className={`flex flex-col gap-4 rounded-2xl border p-4 sm:p-5 ${tono.caja}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -83,16 +80,23 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({ ve
             <IconoEstado conforme={conforme} className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <h2 id="titulo-verificador" className="m-0 text-base font-bold text-saie-text">
-              Veredicto del verificador
-            </h2>
+            {!ocultarTitulo && (
+              <h2 id="titulo-verificador" className="m-0 text-base font-bold text-saie-text">
+                Veredicto del verificador
+              </h2>
+            )}
             <p className={`m-0 mt-0.5 text-sm font-semibold ${tono.texto}`}>
               {conforme
-                ? 'Conforme: la corrida cumple las 7 reglas duras.'
-                : `No conforme: ${totalViolaciones} violación(es) en ${reglas.filter((r) => r.violaciones.length > 0).length} regla(s).`}
+                ? 'Conforme: la asignación cumple las 7 reglas.'
+                : `No conforme: ${plural(totalViolaciones, 'incumplimiento', 'incumplimientos')} en ${plural(
+                    reglas.filter((r) => r.violaciones.length > 0).length,
+                    'regla',
+                    'reglas',
+                  )}.`}
             </p>
             <p className="m-0 mt-0.5 text-xs text-saie-muted">
-              {totalRevisadas} asignación(es) revisada(s) · {totalViolaciones} violación(es)
+              {plural(totalRevisadas, 'asignación revisada', 'asignaciones revisadas')} ·{' '}
+              {plural(totalViolaciones, 'incumplimiento', 'incumplimientos')}
             </p>
           </div>
         </div>
@@ -125,7 +129,9 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({ ve
                 >
                   <IconoEstado conforme={cumple} />
                 </span>
-                <span className="font-medium text-saie-text">{ETIQUETAS[regla.regla]}</span>
+                <span className="font-medium text-saie-text">
+                  {etiquetaReglaVerificacion(regla.regla)}
+                </span>
                 <span className="ml-auto text-xs text-saie-muted">
                   {noAplica ? 'No aplica' : `${regla.cumplen}/${regla.revisadas} cumplen`}
                 </span>
@@ -134,7 +140,7 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({ ve
               {regla.violaciones.length > 0 && (
                 <details className="mt-2 border-t border-saie-divider pt-2">
                   <summary className="cursor-pointer text-xs font-semibold text-saie-danger">
-                    Ver {regla.violaciones.length} violación(es)
+                    Ver {plural(regla.violaciones.length, 'incumplimiento', 'incumplimientos')}
                   </summary>
                   <ul className="m-0 mt-2 flex list-none flex-col gap-1.5 p-0 text-xs text-saie-text">
                     {regla.violaciones.map((violacion, indice) => (
@@ -155,8 +161,8 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({ ve
       </ul>
 
       <p className="m-0 text-xs text-saie-muted">
-        Verificación automática posterior a la corrida. Las violaciones quedan registradas en la
-        auditoría.
+        Comprobación automática posterior a la asignación. Los incumplimientos quedan registrados en
+        la auditoría.
       </p>
     </section>
   );

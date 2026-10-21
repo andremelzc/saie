@@ -183,7 +183,7 @@ describe('HorarioMisCursos (Issue #145 / 3.16)', () => {
       expect(within(redaccion).getByText('Sin aula asignada')).toBeVisible();
 
       const software = screen.getByRole('article', { name: 'Ingeniería de Software' });
-      expect(within(software).getByText('Clase en revisión')).toBeVisible();
+      expect(within(software).getByText('En revisión')).toBeVisible();
       expect(within(software).getByText('Por asignar')).toBeVisible();
     });
 

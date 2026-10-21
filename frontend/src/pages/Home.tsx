@@ -6,6 +6,7 @@ import type { Portal, PortalId } from '../config/portales';
 import LogoEdificioGuinda from '../components/LogoEdificioGuinda';
 import logoBlanco from '../assets/logo-blanco.svg';
 import logoHorizontal from '../assets/logo-horizontal.svg';
+import { EnlaceSaltar, ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
 
 const ICONOS: Record<PortalId, React.ReactNode> = {
   estudiante: (
@@ -36,7 +37,7 @@ const PortalCard: React.FC<{ portal: Portal; indice: number }> = ({ portal: p, i
         data-testid={`portal-${p.id}`}
         aria-label={`Ingresar al ${p.titulo}`}
         onMouseMove={seguirCursor}
-        className="group relative overflow-hidden h-full flex flex-col bg-white rounded-xl p-5 shadow-[0_2px_8px_rgba(34,34,34,0.08)] hover:shadow-[0_8px_24px_rgba(34,34,34,0.16)] hover:-translate-y-1 active:translate-y-0 active:bg-saie-canvas transition-all duration-300 no-underline text-saie-text"
+        className="group relative overflow-hidden h-full flex flex-col bg-white rounded-xl p-5 shadow-saie-card hover:shadow-saie-pop hover:-translate-y-1 active:translate-y-0 active:bg-saie-canvas transition-all duration-300 no-underline text-saie-text"
       >
         {/* Brillo que sigue al cursor */}
         <span
@@ -109,9 +110,10 @@ const PortalCard: React.FC<{ portal: Portal; indice: number }> = ({ portal: p, i
 export const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-saie-canvas text-saie-text flex flex-col">
+      <EnlaceSaltar />
       {/* Barra superior */}
-      <header className="sticky top-0 z-10 shrink-0 bg-saie-primary text-white shadow-[0_2px_8px_rgba(34,34,34,0.08)]">
-        <div className="max-w-[1200px] mx-auto px-4 md:px-6 h-16 flex items-center">
+      <header className="sticky top-0 z-10 shrink-0 bg-saie-primary text-white shadow-saie-card">
+        <div className="max-w-saie-normal mx-auto px-4 md:px-6 h-18 flex items-center">
           <h1 className="m-0 flex items-center">
             <img src={logoBlanco} alt="SAIE" className="h-10 w-auto" />
           </h1>
@@ -122,10 +124,10 @@ export const Home: React.FC = () => {
       </header>
 
       {/* Contenido: la página crece hacia abajo cuando no cabe en la pantalla (un solo bloque) */}
-      <main className="flex-1">
-        <div className="max-w-[1200px] w-full mx-auto px-4 md:px-6 py-6 md:py-8">
+      <main id={ID_CONTENIDO} tabIndex={-1} className="flex-1 focus:outline-none">
+        <div className="max-w-saie-normal w-full mx-auto px-4 md:px-6 py-6 md:py-8">
           {/* Bienvenida (tarjeta destacada: una por pantalla) */}
-          <section className="saie-rise relative overflow-hidden rounded-xl bg-gradient-to-br from-saie-primary to-saie-primary-dark text-white p-6 md:p-8 shadow-[0_8px_24px_rgba(34,34,34,0.16)]">
+          <section className="saie-rise relative overflow-hidden rounded-xl bg-gradient-to-br from-saie-primary to-saie-primary-dark text-white p-6 md:p-8 shadow-saie-pop">
             <div
               aria-hidden="true"
               className="saie-float pointer-events-none absolute -right-4 md:right-10 top-1/2 -translate-y-1/2 hidden md:block"
@@ -134,9 +136,7 @@ export const Home: React.FC = () => {
             </div>
 
             <div className="relative max-w-xl">
-              <h2 className="m-0 font-serif text-[26px] leading-8 md:text-[30px] md:leading-9 font-bold">
-                Bienvenido a SAIE
-              </h2>
+              <h2 className="m-0 text-2xl md:text-3xl font-bold">Bienvenido a SAIE</h2>
               <p className="mt-2 text-white/90">
                 Consulta, asigna y supervisa aulas y laboratorios de la Facultad de Ingeniería de
                 Sistemas e Informática. Elige tu portal para iniciar sesión.
@@ -178,7 +178,7 @@ export const Home: React.FC = () => {
       </main>
 
       <footer className="shrink-0 border-t border-saie-divider bg-white">
-        <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-3 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+        <div className="max-w-saie-normal mx-auto px-4 md:px-6 py-3 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
           <img src={logoHorizontal} alt="" aria-hidden="true" className="h-7 w-auto self-start" />
           <div className="text-xs text-saie-muted sm:text-right">
             <p className="m-0">SAIE &copy; {new Date().getFullYear()} · UNMSM · Grupo 6</p>

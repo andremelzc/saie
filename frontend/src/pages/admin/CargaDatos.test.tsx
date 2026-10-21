@@ -74,7 +74,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     expect(screen.getByText(/Última carga:/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
-    const dialogo = screen.getByRole('dialog', { name: 'Resultado de la carga · 2. Horarios' });
+    const dialogo = screen.getByRole('dialog', { name: /Resultado de la carga.*2. Horarios/ });
     expect(within(dialogo).getByText('bloques de horario')).toBeInTheDocument();
     expect(within(dialogo).getByText('10')).toBeInTheDocument();
 
@@ -99,7 +99,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     expect(screen.queryByRole('button', { name: /Continuar con/ })).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
-    const dialogo = screen.getByRole('dialog', { name: 'Resultado de la carga · 3. Matrículas' });
+    const dialogo = screen.getByRole('dialog', { name: /Resultado de la carga.*3. Matrículas/ });
     expect(
       within(dialogo).getByText(/No se asignaron aulas porque el archivo tiene filas/),
     ).toBeInTheDocument();
@@ -155,7 +155,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
     const dialogo = screen.getByRole('dialog', {
-      name: 'Resultado de la carga · 1. Cursos y secciones',
+      name: /Resultado de la carga.*1. Cursos y secciones/,
     });
     expect(within(dialogo).getByText('CONFORME')).toBeInTheDocument();
     expect(within(dialogo).getByText('Sin doble reserva')).toBeInTheDocument();

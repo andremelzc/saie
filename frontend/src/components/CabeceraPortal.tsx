@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import BotonCerrarSesion from './auth/BotonCerrarSesion';
 import logoBlanco from '../assets/logo-blanco.svg';
 import { useAuth } from '../context/useAuth';
+import { etiquetaRol } from '../utils/admin';
 
 export interface CabeceraPortalProps {
   /** Nombre del portal que se muestra en la cabecera (Estudiante, Docente, etc.). */
@@ -15,7 +16,7 @@ export const CabeceraPortal: React.FC<CabeceraPortalProps> = ({ portal }) => {
 
   return (
     <header className="bg-saie-primary text-white">
-      <div className="mx-auto flex h-[85px] w-full max-w-6xl items-center justify-between gap-3 px-4">
+      <div className="mx-auto flex h-18 w-full max-w-saie-normal items-center justify-between gap-3 px-4">
         <div className="flex min-w-0 items-center gap-4">
           <Link to="/" aria-label="Ir al inicio de SAIE" className="shrink-0">
             <img src={logoBlanco} alt="SAIE" className="h-10 w-auto" />
@@ -27,7 +28,9 @@ export const CabeceraPortal: React.FC<CabeceraPortalProps> = ({ portal }) => {
         <div className="flex items-center gap-4">
           <p className="m-0 hidden text-right text-xs leading-4 text-white/80 sm:block">
             Sesión activa
-            <strong className="block text-sm font-bold text-white">{sesion?.rol}</strong>
+            <strong className="block text-sm font-bold text-white">
+              {etiquetaRol(sesion?.rol)}
+            </strong>
           </p>
           <BotonCerrarSesion className="h-11! border-white/30! bg-white/10! px-5! text-sm! text-white! hover:bg-white/20!" />
         </div>

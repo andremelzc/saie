@@ -19,13 +19,21 @@ interface AvisoItem {
  */
 let secuencia = 0;
 
+/** Tiempo visible de un aviso; los errores duran más. */
+const DURACION_MS = { normal: 5000, error: 8000 };
+/** Si el cursor o el foco están sobre los avisos, se vuelve a comprobar pasado este tiempo. */
+const REINTENTO_PAUSA_MS = 2000;
+
 /**
- * Región viva siempre montada para confirmaciones y errores transitorios.
- * Los errores que exigen corregir algo deben ir inline junto al control, no solo en un toast.
+ * Avisos transitorios (confirmaciones y errores) en dos regiones vivas siempre montadas: una
+ * amable (`status`) para éxito e información y otra asertiva (`alert`) para errores, que se
+ * anuncian de inmediato. Si la persona tiene el cursor o el foco sobre un aviso, no se cierra
+ * (WCAG 2.2.1). Los errores que exigen corregir algo deben ir también junto al control.
  */
 export const ProveedorAvisos: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [avisos, setAvisos] = useState<AvisoItem[]>([]);
   const temporizadores = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const pausado = useRef(false);
 
   useEffect(
     () => () => {
@@ -42,45 +50,68 @@ export const ProveedorAvisos: React.FC<{ children: React.ReactNode }> = ({ child
     (tono: TonoAvisoGlobal, texto: string) => {
       const id = (secuencia += 1);
       setAvisos((previos) => [...previos, { id, tono, texto }]);
-      const temporizador = setTimeout(
-        () => {
-          cerrar(id);
+
+      const programar = (espera: number) => {
+        const temporizador = setTimeout(() => {
           temporizadores.current = temporizadores.current.filter((t) => t !== temporizador);
-        },
-        tono === 'error' ? 8000 : 5000,
-      );
-      temporizadores.current.push(temporizador);
+          if (pausado.current) {
+            programar(REINTENTO_PAUSA_MS);
+            return;
+          }
+          cerrar(id);
+        }, espera);
+        temporizadores.current.push(temporizador);
+      };
+      programar(tono === 'error' ? DURACION_MS.error : DURACION_MS.normal);
     },
     [cerrar],
   );
 
   const valor = useMemo(() => ({ mostrar }), [mostrar]);
 
+  const tarjeta = (a: AvisoItem) => (
+    <div
+      key={a.id}
+      className={`pointer-events-auto flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-saie-pop ${ESTILOS[a.tono]}`}
+    >
+      <span className="min-w-0 flex-1">{a.texto}</span>
+      <button
+        type="button"
+        onClick={() => cerrar(a.id)}
+        aria-label="Cerrar aviso"
+        className="-mr-1 shrink-0 rounded-md px-1.5 text-base leading-6 opacity-70 hover:opacity-100"
+      >
+        <span aria-hidden="true">×</span>
+      </button>
+    </div>
+  );
+
   return (
     <ContextoAvisos.Provider value={valor}>
       {children}
-      {/* La región vive siempre en el DOM: si se monta con el mensaje, el lector no lo anuncia. */}
+      {/* Las regiones viven siempre en el DOM: si se montan con el mensaje, el lector no lo anuncia.
+          Solo llevan `aria-live` (sin `role`) para no aparecer como alertas vacías en el árbol. */}
       <div
-        aria-live="polite"
-        aria-atomic="false"
+        onMouseEnter={() => (pausado.current = true)}
+        onMouseLeave={() => (pausado.current = false)}
+        onFocus={() => (pausado.current = true)}
+        onBlur={() => (pausado.current = false)}
         className="pointer-events-none fixed inset-x-4 bottom-24 z-50 flex flex-col items-end gap-2 md:bottom-6 md:left-auto md:right-6 md:w-96"
       >
-        {avisos.map((a) => (
-          <div
-            key={a.id}
-            className={`pointer-events-auto flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-[var(--saie-shadow-3)] ${ESTILOS[a.tono]}`}
-          >
-            <span className="min-w-0 flex-1">{a.texto}</span>
-            <button
-              type="button"
-              onClick={() => cerrar(a.id)}
-              aria-label="Cerrar aviso"
-              className="-mr-1 shrink-0 rounded-md px-1.5 text-base leading-6 opacity-70 hover:opacity-100"
-            >
-              <span aria-hidden="true">×</span>
-            </button>
-          </div>
-        ))}
+        <div
+          aria-live="polite"
+          aria-atomic="false"
+          className="flex w-full flex-col items-end gap-2"
+        >
+          {avisos.filter((a) => a.tono !== 'error').map(tarjeta)}
+        </div>
+        <div
+          aria-live="assertive"
+          aria-atomic="false"
+          className="flex w-full flex-col items-end gap-2"
+        >
+          {avisos.filter((a) => a.tono === 'error').map(tarjeta)}
+        </div>
       </div>
     </ContextoAvisos.Provider>
   );

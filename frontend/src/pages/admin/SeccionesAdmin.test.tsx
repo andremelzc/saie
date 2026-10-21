@@ -103,8 +103,8 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     expect(await screen.findByText('IS101 · 1')).toBeInTheDocument();
     expect(screen.getByText('Algoritmos')).toBeInTheDocument();
     expect(screen.getByText('Lab 03')).toBeInTheDocument();
-    expect(screen.getByText('Con aula')).toBeInTheDocument();
-    expect(screen.getByText('Sin aula · revisión')).toBeInTheDocument();
+    expect(screen.getByText('Aula confirmada')).toBeInTheDocument();
+    expect(screen.getByText('En revisión')).toBeInTheDocument();
   });
 
   it('filtra por búsqueda y por tipo de espacio', async () => {
@@ -187,7 +187,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
       limite: 200,
     });
     montar();
-    expect(await screen.findByText('Sin asignar')).toBeInTheDocument();
+    expect(await screen.findByText('Sin aula asignada')).toBeInTheDocument();
   });
 
   it('filtra el software del catálogo por su nombre', async () => {

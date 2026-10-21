@@ -29,7 +29,7 @@ const ENLACES_ESTUDIANTE: EnlaceEstudiante[] = [
 ];
 
 const claseLink = ({ isActive }: { isActive: boolean }) =>
-  `flex flex-1 flex-col items-center gap-0.5 px-1 py-2 text-[11px] transition-colors md:flex-none md:flex-row md:gap-2 md:rounded-lg md:px-4 md:text-sm ${
+  `flex flex-1 flex-col items-center gap-0.5 px-1 py-2 text-xs transition-colors md:flex-none md:flex-row md:gap-2 md:rounded-lg md:px-4 md:text-sm ${
     isActive
       ? 'bg-saie-primary/10 font-bold text-saie-primary md:bg-saie-primary md:font-medium md:text-white'
       : 'font-medium text-saie-muted hover:text-saie-primary'
@@ -47,7 +47,7 @@ export const NavegacionEstudiante: React.FC = () => (
     aria-label="Navegación del área del estudiante"
     className="z-30 border-b border-saie-divider bg-white md:static"
   >
-    <ul className="mx-auto m-0 flex w-full max-w-7xl list-none gap-1 p-0 md:px-4 md:py-2">
+    <ul className="mx-auto m-0 flex w-full max-w-saie-ancho list-none gap-1 p-0 md:px-4 md:py-2">
       {ENLACES_ESTUDIANTE.map((enlace) => (
         <li key={enlace.to} className="flex flex-1 md:flex-none">
           <NavLink to={enlace.to} className={claseLink}>

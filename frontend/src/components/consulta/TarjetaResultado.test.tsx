@@ -60,7 +60,7 @@ describe('TarjetaResultado (Issue #135 / 3.6)', () => {
     render(<TarjetaResultado asignacion={mockAulaVigente} />);
 
     // 1. Tipo de espacio (Aula Teórica)
-    expect(screen.getByText('Aula Teórica')).toBeInTheDocument();
+    expect(screen.getByText('Aula teórica')).toBeInTheDocument();
 
     // 2. Pabellón
     expect(screen.getByText('Pabellón Antiguo')).toBeInTheDocument();
@@ -79,7 +79,7 @@ describe('TarjetaResultado (Issue #135 / 3.6)', () => {
     expect(screen.getByText('D001 - Carlos Mendoza')).toBeInTheDocument();
 
     // Estado vigente
-    expect(screen.getByText('Espacio confirmado')).toBeInTheDocument();
+    expect(screen.getByText('Aula confirmada')).toBeInTheDocument();
   });
 
   it('muestra correctamente los 6 campos requeridos diferenciando un laboratorio con ícono y etiqueta', () => {
@@ -144,7 +144,7 @@ describe('TarjetaResultado (Issue #135 / 3.6)', () => {
 
     render(<TarjetaResultado asignacion={mockPendiente} />);
 
-    expect(screen.getByText('Sin asignar')).toBeInTheDocument();
+    expect(screen.getByText('Sin aula asignada')).toBeInTheDocument();
     expect(screen.getByText('Aún no hay aula asignada')).toBeInTheDocument();
     expect(
       screen.getByText(/La facultad todavía no confirma el aula o laboratorio/i),

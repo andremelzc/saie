@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
+import { EstadoError } from '../components/ui/EstadoError';
+import { ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
 import { Icono } from '../components/estudiante/ElementosHorario';
 import SeccionEditable from '../components/estudiante/SeccionEditable';
 import type { CampoPerfil } from '../components/estudiante/SeccionEditable';
@@ -22,7 +24,6 @@ const TRAZO_CORAZON =
   'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z';
 const TRAZO_CANDADO =
   'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z';
-const TRAZO_ALERTA = 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
 
 const CAMPOS_DATOS_PERSONALES: CampoPerfil[] = [
   {
@@ -135,24 +136,10 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
 
     if (error) {
       return (
-        <div
-          role="alert"
-          className="flex flex-col items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-saie-danger"
-        >
-          <p className="m-0 flex items-start gap-2">
-            <Icono trazo={TRAZO_ALERTA} className="mt-0.5 h-5 w-5 shrink-0" />
-            <span>{`No pudimos cargar tu perfil. ${error}`}</span>
-          </p>
-          {onReintentar && (
-            <button
-              type="button"
-              onClick={onReintentar}
-              className="min-h-11 cursor-pointer rounded-xl bg-saie-primary px-5 text-sm font-medium text-white hover:bg-saie-primary-dark"
-            >
-              Reintentar
-            </button>
-          )}
-        </div>
+        <EstadoError
+          mensaje={`No pudimos cargar tu perfil. ${error}`}
+          onReintentar={onReintentar}
+        />
       );
     }
 
@@ -163,11 +150,11 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
       <>
         <section
           aria-label="Datos institucionales"
-          className="flex flex-col gap-5 rounded-2xl border border-saie-divider bg-white p-5 shadow-[0_2px_8px_rgba(34,34,34,0.06)] sm:flex-row sm:items-center sm:p-6"
+          className="flex flex-col gap-5 rounded-2xl border border-saie-divider bg-white p-5 shadow-saie-card sm:flex-row sm:items-center sm:p-6"
         >
           <div
             aria-hidden="true"
-            className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-saie-primary to-saie-primary-dark font-serif text-3xl font-bold text-white"
+            className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-saie-primary to-saie-primary-dark text-3xl font-bold text-white"
           >
             {iniciales(alumno.nombre)}
           </div>
@@ -176,7 +163,7 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
               <Icono trazo={TRAZO_USUARIO} />
               Estudiante
             </p>
-            <h2 className="m-0 mt-2 font-serif text-2xl font-bold leading-8">{alumno.nombre}</h2>
+            <h2 className="m-0 mt-2 text-2xl font-bold leading-8">{alumno.nombre}</h2>
             <dl className="m-0 mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-saie-muted">
               <div className="flex gap-1.5">
                 <dt>Código:</dt>
@@ -237,10 +224,14 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
         titulo="Mi perfil"
         subtitulo="Tus datos personales y tu ficha médica."
         trazoIcono={TRAZO_USUARIO}
-        ancho="max-w-4xl"
+        ancho="max-w-saie-lectura"
       />
 
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6">
+      <main
+        id={ID_CONTENIDO}
+        tabIndex={-1}
+        className="focus:outline-none mx-auto flex w-full max-w-saie-lectura flex-col gap-6 px-4 py-6"
+      >
         {renderCuerpo()}
       </main>
     </div>

@@ -1,5 +1,9 @@
 import { RUTAS } from '../config/rutas';
 import type { RolCuenta } from '../types/auth';
+import { ROL } from './diccionarios';
+
+/** Todas las fechas se muestran en hora de Lima, estén donde estén la persona y el servidor. */
+export const ZONA_HORARIA = 'America/Lima';
 
 export function formatearFechaAlerta(iso: string): string {
   const fecha = new Date(iso);
@@ -10,6 +14,7 @@ export function formatearFechaAlerta(iso: string): string {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: ZONA_HORARIA,
   });
 }
 
@@ -22,7 +27,24 @@ export function formatearFechaCorta(iso: string): string {
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: ZONA_HORARIA,
   });
+}
+
+/**
+ * «hace 5 min», «hace 3 h»; pasadas 24 horas (o si la fecha es futura) la fecha corta. Sirve para
+ * lo que importa por su frescura, como la última carga o la detección de una alerta.
+ */
+export function formatearFechaRelativa(iso: string, ahora: Date = new Date()): string {
+  const fecha = new Date(iso);
+  if (Number.isNaN(fecha.getTime())) return iso;
+  const minutos = Math.round((ahora.getTime() - fecha.getTime()) / 60000);
+  if (minutos < 0) return formatearFechaCorta(iso);
+  if (minutos < 1) return 'ahora mismo';
+  if (minutos < 60) return `hace ${minutos} min`;
+  const horas = Math.round(minutos / 60);
+  if (horas < 24) return `hace ${horas} h`;
+  return formatearFechaCorta(iso);
 }
 
 export interface MotivoEscalamientoInfo {
@@ -49,7 +71,7 @@ const MOTIVOS_ESCALAMIENTO: Record<
     accion: { etiqueta: 'Revisar espacios', to: RUTAS.espaciosAdmin },
   },
   HORARIO_BLOQUEADO: {
-    etiqueta: 'Horario bloqueado',
+    etiqueta: 'Horario ocupado',
     accion: { etiqueta: 'Revisar ocupación', to: RUTAS.espaciosAdmin },
   },
   SOFTWARE_FALTANTE: {
@@ -63,7 +85,7 @@ const MOTIVOS_ESCALAMIENTO: Record<
 };
 
 const MOTIVO_DESCONOCIDO = {
-  etiqueta: 'Escalamiento',
+  etiqueta: 'Requiere revisión',
   accion: null,
 } satisfies Omit<MotivoEscalamientoInfo, 'codigo' | 'descripcion'>;
 
@@ -148,8 +170,10 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
   ];
 }
 
+/**
+ * Nombre legible del rol de la sesión (los cuatro roles, ver `utils/diccionarios.ts`). Sin sesión
+ * se rotula como «Administrativo», que es lo que ya mostraba el panel.
+ */
 export function etiquetaRol(rol?: RolCuenta): string {
-  if (rol === 'JEFATURA_LABORATORIOS') return 'Jefatura de Laboratorios';
-  if (rol === 'COORDINACION_ACADEMICA') return 'Coordinación Académica';
-  return 'Administrativo';
+  return rol ? ROL[rol] : 'Administrativo';
 }

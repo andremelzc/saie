@@ -1,11 +1,11 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import type { ErroresFormulario, ValoresFormulario } from '../../utils/perfil';
+import { Aviso } from '../ui/Aviso';
 import { Icono } from './ElementosHorario';
 
 const TRAZO_LAPIZ =
   'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z';
 const TRAZO_CHECK = 'M5 13l4 4L19 7';
-const TRAZO_ALERTA = 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
 
 export interface CampoPerfil {
   clave: string;
@@ -265,7 +265,7 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
   return (
     <section
       aria-labelledby={idTitulo}
-      className="rounded-2xl border border-saie-divider bg-white p-5 shadow-[0_2px_8px_rgba(34,34,34,0.06)] sm:p-6"
+      className="rounded-2xl border border-saie-divider bg-white p-5 shadow-saie-card sm:p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
@@ -276,7 +276,7 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
             <Icono trazo={trazoIcono} className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <h2 id={idTitulo} className="m-0 font-serif text-xl font-bold leading-7">
+            <h2 id={idTitulo} className="m-0 text-xl font-bold leading-7">
               {titulo}
             </h2>
             {descripcion && <p className="m-0 mt-0.5 text-sm text-saie-muted">{descripcion}</p>}
@@ -302,7 +302,7 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
         {confirmacion && modo === 'lectura' && (
           <p
             role="status"
-            className="m-0 mb-4 flex items-center gap-2 rounded-xl bg-[#E8F5E9] px-4 py-3 text-sm font-medium text-[#1B5E20]"
+            className="m-0 mb-4 flex items-center gap-2 rounded-xl bg-saie-success-soft px-4 py-3 text-sm font-medium text-saie-success-strong"
           >
             <Icono trazo={TRAZO_CHECK} className="h-4 w-4 shrink-0" />
             Cambios guardados.
@@ -331,13 +331,9 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
             </div>
 
             {errorGeneral && (
-              <p
-                role="alert"
-                className="m-0 mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-medium text-saie-danger"
-              >
-                <Icono trazo={TRAZO_ALERTA} className="mt-0.5 h-4 w-4 shrink-0" />
+              <Aviso tono="error" className="mt-4">
                 {errorGeneral}
-              </p>
+              </Aviso>
             )}
 
             <div className="mt-5 flex flex-wrap gap-3">

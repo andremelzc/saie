@@ -3,6 +3,7 @@ import type { EspacioAsignadoDTO } from '../../types/consulta';
 import type { EstadoAsignacionDTO } from '../../types/horario';
 import { estadoAMostrar, etiquetaTipoEspacio } from '../../utils/horario';
 import type { EstadoClase } from '../../utils/horario';
+import { describirEstadoAsignacion } from '../../utils/diccionarios';
 
 /** Trazos de íconos lineales (24 px, trazo de 2 px) usados en las vistas del alumno. */
 const TRAZO_CHECK = 'M5 13l4 4L19 7';
@@ -39,18 +40,18 @@ const ESTILOS_ASIGNACION: Record<
   { etiqueta: string; clases: string; trazo: string }
 > = {
   VIGENTE: {
-    etiqueta: 'Espacio confirmado',
-    clases: 'bg-[#E8F5E9] text-[#1B5E20]',
+    etiqueta: describirEstadoAsignacion('VIGENTE').etiqueta,
+    clases: 'bg-saie-success-soft text-saie-success-strong',
     trazo: TRAZO_CHECK,
   },
   ESCALADA: {
-    etiqueta: 'Clase en revisión',
-    clases: 'bg-[#C0CA33] text-[#222222]',
+    etiqueta: describirEstadoAsignacion('ESCALADA').etiqueta,
+    clases: 'bg-[#C0CA33] text-saie-text',
     trazo: TRAZO_LUPA,
   },
   PENDIENTE: {
-    etiqueta: 'Sin aula asignada',
-    clases: 'bg-[#F57C00] text-[#222222]',
+    etiqueta: describirEstadoAsignacion('PENDIENTE').etiqueta,
+    clases: 'bg-[#F57C00] text-saie-text',
     trazo: TRAZO_RELOJ,
   },
 };
@@ -69,7 +70,7 @@ export const BadgeEstadoAsignacion: React.FC<{ estado: EstadoAsignacionDTO }> = 
 const ESTILOS_CLASE: Record<EstadoClase, { etiqueta: string; clases: string }> = {
   EN_CURSO: { etiqueta: 'En curso', clases: 'bg-saie-primary text-white' },
   PROXIMA: { etiqueta: 'Próxima', clases: 'bg-saie-primary/10 text-saie-primary' },
-  FINALIZADA: { etiqueta: 'Finalizada', clases: 'bg-[#F1EDE3] text-saie-muted' },
+  FINALIZADA: { etiqueta: 'Finalizada', clases: 'bg-saie-canvas-dark text-saie-muted' },
 };
 
 /** Estado de una clase del día (en curso, próxima o finalizada). */
@@ -131,7 +132,7 @@ export const EstadoVacio: React.FC<EstadoVacioProps> = ({ titulo, descripcion, a
     >
       <Icono trazo={TRAZO_CALENDARIO} className="h-8 w-8" />
     </span>
-    <h3 className="m-0 font-serif text-xl font-bold text-saie-text">{titulo}</h3>
+    <h3 className="m-0 text-xl font-bold text-saie-text">{titulo}</h3>
     <p className="m-0 max-w-sm text-sm text-saie-muted">{descripcion}</p>
     {accion && <div className="mt-2">{accion}</div>}
   </div>

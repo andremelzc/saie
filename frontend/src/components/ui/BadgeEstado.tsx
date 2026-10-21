@@ -35,7 +35,7 @@ export const BadgeEstado: React.FC<BadgeEstadoProps> = ({
   conIcono = true,
 }) => (
   <span
-    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${ESTILOS[tono]} ${className}`}
+    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${ESTILOS[tono] ?? ESTILOS.neutro} ${className}`}
   >
     {conIcono && (
       <svg
@@ -48,7 +48,7 @@ export const BadgeEstado: React.FC<BadgeEstadoProps> = ({
         strokeLinejoin="round"
         className="h-3.5 w-3.5 shrink-0"
       >
-        <path d={TRAZOS[tono]} />
+        <path d={TRAZOS[tono] ?? TRAZOS.neutro} />
       </svg>
     )}
     <span>{children}</span>

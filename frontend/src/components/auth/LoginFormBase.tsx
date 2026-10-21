@@ -3,8 +3,27 @@ import api from '../../services/api';
 import isotipoPlaca from '../../assets/isotipo-placa.svg';
 import { PORTALES } from '../../config/portales';
 import type { PortalId } from '../../config/portales';
+import { useTituloPagina } from '../../hooks/useTituloPagina';
+import { estadoHttp, mensajeDeError, mensajeSeguroDelServidor } from '../../services/errores';
 import type { LoginResponseDTO } from '../../types/auth';
 import IconoPortal from './IconoPortal';
+
+const MENSAJE_CREDENCIALES =
+  'Credenciales inválidas. Las cuentas de acceso son administradas por Coordinación Académica.';
+
+/**
+ * Mensaje del login. Un 401 es «credenciales inválidas»; si no hubo respuesta (servidor caído,
+ * sin internet, tiempo agotado) se dice eso, y solo se muestra el texto del servidor si es seguro.
+ */
+function mensajeDeLogin(err: unknown): string {
+  const estado = estadoHttp(err);
+  if (estado === 401) return MENSAJE_CREDENCIALES;
+  if (estado === undefined) return mensajeDeError(err);
+  return (
+    mensajeSeguroDelServidor(err) ??
+    'Error al conectar con el servicio de autenticación. Por favor, intenta de nuevo.'
+  );
+}
 
 const PORTAL_DE_ROL: Record<'ALUMNO' | 'DOCENTE' | 'ADMIN', PortalId> = {
   ALUMNO: 'estudiante',
@@ -14,7 +33,7 @@ const PORTAL_DE_ROL: Record<'ALUMNO' | 'DOCENTE' | 'ADMIN', PortalId> = {
 
 /** Clases comunes de los campos de texto (altura 48 px, foco guinda, ver guía §4.5). */
 const CLASES_CAMPO =
-  'w-full h-12 rounded-[10px] bg-white text-saie-text placeholder-saie-muted text-base border border-[#8A8578] hover:border-saie-text/60 focus:border-saie-primary focus:ring-2 focus:ring-saie-primary/20 transition-colors outline-hidden disabled:bg-[#F1EDE3] disabled:text-saie-muted';
+  'w-full h-12 rounded-saie-campo bg-white text-saie-text placeholder-saie-muted text-base border border-saie-border hover:border-saie-text/60 focus:border-saie-primary focus:ring-2 focus:ring-saie-primary/20 transition-colors outline-hidden disabled:bg-saie-canvas-dark disabled:text-saie-muted';
 
 export interface LoginFormBaseProps {
   rol: 'ALUMNO' | 'DOCENTE' | 'ADMIN';
@@ -44,6 +63,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
   avisoSesion,
   className = '',
 }) => {
+  useTituloPagina(titulo);
   const [identificador, setIdentificador] = useState('');
   const [clave, setClave] = useState('');
   const [mostrarClave, setMostrarClave] = useState(false);
@@ -77,32 +97,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
         onLoginExitoso?.(response.data.data);
       }
     } catch (err: unknown) {
-      let mensaje =
-        'Credenciales inválidas. Las cuentas de acceso son asignadas por Coordinación Académica.';
-
-      if (
-        typeof err === 'object' &&
-        err !== null &&
-        'response' in err &&
-        typeof (err as { response?: { status?: number; data?: { message?: string } } }).response ===
-          'object'
-      ) {
-        const axiosErr = err as {
-          response?: { status?: number; data?: { message?: string } };
-        };
-
-        if (axiosErr.response?.status === 401) {
-          mensaje =
-            'Credenciales inválidas. Las cuentas de acceso son administradas por Coordinación Académica.';
-        } else if (axiosErr.response?.data?.message) {
-          mensaje = axiosErr.response.data.message;
-        } else {
-          mensaje =
-            'Error al conectar con el servicio de autenticación. Por favor, intenta de nuevo.';
-        }
-      }
-
-      setErrorLogin(mensaje);
+      setErrorLogin(mensajeDeLogin(err));
     } finally {
       setCargando(false);
     }
@@ -112,12 +107,12 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
 
   return (
     <div
-      className={`saie-rise relative w-full max-w-md md:max-w-lg lg:max-w-md mx-auto overflow-hidden bg-white border border-saie-divider rounded-xl shadow-[0_8px_24px_rgba(34,34,34,0.16)] p-6 sm:p-8 flex flex-col gap-5 text-saie-text ${className}`}
+      className={`saie-rise relative w-full max-w-md md:max-w-lg lg:max-w-md mx-auto overflow-hidden bg-white border border-saie-divider rounded-xl shadow-saie-pop p-6 sm:p-8 flex flex-col gap-5 text-saie-text ${className}`}
     >
       {/* Acento superior de la tarjeta */}
       <span
         aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-saie-primary to-[#A8383A]"
+        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-saie-primary to-saie-primary-light"
       />
 
       {/* Cabecera: isotipo SAIE, portal y título */}
@@ -126,13 +121,13 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
           src={isotipoPlaca}
           alt=""
           aria-hidden="true"
-          className="h-16 w-16 rounded-2xl shadow-[0_2px_8px_rgba(34,34,34,0.16)]"
+          className="h-16 w-16 rounded-2xl shadow-saie-card"
         />
         <span className="mt-1 inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-saie-primary/10 text-saie-primary text-xs font-medium tracking-[0.2px]">
           <IconoPortal portal={portal.id} className="h-3.5 w-3.5" />
           {portal.etiqueta}
         </span>
-        <h1 className="m-0 font-serif text-[28px] leading-9 sm:text-[32px] sm:leading-10 font-bold text-saie-text">
+        <h1 className="m-0 text-2xl sm:text-3xl font-bold text-saie-text tracking-tight">
           {titulo}
         </h1>
         <p className="m-0 text-sm text-saie-muted max-w-xs">{subtitulo}</p>
@@ -331,7 +326,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
           type="submit"
           disabled={!esValido || cargando}
           aria-busy={cargando}
-          className="group w-full h-12 mt-2 px-6 rounded-xl font-medium text-base text-white shadow-[0_2px_8px_rgba(123,17,19,0.25)] transition-all duration-200 flex items-center justify-center gap-2 bg-saie-primary hover:bg-saie-primary-dark hover:shadow-[0_8px_24px_rgba(123,17,19,0.28)] active:bg-saie-primary-dark disabled:bg-saie-divider disabled:text-saie-muted disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
+          className="group w-full h-12 mt-2 px-6 rounded-xl font-medium text-base text-white shadow-saie-accion transition-all duration-200 flex items-center justify-center gap-2 bg-saie-primary hover:bg-saie-primary-dark hover:shadow-saie-accion active:bg-saie-primary-dark disabled:bg-saie-divider disabled:text-saie-muted disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
         >
           {cargando ? (
             <>

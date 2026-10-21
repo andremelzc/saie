@@ -1,3 +1,5 @@
+import type { DiaSemana } from './consulta';
+
 /** Contratos del panel administrativo (espejo de backend/src/types/*). */
 
 export type TipoAlerta = 'SOFTWARE' | 'CAPACIDAD';
@@ -254,7 +256,7 @@ export interface SeccionAdminDTO {
   tipoEspacioRequerido: TipoEspacio;
   docente: { id: string; codigoDocente: string; nombre: string } | null;
   alumnosMatriculados: number;
-  horarios: { diaSemana: string; horaInicio: string; horaFin: string }[];
+  horarios: { diaSemana: DiaSemana; horaInicio: string; horaFin: string }[];
   softwareRequerido: SoftwareRequeridoSeccionDTO[];
   asignacion: {
     id: string;

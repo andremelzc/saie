@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
+import { ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
 import { aplicarPreferencias, guardarPreferencias, leerPreferencias } from '../utils/preferencias';
 import type { PreferenciasApp } from '../utils/preferencias';
 
@@ -39,7 +40,7 @@ const Interruptor: React.FC<{
     aria-labelledby={etiquetaPor}
     onClick={() => onCambio(!activo)}
     className={`relative h-8 w-14 shrink-0 cursor-pointer rounded-full border transition-colors focus-visible:outline-3 focus-visible:outline-saie-text ${
-      activo ? 'border-saie-primary bg-saie-primary' : 'border-[#8a8578] bg-saie-divider'
+      activo ? 'border-saie-primary bg-saie-primary' : 'border-saie-border bg-saie-divider'
     }`}
   >
     <span
@@ -74,13 +75,17 @@ export const ConfiguracionAlumno: React.FC = () => {
         titulo="Configuración"
         subtitulo="Ajusta la app a tu comodidad."
         trazoIcono={TRAZO_AJUSTES}
-        ancho="max-w-4xl"
+        ancho="max-w-saie-lectura"
       />
 
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-3 px-4 py-6">
+      <main
+        id={ID_CONTENIDO}
+        tabIndex={-1}
+        className="focus:outline-none mx-auto flex w-full max-w-saie-lectura flex-col gap-3 px-4 py-6"
+      >
         <section
           aria-labelledby="config-accesibilidad"
-          className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-5 shadow-[0_2px_8px_rgba(34,34,34,0.06)] sm:p-6"
+          className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-5 shadow-saie-card sm:p-6"
         >
           <div>
             <h2 id="config-accesibilidad" className="m-0 text-xl font-bold">

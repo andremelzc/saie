@@ -15,25 +15,11 @@ import { useCarga } from '../../hooks/useCarga';
 import { usePantallaAncha } from '../../hooks/usePantallaAncha';
 import { obtenerEspacios } from '../../services/admin';
 import type { EspacioAdminDTO, ResultadoEdicionEspacioDTO, TipoEspacio } from '../../types/admin';
+import { etiquetaCampoEspacio, etiquetaTipoEspacio } from '../../utils/diccionarios';
+import { plural } from '../../utils/texto';
 
 type Filtro = 'TODOS' | TipoEspacio;
 
-const TIPO_ETIQUETA: Record<TipoEspacio, string> = {
-  AULA_TEORICA: 'Aula teórica',
-  LABORATORIO: 'Laboratorio',
-};
-
-const ETIQUETA_CAMPO: Record<string, string> = {
-  identificador: 'el código',
-  pabellon: 'el pabellón',
-  piso: 'el piso',
-  aforoNominal: 'la capacidad',
-  contiguos: 'los espacios contiguos',
-  habilitado: 'el estado',
-  descripcionUso: 'el uso previsto',
-  softwareIds: 'el software instalado',
-  pcsMalogradas: 'las PCs fuera de servicio',
-};
 const Dato: React.FC<{ etiqueta: string; children: React.ReactNode }> = ({
   etiqueta,
   children,
@@ -65,7 +51,7 @@ function celdaPcs(espacio: EspacioAdminDTO): React.ReactNode {
 function celdaEstado(espacio: EspacioAdminDTO): React.ReactNode {
   return (
     <BadgeEstado tono={espacio.habilitado ? 'exito' : 'peligro'}>
-      {espacio.habilitado ? 'Habilitado' : 'No asignable'}
+      {espacio.habilitado ? 'En servicio' : 'Fuera de servicio'}
     </BadgeEstado>
   );
 }
@@ -101,10 +87,24 @@ function detalleSoftware(espacio: EspacioAdminDTO): React.ReactNode {
   );
 }
 
-/** Título del drawer: el alta o el espacio que se está consultando. */
-function tituloDrawer(creando: boolean, seleccionado: EspacioAdminDTO | null): string {
+/** Título del drawer: el alta, la edición («Editar AULA-101») o el espacio que se consulta. */
+function tituloDrawer(
+  creando: boolean,
+  editando: boolean,
+  seleccionado: EspacioAdminDTO | null,
+): string {
   if (creando) return 'Nuevo espacio';
-  return seleccionado?.identificador ?? 'Espacio';
+  if (!seleccionado) return 'Espacio';
+  return editando ? `Editar ${seleccionado.identificador}` : seleccionado.identificador;
+}
+
+/** Segunda línea del drawer: tipo y ubicación del espacio. */
+function subtituloDrawer(
+  creando: boolean,
+  seleccionado: EspacioAdminDTO | null,
+): string | undefined {
+  if (creando || !seleccionado) return undefined;
+  return `${etiquetaTipoEspacio(seleccionado.tipo)} · ${seleccionado.pabellon}, piso ${seleccionado.piso}`;
 }
 
 /**
@@ -128,7 +128,7 @@ const ListadoEspacios: React.FC<{
                 <div className="min-w-0">
                   <h3 className="m-0 text-base font-bold text-saie-text">{e.identificador}</h3>
                   <p className="m-0 text-xs text-saie-muted">
-                    {TIPO_ETIQUETA[e.tipo]} · {e.pabellon} · Piso {e.piso}
+                    {etiquetaTipoEspacio(e.tipo)} · {e.pabellon} · Piso {e.piso}
                   </p>
                 </div>
                 {celdaEstado(e)}
@@ -195,11 +195,11 @@ const ListadoEspacios: React.FC<{
           {espacios.map((e) => (
             <tr key={e.id} className="border-t border-saie-divider">
               <td className="px-4 py-3 font-semibold">{e.identificador}</td>
-              <td className="px-4 py-3">{TIPO_ETIQUETA[e.tipo]}</td>
+              <td className="px-4 py-3">{etiquetaTipoEspacio(e.tipo)}</td>
               <td className="px-4 py-3">
                 {e.pabellon} · Piso {e.piso}
               </td>
-              <td className="px-4 py-3">{celdaCapacidad(e)}</td>
+              <td className="px-4 py-3 tabular-nums">{celdaCapacidad(e)}</td>
               <td className="px-4 py-3">{celdaPcs(e)}</td>
               <td className="px-4 py-3">{celdaEstado(e)}</td>
               <td className="px-4 py-3">
@@ -236,7 +236,7 @@ const DetalleEspacio: React.FC<{
           Datos del espacio
         </h3>
         <dl className="m-0 rounded-xl border border-saie-divider bg-white px-4">
-          <Dato etiqueta="Tipo">{TIPO_ETIQUETA[espacio.tipo]}</Dato>
+          <Dato etiqueta="Tipo">{etiquetaTipoEspacio(espacio.tipo)}</Dato>
           <Dato etiqueta="Ubicación">
             {espacio.pabellon} · Piso {espacio.piso}
           </Dato>
@@ -250,7 +250,7 @@ const DetalleEspacio: React.FC<{
           <Dato etiqueta="PCs malogradas">{detallePcs(espacio)}</Dato>
           <Dato etiqueta="Estado">
             <BadgeEstado tono={espacio.habilitado ? 'exito' : 'peligro'}>
-              {espacio.habilitado ? 'Habilitado' : 'No asignable'}
+              {espacio.habilitado ? 'En servicio' : 'Fuera de servicio'}
             </BadgeEstado>
           </Dato>
           <Dato etiqueta="Uso previsto">
@@ -293,7 +293,7 @@ const DetalleEspacio: React.FC<{
         {campos.length > 0 ? (
           <>
             <p className="m-0 text-sm text-saie-muted">
-              Puedes editar: {campos.map((campo) => ETIQUETA_CAMPO[campo] ?? campo).join(', ')}.
+              Puedes editar: {campos.map(etiquetaCampoEspacio).join(', ')}.
             </p>
             <div>
               <Boton variante="primario" tamano="sm" onClick={onEditar}>
@@ -337,6 +337,7 @@ export const EspaciosAdmin: React.FC = () => {
   const [editando, setEditando] = useState(false);
   const [creando, setCreando] = useState(false);
   const [alertas, setAlertas] = useState<string[]>([]);
+  const [cambiosPendientes, setCambiosPendientes] = useState(false);
 
   // El alta es solo de Coordinación Académica (así lo define el endpoint del backend).
   const esCoordinacion = sesion?.rol === 'COORDINACION_ACADEMICA';
@@ -447,6 +448,7 @@ export const EspaciosAdmin: React.FC = () => {
           espacios={base}
           onGuardado={manejarGuardado}
           onCancelar={cerrarDetalle}
+          onCambiosPendientes={setCambiosPendientes}
         />
       );
     }
@@ -458,6 +460,7 @@ export const EspaciosAdmin: React.FC = () => {
           espacios={base}
           onGuardado={manejarGuardado}
           onCancelar={() => setEditando(false)}
+          onCambiosPendientes={setCambiosPendientes}
         />
       );
     }
@@ -565,7 +568,7 @@ export const EspaciosAdmin: React.FC = () => {
                 checked={soloDeshabilitados}
                 onChange={(e) => setSoloDeshabilitados(e.target.checked)}
               />
-              <span>Solo deshabilitados</span>
+              <span>Solo fuera de servicio</span>
             </label>
             {hayFiltros && (
               <Boton variante="secundario" tamano="sm" onClick={limpiarFiltros}>
@@ -579,17 +582,17 @@ export const EspaciosAdmin: React.FC = () => {
       {datos && (
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="rounded-full border border-saie-divider bg-white px-2.5 py-1 font-semibold text-saie-text">
-            {datos.length} espacio(s)
+            {plural(datos.length, 'espacio', 'espacios')}
           </span>
           <span className="rounded-full border border-saie-divider bg-white px-2.5 py-1 text-saie-muted">
-            {aulas} aula(s) teórica(s)
+            {plural(aulas, 'aula teórica', 'aulas teóricas')}
           </span>
           <span className="rounded-full border border-saie-divider bg-white px-2.5 py-1 text-saie-muted">
-            {laboratorios} laboratorio(s)
+            {plural(laboratorios, 'laboratorio', 'laboratorios')}
           </span>
           {fueraDeServicio > 0 && (
             <span className="rounded-full bg-saie-danger-soft px-2.5 py-1 font-semibold text-saie-danger-strong">
-              {fueraDeServicio} no asignables
+              {fueraDeServicio} fuera de servicio
             </span>
           )}
         </div>
@@ -602,7 +605,11 @@ export const EspaciosAdmin: React.FC = () => {
       <Drawer
         abierto={seleccionado !== null || creando}
         onCerrar={cerrarDetalle}
-        titulo={tituloDrawer(creando, seleccionado)}
+        titulo={tituloDrawer(creando, editando, seleccionado)}
+        subtitulo={subtituloDrawer(creando, seleccionado)}
+        insignia={seleccionado && !creando ? celdaEstado(seleccionado) : undefined}
+        hayCambios={(creando || editando) && cambiosPendientes}
+        vista={creando ? 'crear' : editando ? 'editar' : 'detalle'}
       >
         {(seleccionado || creando) && (
           <div className="flex flex-col gap-4">

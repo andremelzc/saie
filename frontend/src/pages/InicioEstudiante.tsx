@@ -7,12 +7,14 @@ import {
   PuntoEnVivo,
 } from '../components/estudiante/ElementosHorario';
 import LayoutEstudiante from '../components/estudiante/LayoutEstudiante';
+import { EstadoError } from '../components/ui/EstadoError';
 import { RUTAS } from '../config/rutas';
 import { useAuth } from '../context/useAuth';
 import { obtenerHorario } from '../services/estudiante';
 import { mensajeDeError } from '../services/estudiante';
 import type { DiaSemana } from '../types/consulta';
 import type { HorarioSemanalDTO, SesionDTO } from '../types/horario';
+import { etiquetaRol } from '../utils/admin';
 import {
   ABREVIATURA_DIA,
   DIAS_LECTIVOS,
@@ -37,7 +39,6 @@ import {
   todasLasSesiones,
 } from '../utils/horario';
 
-const TRAZO_ALERTA = 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
 const TRAZO_CALENDARIO =
   'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5';
 const TRAZO_PERFIL =
@@ -48,6 +49,10 @@ const TRAZO_RUTA =
   'M9 6.75V15m6-6v8.25m0 0a3 3 0 11-6 0 3 3 0 016 0zM15 9.75a3 3 0 11-6 0 3 3 0 016 0z';
 const TRAZO_TELEGRAM =
   'M6 12 3.269 3.126A59.768 59.768 0 0 1 21.485 12 59.77 59.77 0 0 1 3.27 20.876L5.999 12Z';
+const TRAZO_AYUDA =
+  'M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z';
+const TRAZO_AJUSTES =
+  'M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75';
 
 const UN_MINUTO_MS = 60_000;
 
@@ -72,7 +77,7 @@ const TarjetaProxima: React.FC<{
     const primera = proximoDia?.sesiones[0] ?? null;
     return (
       <div className="flex h-full flex-col justify-center gap-2">
-        <h2 className="m-0 font-serif text-xl font-bold">
+        <h2 className="m-0 text-xl font-bold">
           {hayClasesHoy ? 'Ya terminaron tus clases de hoy' : 'Hoy no tienes clases'}
         </h2>
         {primera && proximoDia ? (
@@ -103,7 +108,7 @@ const TarjetaProxima: React.FC<{
         </p>
         <BadgeEstadoClase estado={estado} />
       </div>
-      <h2 className="m-0 font-serif text-2xl font-bold leading-8">{sesion.nombreCurso}</h2>
+      <h2 className="m-0 text-2xl font-bold leading-8">{sesion.nombreCurso}</h2>
       <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm text-white/90">
         <li className="flex items-center gap-2">
           <span className="font-medium">{formatearRango(sesion.horaInicio, sesion.horaFin)}</span>
@@ -172,7 +177,7 @@ const SemanaDeUnVistazo: React.FC<{ horario: HorarioSemanalDTO; hoy: DiaSemana }
               <span aria-hidden="true" className="text-xs font-bold">
                 {ABREVIATURA_DIA[d]}
               </span>
-              <span aria-hidden="true" className="font-serif text-xl font-bold leading-none">
+              <span aria-hidden="true" className="text-xl font-bold leading-none tabular-nums">
                 {cantidad}
               </span>
             </Link>
@@ -208,7 +213,7 @@ const ListaDeClases: React.FC<{
           return (
             <li
               key={`${s.seccionId}-${s.horaInicio}`}
-              className={`flex w-56 shrink-0 flex-col gap-1 rounded-xl border border-l-4 border-saie-divider bg-white p-3 shadow-[0_2px_8px_rgba(34,34,34,0.06)] ${
+              className={`flex w-56 shrink-0 flex-col gap-1 rounded-xl border border-l-4 border-saie-divider bg-white p-3 shadow-saie-card ${
                 estado === 'FINALIZADA' ? 'opacity-60' : ''
               }`}
               style={{ borderLeftColor: color.borde }}
@@ -265,6 +270,18 @@ const ACCESOS = [
     titulo: 'Telegram',
     descripcion: 'Avisos de cambios',
     trazo: TRAZO_TELEGRAM,
+  },
+  {
+    to: RUTAS.ayudaAlumno,
+    titulo: 'Ayuda',
+    descripcion: 'Preguntas frecuentes',
+    trazo: TRAZO_AYUDA,
+  },
+  {
+    to: RUTAS.configuracionAlumno,
+    titulo: 'Configuración',
+    descripcion: 'Texto grande y animaciones',
+    trazo: TRAZO_AJUSTES,
   },
 ];
 
@@ -362,13 +379,11 @@ export const InicioEstudiante: React.FC = () => {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="m-0 text-xs text-white/80">{fechaLarga(ahora)}</p>
-                <p className="m-0 font-serif text-2xl font-bold leading-8">
-                  {saludoSegunHora(ahora)}
-                </p>
+                <p className="m-0 text-2xl font-bold leading-8">{saludoSegunHora(ahora)}</p>
               </div>
               {sesion?.rol && (
                 <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">
-                  {sesion.rol}
+                  {etiquetaRol(sesion.rol)}
                 </span>
               )}
             </div>
@@ -393,9 +408,9 @@ export const InicioEstudiante: React.FC = () => {
               resumen.map((d) => (
                 <div
                   key={d.etiqueta}
-                  className="rounded-xl border border-saie-divider bg-white p-3 shadow-[0_2px_8px_rgba(34,34,34,0.06)]"
+                  className="rounded-xl border border-saie-divider bg-white p-3 shadow-saie-card"
                 >
-                  <p className="m-0 font-serif text-2xl font-bold leading-none">{d.valor}</p>
+                  <p className="m-0 text-2xl font-bold leading-none tabular-nums">{d.valor}</p>
                   <p className="m-0 mt-1 text-xs font-medium text-saie-muted">{d.etiqueta}</p>
                 </div>
               ))
@@ -414,22 +429,10 @@ export const InicioEstudiante: React.FC = () => {
         <div className="grid min-h-0 gap-4 lg:grid-cols-12">
           <div className="flex min-h-0 flex-col gap-3 lg:col-span-8">
             {errorHorario && (
-              <div
-                role="alert"
-                className="flex flex-col items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-medium text-saie-danger"
-              >
-                <p className="m-0 flex items-start gap-2">
-                  <Icono trazo={TRAZO_ALERTA} className="mt-0.5 h-5 w-5 shrink-0" />
-                  <span>{`No pudimos cargar tu horario. ${errorHorario}`}</span>
-                </p>
-                <button
-                  type="button"
-                  onClick={reintentarHorario}
-                  className="min-h-11 cursor-pointer rounded-xl bg-saie-primary px-5 text-sm font-medium text-white hover:bg-saie-primary-dark"
-                >
-                  Reintentar
-                </button>
-              </div>
+              <EstadoError
+                mensaje={`No pudimos cargar tu horario. ${errorHorario}`}
+                onReintentar={reintentarHorario}
+              />
             )}
 
             {horario && hayClases ? (

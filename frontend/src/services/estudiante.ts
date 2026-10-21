@@ -1,4 +1,3 @@
-import axios from 'axios';
 import api from './api';
 import type { CursoMatriculadoDTO, HorarioSemanalDTO } from '../types/horario';
 import type { CambiosPerfil, EstadoTelegramDTO, PerfilAlumnoDTO } from '../types/perfil';
@@ -55,24 +54,5 @@ export async function desvincularTelegram(): Promise<EstadoTelegramDTO> {
   return data.data;
 }
 
-/** Mensaje legible para mostrar al alumno a partir de un error de red o del backend. */
-export function mensajeDeError(error: unknown): string {
-  if (!axios.isAxiosError(error)) {
-    return 'Inténtalo de nuevo en unos minutos.';
-  }
-
-  if (!error.response) {
-    return 'Revisa tu conexión e inténtalo de nuevo.';
-  }
-
-  const { status, data } = error.response;
-  if (status === 401) return 'Tu sesión venció. Vuelve a iniciar sesión.';
-  if (status === 403) return 'No tienes permiso para hacer esta acción.';
-  if (status >= 500) {
-    return 'Algo salió mal de nuestro lado. Inténtalo de nuevo en unos minutos.';
-  }
-
-  const mensaje = (data as { message?: unknown } | undefined)?.message;
-  if (typeof mensaje === 'string' && mensaje.length > 0) return mensaje;
-  return 'Inténtalo de nuevo en unos minutos.';
-}
+/** Mensaje legible para mostrar a la persona usuaria (ver `services/errores.ts`). */
+export { mensajeDeError } from './errores';

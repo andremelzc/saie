@@ -76,7 +76,7 @@ export const HorarioDia: React.FC<HorarioDiaProps> = ({
               onClick={() => onCambiarDia(d)}
               className={`flex min-h-14 cursor-pointer flex-col items-center justify-center rounded-xl border text-sm transition-all duration-200 ${
                 activo
-                  ? 'scale-105 border-saie-primary bg-saie-primary font-bold text-white shadow-[0_4px_12px_rgba(123,17,19,0.35)]'
+                  ? 'scale-105 border-saie-primary bg-saie-primary font-bold text-white shadow-saie-accion'
                   : 'border-saie-divider bg-white font-medium text-saie-text hover:-translate-y-0.5 hover:bg-saie-primary/5'
               }`}
             >
@@ -92,7 +92,7 @@ export const HorarioDia: React.FC<HorarioDiaProps> = ({
       </fieldset>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 key={dia} className="saie-fundido m-0 font-serif text-2xl font-bold text-saie-text">
+        <h3 key={dia} className="saie-fundido m-0 text-2xl font-bold text-saie-text">
           {ETIQUETA_DIA[dia]}
         </h3>
         {!esDiaActual && hoy !== 'DOMINGO' && (
@@ -123,7 +123,7 @@ export const HorarioDia: React.FC<HorarioDiaProps> = ({
             return (
               <li
                 key={`${sesion.seccionId}-${sesion.horaInicio}`}
-                className={`flex gap-3 rounded-xl border border-l-4 border-saie-divider bg-white p-4 shadow-[0_2px_8px_rgba(34,34,34,0.08)] ${
+                className={`flex gap-3 rounded-xl border border-l-4 border-saie-divider bg-white p-4 shadow-saie-card ${
                   indice === indiceDestacada ? 'ring-2 ring-saie-primary' : ''
                 } ${estadoClase === 'EN_CURSO' ? 'saie-respira' : ''}`}
                 style={{ borderLeftColor: color.borde }}

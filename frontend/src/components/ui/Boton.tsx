@@ -1,21 +1,9 @@
 import React, { useId } from 'react';
 
-export type VarianteBoton = 'primario' | 'secundario' | 'peligro' | 'cancelar' | 'fantasma';
-export type TamanoBoton = 'md' | 'sm';
+import { clasesBoton } from './clasesBoton';
+import type { TamanoBoton, VarianteBoton } from './clasesBoton';
 
-const VARIANTES: Record<VarianteBoton, string> = {
-  primario: 'bg-saie-primary text-white hover:bg-saie-primary-dark',
-  secundario: 'border border-saie-primary bg-white text-saie-primary hover:bg-saie-primary/5',
-  peligro: 'bg-saie-danger text-white hover:bg-saie-danger-strong',
-  cancelar: 'border border-saie-border bg-white text-saie-text hover:bg-saie-text/5',
-  fantasma: 'bg-transparent text-saie-primary hover:bg-saie-primary/5',
-};
-
-/** Guía §4.6: 48 px como altura de referencia; 44 px es el mínimo absoluto. */
-const TAMANOS: Record<TamanoBoton, string> = {
-  md: 'min-h-12 px-5 text-base',
-  sm: 'min-h-11 px-4 text-sm',
-};
+export type { TamanoBoton, VarianteBoton } from './clasesBoton';
 
 export interface BotonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variante?: VarianteBoton;
@@ -65,9 +53,7 @@ export const Boton = React.forwardRef<HTMLButtonElement, BotonProps>(function Bo
         disabled={inactivo}
         aria-busy={cargando || undefined}
         aria-describedby={motivoDeshabilitado && disabled ? idMotivo : undefined}
-        className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl font-medium transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-saie-text disabled:cursor-not-allowed disabled:opacity-50 ${
-          anchoCompleto ? 'w-full' : ''
-        } ${TAMANOS[tamano]} ${VARIANTES[variante]} ${className}`}
+        className={`${clasesBoton(variante, tamano, anchoCompleto)} ${className}`}
       >
         {cargando && (
           <svg

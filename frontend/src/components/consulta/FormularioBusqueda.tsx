@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import api from '../../services/api';
+import { TEXTOS_ERROR } from '../../config/textos';
+import { estadoHttp, mensajeDeError, mensajeSeguroDelServidor } from '../../services/errores';
 import type {
   ConsultaAlumnoResponseDTO,
   ConsultaCursoResponseDTO,
@@ -108,31 +110,24 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
         onBuscar?.(resultado, codigoCurso, 'CURSO');
       }
     } catch (err: unknown) {
+      const estado = estadoHttp(err);
       let mensaje = 'Error al realizar la consulta. Por favor, intenta de nuevo.';
-      let estado: number | undefined;
 
-      if (
-        typeof err === 'object' &&
-        err !== null &&
-        'response' in err &&
-        typeof (err as { response?: { data?: { message?: string }; status?: number } }).response ===
-          'object'
-      ) {
-        const axiosErr = err as {
-          response?: { data?: { message?: string }; status?: number };
-        };
-        estado = axiosErr.response?.status;
-        if (axiosErr.response?.data?.message) {
-          mensaje = axiosErr.response.data.message;
-        } else if (axiosErr.response?.status === 404) {
-          mensaje =
-            tipoDetectado === 'ALUMNO'
-              ? `No se encontró ningún estudiante con el código ${codigoNormalizado}`
-              : `No se encontró ningún curso con el código ${codigoNormalizado.toUpperCase()}`;
-        }
+      if (estado === undefined) {
+        // Sin respuesta: un tiempo agotado se distingue de no tener conexión.
+        const general = mensajeDeError(err);
+        mensaje =
+          general === TEXTOS_ERROR.tiempoAgotado
+            ? general
+            : 'No se pudo conectar con el servicio. Revisa tu conexión e inténtalo de nuevo.';
       } else {
-        // Sin respuesta del servidor: no hay conexión o el servicio no está disponible.
-        mensaje = 'No se pudo conectar con el servicio. Revisa tu conexión e inténtalo de nuevo.';
+        mensaje =
+          mensajeSeguroDelServidor(err) ??
+          (estado === 404
+            ? tipoDetectado === 'ALUMNO'
+              ? `No se encontró ningún estudiante con el código ${codigoNormalizado}`
+              : `No se encontró ningún curso con el código ${codigoNormalizado.toUpperCase()}`
+            : mensaje);
       }
 
       setErrorServidor(mensaje);
@@ -155,17 +150,17 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
       <div className="flex flex-col gap-2">
         <label
           htmlFor="codigo-consulta"
-          className="text-sm font-medium text-[#222222] flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 min-h-7"
+          className="text-sm font-medium text-saie-text flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 min-h-7"
         >
           <span>
             Código de alumno o curso{' '}
-            <span className="text-[#D32F2F] font-bold" aria-hidden="true">
+            <span className="text-saie-danger font-bold" aria-hidden="true">
               *
             </span>
             <span className="sr-only">(obligatorio)</span>
           </span>
           {tipoDetectado && (
-            <span className="saie-rise inline-flex items-center gap-1.5 text-sm font-semibold pl-2 pr-2.5 py-0.5 rounded-full bg-[#FAF6ED] text-[#7B1113] border border-[#E6DFD0]">
+            <span className="saie-rise inline-flex items-center gap-1.5 text-sm font-semibold pl-2 pr-2.5 py-0.5 rounded-full bg-saie-canvas text-saie-primary border border-saie-divider">
               <svg
                 className="w-3.5 h-3.5"
                 fill="currentColor"
@@ -189,7 +184,11 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
             {/* El ícono acompaña lo que se escribe: lupa, persona (alumno) o libro (curso) */}
             <svg
               className={`pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors ${
-                tieneError ? 'text-[#D32F2F]' : tipoDetectado ? 'text-[#7B1113]' : 'text-[#666666]'
+                tieneError
+                  ? 'text-saie-danger'
+                  : tipoDetectado
+                    ? 'text-saie-primary'
+                    : 'text-saie-muted'
               }`}
               fill="none"
               stroke="currentColor"
@@ -221,11 +220,11 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
               aria-required="true"
               aria-invalid={tieneError}
               aria-describedby={tieneError ? 'mensaje-error-consulta' : idAyuda}
-              className={`w-full h-12 pl-11 pr-4 rounded-[10px] bg-white text-[#222222] placeholder-[#666666] text-base border transition-colors outline-hidden ${
+              className={`w-full h-12 pl-11 pr-4 rounded-saie-campo bg-white text-saie-text placeholder:text-saie-muted text-base border transition-colors outline-hidden ${
                 tieneError
-                  ? 'border-2 border-[#D32F2F] focus:ring-3 focus:ring-[#D32F2F]/20'
-                  : 'border-[#8A8578] hover:border-[#222222]/60 focus:border-2 focus:border-[#7B1113] focus:ring-3 focus:ring-[#7B1113]/20'
-              } disabled:bg-[#F1EDE3] disabled:text-[#666666] disabled:border-[#E6DFD0]`}
+                  ? 'border-2 border-saie-danger focus:ring-3 focus:ring-saie-danger/20'
+                  : 'border-saie-border hover:border-saie-text/60 focus:border-2 focus:border-saie-primary focus:ring-3 focus:ring-saie-primary/20'
+              } disabled:bg-saie-canvas-dark disabled:text-saie-muted disabled:border-saie-divider`}
             />
           </div>
 
@@ -233,7 +232,7 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
             type="submit"
             disabled={cargando}
             aria-busy={cargando}
-            className="w-full lg:w-auto min-w-[120px] h-12 px-6 rounded-[12px] font-medium text-base text-white transition-all duration-150 flex items-center justify-center gap-2 shadow-[0_2px_8px_rgba(123,17,19,0.25)] focus:outline-hidden focus:ring-3 focus:ring-[#222222] focus:ring-offset-2 bg-[#7B1113] hover:bg-[#5C0D0E] active:bg-[#5C0D0E] disabled:bg-[#E6DFD0] disabled:text-[#666666] disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
+            className="w-full lg:w-auto min-w-[120px] h-12 px-6 rounded-xl font-medium text-base text-white transition-all duration-150 flex items-center justify-center gap-2 shadow-saie-accion focus:outline-hidden focus:ring-3 focus:ring-saie-text focus:ring-offset-2 bg-saie-primary hover:bg-saie-primary-dark active:bg-saie-primary-dark disabled:bg-saie-divider disabled:text-saie-muted disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
           >
             {cargando ? (
               <>
@@ -271,10 +270,10 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
           <div
             id="mensaje-error-consulta"
             role="alert"
-            className="flex items-start gap-2 text-sm text-[#D32F2F] font-medium"
+            className="flex items-start gap-2 text-sm text-saie-danger font-medium"
           >
             <svg
-              className="w-4 h-4 shrink-0 mt-0.5 text-[#D32F2F]"
+              className="w-4 h-4 shrink-0 mt-0.5 text-saie-danger"
               fill="currentColor"
               viewBox="0 0 20 20"
               aria-hidden="true"
@@ -288,7 +287,7 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
             <span>{mensajeError}</span>
           </div>
         ) : (
-          <p id={idAyuda} className="m-0 flex items-start gap-2 text-sm text-[#666666]">
+          <p id={idAyuda} className="m-0 flex items-start gap-2 text-sm text-saie-muted">
             <svg
               className="w-4 h-4 shrink-0 mt-0.5"
               fill="none"

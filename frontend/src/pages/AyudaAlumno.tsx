@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
+import { ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
 import { RUTAS } from '../config/rutas';
 
 const TRAZO_AYUDA =
@@ -83,7 +84,7 @@ const GRUPOS: GrupoPreguntas[] = [
         pregunta: '¿Puedo agrandar el texto o quitar las animaciones?',
         respuesta: (
           <>
-            Sí, desde <Link to="/estudiante/configuracion">Configuración</Link>. Los cambios se
+            Sí, desde <Link to={RUTAS.configuracionAlumno}>Configuración</Link>. Los cambios se
             guardan en este dispositivo.
           </>
         ),
@@ -107,10 +108,14 @@ export const AyudaAlumno: React.FC = () => (
       titulo="Ayuda"
       subtitulo="Respuestas a las dudas más comunes."
       trazoIcono={TRAZO_AYUDA}
-      ancho="max-w-4xl"
+      ancho="max-w-saie-lectura"
     />
 
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-6">
+    <main
+      id={ID_CONTENIDO}
+      tabIndex={-1}
+      className="focus:outline-none mx-auto flex w-full max-w-saie-lectura flex-col gap-8 px-4 py-6"
+    >
       {GRUPOS.map((grupo) => (
         <section
           key={grupo.id}
@@ -124,7 +129,7 @@ export const AyudaAlumno: React.FC = () => (
             {grupo.preguntas.map((p) => (
               <details
                 key={p.pregunta}
-                className="group rounded-2xl border border-saie-divider bg-white shadow-[0_2px_8px_rgba(34,34,34,0.06)]"
+                className="group rounded-2xl border border-saie-divider bg-white shadow-saie-card"
               >
                 <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 py-3 text-base font-medium marker:content-none focus-visible:outline-3 focus-visible:outline-saie-text [&::-webkit-details-marker]:hidden">
                   <span>{p.pregunta}</span>

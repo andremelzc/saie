@@ -55,7 +55,9 @@ describe('TelegramAlumnoPage', () => {
     montar();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Desvincular mi Telegram' }));
-    expect(screen.getByRole('group', { name: 'Confirmar desvinculación' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('alertdialog', { name: /Dejar de recibir avisos/ }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Sí, desvincular' }));
 
@@ -71,7 +73,7 @@ describe('TelegramAlumnoPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Desvincular mi Telegram' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
 
-    expect(screen.queryByRole('group', { name: 'Confirmar desvinculación' })).toBeNull();
+    expect(screen.queryByRole('alertdialog', { name: /Dejar de recibir avisos/ })).toBeNull();
     expect(baja).not.toHaveBeenCalled();
   });
 

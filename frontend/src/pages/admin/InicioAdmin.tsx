@@ -6,6 +6,7 @@ import { EsqueletoCarga } from '../../components/estudiante/ElementosHorario';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
+import { DialogoConfirmacion } from '../../components/ui/DialogoConfirmacion';
 import { Drawer } from '../../components/ui/Drawer';
 import { RUTAS } from '../../config/rutas';
 import { useAuth } from '../../context/useAuth';
@@ -23,6 +24,7 @@ import type {
   SeccionEscaladaDTO,
 } from '../../types/admin';
 import { describirMotivoEscalamiento, formatearFechaCorta } from '../../utils/admin';
+import { plural } from '../../utils/texto';
 
 /**
  * Issue 4.20 — inicio de Coordinación Académica.
@@ -106,7 +108,7 @@ const Metrica: React.FC<{ valor: number | string; etiqueta: string; tono?: strin
   tono = 'text-saie-text',
 }) => (
   <div className="rounded-xl border border-saie-divider bg-white p-3">
-    <p className={`m-0 font-serif text-3xl font-bold leading-none ${tono}`}>{valor}</p>
+    <p className={`m-0 text-3xl font-bold leading-none ${tono} tabular-nums`}>{valor}</p>
     <p className="m-0 mt-1 text-xs font-medium text-saie-muted">{etiqueta}</p>
   </div>
 );
@@ -117,7 +119,7 @@ function textoVerificador(verificacion: ResultadoVerificacionDTO | null): string
   if (verificacion.conforme) {
     return `Conforme · ${verificacion.totalRevisadas} revisadas`;
   }
-  return `No conforme · ${verificacion.totalViolaciones} violación(es)`;
+  return `No conforme · ${plural(verificacion.totalViolaciones, 'incumplimiento', 'incumplimientos')}`;
 }
 
 /** Colores del distintivo del verificador. */
@@ -169,7 +171,7 @@ const FilaEscalada: React.FC<{
         {motivo.codigo && (
           <details className="w-fit text-xs text-saie-muted">
             <summary className="cursor-pointer">Código de soporte</summary>
-            <span className="font-mono text-[10px]">{motivo.codigo}</span>
+            <span className="font-mono text-xs">{motivo.codigo}</span>
           </details>
         )}
       </div>
@@ -351,17 +353,17 @@ const InicioCoordinacion: React.FC = () => {
         <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 lg:grid-cols-4">
           <li>
             <Metrica
-              valor={resumenCorrida?.asignadas ?? escaladas.datos?.total ?? '…'}
+              valor={resumenCorrida?.asignadas ?? '—'}
               etiqueta="Con aula nueva"
               tono="text-saie-success-strong"
             />
           </li>
           <li>
-            <Metrica valor={resumenCorrida?.mantenidas ?? '…'} etiqueta="Conservan la suya" />
+            <Metrica valor={resumenCorrida?.mantenidas ?? '—'} etiqueta="Conservan la suya" />
           </li>
           <li>
             <Metrica
-              valor={resumenCorrida?.escaladas ?? escaladas.datos?.total ?? '…'}
+              valor={resumenCorrida?.escaladas ?? escaladas.datos?.total ?? '—'}
               etiqueta="Esperan revisión"
               tono="text-saie-warning-strong"
             />
@@ -388,7 +390,9 @@ const InicioCoordinacion: React.FC = () => {
               <p role="status" aria-live="polite" className="m-0 mt-0.5 text-sm">
                 {resumenCorrida
                   ? `${resumenCorrida.asignadas} con aula nueva · ${resumenCorrida.mantenidas} conservan la suya · ${resumenCorrida.escaladas} de ${resumenCorrida.totalSecciones} esperan revisión`
-                  : `${escaladas.datos?.total ?? '…'} secciones esperan revisión`}
+                  : escaladas.datos
+                    ? `${plural(escaladas.datos.total, 'sección espera', 'secciones esperan')} revisión`
+                    : 'Consultando las secciones…'}
               </p>
               {ultimaCorrida && (
                 <p className="m-0 mt-1 text-xs text-white/75">
@@ -399,47 +403,17 @@ const InicioCoordinacion: React.FC = () => {
 
             <div className="flex flex-col gap-3">
               <div className="flex flex-wrap items-center justify-end gap-2">
-                {!confirmandoCorrida && (
-                  <Boton
-                    variante="secundario"
-                    onClick={() => setConfirmandoCorrida(true)}
-                    disabled={corriendo}
-                    cargando={corriendo}
-                    textoCargando="Asignando…"
-                    className="border-white! bg-white! text-saie-primary! hover:bg-saie-canvas!"
-                  >
-                    Asignar aulas del periodo
-                  </Boton>
-                )}
+                <Boton
+                  variante="secundario"
+                  onClick={() => setConfirmandoCorrida(true)}
+                  disabled={corriendo}
+                  cargando={corriendo}
+                  textoCargando="Asignando…"
+                  className="border-white! bg-white! text-saie-primary! hover:bg-saie-canvas!"
+                >
+                  Asignar aulas del periodo
+                </Boton>
               </div>
-
-              {confirmandoCorrida && (
-                <div className="rounded-xl border border-white/30 bg-white p-3 text-saie-text">
-                  <p className="m-0 text-sm">
-                    Se volverán a asignar las aulas de las secciones del periodo {periodo}. Las
-                    asignaciones que siguen siendo válidas se conservan y no se duplican aulas.
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Boton
-                      variante="cancelar"
-                      tamano="sm"
-                      onClick={() => setConfirmandoCorrida(false)}
-                      disabled={corriendo}
-                    >
-                      Cancelar
-                    </Boton>
-                    <Boton
-                      variante="primario"
-                      tamano="sm"
-                      onClick={correr}
-                      cargando={corriendo}
-                      textoCargando="Asignando…"
-                    >
-                      Sí, asignar aulas
-                    </Boton>
-                  </div>
-                </div>
-              )}
             </div>
           </section>
 
@@ -447,13 +421,13 @@ const InicioCoordinacion: React.FC = () => {
             aria-label="Veredicto del verificador"
             className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-4"
           >
-            <h2 className="m-0 text-sm font-bold text-saie-text">Verificador de la corrida</h2>
+            <h2 className="m-0 text-sm font-bold text-saie-text">Comprobación de la asignación</h2>
             {resumenCorrida ? (
               <>
                 <p className="m-0 text-xs text-saie-muted">
                   {resumenCorrida.verificacion
-                    ? `${resumenCorrida.verificacion.totalRevisadas} asignaciones revisadas contra las 7 reglas duras del motor.`
-                    : 'Esta corrida no dejó asignaciones que verificar.'}
+                    ? `${resumenCorrida.verificacion.totalRevisadas} asignaciones revisadas contra las 7 reglas de asignación.`
+                    : 'Esta asignación no dejó resultados que comprobar.'}
                 </p>
                 <span
                   className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${claseVerificador(resumenCorrida.verificacion)}`}
@@ -587,12 +561,23 @@ const InicioCoordinacion: React.FC = () => {
         aparece a petición, no algo que deba caber en el tablero. El drawer trae consigo el
         cierre con Escape, el foco atrapado y el bloqueo del scroll del fondo.
       */}
+      <DialogoConfirmacion
+        abierto={confirmandoCorrida}
+        titulo="¿Asignar las aulas del periodo?"
+        descripcion={`Se volverán a asignar las aulas de las secciones del periodo ${periodo}. Las asignaciones que siguen siendo válidas se conservan y no se duplican aulas.`}
+        textoConfirmar="Sí, asignar aulas"
+        cargando={corriendo}
+        textoCargando="Asignando…"
+        onConfirmar={correr}
+        onCancelar={() => setConfirmandoCorrida(false)}
+      />
+
       <Drawer
         abierto={detalleAbierto}
         onCerrar={() => setDetalleAbierto(false)}
         titulo="Veredicto del verificador"
       >
-        <VeredictoVerificacion verificacion={resumenCorrida?.verificacion ?? null} />
+        <VeredictoVerificacion verificacion={resumenCorrida?.verificacion ?? null} ocultarTitulo />
       </Drawer>
     </LayoutAdmin>
   );

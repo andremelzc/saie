@@ -1,10 +1,10 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
-import { Drawer } from '../../components/ui/Drawer';
+import { CLASE_PIE_DRAWER, Drawer } from '../../components/ui/Drawer';
 import { useAvisos } from '../../components/ui/useAvisos';
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
 import { useCarga } from '../../hooks/useCarga';
@@ -25,11 +25,9 @@ import type {
   TipoEspacio,
 } from '../../types/admin';
 import { formatearFechaCorta } from '../../utils/admin';
-
-const TIPO_ETIQUETA: Record<TipoEspacio, string> = {
-  AULA_TEORICA: 'Aula teórica',
-  LABORATORIO: 'Laboratorio',
-};
+import { ETIQUETA_DIA, formatearRango } from '../../utils/horario';
+import { describirEstadoAsignacion, etiquetaTipoEspacio } from '../../utils/diccionarios';
+import { plural } from '../../utils/texto';
 
 const COMPARACIONES: { valor: ComparacionVersion; etiqueta: string }[] = [
   { valor: 'CUALQUIERA', etiqueta: 'Cualquier versión' },
@@ -39,13 +37,9 @@ const COMPARACIONES: { valor: ComparacionVersion; etiqueta: string }[] = [
 
 /** El estado de la asignación en lenguaje llano: lo que le importa a quien coordina. */
 function EtiquetaEstado({ seccion }: { seccion: SeccionAdminDTO }): React.ReactNode {
-  if (!seccion.asignacion) {
-    return <BadgeEstado tono="neutro">Sin asignar</BadgeEstado>;
-  }
-  if (seccion.asignacion.estado === 'ESCALADA') {
-    return <BadgeEstado tono="advertencia">Sin aula · revisión</BadgeEstado>;
-  }
-  return <BadgeEstado tono="exito">Con aula</BadgeEstado>;
+  const codigo = seccion.asignacion ? seccion.asignacion.estado : 'PENDIENTE';
+  const estado = describirEstadoAsignacion(codigo);
+  return <BadgeEstado tono={estado.tono}>{estado.etiqueta}</BadgeEstado>;
 }
 
 /** La fila de una sección en la tabla de escritorio. */
@@ -60,7 +54,7 @@ const FilaSeccion: React.FC<{ seccion: SeccionAdminDTO; onVer: (s: SeccionAdminD
       </span>
       <span className="block text-xs text-saie-muted">{seccion.nombreCurso}</span>
     </td>
-    <td className="px-4 py-3">{TIPO_ETIQUETA[seccion.tipoEspacioRequerido]}</td>
+    <td className="px-4 py-3">{etiquetaTipoEspacio(seccion.tipoEspacioRequerido)}</td>
     <td className="px-4 py-3">
       {seccion.asignacion?.espacios.length ? (
         <span className="font-medium text-saie-text">
@@ -73,7 +67,7 @@ const FilaSeccion: React.FC<{ seccion: SeccionAdminDTO; onVer: (s: SeccionAdminD
     <td className="px-4 py-3">
       {seccion.docente?.nombre ?? <span className="text-saie-muted">—</span>}
     </td>
-    <td className="px-4 py-3 text-center">{seccion.alumnosMatriculados}</td>
+    <td className="px-4 py-3 text-center tabular-nums">{seccion.alumnosMatriculados}</td>
     <td className="px-4 py-3">
       <EtiquetaEstado seccion={seccion} />
     </td>
@@ -130,6 +124,17 @@ const TarjetaSeccion: React.FC<{
   </article>
 );
 
+/** ¿El software marcado en el formulario es el mismo que ya exige la sección? */
+function mismoSoftware(
+  elegidos: Record<string, ComparacionVersion>,
+  actuales: SeccionAdminDTO['softwareRequerido'],
+): boolean {
+  const ids = Object.keys(elegidos);
+  return (
+    ids.length === actuales.length && actuales.every((s) => elegidos[s.id] === s.comparacionVersion)
+  );
+}
+
 /** Formulario de edición: tipo de aula, docente y software requerido (Issue 4.31). */
 const FormularioSeccion: React.FC<{
   seccion: SeccionAdminDTO;
@@ -137,7 +142,9 @@ const FormularioSeccion: React.FC<{
   catalogo: SoftwareDTO[];
   onGuardado: (resultado: { alertas: { motivo: string }[] }) => void;
   onCancelar: () => void;
-}> = ({ seccion, docentes, catalogo, onGuardado, onCancelar }) => {
+  /** Avisa al drawer si hay cambios sin guardar, para pedir confirmación al cerrarlo. */
+  onCambiosPendientes?: (hay: boolean) => void;
+}> = ({ seccion, docentes, catalogo, onGuardado, onCancelar, onCambiosPendientes }) => {
   const [tipo, setTipo] = useState<TipoEspacio>(seccion.tipoEspacioRequerido);
   const [docenteId, setDocenteId] = useState<string>(seccion.docente?.id ?? '');
   const [busqueda, setBusqueda] = useState('');
@@ -146,6 +153,16 @@ const FormularioSeccion: React.FC<{
   );
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const hayCambios =
+    tipo !== seccion.tipoEspacioRequerido ||
+    docenteId !== (seccion.docente?.id ?? '') ||
+    !mismoSoftware(elegidos, seccion.softwareRequerido);
+
+  useEffect(() => {
+    onCambiosPendientes?.(hayCambios);
+    return () => onCambiosPendientes?.(false);
+  }, [hayCambios, onCambiosPendientes]);
 
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -281,22 +298,14 @@ const FormularioSeccion: React.FC<{
 
       {error && <Aviso tono="error">{error}</Aviso>}
 
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="submit"
-          disabled={guardando}
-          className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl bg-saie-primary px-5 text-sm font-medium text-white hover:bg-saie-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {guardando ? 'Guardando…' : 'Guardar cambios'}
-        </button>
-        <button
-          type="button"
-          onClick={onCancelar}
-          disabled={guardando}
-          className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl border border-saie-divider bg-white px-5 text-sm font-medium text-saie-text hover:bg-saie-canvas"
-        >
+      <div className={`${CLASE_PIE_DRAWER} flex flex-wrap items-center gap-3`}>
+        <Boton type="submit" tamano="sm" cargando={guardando} textoCargando="Guardando…">
+          Guardar cambios
+        </Boton>
+        <Boton variante="cancelar" tamano="sm" onClick={onCancelar} disabled={guardando}>
           Cancelar
-        </button>
+        </Boton>
+        {hayCambios && <BadgeEstado tono="advertencia">Cambios sin guardar</BadgeEstado>}
       </div>
     </form>
   );
@@ -314,6 +323,7 @@ export const SeccionesAdmin: React.FC = () => {
   const [periodo, setPeriodo] = useState('');
   const [seleccionadaId, setSeleccionadaId] = useState<string | null>(null);
   const [editando, setEditando] = useState(false);
+  const [cambiosPendientes, setCambiosPendientes] = useState(false);
   const { mostrar } = useAvisos();
 
   const cargar = useCallback(async () => {
@@ -354,7 +364,7 @@ export const SeccionesAdmin: React.FC = () => {
     if (resultado.alertas.length > 0) {
       mostrar(
         'info',
-        `La sección se guardó y generó ${resultado.alertas.length} alerta(s) en el panel.`,
+        `La sección se guardó y generó ${plural(resultado.alertas.length, 'alerta', 'alertas')} en el panel.`,
       );
     } else {
       mostrar('exito', 'Sección actualizada.');
@@ -482,16 +492,14 @@ export const SeccionesAdmin: React.FC = () => {
         titulo={
           seleccionada ? `${seleccionada.codigoCurso} · ${seleccionada.codigoSeccion}` : 'Sección'
         }
+        subtitulo={seleccionada?.nombreCurso}
+        insignia={seleccionada && <EtiquetaEstado seccion={seleccionada} />}
+        hayCambios={editando && cambiosPendientes}
+        vista={editando ? 'editar' : 'detalle'}
       >
         {seleccionada && (
           <div className="flex flex-col gap-5">
             <dl className="m-0 rounded-xl border border-saie-divider bg-white p-4 text-sm">
-              <div className="border-b border-saie-divider py-2">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
-                  Curso
-                </dt>
-                <dd className="m-0 text-saie-text">{seleccionada.nombreCurso}</dd>
-              </div>
               <div className="border-b border-saie-divider py-2">
                 <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
                   Aula asignada
@@ -524,7 +532,10 @@ export const SeccionesAdmin: React.FC = () => {
                   {seleccionada.horarios.length === 0
                     ? 'Sin horarios registrados.'
                     : seleccionada.horarios
-                        .map((h) => `${h.diaSemana} ${h.horaInicio}-${h.horaFin}`)
+                        .map(
+                          (h) =>
+                            `${ETIQUETA_DIA[h.diaSemana]} ${formatearRango(h.horaInicio, h.horaFin)}`,
+                        )
                         .join(' · ')}
                 </dd>
               </div>
@@ -544,7 +555,7 @@ export const SeccionesAdmin: React.FC = () => {
 
             {seleccionada.asignacion && (
               <p className="m-0 text-xs text-saie-muted">
-                Asignada el {formatearFechaCorta(seleccionada.asignacion.fechaAsignacion)}.
+                Asignada el {formatearFechaCorta(seleccionada.asignacion.fechaAsignacion)}
               </p>
             )}
 
@@ -555,6 +566,7 @@ export const SeccionesAdmin: React.FC = () => {
                 catalogo={catalogo.datos?.items ?? []}
                 onGuardado={manejarGuardado}
                 onCancelar={() => setEditando(false)}
+                onCambiosPendientes={setCambiosPendientes}
               />
             ) : (
               <div className="flex flex-col gap-2">

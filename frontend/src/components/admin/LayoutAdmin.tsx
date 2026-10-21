@@ -3,7 +3,10 @@ import { NavLink } from 'react-router-dom';
 import BotonCerrarSesion from '../auth/BotonCerrarSesion';
 import logoBlanco from '../../assets/logo-blanco.svg';
 import { useAuth } from '../../context/useAuth';
+import { useTituloPagina } from '../../hooks/useTituloPagina';
 import { etiquetaRol, pestanasDeRol } from '../../utils/admin';
+import { EnlaceSaltar, ID_CONTENIDO } from '../ui/EnlaceSaltar';
+import { EstadoError } from '../ui/EstadoError';
 
 /**
  * Marco común del panel administrativo.
@@ -51,6 +54,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
 }) => {
   const { sesion } = useAuth();
   const pestanas = pestanasDeRol(sesion?.rol);
+  useTituloPagina(titulo);
 
   const claseLink = ({ isActive }: { isActive: boolean }) =>
     `flex flex-1 flex-col items-center gap-0.5 px-2 py-2 text-xs transition-colors md:flex-none md:flex-row md:gap-2 md:rounded-lg md:px-4 md:text-sm ${
@@ -65,8 +69,9 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
         dashboard ? 'lg:h-screen lg:overflow-hidden' : ''
       }`}
     >
+      <EnlaceSaltar />
       <header className="bg-saie-primary text-white saie-no-imprimir">
-        <div className="mx-auto flex h-[72px] w-full max-w-6xl items-center justify-between gap-3 px-4">
+        <div className="mx-auto flex h-18 w-full max-w-saie-ancho items-center justify-between gap-3 px-4">
           <div className="flex min-w-0 items-center gap-4">
             <img src={logoBlanco} alt="SAIE" className="h-9 w-auto shrink-0" />
             <span className="hidden rounded-full bg-white/15 px-3 py-1 text-sm font-medium sm:inline-flex">
@@ -89,7 +94,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
         aria-label="Navegación del panel"
         className="saie-no-imprimir fixed inset-x-0 bottom-0 z-30 border-t border-saie-divider bg-white md:static md:border-b md:border-t-0"
       >
-        <ul className="mx-auto m-0 flex w-full max-w-6xl list-none gap-1 p-0 md:px-4 md:py-2">
+        <ul className="mx-auto m-0 flex w-full max-w-saie-ancho list-none gap-1 p-0 md:px-4 md:py-2">
           {pestanas.map((p) => (
             <li
               key={p.to}
@@ -105,13 +110,15 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
       </nav>
 
       <main
-        className={`mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-4 py-4 ${
+        id={ID_CONTENIDO}
+        tabIndex={-1}
+        className={`mx-auto flex w-full max-w-saie-ancho flex-1 flex-col gap-4 px-4 py-4 focus:outline-none ${
           dashboard ? 'lg:min-h-0 lg:overflow-hidden' : ''
         }`}
       >
         <div className="saie-no-imprimir flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="m-0 font-serif text-2xl font-bold text-saie-text sm:text-3xl">
+            <h1 className="m-0 text-2xl font-bold text-saie-text sm:text-3xl tracking-tight">
               {titulo}
             </h1>
             {subtitulo && <p className="m-0 mt-1 text-sm text-saie-muted">{subtitulo}</p>}
@@ -124,26 +131,10 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
   );
 };
 
-/** Mensaje de error uniforme con botón de reintento. */
+/** Mensaje de error uniforme con botón de reintento (ver `EstadoError`). */
 export const AvisoError: React.FC<{ mensaje: string; onReintentar?: () => void }> = ({
   mensaje,
   onReintentar,
-}) => (
-  <div
-    role="alert"
-    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-saie-danger/30 bg-saie-danger-soft px-4 py-3 text-sm text-saie-danger-strong"
-  >
-    <span>{mensaje}</span>
-    {onReintentar && (
-      <button
-        type="button"
-        onClick={onReintentar}
-        className="rounded-lg border border-saie-danger/40 px-3 py-1 font-semibold hover:bg-white"
-      >
-        Reintentar
-      </button>
-    )}
-  </div>
-);
+}) => <EstadoError mensaje={mensaje} onReintentar={onReintentar} />;
 
 export default LayoutAdmin;

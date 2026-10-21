@@ -224,12 +224,10 @@ describe('Inicio del panel administrativo', () => {
       // …y el detalle de las reglas, en el drawer a petición.
       fireEvent.click(screen.getByRole('button', { name: 'Ver el detalle de las reglas' }));
       expect(
-        await screen.findByText('Conforme: la corrida cumple las 7 reglas duras.'),
+        await screen.findByText('Conforme: la asignación cumple las 7 reglas.'),
       ).toBeInTheDocument();
       expect(screen.getByText('CONFORME')).toBeInTheDocument();
-      expect(
-        screen.getByText('8 asignación(es) revisada(s) · 0 violación(es)'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('8 asignaciones revisadas · 0 incumplimientos')).toBeInTheDocument();
       expect(screen.getByText('Sin doble reserva')).toBeInTheDocument();
       expect(screen.getByText('Capacidad suficiente')).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
@@ -245,10 +243,10 @@ describe('Inicio del panel administrativo', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Ver el detalle de las reglas' }));
 
       expect(
-        await screen.findByText('No conforme: 1 violación(es) en 1 regla(s).'),
+        await screen.findByText('No conforme: 1 incumplimiento en 1 regla.'),
       ).toBeInTheDocument();
       expect(screen.getByText('NO CONFORME')).toBeInTheDocument();
-      expect(screen.getByText(/Ver 1 violación/)).toBeInTheDocument();
+      expect(screen.getByText(/Ver 1 incumplimiento/)).toBeInTheDocument();
       expect(screen.getByText(/Aforo insuficiente para 45 alumnos/)).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
     });
@@ -265,7 +263,9 @@ describe('Inicio del panel administrativo', () => {
       // Y el aviso completo de la corrida vive en el drawer.
       fireEvent.click(screen.getByRole('button', { name: 'Ver el detalle de las reglas' }));
       expect(
-        await screen.findByText('No hubo asignaciones que verificar en esta corrida.'),
+        await screen.findByText(
+          'No hubo asignaciones que comprobar en esta asignación automática.',
+        ),
       ).toBeInTheDocument();
     });
 

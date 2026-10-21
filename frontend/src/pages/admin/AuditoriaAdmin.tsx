@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
 import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
@@ -9,42 +9,47 @@ import { useCarga } from '../../hooks/useCarga';
 import { obtenerAuditoria, obtenerHistorial } from '../../services/admin';
 import type { EstadoAsignacion, TipoEventoAuditoria } from '../../types/admin';
 import { formatearFechaAlerta } from '../../utils/admin';
+import { describirEstadoAsignacion, describirEventoAuditoria } from '../../utils/diccionarios';
+
+/** Vuelve a pedir los datos cuando cambia `version` (botón «Actualizar»), sin tocar los filtros. */
+function useRecargarAl(version: number, recargar: () => void): void {
+  const anterior = useRef(version);
+  useEffect(() => {
+    if (anterior.current === version) return;
+    anterior.current = version;
+    recargar();
+  }, [version, recargar]);
+}
 
 type Vista = 'historial' | 'auditoria';
 
 const OPCIONES_VISTA: { valor: Vista; etiqueta: string }[] = [
-  { valor: 'historial', etiqueta: 'Historial de asignaciones' },
-  { valor: 'auditoria', etiqueta: 'Auditoría' },
+  { valor: 'historial', etiqueta: 'Asignaciones' },
+  { valor: 'auditoria', etiqueta: 'Registro de actividad' },
 ];
 
-const ETIQUETAS_EVENTO: Record<TipoEventoAuditoria, string> = {
-  ASIGNACION: 'Asignación',
-  ESCALAMIENTO: 'Escalamiento',
-  ALERTA: 'Alerta',
-  VERIFICACION: 'Verificación',
+/** Insignia de un evento del registro (el código se traduce en `utils/diccionarios.ts`). */
+const InsigniaEvento: React.FC<{ tipo: string }> = ({ tipo }) => {
+  const evento = describirEventoAuditoria(tipo);
+  return <BadgeEstado tono={evento.tono}>{evento.etiqueta}</BadgeEstado>;
 };
 
-const TONO_EVENTO: Record<TipoEventoAuditoria, 'exito' | 'advertencia' | 'peligro' | 'info'> = {
-  ASIGNACION: 'exito',
-  ESCALAMIENTO: 'advertencia',
-  ALERTA: 'peligro',
-  VERIFICACION: 'info',
+/** Insignia del estado de una asignación. */
+const InsigniaEstado: React.FC<{ estado: string }> = ({ estado }) => {
+  const descripcion = describirEstadoAsignacion(estado);
+  return <BadgeEstado tono={descripcion.tono}>{descripcion.etiqueta}</BadgeEstado>;
 };
 
-const ETIQUETA_ESTADO: Record<EstadoAsignacion, string> = {
-  VIGENTE: 'Vigente',
-  ESCALADA: 'Escalada',
-  HISTORICA: 'Histórica',
-};
+const ESTADOS_FILTRO: EstadoAsignacion[] = ['VIGENTE', 'ESCALADA', 'HISTORICA'];
+const EVENTOS_FILTRO: TipoEventoAuditoria[] = [
+  'ASIGNACION',
+  'ESCALAMIENTO',
+  'ALERTA',
+  'VERIFICACION',
+];
 
-const TONO_ESTADO: Record<EstadoAsignacion, 'exito' | 'advertencia' | 'neutro'> = {
-  VIGENTE: 'exito',
-  ESCALADA: 'advertencia',
-  HISTORICA: 'neutro',
-};
-
-/** Tabla del historial: qué asignó el motor en cada corrida y con qué estado. */
-const VistaHistorial: React.FC = () => {
+/** `version` cambia al pulsar «Actualizar»: vuelve a pedir los datos conservando los filtros. */
+const VistaHistorial: React.FC<{ version: number }> = ({ version }) => {
   const [periodo, setPeriodo] = useState('');
   const [estado, setEstado] = useState<'TODOS' | EstadoAsignacion>('TODOS');
 
@@ -59,6 +64,7 @@ const VistaHistorial: React.FC = () => {
   );
 
   const { datos, cargando, error, recargar } = useCarga(cargar);
+  useRecargarAl(version, recargar);
   const items = datos?.items ?? [];
 
   return (
@@ -82,9 +88,11 @@ const VistaHistorial: React.FC = () => {
             className={CLASE_CAMPO}
           >
             <option value="TODOS">Todos</option>
-            <option value="VIGENTE">Vigente</option>
-            <option value="ESCALADA">Escalada</option>
-            <option value="HISTORICA">Histórica</option>
+            {ESTADOS_FILTRO.map((e) => (
+              <option key={e} value={e}>
+                {describirEstadoAsignacion(e).etiqueta}
+              </option>
+            ))}
           </select>
         </label>
       </div>
@@ -95,7 +103,7 @@ const VistaHistorial: React.FC = () => {
       ) : items.length === 0 ? (
         <EstadoVacio
           titulo="Sin asignaciones registradas"
-          descripcion="Cuando el motor asigne aulas, aquí quedará el rastro de cada corrida."
+          descripcion="Cuando se asignen aulas, aquí quedará el registro de cada asignación."
         />
       ) : (
         <section
@@ -137,14 +145,12 @@ const VistaHistorial: React.FC = () => {
                       : '—'}
                   </td>
                   <td className="px-4 py-3">
-                    <BadgeEstado tono={TONO_ESTADO[a.estado]}>
-                      {ETIQUETA_ESTADO[a.estado]}
-                    </BadgeEstado>
+                    <InsigniaEstado estado={a.estado} />
                   </td>
                   <td className="px-4 py-3 text-xs text-saie-muted">
                     {formatearFechaAlerta(a.fechaAsignacion)}
                   </td>
-                  <td className="px-4 py-3 font-mono text-[10px] text-saie-muted">
+                  <td className="px-4 py-3 font-mono text-xs text-saie-muted">
                     {a.corridaId ?? '—'}
                   </td>
                 </tr>
@@ -157,8 +163,7 @@ const VistaHistorial: React.FC = () => {
   );
 };
 
-/** Tabla de auditoría: el asiento de cada evento del motor. */
-const VistaAuditoria: React.FC = () => {
+const VistaAuditoria: React.FC<{ version: number }> = ({ version }) => {
   const [tipo, setTipo] = useState<'TODOS' | TipoEventoAuditoria>('TODOS');
 
   const cargar = useCallback(
@@ -171,6 +176,7 @@ const VistaAuditoria: React.FC = () => {
   );
 
   const { datos, cargando, error, recargar } = useCarga(cargar);
+  useRecargarAl(version, recargar);
   const items = datos?.items ?? [];
 
   return (
@@ -183,10 +189,11 @@ const VistaAuditoria: React.FC = () => {
           className={CLASE_CAMPO}
         >
           <option value="TODOS">Todos</option>
-          <option value="ASIGNACION">Asignación</option>
-          <option value="ESCALAMIENTO">Escalamiento</option>
-          <option value="ALERTA">Alerta</option>
-          <option value="VERIFICACION">Verificación</option>
+          {EVENTOS_FILTRO.map((e) => (
+            <option key={e} value={e}>
+              {describirEventoAuditoria(e).etiqueta}
+            </option>
+          ))}
         </select>
       </label>
 
@@ -195,8 +202,8 @@ const VistaAuditoria: React.FC = () => {
         <EsqueletoCarga texto="Cargando auditoría…" />
       ) : items.length === 0 ? (
         <EstadoVacio
-          titulo="Sin asientos de auditoría"
-          descripcion="Cada corrida del motor deja aquí su constancia."
+          titulo="Sin actividad registrada"
+          descripcion="Cada asignación automática de aulas deja aquí su registro."
         />
       ) : (
         <section
@@ -224,9 +231,7 @@ const VistaAuditoria: React.FC = () => {
               {items.map((r) => (
                 <tr key={r.id} className="border-t border-saie-divider align-top">
                   <td className="px-4 py-3">
-                    <BadgeEstado tono={TONO_EVENTO[r.tipoEvento]}>
-                      {ETIQUETAS_EVENTO[r.tipoEvento]}
-                    </BadgeEstado>
+                    <InsigniaEvento tipo={r.tipoEvento} />
                   </td>
                   <td className="px-4 py-3 text-xs">
                     {r.seccion ? `${r.seccion.codigoCurso} · ${r.seccion.codigoSeccion}` : '—'}
@@ -253,13 +258,15 @@ const VistaAuditoria: React.FC = () => {
  */
 export const AuditoriaAdmin: React.FC = () => {
   const [vista, setVista] = useState<Vista>('historial');
+  // Antes «Actualizar» recargaba toda la página y se perdían la pestaña, los filtros y el scroll.
+  const [version, setVersion] = useState(0);
 
   return (
     <LayoutAdmin
       titulo="Auditoría e historial"
-      subtitulo="Qué decidió el motor en cada corrida y qué dejó registrado."
+      subtitulo="Qué pasó con cada sección y cuándo."
       acciones={
-        <Boton variante="secundario" onClick={() => window.location.reload()}>
+        <Boton variante="secundario" onClick={() => setVersion((v) => v + 1)}>
           Actualizar
         </Boton>
       }
@@ -272,7 +279,11 @@ export const AuditoriaAdmin: React.FC = () => {
         className="self-start"
       />
       <section aria-label="Contenido de la auditoría">
-        {vista === 'historial' ? <VistaHistorial /> : <VistaAuditoria />}
+        {vista === 'historial' ? (
+          <VistaHistorial version={version} />
+        ) : (
+          <VistaAuditoria version={version} />
+        )}
       </section>
     </LayoutAdmin>
   );

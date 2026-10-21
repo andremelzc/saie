@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import type { AlertaDTO, TipoAlerta } from '../../types/admin';
 import { formatearFechaAlerta } from '../../utils/admin';
+import { etiquetaTipoAlerta } from '../../utils/diccionarios';
 import { BadgeEstado } from '../ui/BadgeEstado';
 import { Boton } from '../ui/Boton';
+import { DialogoConfirmacion } from '../ui/DialogoConfirmacion';
 
 /** Issue 4.9 — fila/tarjeta de alerta. Cada tipo tiene color, ícono y etiqueta propios. */
 
@@ -46,7 +48,10 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
   onResolver,
   resolviendo = false,
 }) => {
-  const estilo = ESTILO_TIPO[alerta.tipo];
+  const estilo = ESTILO_TIPO[alerta.tipo] ?? {
+    ...ESTILO_TIPO.SOFTWARE,
+    etiqueta: etiquetaTipoAlerta(alerta.tipo),
+  };
   const resuelta = alerta.estado === 'RESUELTA';
   const [confirmando, setConfirmando] = useState(false);
   const [mostrarTodos, setMostrarTodos] = useState(false);
@@ -59,7 +64,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
     <article
       aria-label={`Alerta de ${estilo.etiqueta.toLowerCase()} en ${alerta.espacio.identificador}`}
       data-tipo={alerta.tipo}
-      className={`flex flex-col gap-3 rounded-xl border border-saie-divider border-l-4 ${estilo.borde} bg-white p-4 shadow-[var(--saie-shadow-1)] ${resuelta ? 'opacity-70' : ''}`}
+      className={`flex flex-col gap-3 rounded-xl border border-saie-divider border-l-4 ${estilo.borde} bg-white p-4 shadow-saie-card ${resuelta ? 'opacity-70' : ''}`}
     >
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-3">
@@ -138,45 +143,27 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
         </time>
         {!resuelta && onResolver && (
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {confirmando ? (
-              <fieldset
-                aria-label="Confirmar resolución"
-                className="flex flex-wrap items-center justify-end gap-2 border-0 p-0"
-              >
-                <span className="text-sm font-semibold text-saie-text">¿Marcar como resuelta?</span>
-                <Boton
-                  variante="cancelar"
-                  tamano="sm"
-                  onClick={() => setConfirmando(false)}
-                  disabled={resolviendo}
-                >
-                  Cancelar
-                </Boton>
-                <Boton
-                  variante="primario"
-                  tamano="sm"
-                  onClick={() => {
-                    setConfirmando(false);
-                    onResolver(alerta.id);
-                  }}
-                  cargando={resolviendo}
-                  textoCargando="Marcando…"
-                >
-                  Sí, resolver
-                </Boton>
-              </fieldset>
-            ) : (
-              <Boton
-                variante="primario"
-                tamano="sm"
-                onClick={() => setConfirmando(true)}
-                disabled={resolviendo}
-                cargando={resolviendo}
-                textoCargando="Marcando…"
-              >
-                Marcar como resuelta
-              </Boton>
-            )}
+            <Boton
+              variante="primario"
+              tamano="sm"
+              onClick={() => setConfirmando(true)}
+              disabled={resolviendo}
+              cargando={resolviendo}
+              textoCargando="Marcando…"
+            >
+              Marcar como resuelta
+            </Boton>
+            <DialogoConfirmacion
+              abierto={confirmando}
+              titulo="¿Marcar como resuelta?"
+              descripcion={`La alerta de ${alerta.espacio.identificador} dejará de aparecer en la lista de pendientes.`}
+              textoConfirmar="Sí, resolver"
+              onConfirmar={() => {
+                setConfirmando(false);
+                onResolver(alerta.id);
+              }}
+              onCancelar={() => setConfirmando(false)}
+            />
           </div>
         )}
       </footer>

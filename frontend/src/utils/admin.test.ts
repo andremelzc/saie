@@ -10,7 +10,7 @@ describe('Utils de Administración', () => {
     expect(describirMotivoEscalamiento('[SOFTWARE_FALTANTE] Stack incompleto').etiqueta).toBe(
       'Software faltante',
     );
-    expect(describirMotivoEscalamiento('[TIPO_NUEVO] Detalle').etiqueta).toBe('Escalamiento');
+    expect(describirMotivoEscalamiento('[TIPO_NUEVO] Detalle').etiqueta).toBe('Requiere revisión');
   });
 
   it('conserva los motivos escritos a mano y completa los vacíos', () => {
@@ -21,8 +21,8 @@ describe('Utils de Administración', () => {
   });
 
   it('formatea la fecha corta de la última carga', () => {
-    // Se arma en hora local para que la comprobación no dependa del huso del runner.
-    const iso = new Date(2026, 9, 12, 10, 32).toISOString();
+    // Las fechas se muestran siempre en hora de Lima (UTC-5), sin depender del huso del equipo.
+    const iso = '2026-10-12T15:32:00.000Z';
     expect(formatearFechaCorta(iso)).toMatch(/10:32/);
     expect(formatearFechaCorta('no-es-una-fecha')).toBe('no-es-una-fecha');
   });

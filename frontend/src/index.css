@@ -1,40 +1,23 @@
 @import 'tailwindcss';
+/* Inter autoalojada (variable, 100–900): la app ya no depende de Google Fonts. */
+@import '@fontsource-variable/inter/wght.css';
 
-/* Tokens de la Guía de Estilos UI/UX (docs/07_guia_de_estilos_ui_ux.md, Anexo A) */
-:root {
-  --saie-primary: #7b1113;
-  --saie-primary-dark: #5c0d0e;
-  --saie-canvas: #faf6ed;
-  --saie-surface: #ffffff;
-  --saie-text: #222222;
-  --saie-text-muted: #666666;
-  --saie-success: #2e7d32;
-  --saie-success-soft: #e8f5e9;
-  --saie-success-strong: #1b5e20;
-  --saie-danger: #d32f2f;
-  --saie-danger-soft: #fdecea;
-  --saie-danger-strong: #b71c1c;
-  --saie-warning-soft: #fdf0e1;
-  --saie-warning-strong: #b45309;
-  --saie-info: #1f5fa8;
-  --saie-info-soft: #e7eff9;
-  --saie-divider: #e6dfd0;
-  --saie-border: #8a8578;
-  --saie-radius-card: 12px;
-  --saie-shadow-1: 0 2px 8px rgba(34, 34, 34, 0.08);
-  --saie-shadow-3: 0 8px 24px rgba(34, 34, 34, 0.16);
-  --saie-font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
-  --saie-font-sans: Inter, Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
-}
-
+/* Tokens de diseño: ÚNICA fuente de verdad (docs/07_guia_de_estilos_ui_ux.md, Anexo A).
+   Tailwind los publica como utilidades (`bg-saie-primary`, `shadow-saie-card`,
+   `max-w-saie-ancho`…) y como variables CSS (`var(--color-saie-primary)`). */
 @theme {
+  /* Color · marca */
   --color-saie-primary: #7b1113;
   --color-saie-primary-dark: #5c0d0e;
+  --color-saie-primary-light: #a8383a;
+  /* Color · superficies, texto y bordes */
   --color-saie-canvas: #faf6ed;
+  --color-saie-canvas-dark: #f1ede3;
   --color-saie-text: #222222;
   --color-saie-muted: #666666;
   --color-saie-divider: #e6dfd0;
   --color-saie-border: #8a8578;
+  /* Color · estados */
   --color-saie-success: #2e7d32;
   --color-saie-success-soft: #e8f5e9;
   --color-saie-success-strong: #1b5e20;
@@ -42,20 +25,75 @@
   --color-saie-danger-soft: #fdecea;
   --color-saie-danger-strong: #b71c1c;
   --color-saie-warning-soft: #fdf0e1;
-  --color-saie-warning-strong: #b45309;
+  --color-saie-warning-strong: #92400e;
   --color-saie-info: #1f5fa8;
   --color-saie-info-soft: #e7eff9;
-  --font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
-  --font-sans: Inter, Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Tipografía: una sola familia (Inter) y una pila monoespaciada explícita */
+  --font-sans: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', Consolas, 'SF Mono', Menlo, monospace;
+
+  /* Elevación */
+  --shadow-saie-card: 0 2px 8px rgb(34 34 34 / 0.08);
+  --shadow-saie-pop: 0 8px 24px rgb(34 34 34 / 0.16);
+  --shadow-saie-accion: 0 2px 8px rgb(123 17 19 / 0.25);
+
+  /* Radios */
+  --radius-saie-campo: 10px;
+
+  /* Anchos de contenedor: lectura (formularios y perfil), normal y ancho (panel y tableros) */
+  --container-saie-lectura: 56rem;
+  --container-saie-normal: 72rem;
+  --container-saie-ancho: 80rem;
 }
 
 body {
   margin: 0;
-  background: var(--saie-canvas);
-  color: var(--saie-text);
-  font-family: var(--saie-font-sans);
-  font-size: 16px;
-  line-height: 24px;
+  background: var(--color-saie-canvas);
+  color: var(--color-saie-text);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* «Texto grande» (Configuración del alumno): la clase la pone `aplicarPreferencias` en <html>.
+   Todo el sistema usa unidades `rem`, así que subir la base agranda el texto de toda la app. */
+html.saie-texto-grande {
+  font-size: 125%;
+}
+
+/* Reserva el espacio de la barra de desplazamiento: al abrir un drawer se bloquea el scroll de la
+   página y, sin esto, el contenido se movería unos píxeles al desaparecer la barra. */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* Entrada de los paneles y los diálogos: el panel se desliza desde la derecha y el velo del fondo
+   aparece con un fundido. Duración corta (≈200 ms); se anulan con «Reducir movimiento». */
+@keyframes saie-deslizar {
+  from {
+    opacity: 0;
+    transform: translateX(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.saie-deslizar {
+  animation: saie-deslizar 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes saie-velo {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.saie-velo {
+  animation: saie-velo 180ms ease-out both;
 }
 
 /* Edge/IE dibujan su propio ojo en los campos de contraseña; SAIE ya tiene el suyo. */
@@ -68,7 +106,7 @@ input::-ms-clear {
    `:where()` mantiene la especificidad en 0 para que las utilidades de Tailwind
    puedan afinar el foco cuando haga falta. */
 :where(a, button, summary, select, input, textarea):focus-visible {
-  outline: 3px solid var(--saie-text);
+  outline: 3px solid var(--color-saie-text);
   outline-offset: 2px;
 }
 
@@ -80,6 +118,18 @@ input::-ms-clear {
   path.saie-trazo {
     stroke-dashoffset: 0;
   }
+}
+
+/* «Reducir movimiento» (Configuración del alumno): mismo efecto que la preferencia del sistema,
+   pero elegible desde la app. */
+html.saie-sin-movimiento *,
+html.saie-sin-movimiento *::before,
+html.saie-sin-movimiento *::after {
+  animation: none !important;
+  transition: none !important;
+}
+html.saie-sin-movimiento path.saie-trazo {
+  stroke-dashoffset: 0;
 }
 
 /* Animaciones de entrada y flotado del logo (se anulan con «Reducir movimiento») */
@@ -142,7 +192,7 @@ input::-ms-clear {
 .saie-lift:hover,
 .saie-lift:focus-visible {
   transform: translateY(-3px);
-  box-shadow: var(--saie-shadow-3);
+  box-shadow: var(--shadow-saie-pop);
 }
 
 /* Rayado del estado «Ocupado»: el color nunca es el único canal. */
