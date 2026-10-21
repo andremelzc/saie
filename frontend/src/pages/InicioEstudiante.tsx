@@ -213,7 +213,7 @@ const ListaDeClases: React.FC<{
           return (
             <li
               key={`${s.seccionId}-${s.horaInicio}`}
-              className={`flex w-56 shrink-0 flex-col gap-1 rounded-xl border border-l-4 border-saie-divider bg-white p-3 shadow-saie-card ${
+              className={`flex w-56 shrink-0 flex-col gap-1 rounded-xl border border-l-4 border-saie-divider bg-white p-3 shadow-sm ${
                 estado === 'FINALIZADA' ? 'opacity-60' : ''
               }`}
               style={{ borderLeftColor: color.borde }}
@@ -408,7 +408,7 @@ export const InicioEstudiante: React.FC = () => {
               resumen.map((d) => (
                 <div
                   key={d.etiqueta}
-                  className="rounded-xl border border-saie-divider bg-white p-3 shadow-saie-card"
+                  className="rounded-xl border border-saie-divider bg-white p-3 shadow-sm"
                 >
                   <p className="m-0 text-2xl font-bold leading-none tabular-nums">{d.valor}</p>
                   <p className="m-0 mt-1 text-xs font-medium text-saie-muted">{d.etiqueta}</p>

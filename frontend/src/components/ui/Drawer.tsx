@@ -118,7 +118,7 @@ export const Drawer: React.FC<DrawerProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby={subtitulo ? `${idTitulo} ${idSubtitulo}` : idTitulo}
-        className={`saie-deslizar relative flex h-full w-full ${ANCHOS[tamano]} flex-col bg-saie-canvas shadow-saie-pop`}
+        className={`saie-deslizar relative flex h-full w-full ${ANCHOS[tamano]} flex-col bg-saie-canvas shadow-lg`}
       >
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-saie-divider bg-white px-5 py-4">
           <div className="min-w-0">

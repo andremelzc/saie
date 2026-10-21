@@ -64,7 +64,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
     <article
       aria-label={`Alerta de ${estilo.etiqueta.toLowerCase()} en ${alerta.espacio.identificador}`}
       data-tipo={alerta.tipo}
-      className={`flex flex-col gap-3 rounded-xl border border-saie-divider border-l-4 ${estilo.borde} bg-white p-4 shadow-saie-card ${resuelta ? 'opacity-70' : ''}`}
+      className={`flex flex-col gap-3 rounded-xl border border-saie-divider border-l-4 ${estilo.borde} bg-white p-4 shadow-sm ${resuelta ? 'opacity-70' : ''}`}
     >
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-3">

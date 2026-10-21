@@ -18,7 +18,7 @@ export const EnlaceSaltar: React.FC = () => (
       destino?.focus();
       destino?.scrollIntoView?.();
     }}
-    className="saie-no-imprimir sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-xl focus:bg-white focus:px-4 focus:py-3 focus:font-medium focus:text-saie-primary focus:shadow-saie-pop"
+    className="saie-no-imprimir sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-xl focus:bg-white focus:px-4 focus:py-3 focus:font-medium focus:text-saie-primary focus:shadow-lg"
   >
     Saltar al contenido
   </a>

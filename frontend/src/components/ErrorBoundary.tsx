@@ -34,7 +34,7 @@ export class ErrorBoundary extends React.Component<
         id="contenido"
         className="flex min-h-screen flex-col items-center justify-center bg-saie-canvas px-4 py-8 text-saie-text"
       >
-        <div className="flex w-full max-w-md flex-col gap-4 rounded-2xl border border-saie-divider bg-white p-6 text-center shadow-saie-card sm:p-8">
+        <div className="flex w-full max-w-md flex-col gap-4 rounded-2xl border border-saie-divider bg-white p-6 text-center shadow-sm sm:p-8">
           <h1 className="m-0 text-2xl font-bold tracking-tight">Algo salió mal</h1>
           <p role="alert" className="m-0 text-base">
             No pudimos mostrar esta pantalla. Tus datos no se perdieron.

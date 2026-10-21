@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
 import { EstadoError } from '../components/ui/EstadoError';
+import { Contenedor } from '../components/ui/Contenedor';
 import { ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
 import { EsqueletoCarga, EstadoVacio } from '../components/estudiante/ElementosHorario';
 import GridHorarioSemanal from '../components/estudiante/GridHorarioSemanal';
@@ -154,10 +155,12 @@ export const HorarioMisCursos: React.FC<HorarioMisCursosProps> = ({
         trazoIcono={TRAZO_CALENDARIO}
       />
 
-      <main
+      <Contenedor
+        como="main"
+        ancho="normal"
         id={ID_CONTENIDO}
         tabIndex={-1}
-        className="focus:outline-none mx-auto flex w-full max-w-saie-normal flex-col gap-5 px-4 py-6"
+        className="flex flex-col gap-5 py-6 focus:outline-none"
       >
         <SelectorSegmentado
           opciones={OPCIONES_SECCION}
@@ -174,7 +177,7 @@ export const HorarioMisCursos: React.FC<HorarioMisCursosProps> = ({
             {renderCuerpo()}
           </div>
         </section>
-      </main>
+      </Contenedor>
     </div>
   );
 };

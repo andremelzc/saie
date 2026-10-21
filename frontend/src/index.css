@@ -3,8 +3,8 @@
 @import '@fontsource-variable/inter/wght.css';
 
 /* Tokens de diseño: ÚNICA fuente de verdad (docs/07_guia_de_estilos_ui_ux.md, Anexo A).
-   Tailwind los publica como utilidades (`bg-saie-primary`, `shadow-saie-card`,
-   `max-w-saie-ancho`…) y como variables CSS (`var(--color-saie-primary)`). */
+   Tailwind los publica como utilidades (`bg-saie-primary`, `shadow-sm`,
+   `max-w-7xl`…) y como variables CSS (`var(--color-saie-primary)`). */
 @theme {
   /* Color · marca */
   --color-saie-primary: #7b1113;
@@ -32,19 +32,6 @@
   /* Tipografía: una sola familia (Inter) y una pila monoespaciada explícita */
   --font-sans: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', Consolas, 'SF Mono', Menlo, monospace;
-
-  /* Elevación */
-  --shadow-saie-card: 0 2px 8px rgb(34 34 34 / 0.08);
-  --shadow-saie-pop: 0 8px 24px rgb(34 34 34 / 0.16);
-  --shadow-saie-accion: 0 2px 8px rgb(123 17 19 / 0.25);
-
-  /* Radios */
-  --radius-saie-campo: 10px;
-
-  /* Anchos de contenedor: lectura (formularios y perfil), normal y ancho (panel y tableros) */
-  --container-saie-lectura: 56rem;
-  --container-saie-normal: 72rem;
-  --container-saie-ancho: 80rem;
 }
 
 body {
@@ -192,7 +179,7 @@ html.saie-sin-movimiento path.saie-trazo {
 .saie-lift:hover,
 .saie-lift:focus-visible {
   transform: translateY(-3px);
-  box-shadow: var(--shadow-saie-pop);
+  box-shadow: var(--shadow-lg);
 }
 
 /* Rayado del estado «Ocupado»: el color nunca es el único canal. */

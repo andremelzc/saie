@@ -154,7 +154,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
         role="status"
         aria-label="Consultando espacios"
         aria-busy="true"
-        className={`w-full max-w-xl mx-auto p-4 sm:p-6 bg-white border border-saie-divider rounded-xl shadow-saie-card flex flex-col gap-3 ${className}`}
+        className={`w-full max-w-xl mx-auto p-4 sm:p-6 bg-white border border-saie-divider rounded-xl shadow-sm flex flex-col gap-3 ${className}`}
       >
         <div
           aria-hidden="true"
@@ -181,7 +181,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
       <div
         role="alert"
         aria-label="Error de consulta"
-        className={`w-full max-w-xl mx-auto p-4 sm:p-5 bg-white border border-rose-200 border-l-4 border-l-saie-danger rounded-xl shadow-saie-card flex items-start gap-3.5 ${className}`}
+        className={`w-full max-w-xl mx-auto p-4 sm:p-5 bg-white border border-rose-200 border-l-4 border-l-saie-danger rounded-xl shadow-sm flex items-start gap-3.5 ${className}`}
       >
         <div className="w-10 h-10 shrink-0 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center text-saie-danger">
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
@@ -208,7 +208,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
       <div
         role="status"
         aria-label="Sin resultados de consulta"
-        className={`w-full max-w-xl mx-auto p-6 sm:p-8 bg-white border border-saie-divider rounded-xl shadow-saie-card flex flex-col items-center text-center ${className}`}
+        className={`w-full max-w-xl mx-auto p-6 sm:p-8 bg-white border border-saie-divider rounded-xl shadow-sm flex flex-col items-center text-center ${className}`}
       >
         <div className="w-12 h-12 rounded-full bg-saie-canvas border border-saie-divider flex items-center justify-center text-saie-primary mb-3">
           <svg
@@ -260,7 +260,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
   return (
     <article
       aria-label={`Resultado de consulta para ${codigoCurso || 'curso'} sección ${codigoSeccion}`}
-      className={`w-full max-w-xl mx-auto bg-white border border-saie-divider rounded-xl shadow-saie-card p-4 sm:p-6 flex flex-col gap-4 text-saie-text transition-all ${className}`}
+      className={`w-full max-w-xl mx-auto bg-white border border-saie-divider rounded-xl shadow-sm p-4 sm:p-6 flex flex-col gap-4 text-saie-text transition-all ${className}`}
     >
       {/* Cabecera del Curso y Estado */}
       <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 border-b border-saie-divider pb-3">

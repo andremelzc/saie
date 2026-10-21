@@ -19,7 +19,7 @@ export const InicioDocentePage: React.FC = () => (
 
       <section
         aria-label="Portal en preparación"
-        className="flex flex-col gap-4 rounded-2xl border border-saie-divider bg-white p-6 shadow-saie-card"
+        className="flex flex-col gap-4 rounded-2xl border border-saie-divider bg-white p-6 shadow-sm"
       >
         <output className="m-0 block text-base font-bold text-saie-primary">
           {MENSAJE_EN_DESARROLLO}

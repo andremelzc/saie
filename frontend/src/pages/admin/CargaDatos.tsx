@@ -457,7 +457,7 @@ export const ZonaCarga: React.FC<{
       id={`carga-${tipo}`}
       tabIndex={-1}
       aria-label={titulo}
-      className="flex h-full scroll-mt-24 flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-saie-card focus:outline-3 focus:outline-offset-2 focus:outline-saie-primary"
+      className="flex h-full scroll-mt-24 flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-sm focus:outline-3 focus:outline-offset-2 focus:outline-saie-primary"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
@@ -689,7 +689,7 @@ const TarjetaPlantilla: React.FC<{ plantilla: PlantillaCSV }> = ({ plantilla }) 
   const esPantallaAncha = usePantallaAncha(640);
 
   return (
-    <article className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-saie-card">
+    <article className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-sm">
       <header className="flex flex-col gap-1">
         <h3 className="m-0 text-base font-bold text-saie-text">{plantilla.titulo}</h3>
         <p className="m-0 text-sm text-saie-muted">{plantilla.descripcion}</p>

@@ -2,6 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { RUTAS } from '../../config/rutas';
 import { useTituloPagina } from '../../hooks/useTituloPagina';
+import { Contenedor } from '../ui/Contenedor';
+import type { AnchoContenedor } from '../ui/Contenedor';
 import { EnlaceSaltar } from '../ui/EnlaceSaltar';
 import { Icono } from './ElementosHorario';
 import NavegacionEstudiante from './NavegacionEstudiante';
@@ -15,7 +17,7 @@ export interface CabeceraPantallaProps {
   /** Trazo del ícono que acompaña al título. */
   trazoIcono?: string;
   /** Ancho máximo del contenido (debe coincidir con el de la pantalla). */
-  ancho?: 'max-w-saie-lectura' | 'max-w-saie-normal';
+  ancho?: Exclude<AnchoContenedor, 'ancho'>;
   /** Contenido extra a la derecha (insignias, datos rápidos). */
   extra?: React.ReactNode;
 }
@@ -27,7 +29,7 @@ export const CabeceraPantalla: React.FC<CabeceraPantallaProps> = ({
   volverA = RUTAS.inicioAlumno,
   etiquetaVolver = 'Volver al inicio',
   trazoIcono,
-  ancho = 'max-w-saie-normal',
+  ancho = 'normal',
   extra,
 }) => {
   useTituloPagina(titulo);
@@ -59,7 +61,7 @@ export const CabeceraPantalla: React.FC<CabeceraPantallaProps> = ({
             d="M50 130V90h30v40M250 130V90h30v40M160 130V90h30v40"
           />
         </svg>
-        <div className={`relative mx-auto flex w-full ${ancho} flex-col gap-2 px-4 pb-7 pt-3`}>
+        <Contenedor ancho={ancho} className="relative flex flex-col gap-2 pb-7 pt-3">
           <Link
             to={volverA}
             className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-full bg-white/10 px-3.5 text-sm font-medium text-white no-underline transition-colors hover:bg-white/20 focus-visible:outline-white"
@@ -84,9 +86,9 @@ export const CabeceraPantalla: React.FC<CabeceraPantallaProps> = ({
             </div>
             {extra}
           </div>
-        </div>
+        </Contenedor>
       </header>
-      <NavegacionEstudiante />
+      <NavegacionEstudiante ancho={ancho} />
     </>
   );
 };

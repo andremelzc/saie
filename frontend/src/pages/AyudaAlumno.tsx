@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
+import { Contenedor } from '../components/ui/Contenedor';
 import { ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
 import { RUTAS } from '../config/rutas';
 
@@ -108,13 +109,15 @@ export const AyudaAlumno: React.FC = () => (
       titulo="Ayuda"
       subtitulo="Respuestas a las dudas más comunes."
       trazoIcono={TRAZO_AYUDA}
-      ancho="max-w-saie-lectura"
+      ancho="lectura"
     />
 
-    <main
+    <Contenedor
+      como="main"
+      ancho="lectura"
       id={ID_CONTENIDO}
       tabIndex={-1}
-      className="focus:outline-none mx-auto flex w-full max-w-saie-lectura flex-col gap-8 px-4 py-6"
+      className="flex flex-col gap-8 py-6 focus:outline-none"
     >
       {GRUPOS.map((grupo) => (
         <section
@@ -129,7 +132,7 @@ export const AyudaAlumno: React.FC = () => (
             {grupo.preguntas.map((p) => (
               <details
                 key={p.pregunta}
-                className="group rounded-2xl border border-saie-divider bg-white shadow-saie-card"
+                className="group rounded-2xl border border-saie-divider bg-white shadow-sm"
               >
                 <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 py-3 text-base font-medium marker:content-none focus-visible:outline-3 focus-visible:outline-saie-text [&::-webkit-details-marker]:hidden">
                   <span>{p.pregunta}</span>
@@ -153,7 +156,7 @@ export const AyudaAlumno: React.FC = () => (
         ¿No encontraste lo que buscabas? Acércate a la oficina académica de la Facultad de
         Ingeniería.
       </p>
-    </main>
+    </Contenedor>
   </div>
 );
 

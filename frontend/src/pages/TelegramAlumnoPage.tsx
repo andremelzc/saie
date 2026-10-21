@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
 import { EstadoError } from '../components/ui/EstadoError';
+import { Contenedor } from '../components/ui/Contenedor';
 import { ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
 import { EsqueletoCarga, Icono } from '../components/estudiante/ElementosHorario';
 import { Boton } from '../components/ui/Boton';
@@ -79,13 +80,15 @@ export const TelegramAlumnoPage: React.FC = () => {
         titulo="Avisos por Telegram"
         subtitulo="Recibe un aviso cuando cambie el aula o el laboratorio de una de tus clases."
         trazoIcono={TRAZO_TELEGRAM}
-        ancho="max-w-saie-lectura"
+        ancho="lectura"
       />
 
-      <main
+      <Contenedor
+        como="main"
+        ancho="lectura"
         id={ID_CONTENIDO}
         tabIndex={-1}
-        className="focus:outline-none mx-auto flex w-full max-w-saie-lectura flex-col gap-6 px-4 py-6"
+        className="flex flex-col gap-6 py-6 focus:outline-none"
       >
         {cargando && !estado ? (
           <EsqueletoCarga texto="Consultando tu vinculación…" />
@@ -106,7 +109,7 @@ export const TelegramAlumnoPage: React.FC = () => {
 
               <section
                 aria-labelledby="titulo-telegram"
-                className="rounded-2xl border border-saie-divider bg-white p-5 shadow-saie-card sm:p-6"
+                className="rounded-2xl border border-saie-divider bg-white p-5 shadow-sm sm:p-6"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
@@ -223,7 +226,7 @@ export const TelegramAlumnoPage: React.FC = () => {
 
               <section
                 aria-labelledby="titulo-como-vincular"
-                className="rounded-2xl border border-saie-divider bg-white p-5 shadow-saie-card sm:p-6"
+                className="rounded-2xl border border-saie-divider bg-white p-5 shadow-sm sm:p-6"
               >
                 <h2 id="titulo-como-vincular" className="m-0 text-xl font-bold leading-7">
                   Cómo vincular tu cuenta
@@ -297,7 +300,7 @@ export const TelegramAlumnoPage: React.FC = () => {
 
               <section
                 aria-labelledby="titulo-comandos"
-                className="rounded-2xl border border-saie-divider bg-white p-5 shadow-saie-card sm:p-6"
+                className="rounded-2xl border border-saie-divider bg-white p-5 shadow-sm sm:p-6"
               >
                 <h2 id="titulo-comandos" className="m-0 text-xl font-bold leading-7">
                   Qué puedes consultar en el bot
@@ -320,7 +323,7 @@ export const TelegramAlumnoPage: React.FC = () => {
             </>
           )
         )}
-      </main>
+      </Contenedor>
     </div>
   );
 };

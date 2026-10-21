@@ -220,7 +220,7 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
               aria-required="true"
               aria-invalid={tieneError}
               aria-describedby={tieneError ? 'mensaje-error-consulta' : idAyuda}
-              className={`w-full h-12 pl-11 pr-4 rounded-saie-campo bg-white text-saie-text placeholder:text-saie-muted text-base border transition-colors outline-hidden ${
+              className={`w-full h-12 pl-11 pr-4 rounded-xl bg-white text-saie-text placeholder:text-saie-muted text-base border transition-colors outline-hidden ${
                 tieneError
                   ? 'border-2 border-saie-danger focus:ring-3 focus:ring-saie-danger/20'
                   : 'border-saie-border hover:border-saie-text/60 focus:border-2 focus:border-saie-primary focus:ring-3 focus:ring-saie-primary/20'
@@ -232,7 +232,7 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
             type="submit"
             disabled={cargando}
             aria-busy={cargando}
-            className="w-full lg:w-auto min-w-[120px] h-12 px-6 rounded-xl font-medium text-base text-white transition-all duration-150 flex items-center justify-center gap-2 shadow-saie-accion focus:outline-hidden focus:ring-3 focus:ring-saie-text focus:ring-offset-2 bg-saie-primary hover:bg-saie-primary-dark active:bg-saie-primary-dark disabled:bg-saie-divider disabled:text-saie-muted disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
+            className="w-full lg:w-auto min-w-[120px] h-12 px-6 rounded-xl font-medium text-base text-white transition-all duration-150 flex items-center justify-center gap-2 shadow-md focus:outline-hidden focus:ring-3 focus:ring-saie-text focus:ring-offset-2 bg-saie-primary hover:bg-saie-primary-dark active:bg-saie-primary-dark disabled:bg-saie-divider disabled:text-saie-muted disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
           >
             {cargando ? (
               <>

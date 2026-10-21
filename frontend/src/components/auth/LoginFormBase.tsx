@@ -33,7 +33,7 @@ const PORTAL_DE_ROL: Record<'ALUMNO' | 'DOCENTE' | 'ADMIN', PortalId> = {
 
 /** Clases comunes de los campos de texto (altura 48 px, foco guinda, ver guía §4.5). */
 const CLASES_CAMPO =
-  'w-full h-12 rounded-saie-campo bg-white text-saie-text placeholder-saie-muted text-base border border-saie-border hover:border-saie-text/60 focus:border-saie-primary focus:ring-2 focus:ring-saie-primary/20 transition-colors outline-hidden disabled:bg-saie-canvas-dark disabled:text-saie-muted';
+  'w-full h-12 rounded-xl bg-white text-saie-text placeholder-saie-muted text-base border border-saie-border hover:border-saie-text/60 focus:border-saie-primary focus:ring-2 focus:ring-saie-primary/20 transition-colors outline-hidden disabled:bg-saie-canvas-dark disabled:text-saie-muted';
 
 export interface LoginFormBaseProps {
   rol: 'ALUMNO' | 'DOCENTE' | 'ADMIN';
@@ -107,7 +107,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
 
   return (
     <div
-      className={`saie-rise relative w-full max-w-md md:max-w-lg lg:max-w-md mx-auto overflow-hidden bg-white border border-saie-divider rounded-xl shadow-saie-pop p-6 sm:p-8 flex flex-col gap-5 text-saie-text ${className}`}
+      className={`saie-rise relative w-full max-w-md md:max-w-lg lg:max-w-md mx-auto overflow-hidden bg-white border border-saie-divider rounded-xl shadow-lg p-6 sm:p-8 flex flex-col gap-5 text-saie-text ${className}`}
     >
       {/* Acento superior de la tarjeta */}
       <span
@@ -121,7 +121,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
           src={isotipoPlaca}
           alt=""
           aria-hidden="true"
-          className="h-16 w-16 rounded-2xl shadow-saie-card"
+          className="h-16 w-16 rounded-2xl shadow-sm"
         />
         <span className="mt-1 inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-saie-primary/10 text-saie-primary text-xs font-medium tracking-[0.2px]">
           <IconoPortal portal={portal.id} className="h-3.5 w-3.5" />
@@ -326,7 +326,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
           type="submit"
           disabled={!esValido || cargando}
           aria-busy={cargando}
-          className="group w-full h-12 mt-2 px-6 rounded-xl font-medium text-base text-white shadow-saie-accion transition-all duration-200 flex items-center justify-center gap-2 bg-saie-primary hover:bg-saie-primary-dark hover:shadow-saie-accion active:bg-saie-primary-dark disabled:bg-saie-divider disabled:text-saie-muted disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
+          className="group w-full h-12 mt-2 px-6 rounded-xl font-medium text-base text-white shadow-md transition-all duration-200 flex items-center justify-center gap-2 bg-saie-primary hover:bg-saie-primary-dark hover:shadow-md active:bg-saie-primary-dark disabled:bg-saie-divider disabled:text-saie-muted disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
         >
           {cargando ? (
             <>

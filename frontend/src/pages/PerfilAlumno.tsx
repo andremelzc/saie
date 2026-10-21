@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
 import { EstadoError } from '../components/ui/EstadoError';
+import { Contenedor } from '../components/ui/Contenedor';
 import { ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
 import { Icono } from '../components/estudiante/ElementosHorario';
 import SeccionEditable from '../components/estudiante/SeccionEditable';
@@ -150,7 +151,7 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
       <>
         <section
           aria-label="Datos institucionales"
-          className="flex flex-col gap-5 rounded-2xl border border-saie-divider bg-white p-5 shadow-saie-card sm:flex-row sm:items-center sm:p-6"
+          className="flex flex-col gap-5 rounded-2xl border border-saie-divider bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:p-6"
         >
           <div
             aria-hidden="true"
@@ -224,16 +225,18 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
         titulo="Mi perfil"
         subtitulo="Tus datos personales y tu ficha médica."
         trazoIcono={TRAZO_USUARIO}
-        ancho="max-w-saie-lectura"
+        ancho="lectura"
       />
 
-      <main
+      <Contenedor
+        como="main"
+        ancho="lectura"
         id={ID_CONTENIDO}
         tabIndex={-1}
-        className="focus:outline-none mx-auto flex w-full max-w-saie-lectura flex-col gap-6 px-4 py-6"
+        className="flex flex-col gap-6 py-6 focus:outline-none"
       >
         {renderCuerpo()}
-      </main>
+      </Contenedor>
     </div>
   );
 };

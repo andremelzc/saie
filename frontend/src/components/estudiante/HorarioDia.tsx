@@ -76,7 +76,7 @@ export const HorarioDia: React.FC<HorarioDiaProps> = ({
               onClick={() => onCambiarDia(d)}
               className={`flex min-h-14 cursor-pointer flex-col items-center justify-center rounded-xl border text-sm transition-all duration-200 ${
                 activo
-                  ? 'scale-105 border-saie-primary bg-saie-primary font-bold text-white shadow-saie-accion'
+                  ? 'scale-105 border-saie-primary bg-saie-primary font-bold text-white shadow-md'
                   : 'border-saie-divider bg-white font-medium text-saie-text hover:-translate-y-0.5 hover:bg-saie-primary/5'
               }`}
             >
@@ -123,7 +123,7 @@ export const HorarioDia: React.FC<HorarioDiaProps> = ({
             return (
               <li
                 key={`${sesion.seccionId}-${sesion.horaInicio}`}
-                className={`flex gap-3 rounded-xl border border-l-4 border-saie-divider bg-white p-4 shadow-saie-card ${
+                className={`flex gap-3 rounded-xl border border-l-4 border-saie-divider bg-white p-4 shadow-sm ${
                   indice === indiceDestacada ? 'ring-2 ring-saie-primary' : ''
                 } ${estadoClase === 'EN_CURSO' ? 'saie-respira' : ''}`}
                 style={{ borderLeftColor: color.borde }}

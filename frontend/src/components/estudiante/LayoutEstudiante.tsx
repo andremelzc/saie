@@ -6,6 +6,7 @@ import { RUTAS } from '../../config/rutas';
 import { useAuth } from '../../context/useAuth';
 import { useTituloPagina } from '../../hooks/useTituloPagina';
 import { etiquetaRol } from '../../utils/admin';
+import { Contenedor } from '../ui/Contenedor';
 import { EnlaceSaltar, ID_CONTENIDO } from '../ui/EnlaceSaltar';
 import NavegacionEstudiante from './NavegacionEstudiante';
 
@@ -47,7 +48,7 @@ export const LayoutEstudiante: React.FC<LayoutEstudianteProps> = ({
     >
       <EnlaceSaltar />
       <header className="bg-saie-primary text-white">
-        <div className="mx-auto flex h-18 w-full max-w-saie-ancho items-center justify-between gap-3 px-4">
+        <Contenedor className="flex h-18 items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-4">
             <Link to={RUTAS.inicioAlumno} className="flex shrink-0 items-center">
               <img src={logoBlanco} alt="SAIE" className="h-9 w-auto" />
@@ -65,15 +66,16 @@ export const LayoutEstudiante: React.FC<LayoutEstudianteProps> = ({
             </p>
             <BotonCerrarSesion className="h-10! border-white/30! bg-white/10! px-4! text-sm! text-white! hover:bg-white/20!" />
           </div>
-        </div>
+        </Contenedor>
       </header>
 
       <NavegacionEstudiante />
 
-      <main
+      <Contenedor
+        como="main"
         id={ID_CONTENIDO}
         tabIndex={-1}
-        className={`mx-auto flex w-full max-w-saie-ancho flex-1 flex-col gap-4 px-4 py-4 focus:outline-none ${
+        className={`flex flex-1 flex-col gap-4 py-4 focus:outline-none ${
           dashboard ? 'lg:min-h-0 lg:overflow-hidden' : ''
         }`}
       >
@@ -87,7 +89,7 @@ export const LayoutEstudiante: React.FC<LayoutEstudianteProps> = ({
           {extra}
         </div>
         {children}
-      </main>
+      </Contenedor>
     </div>
   );
 };

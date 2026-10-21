@@ -37,7 +37,7 @@ export const AvisoEnDesarrollo: React.FC<AvisoEnDesarrolloProps> = ({
   <section
     aria-label={titulo ? undefined : 'Funcionalidad en desarrollo'}
     aria-labelledby={titulo ? 'titulo-pantalla' : undefined}
-    className="relative overflow-hidden rounded-2xl border border-saie-divider bg-white p-6 shadow-saie-card sm:p-8"
+    className="relative overflow-hidden rounded-2xl border border-saie-divider bg-white p-6 shadow-sm sm:p-8"
   >
     <span
       aria-hidden="true"

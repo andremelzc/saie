@@ -5,6 +5,7 @@ import logoBlanco from '../../assets/logo-blanco.svg';
 import { useAuth } from '../../context/useAuth';
 import { useTituloPagina } from '../../hooks/useTituloPagina';
 import { etiquetaRol, pestanasDeRol } from '../../utils/admin';
+import { Contenedor } from '../ui/Contenedor';
 import { EnlaceSaltar, ID_CONTENIDO } from '../ui/EnlaceSaltar';
 import { EstadoError } from '../ui/EstadoError';
 
@@ -71,7 +72,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
     >
       <EnlaceSaltar />
       <header className="bg-saie-primary text-white saie-no-imprimir">
-        <div className="mx-auto flex h-18 w-full max-w-saie-ancho items-center justify-between gap-3 px-4">
+        <Contenedor className="flex h-18 items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-4">
             <img src={logoBlanco} alt="SAIE" className="h-9 w-auto shrink-0" />
             <span className="hidden rounded-full bg-white/15 px-3 py-1 text-sm font-medium sm:inline-flex">
@@ -87,14 +88,14 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
             </p>
             <BotonCerrarSesion className="h-10! border-white/30! bg-white/10! px-4! text-sm! text-white! hover:bg-white/20!" />
           </div>
-        </div>
+        </Contenedor>
       </header>
 
       <nav
         aria-label="Navegación del panel"
         className="saie-no-imprimir fixed inset-x-0 bottom-0 z-30 border-t border-saie-divider bg-white md:static md:border-b md:border-t-0"
       >
-        <ul className="mx-auto m-0 flex w-full max-w-saie-ancho list-none gap-1 p-0 md:px-4 md:py-2">
+        <Contenedor como="ul" className="m-0 flex list-none gap-1 py-0 md:py-2">
           {pestanas.map((p) => (
             <li
               key={p.to}
@@ -106,13 +107,14 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
               </NavLink>
             </li>
           ))}
-        </ul>
+        </Contenedor>
       </nav>
 
-      <main
+      <Contenedor
+        como="main"
         id={ID_CONTENIDO}
         tabIndex={-1}
-        className={`mx-auto flex w-full max-w-saie-ancho flex-1 flex-col gap-4 px-4 py-4 focus:outline-none ${
+        className={`flex flex-1 flex-col gap-4 py-4 focus:outline-none ${
           dashboard ? 'lg:min-h-0 lg:overflow-hidden' : ''
         }`}
       >
@@ -126,7 +128,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
           {acciones}
         </div>
         {children}
-      </main>
+      </Contenedor>
     </div>
   );
 };

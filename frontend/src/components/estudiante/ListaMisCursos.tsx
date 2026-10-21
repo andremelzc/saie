@@ -98,7 +98,7 @@ export const ListaMisCursos: React.FC<ListaMisCursosProps> = ({
             <li key={grupo.codigoCurso}>
               <article
                 aria-labelledby={idTitulo}
-                className="saie-lift flex flex-col gap-4 rounded-2xl border border-l-[6px] border-saie-divider bg-white p-5 shadow-saie-card"
+                className="saie-lift flex flex-col gap-4 rounded-2xl border border-l-[6px] border-saie-divider bg-white p-5 shadow-sm"
                 style={{ borderLeftColor: color.borde }}
               >
                 <header className="flex flex-col gap-1">

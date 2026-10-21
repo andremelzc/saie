@@ -265,7 +265,7 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
   return (
     <section
       aria-labelledby={idTitulo}
-      className="rounded-2xl border border-saie-divider bg-white p-5 shadow-saie-card sm:p-6"
+      className="rounded-2xl border border-saie-divider bg-white p-5 shadow-sm sm:p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">

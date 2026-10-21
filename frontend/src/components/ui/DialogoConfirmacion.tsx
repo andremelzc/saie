@@ -61,7 +61,7 @@ export const DialogoConfirmacion: React.FC<DialogoConfirmacionProps> = ({
         aria-modal="true"
         aria-labelledby={idTitulo}
         aria-describedby={idDescripcion}
-        className="saie-deslizar relative flex w-full max-w-md flex-col gap-4 rounded-2xl bg-white p-6 shadow-saie-pop"
+        className="saie-deslizar relative flex w-full max-w-md flex-col gap-4 rounded-2xl bg-white p-6 shadow-lg"
       >
         <h2 id={idTitulo} className="m-0 text-lg font-bold text-saie-text">
           {titulo}

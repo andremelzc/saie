@@ -37,7 +37,7 @@ const PortalCard: React.FC<{ portal: Portal; indice: number }> = ({ portal: p, i
         data-testid={`portal-${p.id}`}
         aria-label={`Ingresar al ${p.titulo}`}
         onMouseMove={seguirCursor}
-        className="group relative overflow-hidden h-full flex flex-col bg-white rounded-xl p-5 shadow-saie-card hover:shadow-saie-pop hover:-translate-y-1 active:translate-y-0 active:bg-saie-canvas transition-all duration-300 no-underline text-saie-text"
+        className="group relative overflow-hidden h-full flex flex-col bg-white rounded-xl p-5 shadow-sm hover:shadow-lg hover:-translate-y-1 active:translate-y-0 active:bg-saie-canvas transition-all duration-300 no-underline text-saie-text"
       >
         {/* Brillo que sigue al cursor */}
         <span
@@ -112,8 +112,8 @@ export const Home: React.FC = () => {
     <div className="min-h-screen bg-saie-canvas text-saie-text flex flex-col">
       <EnlaceSaltar />
       {/* Barra superior */}
-      <header className="sticky top-0 z-10 shrink-0 bg-saie-primary text-white shadow-saie-card">
-        <div className="max-w-saie-normal mx-auto px-4 md:px-6 h-18 flex items-center">
+      <header className="sticky top-0 z-10 shrink-0 bg-saie-primary text-white shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 h-18 flex items-center">
           <h1 className="m-0 flex items-center">
             <img src={logoBlanco} alt="SAIE" className="h-10 w-auto" />
           </h1>
@@ -125,9 +125,9 @@ export const Home: React.FC = () => {
 
       {/* Contenido: la página crece hacia abajo cuando no cabe en la pantalla (un solo bloque) */}
       <main id={ID_CONTENIDO} tabIndex={-1} className="flex-1 focus:outline-none">
-        <div className="max-w-saie-normal w-full mx-auto px-4 md:px-6 py-6 md:py-8">
+        <div className="max-w-6xl w-full mx-auto px-4 md:px-6 py-6 md:py-8">
           {/* Bienvenida (tarjeta destacada: una por pantalla) */}
-          <section className="saie-rise relative overflow-hidden rounded-xl bg-gradient-to-br from-saie-primary to-saie-primary-dark text-white p-6 md:p-8 shadow-saie-pop">
+          <section className="saie-rise relative overflow-hidden rounded-xl bg-gradient-to-br from-saie-primary to-saie-primary-dark text-white p-6 md:p-8 shadow-lg">
             <div
               aria-hidden="true"
               className="saie-float pointer-events-none absolute -right-4 md:right-10 top-1/2 -translate-y-1/2 hidden md:block"
@@ -178,7 +178,7 @@ export const Home: React.FC = () => {
       </main>
 
       <footer className="shrink-0 border-t border-saie-divider bg-white">
-        <div className="max-w-saie-normal mx-auto px-4 md:px-6 py-3 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
           <img src={logoHorizontal} alt="" aria-hidden="true" className="h-7 w-auto self-start" />
           <div className="text-xs text-saie-muted sm:text-right">
             <p className="m-0">SAIE &copy; {new Date().getFullYear()} · UNMSM · Grupo 6</p>

@@ -72,7 +72,7 @@ export const ProveedorAvisos: React.FC<{ children: React.ReactNode }> = ({ child
   const tarjeta = (a: AvisoItem) => (
     <div
       key={a.id}
-      className={`pointer-events-auto flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-saie-pop ${ESTILOS[a.tono]}`}
+      className={`pointer-events-auto flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-lg ${ESTILOS[a.tono]}`}
     >
       <span className="min-w-0 flex-1">{a.texto}</span>
       <button

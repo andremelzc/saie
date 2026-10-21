@@ -44,7 +44,7 @@ export function SelectorSegmentado<T extends string>({
       >
         <span
           aria-hidden="true"
-          className="saie-selector-pulgar absolute inset-y-0 left-0 rounded-lg bg-saie-primary shadow-saie-accion"
+          className="saie-selector-pulgar absolute inset-y-0 left-0 rounded-lg bg-saie-primary shadow-md"
           style={{ width: `${100 / total}%`, transform: `translateX(${indice * 100}%)` }}
         />
         {opciones.map((opcion) => {

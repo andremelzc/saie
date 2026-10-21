@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import BotonCerrarSesion from './auth/BotonCerrarSesion';
 import logoBlanco from '../assets/logo-blanco.svg';
 import { useAuth } from '../context/useAuth';
+import { Contenedor } from './ui/Contenedor';
 import { etiquetaRol } from '../utils/admin';
 
 export interface CabeceraPortalProps {
@@ -16,7 +17,7 @@ export const CabeceraPortal: React.FC<CabeceraPortalProps> = ({ portal }) => {
 
   return (
     <header className="bg-saie-primary text-white">
-      <div className="mx-auto flex h-18 w-full max-w-saie-normal items-center justify-between gap-3 px-4">
+      <Contenedor ancho="normal" className="flex h-18 items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-4">
           <Link to="/" aria-label="Ir al inicio de SAIE" className="shrink-0">
             <img src={logoBlanco} alt="SAIE" className="h-10 w-auto" />
@@ -34,7 +35,7 @@ export const CabeceraPortal: React.FC<CabeceraPortalProps> = ({ portal }) => {
           </p>
           <BotonCerrarSesion className="h-11! border-white/30! bg-white/10! px-5! text-sm! text-white! hover:bg-white/20!" />
         </div>
-      </div>
+      </Contenedor>
     </header>
   );
 };

@@ -13,7 +13,7 @@ export const AccesoDenegado: React.FC<{ rol: RolCuenta }> = ({ rol }) => {
       className="min-h-screen bg-saie-canvas text-saie-text flex flex-col justify-center items-center px-4 py-8"
       aria-label="Acceso no autorizado"
     >
-      <div className="w-full max-w-md bg-white border border-saie-divider rounded-2xl shadow-saie-card p-6 sm:p-8 flex flex-col gap-4 text-center">
+      <div className="w-full max-w-md bg-white border border-saie-divider rounded-2xl shadow-sm p-6 sm:p-8 flex flex-col gap-4 text-center">
         <h1 className="text-2xl font-bold tracking-tight">Acceso no autorizado</h1>
         <p role="alert" className="text-base text-saie-text">
           Tu cuenta no tiene permiso para ver esta sección.

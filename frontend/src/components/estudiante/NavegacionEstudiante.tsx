@@ -1,6 +1,8 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { RUTAS } from '../../config/rutas';
+import { Contenedor } from '../ui/Contenedor';
+import type { AnchoContenedor } from '../ui/Contenedor';
 
 const TRAZO_HORARIO =
   'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5';
@@ -42,12 +44,20 @@ const claseLink = ({ isActive }: { isActive: boolean }) =>
  * volver al inicio para cambiar de sitio. En móvil se fija abajo; en escritorio va bajo la
  * cabecera, como en el panel administrativo.
  */
-export const NavegacionEstudiante: React.FC = () => (
+export interface NavegacionEstudianteProps {
+  /**
+   * Ancho máximo del contenido: la barra debe medir lo mismo que la cabecera y el contenido de
+   * la pantalla para que sus bordes calcen (en las pantallas de lectura es más estrecho).
+   */
+  ancho?: AnchoContenedor;
+}
+
+export const NavegacionEstudiante: React.FC<NavegacionEstudianteProps> = ({ ancho = 'ancho' }) => (
   <nav
     aria-label="Navegación del área del estudiante"
     className="z-30 border-b border-saie-divider bg-white md:static"
   >
-    <ul className="mx-auto m-0 flex w-full max-w-saie-ancho list-none gap-1 p-0 md:px-4 md:py-2">
+    <Contenedor como="ul" ancho={ancho} className="m-0 flex list-none gap-1 py-0 md:py-2">
       {ENLACES_ESTUDIANTE.map((enlace) => (
         <li key={enlace.to} className="flex flex-1 md:flex-none">
           <NavLink to={enlace.to} className={claseLink}>
@@ -67,7 +77,7 @@ export const NavegacionEstudiante: React.FC = () => (
           </NavLink>
         </li>
       ))}
-    </ul>
+    </Contenedor>
   </nav>
 );
 

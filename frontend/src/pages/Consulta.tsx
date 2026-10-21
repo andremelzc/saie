@@ -194,8 +194,8 @@ export const Consulta: React.FC = () => {
     <div className="min-h-screen bg-saie-canvas text-saie-text">
       <EnlaceSaltar />
       {/* Header fijo con ancho extendido de 1200px para separar el logo y el enlace de retorno */}
-      <header className="sticky top-0 z-10 bg-saie-primary text-white shadow-saie-card">
-        <div className="max-w-saie-normal mx-auto px-4 md:px-6 h-18 flex items-center justify-between">
+      <header className="sticky top-0 z-10 bg-saie-primary text-white shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 h-18 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-white no-underline">
             <img src={logoBlanco} alt="SAIE" className="h-10 w-auto shrink-0" />
           </Link>
@@ -241,7 +241,7 @@ export const Consulta: React.FC = () => {
           </p>
         </div>
 
-        <div className="saie-rise relative overflow-hidden bg-white border border-saie-divider rounded-2xl shadow-saie-card p-4 pt-5 sm:p-6 sm:pt-7">
+        <div className="saie-rise relative overflow-hidden bg-white border border-saie-divider rounded-2xl shadow-sm p-4 pt-5 sm:p-6 sm:pt-7">
           <span
             aria-hidden="true"
             className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-saie-primary to-saie-primary-light"
