@@ -1,9 +1,10 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import BotonCerrarSesion from '../auth/BotonCerrarSesion';
-import logoBlanco from '../../assets/logo-blanco.svg';
+import CabeceraPortal from '../CabeceraPortal';
+import { RUTAS } from '../../config/rutas';
+import { AvisoError } from '../ui/AvisoError';
 import { useAuth } from '../../context/useAuth';
-import { etiquetaRol, pestanasDeRol } from '../../utils/admin';
+import { pestanasDeRol } from '../../utils/admin';
 
 /**
  * Marco común del panel administrativo.
@@ -65,31 +66,13 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
         dashboard ? 'lg:h-screen lg:overflow-hidden' : ''
       }`}
     >
-      <header className="bg-saie-primary text-white saie-no-imprimir">
-        <div className="mx-auto flex h-[72px] w-full max-w-6xl items-center justify-between gap-3 px-4">
-          <div className="flex min-w-0 items-center gap-4">
-            <img src={logoBlanco} alt="SAIE" className="h-9 w-auto shrink-0" />
-            <span className="hidden rounded-full bg-white/15 px-3 py-1 text-sm font-medium sm:inline-flex">
-              {etiquetaRol(sesion?.rol)}
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <p className="m-0 hidden text-right text-xs leading-4 text-white/80 sm:block">
-              <span>Sesión activa</span>
-              <strong className="block text-sm font-bold text-white">
-                {etiquetaRol(sesion?.rol)}
-              </strong>
-            </p>
-            <BotonCerrarSesion className="h-10! border-white/30! bg-white/10! px-4! text-sm! text-white! hover:bg-white/20!" />
-          </div>
-        </div>
-      </header>
+      <CabeceraPortal inicioTo={RUTAS.inicioAdmin} className="saie-no-imprimir" />
 
       <nav
         aria-label="Navegación del panel"
         className="saie-no-imprimir fixed inset-x-0 bottom-0 z-30 border-t border-saie-divider bg-white md:static md:border-b md:border-t-0"
       >
-        <ul className="mx-auto m-0 flex w-full max-w-6xl list-none gap-1 p-0 md:px-4 md:py-2">
+        <ul className="mx-auto m-0 flex w-full max-w-7xl list-none gap-1 p-0 md:px-4 md:py-2">
           {pestanas.map((p) => (
             <li
               key={p.to}
@@ -124,26 +107,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
   );
 };
 
-/** Mensaje de error uniforme con botón de reintento. */
-export const AvisoError: React.FC<{ mensaje: string; onReintentar?: () => void }> = ({
-  mensaje,
-  onReintentar,
-}) => (
-  <div
-    role="alert"
-    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-saie-danger/30 bg-saie-danger-soft px-4 py-3 text-sm text-saie-danger-strong"
-  >
-    <span>{mensaje}</span>
-    {onReintentar && (
-      <button
-        type="button"
-        onClick={onReintentar}
-        className="rounded-lg border border-saie-danger/40 px-3 py-1 font-semibold hover:bg-white"
-      >
-        Reintentar
-      </button>
-    )}
-  </div>
-);
+/** Se reexporta para las pantallas que ya lo importaban desde aquí. */
+export { AvisoError };
 
 export default LayoutAdmin;

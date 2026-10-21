@@ -10,7 +10,9 @@ describe('Utils de Administración', () => {
     expect(describirMotivoEscalamiento('[SOFTWARE_FALTANTE] Stack incompleto').etiqueta).toBe(
       'Software faltante',
     );
-    expect(describirMotivoEscalamiento('[TIPO_NUEVO] Detalle').etiqueta).toBe('Escalamiento');
+    expect(describirMotivoEscalamiento('[TIPO_NUEVO] Detalle').etiqueta).toBe(
+      'Motivo sin clasificar',
+    );
   });
 
   it('conserva los motivos escritos a mano y completa los vacíos', () => {

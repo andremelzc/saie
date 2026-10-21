@@ -2,12 +2,11 @@ import React from 'react';
 import type { EspacioAsignadoDTO } from '../../types/consulta';
 import type { EstadoAsignacionDTO } from '../../types/horario';
 import { estadoAMostrar, etiquetaTipoEspacio } from '../../utils/horario';
+import { ESTADO_CLASE_ASIGNADA } from '../../utils/etiquetas';
+import { BadgeEstado } from '../ui/BadgeEstado';
 import type { EstadoClase } from '../../utils/horario';
 
 /** Trazos de íconos lineales (24 px, trazo de 2 px) usados en las vistas del alumno. */
-const TRAZO_CHECK = 'M5 13l4 4L19 7';
-const TRAZO_LUPA = 'M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z';
-const TRAZO_RELOJ = 'M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z';
 const TRAZO_PIN =
   'M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z';
 const TRAZO_CALENDARIO =
@@ -34,42 +33,19 @@ export const Icono: React.FC<{ trazo: string; className?: string }> = ({
 const CLASES_BADGE =
   'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium tracking-[0.2px]';
 
-const ESTILOS_ASIGNACION: Record<
-  EstadoAsignacionDTO,
-  { etiqueta: string; clases: string; trazo: string }
-> = {
-  VIGENTE: {
-    etiqueta: 'Espacio confirmado',
-    clases: 'bg-[#E8F5E9] text-[#1B5E20]',
-    trazo: TRAZO_CHECK,
-  },
-  ESCALADA: {
-    etiqueta: 'Clase en revisión',
-    clases: 'bg-[#C0CA33] text-[#222222]',
-    trazo: TRAZO_LUPA,
-  },
-  PENDIENTE: {
-    etiqueta: 'Sin aula asignada',
-    clases: 'bg-[#F57C00] text-[#222222]',
-    trazo: TRAZO_RELOJ,
-  },
-};
-
-/** Badge de estado de la asignación: color + ícono + texto (la Guía exige los tres canales). */
+/**
+ * Badge de estado de la asignación. Usa el badge y el vocabulario comunes, así un mismo estado se
+ * ve igual en el horario, en la consulta pública y en el panel.
+ */
 export const BadgeEstadoAsignacion: React.FC<{ estado: EstadoAsignacionDTO }> = ({ estado }) => {
-  const { etiqueta, clases, trazo } = ESTILOS_ASIGNACION[estado];
-  return (
-    <span className={`${CLASES_BADGE} ${clases}`}>
-      <Icono trazo={trazo} />
-      <span>{etiqueta}</span>
-    </span>
-  );
+  const { etiqueta, tono } = ESTADO_CLASE_ASIGNADA[estado];
+  return <BadgeEstado tono={tono}>{etiqueta}</BadgeEstado>;
 };
 
 const ESTILOS_CLASE: Record<EstadoClase, { etiqueta: string; clases: string }> = {
   EN_CURSO: { etiqueta: 'En curso', clases: 'bg-saie-primary text-white' },
   PROXIMA: { etiqueta: 'Próxima', clases: 'bg-saie-primary/10 text-saie-primary' },
-  FINALIZADA: { etiqueta: 'Finalizada', clases: 'bg-[#F1EDE3] text-saie-muted' },
+  FINALIZADA: { etiqueta: 'Finalizada', clases: 'bg-saie-canvas text-saie-muted' },
 };
 
 /** Estado de una clase del día (en curso, próxima o finalizada). */

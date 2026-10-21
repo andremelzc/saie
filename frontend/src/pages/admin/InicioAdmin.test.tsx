@@ -219,16 +219,19 @@ describe('Inicio del panel administrativo', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
       fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
 
+      // En el tablero, el veredicto ocupa una línea; las reglas se abren bajo demanda.
       expect(
-        await screen.findByText('Conforme: la corrida cumple las 7 reglas duras.'),
+        await screen.findByText('Verificación correcta · 8 asignaciones · 0 problemas'),
       ).toBeInTheDocument();
-      expect(screen.getByText('CONFORME')).toBeInTheDocument();
+      expect(screen.queryByText('Sin doble reserva')).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Ver detalles' }));
+      const detalle = screen.getByRole('dialog', { name: 'Detalle de la verificación' });
       expect(
-        screen.getByText('8 asignación(es) revisada(s) · 0 violación(es)'),
+        within(detalle).getByText('Todo correcto: se cumplen las 7 reglas.'),
       ).toBeInTheDocument();
-      expect(screen.getByText('Sin doble reserva')).toBeInTheDocument();
-      expect(screen.getByText('Capacidad suficiente')).toBeInTheDocument();
-      expect(screen.getByText(/Conforme · 8 revisadas/)).toBeInTheDocument();
+      expect(within(detalle).getByText('Sin doble reserva')).toBeInTheDocument();
+      expect(within(detalle).getByText('Capacidad suficiente')).toBeInTheDocument();
     });
 
     it('detalla las violaciones cuando el verificador no es conforme', async () => {
@@ -239,12 +242,14 @@ describe('Inicio del panel administrativo', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
 
       expect(
-        await screen.findByText('No conforme: 1 violación(es) en 1 regla(s).'),
+        await screen.findByText(/^Verificación con problemas · .* · 1 problema$/),
       ).toBeInTheDocument();
-      expect(screen.getByText('NO CONFORME')).toBeInTheDocument();
-      expect(screen.getByText(/Ver 1 violación/)).toBeInTheDocument();
-      expect(screen.getByText(/Aforo insuficiente para 45 alumnos/)).toBeInTheDocument();
-      expect(screen.getByText(/No conforme · 1 violación/)).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Ver detalles' }));
+      const detalle = screen.getByRole('dialog', { name: 'Detalle de la verificación' });
+      expect(within(detalle).getByText('1 problema en 1 regla.')).toBeInTheDocument();
+      expect(within(detalle).getByText(/Ver 1 sección afectada/)).toBeInTheDocument();
+      expect(within(detalle).getByText(/Aforo insuficiente para 45 alumnos/)).toBeInTheDocument();
     });
 
     it('avisa cuando la corrida no dejó asignaciones que verificar', async () => {
@@ -254,10 +259,8 @@ describe('Inicio del panel administrativo', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
       fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
 
-      expect(
-        await screen.findByText('No hubo asignaciones que verificar en esta corrida.'),
-      ).toBeInTheDocument();
-      expect(screen.getByText('Verificador: sin asignaciones que revisar')).toBeInTheDocument();
+      expect(await screen.findByText('Sin asignaciones que verificar')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Ver detalles' })).toBeNull();
     });
 
     it('muestra el error si la corrida falla', async () => {
@@ -376,7 +379,8 @@ describe('Inicio del panel administrativo', () => {
       montar();
       expect(await screen.findByText('Alertas pendientes')).toBeInTheDocument();
       expect(screen.getByText('De software').previousSibling).toHaveTextContent('1');
-      expect(screen.getByText('De capacidad').previousSibling).toHaveTextContent('2');
+      // Solo cuentan las pendientes: la alerta resuelta de capacidad ya no pide atención.
+      expect(screen.getByText('De capacidad').previousSibling).toHaveTextContent('1');
       expect(screen.getByText('Alertas pendientes').previousSibling).toHaveTextContent('2');
       expect(screen.getByRole('link', { name: /Reportar cambio de laboratorio/ })).toBeTruthy();
       expect(escaladas).not.toHaveBeenCalled();

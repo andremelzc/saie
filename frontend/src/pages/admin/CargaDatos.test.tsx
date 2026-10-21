@@ -136,7 +136,10 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
         'Asignación de aulas: 4 secciones con aula nueva, 0 secciones que conservan la suya y 1 sección pendiente de revisión.',
       ),
     ).toBeInTheDocument();
-    expect(await screen.findByText('CONFORME')).toBeInTheDocument();
+    expect(await screen.findByText(/^Verificación correcta/)).toBeInTheDocument();
+    // El detalle por regla se abre bajo demanda.
+    expect(screen.queryByText('Sin doble reserva')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Ver detalles' }));
     expect(screen.getByText('Sin doble reserva')).toBeInTheDocument();
   });
 

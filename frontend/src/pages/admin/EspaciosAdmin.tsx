@@ -15,13 +15,12 @@ import { useCarga } from '../../hooks/useCarga';
 import { usePantallaAncha } from '../../hooks/usePantallaAncha';
 import { obtenerEspacios } from '../../services/admin';
 import type { EspacioAdminDTO, ResultadoEdicionEspacioDTO, TipoEspacio } from '../../types/admin';
+import { ETIQUETA_TIPO_ESPACIO, ETIQUETA_TIPO_ESPACIO_PLURAL, plural } from '../../utils/etiquetas';
 
 type Filtro = 'TODOS' | TipoEspacio;
 
-const TIPO_ETIQUETA: Record<TipoEspacio, string> = {
-  AULA_TEORICA: 'Aula teórica',
-  LABORATORIO: 'Laboratorio',
-};
+const TIPO_ETIQUETA = ETIQUETA_TIPO_ESPACIO;
+const TIPOS: TipoEspacio[] = ['AULA_TEORICA', 'LABORATORIO'];
 
 const ETIQUETA_CAMPO: Record<string, string> = {
   identificador: 'el código',
@@ -187,7 +186,7 @@ const ListadoEspacios: React.FC<{
               Estado
             </th>
             <th scope="col" className="px-4 py-3">
-              Detalle
+              <span className="sr-only">Acciones</span>
             </th>
           </tr>
         </thead>
@@ -414,6 +413,8 @@ export const EspaciosAdmin: React.FC = () => {
   // El listado tiene tres estados: cargando, sin espacios registrados y con espacios.
   const contenidoListado = (() => {
     if (cargando && !datos) return <EsqueletoCarga texto="Cargando espacios…" />;
+    // Con un error de carga no se sabe si hay espacios: basta el aviso, sin un vacío engañoso.
+    if (error && !datos) return null;
     if (base.length === 0) {
       return (
         <EstadoVacio
@@ -518,8 +519,11 @@ export const EspaciosAdmin: React.FC = () => {
               className={CLASE_CAMPO}
             >
               <option value="TODOS">Todos</option>
-              <option value="AULA_TEORICA">Aulas teóricas</option>
-              <option value="LABORATORIO">Laboratorios</option>
+              {TIPOS.map((t) => (
+                <option key={t} value={t}>
+                  {ETIQUETA_TIPO_ESPACIO_PLURAL[t]}
+                </option>
+              ))}
             </select>
           </label>
           <label className="flex flex-col gap-1">
@@ -553,8 +557,30 @@ export const EspaciosAdmin: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-3">
           {datos && (
             <p className="m-0 text-sm text-saie-muted" aria-live="polite">
-              <strong className="text-saie-text">{espacios.length}</strong> de {base.length}{' '}
-              coinciden
+              {hayFiltros ? (
+                <>
+                  <strong className="text-saie-text">{espacios.length}</strong> de {base.length}{' '}
+                  coinciden
+                </>
+              ) : (
+                <>
+                  <strong className="text-saie-text">{plural(base.length, 'espacio')}</strong> ·{' '}
+                  {plural(aulas, 'aula teórica', 'aulas teóricas')} ·{' '}
+                  {plural(laboratorios, 'laboratorio')}
+                </>
+              )}
+              {fueraDeServicio > 0 && (
+                <>
+                  {' · '}
+                  <button
+                    type="button"
+                    onClick={() => setSoloDeshabilitados(true)}
+                    className="cursor-pointer font-semibold text-saie-danger-strong underline-offset-2 hover:underline"
+                  >
+                    {fueraDeServicio} no asignables
+                  </button>
+                </>
+              )}
             </p>
           )}
           <div className="flex flex-wrap items-center gap-3">
@@ -575,25 +601,6 @@ export const EspaciosAdmin: React.FC = () => {
           </div>
         </div>
       </section>
-
-      {datos && (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded-full border border-saie-divider bg-white px-2.5 py-1 font-semibold text-saie-text">
-            {datos.length} espacio(s)
-          </span>
-          <span className="rounded-full border border-saie-divider bg-white px-2.5 py-1 text-saie-muted">
-            {aulas} aula(s) teórica(s)
-          </span>
-          <span className="rounded-full border border-saie-divider bg-white px-2.5 py-1 text-saie-muted">
-            {laboratorios} laboratorio(s)
-          </span>
-          {fueraDeServicio > 0 && (
-            <span className="rounded-full bg-saie-danger-soft px-2.5 py-1 font-semibold text-saie-danger-strong">
-              {fueraDeServicio} no asignables
-            </span>
-          )}
-        </div>
-      )}
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
 

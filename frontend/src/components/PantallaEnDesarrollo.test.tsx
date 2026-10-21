@@ -65,10 +65,10 @@ describe('PantallaEnDesarrollo', () => {
     expect(screen.queryByText(/Seguimiento en el repositorio/)).toBeNull();
   });
 
-  it('permite indicar el portal y muestra el rol de la sesión', () => {
+  it('permite indicar el portal y no muestra el código interno del rol', () => {
     montar({ portal: 'Docente' });
 
     expect(screen.getByText('Docente')).toBeVisible();
-    expect(screen.getByText('ALUMNO')).toBeVisible();
+    expect(screen.queryByText('ALUMNO')).toBeNull();
   });
 });

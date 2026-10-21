@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import LayoutAdmin from '../../components/admin/LayoutAdmin';
-import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
+import { ResumenVerificacion } from '../../components/admin/VeredictoVerificacion';
 import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
 import { Acordeon } from '../../components/ui/Acordeon';
 import { Aviso } from '../../components/ui/Aviso';
@@ -177,7 +177,7 @@ const ZonaArchivo: React.FC<{
           <span className="max-w-full break-all font-semibold text-saie-primary">
             {archivo.name}
           </span>
-          <span className="text-xs text-saie-muted">
+          <span id={idAyuda} className="text-xs text-saie-muted">
             {(archivo.size / 1024).toFixed(1)} KB · listo para importar
           </span>
         </>
@@ -186,7 +186,9 @@ const ZonaArchivo: React.FC<{
           <span className="font-semibold text-saie-primary">
             Arrastra tu CSV o elige un archivo
           </span>
-          <span className="text-xs text-saie-muted">Máx. 10 MB · solo archivos .csv</span>
+          <span id={idAyuda} className="text-xs text-saie-muted">
+            Archivo .csv de hasta 10 MB, con los nombres de las columnas en la primera fila
+          </span>
         </>
       )}
       <input
@@ -199,10 +201,6 @@ const ZonaArchivo: React.FC<{
         onChange={(e) => onSeleccionar(e.target.files?.[0] ?? null)}
       />
     </label>
-    <p id={idAyuda} className="m-0 text-xs text-saie-muted">
-      Se aceptan archivos .csv de hasta 10 MB. La primera fila debe tener los nombres de las
-      columnas.
-    </p>
 
     {archivo && (
       <div className="flex justify-end">
@@ -219,7 +217,14 @@ const ZonaArchivo: React.FC<{
   </>
 );
 
-/** Resultado de la importación: resumen, errores descargables y siguiente paso. */
+/** Filas con problemas que se muestran en la tarjeta; el resto se consulta en el detalle. */
+const MAX_ERRORES_VISIBLES = 3;
+
+/**
+ * Resultado de la importación. Primero el veredicto en una línea y lo que se guardó; después,
+ * solo lo que pide una acción (corregir filas, continuar). La lista completa de filas
+ * rechazadas vive en un panel lateral bajo demanda.
+ */
 const PanelResultado: React.FC<{
   resultado: ResultadoImportacionDTO;
   tipo: TipoImportacion;
@@ -227,43 +232,46 @@ const PanelResultado: React.FC<{
   onSiguiente?: () => void;
   etiquetaSiguiente?: string;
 }> = ({ resultado, tipo, onCorregir, onSiguiente, etiquetaSiguiente }) => {
-  const conProblemas = resultado.errores.length > 0;
+  const [detalleAbierto, setDetalleAbierto] = useState(false);
+  const errores = resultado.errores;
+  const conProblemas = errores.length > 0;
   const haySiguiente = resultado.exitosa && Boolean(onSiguiente) && Boolean(etiquetaSiguiente);
+  const procesados = Object.entries(resultado.procesados);
+  const resumenAsignacion = resultado.asignacion?.resumen ?? null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-saie-canvas p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <output className="m-0 block text-sm font-bold text-saie-text">
-          {resultado.exitosa
-            ? 'Carga completada sin errores'
-            : `La carga tiene ${textoFilasConProblemas(resultado.errores.length)}`}
-        </output>
+    <div className="flex flex-col gap-3 border-t border-saie-divider pt-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <output className="m-0 block text-sm font-bold text-saie-text">
+            {resultado.exitosa
+              ? 'Carga completada sin errores'
+              : `La carga tiene ${textoFilasConProblemas(errores.length)}`}
+          </output>
+          {/*
+            Cada importador genera una entrada por fila rechazada (las varias incidencias de
+            validación de una misma fila se unen en un solo mensaje), así que la resta es
+            exacta: son las filas que sí se guardaron.
+          */}
+          <p className="m-0 text-xs text-saie-muted">
+            {resultado.filasRecibidas} filas leídas · {resultado.filasRecibidas - errores.length}{' '}
+            guardadas
+          </p>
+        </div>
         <BadgeEstado tono={resultado.exitosa ? 'exito' : 'advertencia'}>
-          {resultado.exitosa ? 'Sin errores' : `${resultado.errores.length} con problemas`}
+          {resultado.exitosa ? 'Sin errores' : `${errores.length} con problemas`}
         </BadgeEstado>
       </div>
-      <p className="m-0 text-sm text-saie-muted">
-        {/*
-          Cada importador genera una entrada por fila rechazada (las varias incidencias de
-          validación de una misma fila se unen en un solo mensaje), así que la resta es
-          exacta: son las filas que sí se guardaron.
-        */}
-        {resultado.filasRecibidas} filas leídas ·{' '}
-        {resultado.filasRecibidas - resultado.errores.length} guardadas
-        {resultado.errores.length > 0 && ` · ${resultado.errores.length} con problemas`}
-      </p>
 
-      {Object.keys(resultado.procesados).length > 0 && (
-        <dl className="m-0 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-          {Object.entries(resultado.procesados).map(([clave, valor]) => (
-            <div key={clave} className="rounded-lg bg-white px-3 py-2">
-              <dt className="text-xs text-saie-muted">
-                {ETIQUETAS_PROCESADOS[clave] ?? humanizar(clave)}
-              </dt>
-              <dd className="m-0 text-lg font-bold text-saie-text">{valor}</dd>
-            </div>
+      {procesados.length > 0 && (
+        <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0 text-sm text-saie-muted">
+          {procesados.map(([clave, valor]) => (
+            <li key={clave}>
+              <strong className="text-saie-text">{valor}</strong>{' '}
+              <span>{ETIQUETAS_PROCESADOS[clave] ?? humanizar(clave)}</span>
+            </li>
           ))}
-        </dl>
+        </ul>
       )}
 
       {conProblemas && (
@@ -274,34 +282,35 @@ const PanelResultado: React.FC<{
             )}
             Corrige esas filas y sube el archivo de nuevo; las demás ya se guardaron.
           </Aviso>
+          <ul className="m-0 list-disc pl-5 text-sm text-saie-text">
+            {errores.slice(0, MAX_ERRORES_VISIBLES).map((e, i) => (
+              <li key={i}>{e}</li>
+            ))}
+          </ul>
           <div className="flex flex-wrap gap-2">
+            <Boton variante="primario" tamano="sm" onClick={onCorregir}>
+              Corregir y volver a subir
+            </Boton>
             <Boton
               variante="secundario"
               tamano="sm"
-              onClick={() => descargarErrores(tipo, resultado.errores)}
+              onClick={() => descargarErrores(tipo, errores)}
             >
               Descargar errores (CSV)
             </Boton>
-            <Boton variante="fantasma" tamano="sm" onClick={onCorregir}>
-              Corregir y volver a subir
-            </Boton>
+            {errores.length > MAX_ERRORES_VISIBLES && (
+              <Boton variante="fantasma" tamano="sm" onClick={() => setDetalleAbierto(true)}>
+                Ver las {errores.length} filas
+              </Boton>
+            )}
           </div>
-          <Acordeon
-            titulo={`Ver ${textoFilasConProblemas(resultado.errores.length)}`}
-            abiertoInicial
-          >
-            <ul className="m-0 max-h-48 list-disc overflow-auto pl-5 text-sm text-saie-text">
-              {resultado.errores.map((e, i) => (
-                <li key={i}>{e}</li>
-              ))}
-            </ul>
-          </Acordeon>
         </>
       )}
 
       {resultado.asignacion && (
         <p className="m-0 text-sm text-saie-text">{textoAsignacion(resultado.asignacion)}</p>
       )}
+      {resumenAsignacion && <ResumenVerificacion verificacion={resumenAsignacion.verificacion} />}
 
       {haySiguiente && (
         <div>
@@ -310,6 +319,35 @@ const PanelResultado: React.FC<{
           </Boton>
         </div>
       )}
+
+      <Drawer
+        abierto={detalleAbierto}
+        onCerrar={() => setDetalleAbierto(false)}
+        titulo="Filas con problemas"
+      >
+        <div className="flex flex-col gap-3">
+          <p className="m-0 text-sm text-saie-muted">
+            Estas filas no se guardaron. Corrígelas en tu archivo y vuelve a subirlo: las filas
+            correctas no se duplican.
+          </p>
+          <ol className="m-0 flex list-none flex-col divide-y divide-saie-divider rounded-xl border border-saie-divider bg-white p-0 text-sm">
+            {errores.map((e, i) => (
+              <li key={i} className="px-4 py-2.5 text-saie-text">
+                {e}
+              </li>
+            ))}
+          </ol>
+          <div>
+            <Boton
+              variante="secundario"
+              tamano="sm"
+              onClick={() => descargarErrores(tipo, errores)}
+            >
+              Descargar errores (CSV)
+            </Boton>
+          </div>
+        </div>
+      </Drawer>
     </div>
   );
 };
@@ -386,6 +424,8 @@ export const ZonaCarga: React.FC<{
     try {
       const respuesta = await importarCsv(tipo, await leerArchivo(archivo));
       setResultado(respuesta);
+      // El archivo ya se procesó: se suelta para no invitar a importarlo dos veces.
+      setArchivo(null);
       onEstado(tipo, respuesta.exitosa ? 'cargado' : 'con-errores', new Date().toISOString());
     } catch (e) {
       setError(mensajeDeError(e));
@@ -411,20 +451,22 @@ export const ZonaCarga: React.FC<{
       id={`carga-${tipo}`}
       tabIndex={-1}
       aria-label={titulo}
-      className="flex h-full scroll-mt-24 flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-[var(--saie-shadow-1)] focus:outline-3 focus:outline-offset-2 focus:outline-saie-primary"
+      className="flex scroll-mt-24 flex-col gap-3 rounded-2xl border border-saie-divider bg-white p-5 focus:outline-3 focus:outline-offset-2 focus:outline-saie-primary"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="m-0 text-base font-bold text-saie-text">{titulo}</h2>
           <p className="m-0 text-sm text-saie-muted">{descripcion}</p>
         </div>
-        <BadgeEstado tono={insignia.tono}>{insignia.texto}</BadgeEstado>
+        <div className="flex flex-col items-end gap-1">
+          <BadgeEstado tono={insignia.tono}>{insignia.texto}</BadgeEstado>
+          {ultimaCarga && (
+            <span className="text-xs text-saie-muted">
+              Última carga: {formatearFechaCorta(ultimaCarga)}
+            </span>
+          )}
+        </div>
       </div>
-      {ultimaCarga && (
-        <p className="m-0 text-xs text-saie-muted">
-          Última carga: {formatearFechaCorta(ultimaCarga)}
-        </p>
-      )}
 
       <ZonaArchivo
         idInput={idInput}
@@ -462,10 +504,6 @@ export const ZonaCarga: React.FC<{
           onSiguiente={onSiguiente}
           etiquetaSiguiente={etiquetaSiguiente}
         />
-      )}
-
-      {resultado?.asignacion?.resumen && (
-        <VeredictoVerificacion verificacion={resultado.asignacion.resumen.verificacion} />
       )}
     </section>
   );
@@ -768,23 +806,15 @@ export const CargaDatos: React.FC = () => {
   return (
     <LayoutAdmin
       titulo="Carga de datos"
-      subtitulo="Sube un archivo por vez. Cada carga es independiente y se puede repetir."
+      subtitulo="Sigue el orden 1 → 4. Cada carga es independiente y se puede repetir sin duplicar datos."
       acciones={
         <Boton variante="secundario" onClick={() => setGuiaAbierta(true)}>
           Guía y plantillas
         </Boton>
       }
     >
-      <p className="m-0 rounded-xl border border-saie-divider bg-white px-4 py-3 text-sm text-saie-muted">
-        Sigue el orden 1 → 2 → 3 → 4. Si un archivo tiene filas con problemas, las demás sí se
-        guardan, pero no se asignan aulas en ese periodo.
-      </p>
-
-      <section aria-labelledby="titulo-zonas" className="flex flex-col gap-3">
-        <h2 id="titulo-zonas" className="m-0 text-lg font-bold text-saie-text">
-          Cargar un archivo
-        </h2>
-        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+      <section aria-label="Cargar un archivo" className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
           {FLUJOS.map((flujo, indice) => {
             const siguiente = FLUJOS[indice + 1];
             return (

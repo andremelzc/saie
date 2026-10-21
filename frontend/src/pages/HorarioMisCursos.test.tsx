@@ -6,6 +6,10 @@ import HorarioMisCursos from './HorarioMisCursos';
 import { CURSOS_FIXTURE, HORARIO_FIXTURE } from '../test/fixtures/horario';
 import type { CursoMatriculadoDTO } from '../types/horario';
 
+vi.mock('../context/useAuth', () => ({
+  useAuth: () => ({ sesion: { rol: 'ALUMNO' }, cerrarSesion: vi.fn() }),
+}));
+
 /** Martes 13/10/2026, 10:30 (hora local). */
 const MARTES_10_30 = new Date(2026, 9, 13, 10, 30);
 
@@ -183,7 +187,7 @@ describe('HorarioMisCursos (Issue #145 / 3.16)', () => {
       expect(within(redaccion).getByText('Sin aula asignada')).toBeVisible();
 
       const software = screen.getByRole('article', { name: 'Ingeniería de Software' });
-      expect(within(software).getByText('Clase en revisión')).toBeVisible();
+      expect(within(software).getByText('En revisión')).toBeVisible();
       expect(within(software).getByText('Por asignar')).toBeVisible();
     });
 

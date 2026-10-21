@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { RUTAS } from '../../config/rutas';
 
+const TRAZO_INICIO = 'M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10';
 const TRAZO_HORARIO =
   'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5';
 const TRAZO_PERFIL =
@@ -17,10 +18,13 @@ interface EnlaceEstudiante {
   to: string;
   etiqueta: string;
   trazo: string;
+  /** Activo solo en su ruta exacta (el inicio es prefijo de todas las demás). */
+  exacta?: boolean;
 }
 
 /** Las secciones del portal del estudiante, en el orden en que se recorren. */
 const ENLACES_ESTUDIANTE: EnlaceEstudiante[] = [
+  { to: RUTAS.inicioAlumno, etiqueta: 'Inicio', trazo: TRAZO_INICIO, exacta: true },
   { to: RUTAS.horarioAlumno, etiqueta: 'Horario', trazo: TRAZO_HORARIO },
   { to: RUTAS.perfilAlumno, etiqueta: 'Perfil', trazo: TRAZO_PERFIL },
   { to: RUTAS.mapaAlumno, etiqueta: 'Mapa', trazo: TRAZO_MAPA },
@@ -50,7 +54,7 @@ export const NavegacionEstudiante: React.FC = () => (
     <ul className="mx-auto m-0 flex w-full max-w-7xl list-none gap-1 p-0 md:px-4 md:py-2">
       {ENLACES_ESTUDIANTE.map((enlace) => (
         <li key={enlace.to} className="flex flex-1 md:flex-none">
-          <NavLink to={enlace.to} className={claseLink}>
+          <NavLink to={enlace.to} end={enlace.exacta} className={claseLink}>
             <svg
               aria-hidden="true"
               className="h-5 w-5"

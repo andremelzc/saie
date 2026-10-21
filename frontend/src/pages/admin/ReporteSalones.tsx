@@ -106,8 +106,10 @@ export const ReporteSalones: React.FC = () => {
 
             {datos.totales.sinAula > 0 && (
               <p className="saie-no-imprimir m-0 rounded-xl border border-saie-warning-strong/30 bg-saie-warning-soft p-3 text-sm font-medium text-saie-warning-strong">
-                {datos.totales.sinAula} sección(es) todavía no tienen aula: están marcadas en la
-                tabla y conviene resolverlas antes de presentar el cuadro.
+                {datos.totales.sinAula === 1
+                  ? '1 sección todavía no tiene aula'
+                  : `${datos.totales.sinAula} secciones todavía no tienen aula`}
+                : están marcadas en la tabla y conviene resolverlas antes de presentar el cuadro.
               </p>
             )}
 

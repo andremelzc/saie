@@ -302,7 +302,7 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
         {confirmacion && modo === 'lectura' && (
           <p
             role="status"
-            className="m-0 mb-4 flex items-center gap-2 rounded-xl bg-[#E8F5E9] px-4 py-3 text-sm font-medium text-[#1B5E20]"
+            className="m-0 mb-4 flex items-center gap-2 rounded-xl bg-saie-success-soft px-4 py-3 text-sm font-medium text-saie-success-strong"
           >
             <Icono trazo={TRAZO_CHECK} className="h-4 w-4 shrink-0" />
             Cambios guardados.
@@ -333,7 +333,7 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
             {errorGeneral && (
               <p
                 role="alert"
-                className="m-0 mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-medium text-saie-danger"
+                className="m-0 mt-4 flex items-start gap-2 rounded-xl border border-saie-danger/30 bg-saie-danger-soft p-3 text-sm font-medium text-saie-danger"
               >
                 <Icono trazo={TRAZO_ALERTA} className="mt-0.5 h-4 w-4 shrink-0" />
                 {errorGeneral}

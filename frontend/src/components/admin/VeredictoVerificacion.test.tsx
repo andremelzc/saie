@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
-import { VeredictoVerificacion } from './VeredictoVerificacion';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { ResumenVerificacion, VeredictoVerificacion } from './VeredictoVerificacion';
 import type { ResultadoVerificacionDTO } from '../../types/admin';
 
 const conforme: ResultadoVerificacionDTO = {
@@ -65,9 +65,8 @@ describe('VeredictoVerificacion (Issue 2.17)', () => {
     render(<VeredictoVerificacion verificacion={conforme} />);
 
     expect(screen.getByRole('heading', { name: 'Veredicto del verificador' })).toBeTruthy();
-    expect(screen.getByText('CONFORME')).toBeTruthy();
-    expect(screen.getByText('Conforme: la corrida cumple las 7 reglas duras.')).toBeTruthy();
-    expect(screen.getByText('12 asignación(es) revisada(s) · 0 violación(es)')).toBeTruthy();
+    expect(screen.getByText('Todo correcto: se cumplen las 7 reglas.')).toBeTruthy();
+    expect(screen.getByText('12 asignaciones revisadas')).toBeTruthy();
     expect(screen.getByText('Sin doble reserva')).toBeTruthy();
     expect(screen.getByText('12/12 cumplen')).toBeTruthy();
     expect(screen.getByText('No aplica')).toBeTruthy();
@@ -76,14 +75,34 @@ describe('VeredictoVerificacion (Issue 2.17)', () => {
   it('marca el veredicto no conforme y despliega las violaciones', () => {
     render(<VeredictoVerificacion verificacion={noConforme} />);
 
-    expect(screen.getByText('NO CONFORME')).toBeTruthy();
-    expect(screen.getByText('No conforme: 2 violación(es) en 1 regla(s).')).toBeTruthy();
+    expect(screen.getByText('2 problemas en 1 regla.')).toBeTruthy();
     expect(screen.getByText('10/12 cumplen')).toBeTruthy();
 
-    const detalle = screen.getByText(/Ver 2 violación/).closest('details') as HTMLDetailsElement;
+    const detalle = screen
+      .getByText(/Ver 2 secciones afectadas/)
+      .closest('details') as HTMLDetailsElement;
     expect(detalle.open).toBe(false);
     expect(within(detalle).getByText(/01/)).toBeTruthy();
     expect(within(detalle).getByText(/Aforo insuficiente para 45 alumnos/)).toBeTruthy();
     expect(within(detalle).getByText(/Aforo insuficiente para 40 alumnos/)).toBeTruthy();
+  });
+
+  it('resume el veredicto en una línea y abre el detalle bajo demanda', () => {
+    render(<ResumenVerificacion verificacion={conforme} />);
+
+    expect(screen.getByText('Verificación correcta · 12 asignaciones · 0 problemas')).toBeTruthy();
+    // Las reglas no ocupan la pantalla hasta que se piden.
+    expect(screen.queryByText('Sin doble reserva')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver detalles' }));
+    const panel = screen.getByRole('dialog', { name: 'Detalle de la verificación' });
+    expect(within(panel).getByText('Sin doble reserva')).toBeTruthy();
+  });
+
+  it('el resumen con problemas los cuenta', () => {
+    render(<ResumenVerificacion verificacion={noConforme} />);
+    expect(
+      screen.getByText('Verificación con problemas · 12 asignaciones · 2 problemas'),
+    ).toBeTruthy();
   });
 });

@@ -1,5 +1,6 @@
 import { RUTAS } from '../config/rutas';
 import type { RolCuenta } from '../types/auth';
+import { ETIQUETA_ROL } from './etiquetas';
 
 export function formatearFechaAlerta(iso: string): string {
   const fecha = new Date(iso);
@@ -63,7 +64,7 @@ const MOTIVOS_ESCALAMIENTO: Record<
 };
 
 const MOTIVO_DESCONOCIDO = {
-  etiqueta: 'Escalamiento',
+  etiqueta: 'Motivo sin clasificar',
   accion: null,
 } satisfies Omit<MotivoEscalamientoInfo, 'codigo' | 'descripcion'>;
 
@@ -148,8 +149,6 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
   ];
 }
 
-export function etiquetaRol(rol?: RolCuenta): string {
-  if (rol === 'JEFATURA_LABORATORIOS') return 'Jefatura de Laboratorios';
-  if (rol === 'COORDINACION_ACADEMICA') return 'Coordinación Académica';
-  return 'Administrativo';
+export function etiquetaRol(rol?: RolCuenta | null): string {
+  return rol ? ETIQUETA_ROL[rol] : 'Administrativo';
 }

@@ -39,7 +39,7 @@ const Interruptor: React.FC<{
     aria-labelledby={etiquetaPor}
     onClick={() => onCambio(!activo)}
     className={`relative h-8 w-14 shrink-0 cursor-pointer rounded-full border transition-colors focus-visible:outline-3 focus-visible:outline-saie-text ${
-      activo ? 'border-saie-primary bg-saie-primary' : 'border-[#8a8578] bg-saie-divider'
+      activo ? 'border-saie-primary bg-saie-primary' : 'border-saie-border bg-saie-divider'
     }`}
   >
     <span

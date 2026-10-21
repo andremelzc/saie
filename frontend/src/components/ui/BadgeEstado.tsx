@@ -25,6 +25,8 @@ export interface BadgeEstadoProps {
   className?: string;
   /** Permite ocultar el ícono en espacios muy compactos. */
   conIcono?: boolean;
+  /** `md` usa texto de 14 px, para las vistas públicas donde 12 px es demasiado pequeño. */
+  tamano?: 'sm' | 'md';
 }
 
 /** Badge de estado con los tres canales que exige la guía: color, ícono y texto. */
@@ -33,9 +35,12 @@ export const BadgeEstado: React.FC<BadgeEstadoProps> = ({
   children,
   className = '',
   conIcono = true,
+  tamano = 'sm',
 }) => (
   <span
-    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${ESTILOS[tono]} ${className}`}
+    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold ${
+      tamano === 'md' ? 'text-sm' : 'text-xs'
+    } ${ESTILOS[tono]} ${className}`}
   >
     {conIcono && (
       <svg
