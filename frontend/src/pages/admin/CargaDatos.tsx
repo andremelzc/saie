@@ -206,14 +206,14 @@ const ZonaArchivo: React.FC<{
 
     {archivo && (
       <div className="flex justify-end">
-        <button
-          type="button"
+        <Boton
+          variante="fantasma"
+          tamano="sm"
           onClick={() => onSeleccionar(null)}
           disabled={enviando}
-          className="min-h-11 cursor-pointer rounded-lg px-2 text-sm font-semibold text-saie-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
         >
           Quitar archivo
-        </button>
+        </Boton>
       </div>
     )}
   </>

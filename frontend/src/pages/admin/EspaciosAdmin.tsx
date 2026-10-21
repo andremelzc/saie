@@ -6,9 +6,11 @@ import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/Element
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
+import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
 import { Drawer } from '../../components/ui/Drawer';
 import { useAvisos } from '../../components/ui/useAvisos';
-import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
+import { Campo } from '../../components/ui/Campo';
+import { CLASE_CAMPO } from '../../components/ui/campos';
 import { RUTAS } from '../../config/rutas';
 import { useAuth } from '../../context/useAuth';
 import { useCarga } from '../../hooks/useCarga';
@@ -161,62 +163,43 @@ const ListadoEspacios: React.FC<{
   }
 
   return (
-    <section
-      aria-label="Listado de espacios"
-      className="overflow-x-auto rounded-xl border border-saie-divider bg-white"
-    >
-      <table className="w-full text-left text-sm">
-        <thead className="bg-saie-canvas text-xs uppercase tracking-wide text-saie-muted">
-          <tr>
-            <th scope="col" className="px-4 py-3">
-              Espacio
-            </th>
-            <th scope="col" className="px-4 py-3">
-              Tipo
-            </th>
-            <th scope="col" className="px-4 py-3">
-              Ubicación
-            </th>
-            <th scope="col" className="px-4 py-3">
-              Capacidad
-            </th>
-            <th scope="col" className="px-4 py-3">
-              PCs malogradas
-            </th>
-            <th scope="col" className="px-4 py-3">
-              Estado
-            </th>
-            <th scope="col" className="px-4 py-3">
-              Detalle
-            </th>
+    <TablaDatos etiqueta="Listado de espacios">
+      <CabeceraTabla
+        columnas={[
+          'Espacio',
+          'Tipo',
+          'Ubicación',
+          'Capacidad',
+          'PCs malogradas',
+          'Estado',
+          'Detalle',
+        ]}
+      />
+      <tbody>
+        {espacios.map((e) => (
+          <tr key={e.id} className="border-t border-saie-divider">
+            <td className="px-4 py-3 font-semibold">{e.identificador}</td>
+            <td className="px-4 py-3">{etiquetaTipoEspacio(e.tipo)}</td>
+            <td className="px-4 py-3">
+              {e.pabellon} · Piso {e.piso}
+            </td>
+            <td className="px-4 py-3 tabular-nums">{celdaCapacidad(e)}</td>
+            <td className="px-4 py-3">{celdaPcs(e)}</td>
+            <td className="px-4 py-3">{celdaEstado(e)}</td>
+            <td className="px-4 py-3">
+              <Boton
+                variante="fantasma"
+                tamano="sm"
+                onClick={() => onVer(e)}
+                aria-label={`Ver detalle de ${e.identificador}`}
+              >
+                Ver
+              </Boton>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          {espacios.map((e) => (
-            <tr key={e.id} className="border-t border-saie-divider">
-              <td className="px-4 py-3 font-semibold">{e.identificador}</td>
-              <td className="px-4 py-3">{etiquetaTipoEspacio(e.tipo)}</td>
-              <td className="px-4 py-3">
-                {e.pabellon} · Piso {e.piso}
-              </td>
-              <td className="px-4 py-3 tabular-nums">{celdaCapacidad(e)}</td>
-              <td className="px-4 py-3">{celdaPcs(e)}</td>
-              <td className="px-4 py-3">{celdaEstado(e)}</td>
-              <td className="px-4 py-3">
-                <Boton
-                  variante="fantasma"
-                  tamano="sm"
-                  onClick={() => onVer(e)}
-                  aria-label={`Ver detalle de ${e.identificador}`}
-                >
-                  Ver
-                </Boton>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
+        ))}
+      </tbody>
+    </TablaDatos>
   );
 };
 
@@ -414,7 +397,7 @@ export const EspaciosAdmin: React.FC = () => {
 
   // El listado tiene tres estados: cargando, sin espacios registrados y con espacios.
   const contenidoListado = (() => {
-    if (cargando && !datos) return <EsqueletoCarga texto="Cargando espacios…" />;
+    if (cargando && !datos) return <EsqueletoCarga texto="Cargando espacios…" forma="tabla" />;
     if (base.length === 0) {
       return (
         <EstadoVacio
@@ -503,8 +486,7 @@ export const EspaciosAdmin: React.FC = () => {
     >
       <section aria-label="Filtros de espacios" className="flex flex-col gap-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Buscar espacio</span>
+          <Campo etiqueta="Buscar espacio">
             <input
               type="search"
               placeholder="Ej. AULA-101"
@@ -512,9 +494,8 @@ export const EspaciosAdmin: React.FC = () => {
               onChange={(e) => setTexto(e.target.value)}
               className={CLASE_CAMPO}
             />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Tipo de espacio</span>
+          </Campo>
+          <Campo etiqueta="Tipo de espacio">
             <select
               value={filtro}
               onChange={(e) => setFiltro(e.target.value as Filtro)}
@@ -524,9 +505,8 @@ export const EspaciosAdmin: React.FC = () => {
               <option value="AULA_TEORICA">Aulas teóricas</option>
               <option value="LABORATORIO">Laboratorios</option>
             </select>
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Pabellón</span>
+          </Campo>
+          <Campo etiqueta="Pabellón">
             <select
               value={pabellon}
               onChange={(e) => setPabellon(e.target.value)}
@@ -539,9 +519,8 @@ export const EspaciosAdmin: React.FC = () => {
                 </option>
               ))}
             </select>
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Piso</span>
+          </Campo>
+          <Campo etiqueta="Piso">
             <select value={piso} onChange={(e) => setPiso(e.target.value)} className={CLASE_CAMPO}>
               <option value="TODOS">Todos</option>
               {pisos.map((p) => (
@@ -550,7 +529,7 @@ export const EspaciosAdmin: React.FC = () => {
                 </option>
               ))}
             </select>
-          </label>
+          </Campo>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">

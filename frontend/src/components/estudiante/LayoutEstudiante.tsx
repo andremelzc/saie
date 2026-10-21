@@ -48,7 +48,7 @@ export const LayoutEstudiante: React.FC<LayoutEstudianteProps> = ({
     >
       <EnlaceSaltar />
       <header className="bg-saie-primary text-white">
-        <Contenedor className="flex h-18 items-center justify-between gap-3">
+        <Contenedor ancho="normal" className="flex h-18 items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-4">
             <Link to={RUTAS.inicioAlumno} className="flex shrink-0 items-center">
               <img src={logoBlanco} alt="SAIE" className="h-9 w-auto" />
@@ -64,7 +64,10 @@ export const LayoutEstudiante: React.FC<LayoutEstudianteProps> = ({
                 {etiquetaRol(sesion?.rol)}
               </strong>
             </p>
-            <BotonCerrarSesion className="h-10! border-white/30! bg-white/10! px-4! text-sm! text-white! hover:bg-white/20!" />
+            <BotonCerrarSesion
+              compacto
+              className="border-white/30! bg-white/10! text-white! hover:bg-white/20!"
+            />
           </div>
         </Contenedor>
       </header>
@@ -73,6 +76,7 @@ export const LayoutEstudiante: React.FC<LayoutEstudianteProps> = ({
 
       <Contenedor
         como="main"
+        ancho="normal"
         id={ID_CONTENIDO}
         tabIndex={-1}
         className={`flex flex-1 flex-col gap-4 py-4 focus:outline-none ${

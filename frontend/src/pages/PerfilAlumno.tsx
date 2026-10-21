@@ -19,8 +19,9 @@ import {
   valoresFichaMedica,
 } from '../utils/perfil';
 import type { ValoresFormulario } from '../utils/perfil';
+import { ICONOS } from '../components/ui/iconos';
 
-const TRAZO_USUARIO = 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z';
+const TRAZO_USUARIO = ICONOS.usuarioRelleno;
 const TRAZO_CORAZON =
   'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z';
 const TRAZO_CANDADO =
@@ -107,7 +108,7 @@ const EsqueletoPerfil: React.FC = () => (
       <div
         key={i}
         aria-hidden="true"
-        className="h-40 animate-pulse rounded-2xl bg-saie-divider/60 motion-reduce:animate-none"
+        className="saie-esqueleto h-40 rounded-2xl border border-saie-divider"
       />
     ))}
   </div>
@@ -225,12 +226,12 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
         titulo="Mi perfil"
         subtitulo="Tus datos personales y tu ficha médica."
         trazoIcono={TRAZO_USUARIO}
-        ancho="lectura"
+        ancho="normal"
       />
 
       <Contenedor
         como="main"
-        ancho="lectura"
+        ancho="normal"
         id={ID_CONTENIDO}
         tabIndex={-1}
         className="flex flex-col gap-6 py-6 focus:outline-none"

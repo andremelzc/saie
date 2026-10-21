@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import type { ErroresFormulario, ValoresFormulario } from '../../utils/perfil';
 import { Aviso } from '../ui/Aviso';
+import { Boton } from '../ui/Boton';
 import { Icono } from './ElementosHorario';
 
 const TRAZO_LAPIZ =
@@ -42,9 +43,6 @@ export interface SeccionEditableProps {
 
 const CLASES_CAMPO =
   'min-h-12 w-full rounded-xl border bg-white px-4 text-base text-saie-text placeholder:text-saie-muted/70';
-
-const CLASES_BOTON_BASE =
-  'inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60';
 
 /**
  * Tarjeta con dos modos: lectura (lista de datos) y edición (formulario). Valida antes de
@@ -283,16 +281,16 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
           </div>
         </div>
         {modo === 'lectura' && (
-          <button
+          <Boton
             ref={botonEditarRef}
-            type="button"
+            variante="secundario"
+            tamano="sm"
             onClick={empezarEdicion}
             aria-label={`${sinDatos && textoVacio ? 'Completar' : 'Editar'} ${titulo.toLowerCase()}`}
-            className={`${CLASES_BOTON_BASE} border border-saie-primary text-saie-primary hover:bg-saie-primary/5`}
           >
             <Icono trazo={TRAZO_LAPIZ} className="h-4 w-4" />
             {sinDatos && textoVacio ? 'Completar' : 'Editar'}
-          </button>
+          </Boton>
         )}
       </div>
 
@@ -337,21 +335,12 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
             )}
 
             <div className="mt-5 flex flex-wrap gap-3">
-              <button
-                type="submit"
-                disabled={guardando}
-                className={`${CLASES_BOTON_BASE} bg-saie-primary text-white hover:bg-saie-primary-dark`}
-              >
-                {guardando ? 'Guardando…' : 'Guardar cambios'}
-              </button>
-              <button
-                type="button"
-                onClick={cancelar}
-                disabled={guardando}
-                className={`${CLASES_BOTON_BASE} border border-saie-divider bg-white text-saie-text hover:bg-saie-canvas`}
-              >
+              <Boton type="submit" tamano="sm" cargando={guardando} textoCargando="Guardando…">
+                Guardar cambios
+              </Boton>
+              <Boton variante="cancelar" tamano="sm" onClick={cancelar} disabled={guardando}>
                 Cancelar
-              </button>
+              </Boton>
             </div>
           </form>
         )}

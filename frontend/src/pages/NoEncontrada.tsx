@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { BotonEnlace } from '../components/ui/BotonEnlace';
 import { rutaInicioDeRol } from '../config/rutas';
 import { useAuth } from '../context/useAuth';
 import { useTituloPagina } from '../hooks/useTituloPagina';
@@ -25,12 +25,9 @@ export const NoEncontrada: React.FC = () => {
           La dirección no existe o ya no está disponible. Revisa que esté bien escrita o vuelve al
           inicio.
         </p>
-        <Link
-          to={destino}
-          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-saie-primary px-5 font-medium text-white no-underline transition-colors hover:bg-saie-primary-dark"
-        >
+        <BotonEnlace to={destino} variante="primario">
           {sesion ? 'Ir a mi portal' : 'Ir al inicio'}
-        </Link>
+        </BotonEnlace>
       </div>
     </main>
   );

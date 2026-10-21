@@ -1,6 +1,7 @@
 import { RUTAS } from '../config/rutas';
 import type { RolCuenta } from '../types/auth';
 import { ROL } from './diccionarios';
+import { ICONOS } from '../components/ui/iconos';
 
 /** Todas las fechas se muestran en hora de Lima, estén donde estén la persona y el servidor. */
 export const ZONA_HORARIA = 'America/Lima';
@@ -111,18 +112,13 @@ export function describirMotivoEscalamiento(
 }
 
 const T_INICIO = 'M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10';
-const T_ALERTA =
-  'M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z';
-const T_CARGA = 'M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12l-4 4m4-4l4 4';
-const T_ESPACIOS = 'M3 21h18M5 21V7l7-4 7 4v14M9 9h1m4 0h1M9 13h1m4 0h1M9 17h1m4 0h1';
-const T_LAB =
-  'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z';
-const T_SECCIONES =
-  'M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z';
-const T_AUDITORIA =
-  'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4';
-const T_REPORTE =
-  'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z';
+const T_ALERTA = ICONOS.alerta;
+const T_CARGA = ICONOS.subir;
+const T_ESPACIOS = ICONOS.edificio;
+const T_LAB = ICONOS.monitor;
+const T_SECCIONES = ICONOS.libro;
+const T_AUDITORIA = ICONOS.portapapeles;
+const T_REPORTE = ICONOS.documento;
 
 interface Pestana {
   to: string;

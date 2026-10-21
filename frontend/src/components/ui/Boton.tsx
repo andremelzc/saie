@@ -14,6 +14,8 @@ export interface BotonProps extends React.ButtonHTMLAttributes<HTMLButtonElement
   motivoDeshabilitado?: string;
   /** En móvil ocupa el ancho disponible; desde `sm` se ajusta al contenido. */
   anchoCompleto?: boolean;
+  /** Clases del contenedor del botón (p. ej. `w-full` para ocupar todo el ancho de un formulario). */
+  claseContenedor?: string;
 }
 
 /**
@@ -28,6 +30,7 @@ export const Boton = React.forwardRef<HTMLButtonElement, BotonProps>(function Bo
     textoCargando,
     motivoDeshabilitado,
     anchoCompleto = false,
+    claseContenedor = '',
     disabled,
     children,
     className = '',
@@ -43,7 +46,7 @@ export const Boton = React.forwardRef<HTMLButtonElement, BotonProps>(function Bo
 
   return (
     <span
-      className={`inline-flex flex-col items-start gap-1 ${anchoCompleto ? 'w-full sm:w-auto' : ''}`}
+      className={`inline-flex flex-col items-start gap-1 ${anchoCompleto ? 'w-full sm:w-auto' : ''} ${claseContenedor}`}
     >
       <button
         {...props}

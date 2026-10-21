@@ -1,8 +1,8 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { rutaInicioDeRol } from '../../config/rutas';
 import { useTituloPagina } from '../../hooks/useTituloPagina';
 import type { RolCuenta } from '../../types/auth';
+import { BotonEnlace } from '../ui/BotonEnlace';
 import BotonCerrarSesion from './BotonCerrarSesion';
 
 /** Mensaje claro cuando un usuario con sesión entra a una ruta que su rol no permite. */
@@ -22,12 +22,9 @@ export const AccesoDenegado: React.FC<{ rol: RolCuenta }> = ({ rol }) => {
           Si crees que es un error, comunícate con Coordinación Académica.
         </p>
         <div className="flex flex-col gap-3 mt-2">
-          <Link
-            to={rutaInicioDeRol(rol)}
-            className="h-12 px-6 rounded-xl font-medium text-base text-white bg-saie-primary hover:bg-saie-primary-dark flex items-center justify-center focus:outline-hidden focus:ring-3 focus:ring-saie-text focus:ring-offset-2 transition-colors"
-          >
+          <BotonEnlace to={rutaInicioDeRol(rol)} variante="primario">
             Ir a mi portal
-          </Link>
+          </BotonEnlace>
           <BotonCerrarSesion />
         </div>
       </div>

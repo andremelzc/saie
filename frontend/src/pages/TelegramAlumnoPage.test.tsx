@@ -41,7 +41,7 @@ describe('TelegramAlumnoPage', () => {
 
     expect(await screen.findByText('Sin vincular')).toBeInTheDocument();
     expect(screen.getByText('22200101 miClave')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Abrir el bot en Telegram' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Abrir el bot en Telegram/ })).toHaveAttribute(
       'href',
       'https://t.me/saie_bot',
     );
@@ -110,6 +110,6 @@ describe('TelegramAlumnoPage', () => {
     montar();
 
     expect(await screen.findByText(/no está configurado todavía/)).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Abrir el bot en Telegram' })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Abrir el bot en Telegram/ })).toBeNull();
   });
 });

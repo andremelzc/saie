@@ -6,6 +6,7 @@ import { EsqueletoCarga } from '../../components/estudiante/ElementosHorario';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
+import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import { DialogoConfirmacion } from '../../components/ui/DialogoConfirmacion';
 import { Drawer } from '../../components/ui/Drawer';
 import { RUTAS } from '../../config/rutas';
@@ -25,6 +26,7 @@ import type {
 } from '../../types/admin';
 import { describirMotivoEscalamiento, formatearFechaCorta } from '../../utils/admin';
 import { plural } from '../../utils/texto';
+import { ICONOS } from '../../components/ui/iconos';
 
 /**
  * Issue 4.20 — inicio de Coordinación Académica.
@@ -177,12 +179,9 @@ const FilaEscalada: React.FC<{
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">
         {motivo.accion && (
-          <Link
-            to={motivo.accion.to}
-            className="rounded-lg border border-saie-primary px-2.5 py-1 text-xs font-semibold text-saie-primary no-underline hover:bg-saie-primary/5"
-          >
+          <BotonEnlace to={motivo.accion.to} variante="secundario" tamano="sm">
             {motivo.accion.etiqueta}
-          </Link>
+          </BotonEnlace>
         )}
         <Boton
           variante="secundario"
@@ -265,13 +264,13 @@ const InicioJefatura: React.FC = () => {
               to={RUTAS.alertasAdmin}
               titulo="Alertas de mis laboratorios"
               descripcion="Revisa y marca como resueltas las alertas."
-              trazo="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+              trazo={ICONOS.alerta}
             />
             <Acceso
               to={RUTAS.cambioLaboratorio}
               titulo="Reportar cambio de laboratorio"
               descripcion="Software instalado y PCs malogradas o reparadas."
-              trazo="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              trazo={ICONOS.monitor}
             />
           </div>
         )}
@@ -512,30 +511,14 @@ const InicioCoordinacion: React.FC = () => {
               Accesos
             </h2>
             <div className="grid min-h-0 gap-2 sm:grid-cols-2 lg:grid-cols-2">
-              <Atajo
-                to={RUTAS.cargaAdmin}
-                titulo="Carga de datos"
-                trazo="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12l-4 4m4-4l4 4"
-              />
-              <Atajo
-                to={RUTAS.espaciosAdmin}
-                titulo="Espacios"
-                trazo="M3 21h18M5 21V7l7-4 7 4v14M9 9h1m4 0h1M9 13h1m4 0h1M9 17h1m4 0h1"
-              />
-              <Atajo
-                to={RUTAS.seccionesAdmin}
-                titulo="Secciones"
-                trazo="M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"
-              />
-              <Atajo
-                to={RUTAS.auditoriaAdmin}
-                titulo="Auditoría"
-                trazo="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-              />
+              <Atajo to={RUTAS.cargaAdmin} titulo="Carga de datos" trazo={ICONOS.subir} />
+              <Atajo to={RUTAS.espaciosAdmin} titulo="Espacios" trazo={ICONOS.edificio} />
+              <Atajo to={RUTAS.seccionesAdmin} titulo="Secciones" trazo={ICONOS.libro} />
+              <Atajo to={RUTAS.auditoriaAdmin} titulo="Auditoría" trazo={ICONOS.portapapeles} />
               <Atajo
                 to={RUTAS.reporteSalonesAdmin}
                 titulo="Informe de salones"
-                trazo="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                trazo={ICONOS.documento}
               />
               {/*
                 Atajo a las alertas: la tarjeta «Requieren tu atención» repetía las dos cifras

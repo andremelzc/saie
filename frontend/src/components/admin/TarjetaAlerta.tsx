@@ -5,6 +5,7 @@ import { etiquetaTipoAlerta } from '../../utils/diccionarios';
 import { BadgeEstado } from '../ui/BadgeEstado';
 import { Boton } from '../ui/Boton';
 import { DialogoConfirmacion } from '../ui/DialogoConfirmacion';
+import { ICONOS } from '../ui/iconos';
 
 /** Issue 4.9 — fila/tarjeta de alerta. Cada tipo tiene color, ícono y etiqueta propios. */
 
@@ -24,8 +25,7 @@ const ESTILO_TIPO: Record<
     borde: 'border-l-saie-info',
     chip: 'bg-saie-info-soft text-saie-info',
     // Monitor
-    trazo:
-      'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+    trazo: ICONOS.monitor,
   },
   CAPACIDAD: {
     etiqueta: 'Capacidad',
@@ -124,14 +124,15 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
               ))}
             </ul>
             {cursos.length > MAX_CURSOS_VISIBLES && (
-              <button
-                type="button"
+              <Boton
+                variante="fantasma"
+                tamano="sm"
                 onClick={() => setMostrarTodos((v) => !v)}
                 aria-expanded={mostrarTodos}
-                className="mt-2 min-h-11 cursor-pointer rounded-md px-1 text-xs font-semibold text-saie-primary hover:underline"
+                className="mt-1"
               >
                 {mostrarTodos ? 'Ver menos' : `+${ocultos} ${textoCursosOcultos(ocultos)} más`}
-              </button>
+              </Boton>
             )}
           </>
         )}

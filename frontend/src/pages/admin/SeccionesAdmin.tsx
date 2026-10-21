@@ -4,8 +4,10 @@ import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/Element
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
+import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
 import { CLASE_PIE_DRAWER, Drawer } from '../../components/ui/Drawer';
 import { useAvisos } from '../../components/ui/useAvisos';
+import { Campo } from '../../components/ui/Campo';
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
 import { useCarga } from '../../hooks/useCarga';
 import { usePantallaAncha } from '../../hooks/usePantallaAncha';
@@ -205,8 +207,7 @@ const FormularioSeccion: React.FC<{
   return (
     <form onSubmit={guardar} noValidate className="flex flex-col gap-5">
       <div className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1">
-          <span className={CLASE_ETIQUETA}>Tipo de espacio que necesita</span>
+        <Campo etiqueta="Tipo de espacio que necesita">
           <select
             value={tipo}
             onChange={(e) => setTipo(e.target.value as TipoEspacio)}
@@ -215,10 +216,9 @@ const FormularioSeccion: React.FC<{
             <option value="AULA_TEORICA">Aula teórica</option>
             <option value="LABORATORIO">Laboratorio</option>
           </select>
-        </label>
+        </Campo>
 
-        <label className="flex flex-col gap-1">
-          <span className={CLASE_ETIQUETA}>Docente</span>
+        <Campo etiqueta="Docente">
           <select
             value={docenteId}
             onChange={(e) => setDocenteId(e.target.value)}
@@ -231,7 +231,7 @@ const FormularioSeccion: React.FC<{
               </option>
             ))}
           </select>
-        </label>
+        </Campo>
       </div>
 
       <fieldset className="m-0 flex flex-col gap-2">
@@ -378,43 +378,16 @@ export const SeccionesAdmin: React.FC = () => {
         descripcion="Cuando se carguen cursos y secciones, aparecerán aquí."
       />
     ) : esPantallaAncha ? (
-      <section
-        aria-label="Listado de secciones"
-        className="overflow-x-auto rounded-xl border border-saie-divider bg-white"
-      >
-        <table className="w-full text-left text-sm">
-          <thead className="bg-saie-canvas text-xs uppercase tracking-wide text-saie-muted">
-            <tr>
-              <th scope="col" className="px-4 py-3">
-                Sección
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Tipo
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Aula
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Docente
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Alumnos
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Estado
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Detalle
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {secciones.map((s) => (
-              <FilaSeccion key={s.id} seccion={s} onVer={abrirDetalle} />
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <TablaDatos etiqueta="Listado de secciones">
+        <CabeceraTabla
+          columnas={['Sección', 'Tipo', 'Aula', 'Docente', 'Alumnos', 'Estado', 'Detalle']}
+        />
+        <tbody>
+          {secciones.map((s) => (
+            <FilaSeccion key={s.id} seccion={s} onVer={abrirDetalle} />
+          ))}
+        </tbody>
+      </TablaDatos>
     ) : (
       <ul className="m-0 flex list-none flex-col gap-3 p-0" aria-label="Listado de secciones">
         {secciones.map((s) => (
@@ -442,8 +415,7 @@ export const SeccionesAdmin: React.FC = () => {
     >
       <section aria-label="Filtros de secciones" className="flex flex-col gap-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Buscar sección</span>
+          <Campo etiqueta="Buscar sección">
             <input
               type="search"
               placeholder="Ej. 2020101 o Cálculo"
@@ -451,9 +423,8 @@ export const SeccionesAdmin: React.FC = () => {
               onChange={(e) => setTexto(e.target.value)}
               className={CLASE_CAMPO}
             />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Tipo de espacio</span>
+          </Campo>
+          <Campo etiqueta="Tipo de espacio">
             <select
               value={tipo}
               onChange={(e) => setTipo(e.target.value as 'TODOS' | TipoEspacio)}
@@ -463,9 +434,8 @@ export const SeccionesAdmin: React.FC = () => {
               <option value="AULA_TEORICA">Aulas teóricas</option>
               <option value="LABORATORIO">Laboratorios</option>
             </select>
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Periodo</span>
+          </Campo>
+          <Campo etiqueta="Periodo">
             <input
               type="text"
               placeholder="Ej. 2026-2"
@@ -473,7 +443,7 @@ export const SeccionesAdmin: React.FC = () => {
               onChange={(e) => setPeriodo(e.target.value)}
               className={CLASE_CAMPO}
             />
-          </label>
+          </Campo>
         </div>
         <p className="m-0 text-sm text-saie-muted" aria-live="polite">
           {secciones.length} {secciones.length === 1 ? 'sección' : 'secciones'}
@@ -481,7 +451,7 @@ export const SeccionesAdmin: React.FC = () => {
       </section>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      {cargando && !datos ? <EsqueletoCarga texto="Cargando secciones…" /> : lista}
+      {cargando && !datos ? <EsqueletoCarga texto="Cargando secciones…" forma="tabla" /> : lista}
 
       <Drawer
         abierto={seleccionada !== null}

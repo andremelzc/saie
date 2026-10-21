@@ -4,7 +4,9 @@ import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/Element
 import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
-import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
+import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
+import { Campo } from '../../components/ui/Campo';
+import { CLASE_CAMPO } from '../../components/ui/campos';
 import { useCarga } from '../../hooks/useCarga';
 import { obtenerAuditoria, obtenerHistorial } from '../../services/admin';
 import type { EstadoAsignacion, TipoEventoAuditoria } from '../../types/admin';
@@ -70,8 +72,7 @@ const VistaHistorial: React.FC<{ version: number }> = ({ version }) => {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1">
-          <span className={CLASE_ETIQUETA}>Periodo</span>
+        <Campo etiqueta="Periodo">
           <input
             type="text"
             placeholder="Ej. 2026-2"
@@ -79,9 +80,8 @@ const VistaHistorial: React.FC<{ version: number }> = ({ version }) => {
             onChange={(e) => setPeriodo(e.target.value)}
             className={CLASE_CAMPO}
           />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className={CLASE_ETIQUETA}>Estado</span>
+        </Campo>
+        <Campo etiqueta="Estado">
           <select
             value={estado}
             onChange={(e) => setEstado(e.target.value as 'TODOS' | EstadoAsignacion)}
@@ -94,70 +94,45 @@ const VistaHistorial: React.FC<{ version: number }> = ({ version }) => {
               </option>
             ))}
           </select>
-        </label>
+        </Campo>
       </div>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
       {cargando && !datos ? (
-        <EsqueletoCarga texto="Cargando historial…" />
+        <EsqueletoCarga texto="Cargando historial…" forma="tabla" />
       ) : items.length === 0 ? (
         <EstadoVacio
           titulo="Sin asignaciones registradas"
           descripcion="Cuando se asignen aulas, aquí quedará el registro de cada asignación."
         />
       ) : (
-        <section
-          aria-label="Historial de asignaciones"
-          className="overflow-x-auto rounded-xl border border-saie-divider bg-white"
-        >
-          <table className="w-full text-left text-sm">
-            <thead className="bg-saie-canvas text-xs uppercase tracking-wide text-saie-muted">
-              <tr>
-                <th scope="col" className="px-4 py-3">
-                  Sección
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Aula
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Estado
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Fecha
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Corrida
-                </th>
+        <TablaDatos etiqueta="Historial de asignaciones">
+          <CabeceraTabla columnas={['Sección', 'Aula', 'Estado', 'Fecha', 'Corrida']} />
+          <tbody>
+            {items.map((a) => (
+              <tr key={a.id} className="border-t border-saie-divider">
+                <td className="px-4 py-3">
+                  <span className="block font-semibold">
+                    {a.codigoCurso} · {a.codigoSeccion}
+                  </span>
+                  <span className="block text-xs text-saie-muted">{a.nombreCurso}</span>
+                </td>
+                <td className="px-4 py-3">
+                  {a.espacios.length > 0 ? a.espacios.map((e) => e.identificador).join(', ') : '—'}
+                </td>
+                <td className="px-4 py-3">
+                  <InsigniaEstado estado={a.estado} />
+                </td>
+                <td className="px-4 py-3 text-xs text-saie-muted">
+                  {formatearFechaAlerta(a.fechaAsignacion)}
+                </td>
+                <td className="px-4 py-3 font-mono text-xs text-saie-muted">
+                  {a.corridaId ?? '—'}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {items.map((a) => (
-                <tr key={a.id} className="border-t border-saie-divider">
-                  <td className="px-4 py-3">
-                    <span className="block font-semibold">
-                      {a.codigoCurso} · {a.codigoSeccion}
-                    </span>
-                    <span className="block text-xs text-saie-muted">{a.nombreCurso}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {a.espacios.length > 0
-                      ? a.espacios.map((e) => e.identificador).join(', ')
-                      : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <InsigniaEstado estado={a.estado} />
-                  </td>
-                  <td className="px-4 py-3 text-xs text-saie-muted">
-                    {formatearFechaAlerta(a.fechaAsignacion)}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-saie-muted">
-                    {a.corridaId ?? '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+            ))}
+          </tbody>
+        </TablaDatos>
       )}
     </div>
   );
@@ -181,8 +156,7 @@ const VistaAuditoria: React.FC<{ version: number }> = ({ version }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <label className="flex max-w-xs flex-col gap-1">
-        <span className={CLASE_ETIQUETA}>Tipo de evento</span>
+      <Campo etiqueta="Tipo de evento" className="flex max-w-xs flex-col gap-1">
         <select
           value={tipo}
           onChange={(e) => setTipo(e.target.value as 'TODOS' | TipoEventoAuditoria)}
@@ -195,56 +169,36 @@ const VistaAuditoria: React.FC<{ version: number }> = ({ version }) => {
             </option>
           ))}
         </select>
-      </label>
+      </Campo>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
       {cargando && !datos ? (
-        <EsqueletoCarga texto="Cargando auditoría…" />
+        <EsqueletoCarga texto="Cargando auditoría…" forma="tabla" />
       ) : items.length === 0 ? (
         <EstadoVacio
           titulo="Sin actividad registrada"
           descripcion="Cada asignación automática de aulas deja aquí su registro."
         />
       ) : (
-        <section
-          aria-label="Registros de auditoría"
-          className="overflow-x-auto rounded-xl border border-saie-divider bg-white"
-        >
-          <table className="w-full text-left text-sm">
-            <thead className="bg-saie-canvas text-xs uppercase tracking-wide text-saie-muted">
-              <tr>
-                <th scope="col" className="px-4 py-3">
-                  Evento
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Sección
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Detalle
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Fecha
-                </th>
+        <TablaDatos etiqueta="Registros de auditoría">
+          <CabeceraTabla columnas={['Evento', 'Sección', 'Detalle', 'Fecha']} />
+          <tbody>
+            {items.map((r) => (
+              <tr key={r.id} className="border-t border-saie-divider align-top">
+                <td className="px-4 py-3">
+                  <InsigniaEvento tipo={r.tipoEvento} />
+                </td>
+                <td className="px-4 py-3 text-xs">
+                  {r.seccion ? `${r.seccion.codigoCurso} · ${r.seccion.codigoSeccion}` : '—'}
+                </td>
+                <td className="px-4 py-3 text-xs text-saie-text">{r.detalle}</td>
+                <td className="px-4 py-3 text-xs text-saie-muted">
+                  {formatearFechaAlerta(r.fechaHora)}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {items.map((r) => (
-                <tr key={r.id} className="border-t border-saie-divider align-top">
-                  <td className="px-4 py-3">
-                    <InsigniaEvento tipo={r.tipoEvento} />
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    {r.seccion ? `${r.seccion.codigoCurso} · ${r.seccion.codigoSeccion}` : '—'}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-saie-text">{r.detalle}</td>
-                  <td className="px-4 py-3 text-xs text-saie-muted">
-                    {formatearFechaAlerta(r.fechaHora)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+            ))}
+          </tbody>
+        </TablaDatos>
       )}
     </div>
   );

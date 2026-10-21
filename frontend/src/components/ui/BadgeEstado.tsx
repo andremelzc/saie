@@ -1,4 +1,5 @@
 import React from 'react';
+import { ICONOS } from './iconos';
 
 export type TonoBadge = 'exito' | 'peligro' | 'advertencia' | 'neutro' | 'info';
 
@@ -12,8 +13,7 @@ const ESTILOS: Record<TonoBadge, string> = {
 
 const TRAZOS: Record<TonoBadge, string> = {
   exito: 'M5 13l4 4L19 7',
-  peligro:
-    'M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z',
+  peligro: ICONOS.alerta,
   advertencia: 'M12 8v4m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z',
   neutro: 'M12 8v4m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z',
   info: 'M12 8h.01M11 12h1v4h1m-1-13a9 9 0 100 18 9 9 0 000-18z',

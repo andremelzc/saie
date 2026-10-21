@@ -55,6 +55,34 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* Barras de desplazamiento con los colores del sistema: pulgar guinda sobre un carril crema, en la
+   página, en los drawers y en cualquier zona con scroll. El pulgar se oscurece al pasar el cursor.
+   Chromium y Safari usan `::-webkit-scrollbar`; Firefox, las propiedades estándar. */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-saie-canvas-dark);
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-saie-primary);
+  border: 3px solid var(--color-saie-canvas-dark);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-saie-primary-dark);
+}
+::-webkit-scrollbar-corner {
+  background: var(--color-saie-canvas-dark);
+}
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-saie-primary) var(--color-saie-canvas-dark);
+  }
+}
+
 /* Entrada de los paneles y los diálogos: el panel se desliza desde la derecha y el velo del fondo
    aparece con un fundido. Duración corta (≈200 ms); se anulan con «Reducir movimiento». */
 @keyframes saie-deslizar {

@@ -33,7 +33,10 @@ export const CabeceraPortal: React.FC<CabeceraPortalProps> = ({ portal }) => {
               {etiquetaRol(sesion?.rol)}
             </strong>
           </p>
-          <BotonCerrarSesion className="h-11! border-white/30! bg-white/10! px-5! text-sm! text-white! hover:bg-white/20!" />
+          <BotonCerrarSesion
+            compacto
+            className="border-white/30! bg-white/10! text-white! hover:bg-white/20!"
+          />
         </div>
       </Contenedor>
     </header>

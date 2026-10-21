@@ -4,9 +4,11 @@ import isotipoPlaca from '../../assets/isotipo-placa.svg';
 import { PORTALES } from '../../config/portales';
 import type { PortalId } from '../../config/portales';
 import { useTituloPagina } from '../../hooks/useTituloPagina';
+import { Boton } from '../ui/Boton';
 import { estadoHttp, mensajeDeError, mensajeSeguroDelServidor } from '../../services/errores';
 import type { LoginResponseDTO } from '../../types/auth';
 import IconoPortal from './IconoPortal';
+import { ICONOS } from '../ui/iconos';
 
 const MENSAJE_CREDENCIALES =
   'Credenciales inválidas. Las cuentas de acceso son administradas por Coordinación Académica.';
@@ -168,11 +170,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
             viewBox="0 0 20 20"
             aria-hidden="true"
           >
-            <path
-              fillRule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-              clipRule="evenodd"
-            />
+            <path fillRule="evenodd" d={ICONOS.errorCirculo} clipRule="evenodd" />
           </svg>
           <div className="flex-1">
             <span>{errorLogin}</span>
@@ -322,49 +320,16 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
         </div>
 
         {/* Botón de envío */}
-        <button
+        <Boton
           type="submit"
-          disabled={!esValido || cargando}
-          aria-busy={cargando}
-          className="group w-full h-12 mt-2 px-6 rounded-xl font-medium text-base text-white shadow-md transition-all duration-200 flex items-center justify-center gap-2 bg-saie-primary hover:bg-saie-primary-dark hover:shadow-md active:bg-saie-primary-dark disabled:bg-saie-divider disabled:text-saie-muted disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
+          disabled={!esValido}
+          cargando={cargando}
+          textoCargando="Iniciando sesión..."
+          claseContenedor="w-full"
+          className="mt-2 w-full"
         >
-          {cargando ? (
-            <>
-              <svg
-                className="animate-spin h-5 w-5 text-current"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                />
-              </svg>
-              <span>Iniciando sesión...</span>
-            </>
-          ) : (
-            <>
-              <span>Iniciar sesión</span>
-              <span
-                aria-hidden="true"
-                className="inline-block transition-transform duration-300 group-enabled:group-hover:translate-x-1.5"
-              >
-                &rarr;
-              </span>
-            </>
-          )}
-        </button>
+          Iniciar sesión <span aria-hidden="true">&rarr;</span>
+        </Boton>
       </form>
 
       {/* Nota institucional de no autorregistro */}

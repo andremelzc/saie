@@ -5,6 +5,7 @@ import { Contenedor } from '../components/ui/Contenedor';
 import { ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
 import { EsqueletoCarga, Icono } from '../components/estudiante/ElementosHorario';
 import { Boton } from '../components/ui/Boton';
+import { clasesBoton } from '../components/ui/clasesBoton';
 import { DialogoConfirmacion } from '../components/ui/DialogoConfirmacion';
 import { useCarga } from '../hooks/useCarga';
 import { ZONA_HORARIA } from '../utils/admin';
@@ -29,9 +30,6 @@ function formatearFechaHora(iso: string | null): string | null {
     timeZone: ZONA_HORARIA,
   });
 }
-
-const estilosBoton =
-  'inline-flex min-h-11 w-fit cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-saie-primary disabled:cursor-not-allowed disabled:opacity-60';
 
 /**
  * Issue 3.28 — pantalla de avisos por Telegram. La vinculación se hace desde el bot (el alumno
@@ -80,12 +78,12 @@ export const TelegramAlumnoPage: React.FC = () => {
         titulo="Avisos por Telegram"
         subtitulo="Recibe un aviso cuando cambie el aula o el laboratorio de una de tus clases."
         trazoIcono={TRAZO_TELEGRAM}
-        ancho="lectura"
+        ancho="normal"
       />
 
       <Contenedor
         como="main"
-        ancho="lectura"
+        ancho="normal"
         id={ID_CONTENIDO}
         tabIndex={-1}
         className="flex flex-col gap-6 py-6 focus:outline-none"
@@ -187,9 +185,10 @@ export const TelegramAlumnoPage: React.FC = () => {
                       href={`https://t.me/${estado.botUsername}`}
                       target="_blank"
                       rel="noreferrer"
-                      className={`${estilosBoton} bg-saie-primary text-white no-underline hover:bg-saie-primary-dark`}
+                      className={clasesBoton('primario', 'sm')}
                     >
                       Abrir el bot en Telegram
+                      <span className="sr-only"> (se abre en una pestaña nueva)</span>
                     </a>
                   ) : (
                     <p className="m-0 text-sm text-saie-muted">
@@ -212,14 +211,14 @@ export const TelegramAlumnoPage: React.FC = () => {
                   <span aria-hidden="true">{mensaje.tipo === 'error' ? '⚠' : '✓'}</span>
                   <span className="min-w-0 flex-1">{mensaje.texto}</span>
                   {mensaje.tipo === 'error' && (
-                    <button
-                      type="button"
+                    <Boton
+                      variante="peligro"
+                      tamano="sm"
                       onClick={ejecutarBaja}
                       disabled={desvinculando}
-                      className={`${estilosBoton} bg-saie-danger text-white hover:opacity-90`}
                     >
                       Reintentar
-                    </button>
+                    </Boton>
                   )}
                 </div>
               )}

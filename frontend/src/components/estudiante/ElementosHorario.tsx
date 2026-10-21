@@ -115,22 +115,29 @@ export const UbicacionEspacios: React.FC<UbicacionEspaciosProps> = ({
 
 export interface EstadoVacioProps {
   titulo: string;
+  /** Trazo del ícono (por defecto un calendario); usa uno que diga de qué es el vacío. */
+  icono?: string;
   descripcion: string;
   /** Acción que resuelve el vacío (p. ej. «Limpiar filtros» o «Ir a Carga de datos»). */
   accion?: React.ReactNode;
 }
 
 /** Estado vacío uniforme (Guía de diseño 1.7): título breve, explicación y salida. */
-export const EstadoVacio: React.FC<EstadoVacioProps> = ({ titulo, descripcion, accion }) => (
+export const EstadoVacio: React.FC<EstadoVacioProps> = ({
+  titulo,
+  descripcion,
+  accion,
+  icono = TRAZO_CALENDARIO,
+}) => (
   <div
     role="status"
     className="saie-fundido flex flex-col items-center gap-2 rounded-2xl border border-dashed border-saie-divider bg-white px-6 py-10 text-center"
   >
     <span
       aria-hidden="true"
-      className="saie-flota flex h-16 w-16 items-center justify-center rounded-2xl bg-saie-canvas text-saie-primary"
+      className="flex h-16 w-16 items-center justify-center rounded-2xl bg-saie-canvas text-saie-primary"
     >
-      <Icono trazo={TRAZO_CALENDARIO} className="h-8 w-8" />
+      <Icono trazo={icono} className="h-8 w-8" />
     </span>
     <h3 className="m-0 text-xl font-bold text-saie-text">{titulo}</h3>
     <p className="m-0 max-w-sm text-sm text-saie-muted">{descripcion}</p>
@@ -139,18 +146,33 @@ export const EstadoVacio: React.FC<EstadoVacioProps> = ({ titulo, descripcion, a
 );
 
 /** Esqueleto de carga con la forma del contenido; respeta «Reducir movimiento». */
-export const EsqueletoCarga: React.FC<{ texto?: string }> = ({
+export const EsqueletoCarga: React.FC<{ texto?: string; forma?: 'lista' | 'tabla' }> = ({
   texto = 'Cargando tu horario…',
+  forma = 'lista',
 }) => (
   <div role="status" aria-busy="true" className="flex flex-col gap-3">
     <span className="sr-only">{texto}</span>
-    {[0, 1, 2].map((posicion) => (
+    {forma === 'tabla' ? (
       <div
-        key={posicion}
         aria-hidden="true"
-        className="saie-esqueleto h-24 rounded-xl border border-saie-divider"
-      />
-    ))}
+        className="overflow-hidden rounded-xl border border-saie-divider bg-white"
+      >
+        {[0, 1, 2, 3, 4, 5].map((fila) => (
+          <div
+            key={fila}
+            className="saie-esqueleto h-12 border-b border-saie-divider last:border-b-0"
+          />
+        ))}
+      </div>
+    ) : (
+      [0, 1, 2].map((posicion) => (
+        <div
+          key={posicion}
+          aria-hidden="true"
+          className="saie-esqueleto h-24 rounded-xl border border-saie-divider"
+        />
+      ))
+    )}
   </div>
 );
 

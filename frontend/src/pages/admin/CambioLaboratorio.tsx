@@ -6,6 +6,8 @@ import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
 import { CLASE_AYUDA, CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
+import { DialogoConfirmacion } from '../../components/ui/DialogoConfirmacion';
+import { useAdvertenciaSalida } from '../../hooks/useAdvertenciaSalida';
 import { useCarga } from '../../hooks/useCarga';
 import {
   obtenerCatalogoActivo,
@@ -238,6 +240,9 @@ export const CambioLaboratorio: React.FC = () => {
     pcsValido &&
     (lab.pcsMalogradas == null ? pcsIngresado : pcsNumero !== lab.pcsMalogradas);
   const hayCambios = softwareCambiado || pcsCambiado;
+  // Cerrar la pestaña o cambiar de laboratorio con cambios sin guardar pide confirmación.
+  useAdvertenciaSalida(hayCambios);
+  const [labPendiente, setLabPendiente] = useState<string | null>(null);
   const puedeGuardar = Boolean(lab) && hayCambios && pcsValido && !guardando;
 
   const itemsCatalogo = catalogo.datos?.items ?? [];
@@ -335,7 +340,9 @@ export const CambioLaboratorio: React.FC = () => {
         <select
           id="laboratorio"
           value={labId}
-          onChange={(e) => elegirLab(e.target.value)}
+          onChange={(e) =>
+            hayCambios ? setLabPendiente(e.target.value) : elegirLab(e.target.value)
+          }
           disabled={!labs.datos}
           className={CLASE_CAMPO}
         >
@@ -432,6 +439,27 @@ export const CambioLaboratorio: React.FC = () => {
           </Boton>
         </footer>
       </div>
+      <DialogoConfirmacion
+        abierto={labPendiente !== null}
+
+        titulo="¿Cambiar de laboratorio?"
+
+        descripcion="Tienes cambios sin guardar en este laboratorio. Si cambias ahora, se perderán."
+
+        textoConfirmar="Cambiar y descartar"
+
+        textoCancelar="Seguir editando"
+
+        variante="peligro"
+
+        onConfirmar={() => {
+          if (labPendiente !== null) elegirLab(labPendiente);
+
+          setLabPendiente(null);
+        }}
+
+        onCancelar={() => setLabPendiente(null)}
+      />
     </LayoutAdmin>
   );
 };

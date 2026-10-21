@@ -18,6 +18,7 @@ import {
   EstadoVacio,
   UbicacionEspacios,
 } from './ElementosHorario';
+import { Boton } from '../ui/Boton';
 
 export interface HorarioDiaProps {
   horario: HorarioSemanalDTO;
@@ -96,13 +97,9 @@ export const HorarioDia: React.FC<HorarioDiaProps> = ({
           {ETIQUETA_DIA[dia]}
         </h3>
         {!esDiaActual && hoy !== 'DOMINGO' && (
-          <button
-            type="button"
-            onClick={() => onCambiarDia(hoy)}
-            className="min-h-11 cursor-pointer rounded-xl border border-saie-primary bg-white px-4 text-sm font-medium text-saie-primary hover:bg-saie-canvas"
-          >
+          <Boton variante="secundario" tamano="sm" onClick={() => onCambiarDia(hoy)}>
             Ir a hoy
-          </button>
+          </Boton>
         )}
       </div>
 

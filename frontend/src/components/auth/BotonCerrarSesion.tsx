@@ -1,18 +1,23 @@
 import React from 'react';
 import { useAuth } from '../../context/useAuth';
+import { Boton } from '../ui/Boton';
 
 /** Cierra la sesión (borra el token y vuelve al login del rol). Reutilizable en todos los portales. */
-export const BotonCerrarSesion: React.FC<{ className?: string }> = ({ className = '' }) => {
+export const BotonCerrarSesion: React.FC<{ className?: string; compacto?: boolean }> = ({
+  className = '',
+  compacto = false,
+}) => {
   const { cerrarSesion } = useAuth();
 
   return (
-    <button
-      type="button"
+    <Boton
+      variante="secundario"
+      tamano={compacto ? 'sm' : 'md'}
       onClick={() => cerrarSesion('manual')}
-      className={`h-12 px-6 rounded-xl font-medium text-base text-saie-primary bg-white border border-saie-primary hover:bg-saie-canvas focus:outline-hidden focus:ring-3 focus:ring-saie-text focus:ring-offset-2 transition-colors cursor-pointer ${className}`}
+      className={className}
     >
       Cerrar sesión
-    </button>
+    </Boton>
   );
 };
 
