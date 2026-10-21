@@ -170,10 +170,10 @@ describe('Inicio del panel administrativo', () => {
         '/admin/carga#carga-horarios',
       );
       expect(screen.getByText('Sin motivo registrado.')).toBeInTheDocument();
-      const atencion = screen.getByRole('region', { name: 'Requieren tu atención' });
-      expect(within(atencion).getByText(/alertas pendientes/).parentElement).toHaveTextContent(
-        '2 alertas pendientes',
-      );
+      // La tarjeta «Requieren tu atención» repetía las cifras de la fila de métricas; lo que
+      // queda es el atajo a la lista completa de alertas, con su número dentro del enlace.
+      expect(screen.getAllByText('Alertas pendientes').length).toBeGreaterThan(0);
+      expect(screen.getByRole('link', { name: /Alertas pendientes/ })).toBeInTheDocument();
     });
 
     it('muestra el estado vacío cuando no hay escaladas', async () => {
@@ -219,6 +219,10 @@ describe('Inicio del panel administrativo', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
       fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
 
+      // El resumen va en la tarjeta del tablero…
+      expect(await screen.findByText(/Conforme · 8 revisadas/)).toBeInTheDocument();
+      // …y el detalle de las reglas, en el drawer a petición.
+      fireEvent.click(screen.getByRole('button', { name: 'Ver el detalle de las reglas' }));
       expect(
         await screen.findByText('Conforme: la corrida cumple las 7 reglas duras.'),
       ).toBeInTheDocument();
@@ -228,7 +232,8 @@ describe('Inicio del panel administrativo', () => {
       ).toBeInTheDocument();
       expect(screen.getByText('Sin doble reserva')).toBeInTheDocument();
       expect(screen.getByText('Capacidad suficiente')).toBeInTheDocument();
-      expect(screen.getByText(/Conforme · 8 revisadas/)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
+      expect(screen.queryByText('Sin doble reserva')).toBeNull();
     });
 
     it('detalla las violaciones cuando el verificador no es conforme', async () => {
@@ -237,6 +242,7 @@ describe('Inicio del panel administrativo', () => {
       await screen.findByText(/IS101/);
       fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
       fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Ver el detalle de las reglas' }));
 
       expect(
         await screen.findByText('No conforme: 1 violación(es) en 1 regla(s).'),
@@ -244,7 +250,7 @@ describe('Inicio del panel administrativo', () => {
       expect(screen.getByText('NO CONFORME')).toBeInTheDocument();
       expect(screen.getByText(/Ver 1 violación/)).toBeInTheDocument();
       expect(screen.getByText(/Aforo insuficiente para 45 alumnos/)).toBeInTheDocument();
-      expect(screen.getByText(/No conforme · 1 violación/)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
     });
 
     it('avisa cuando la corrida no dejó asignaciones que verificar', async () => {
@@ -254,10 +260,13 @@ describe('Inicio del panel administrativo', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
       fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
 
+      // En la tarjeta queda el distintivo de que no hubo nada que verificar.
+      expect(await screen.findByText('Verificador: sin asignaciones que revisar')).toBeVisible();
+      // Y el aviso completo de la corrida vive en el drawer.
+      fireEvent.click(screen.getByRole('button', { name: 'Ver el detalle de las reglas' }));
       expect(
         await screen.findByText('No hubo asignaciones que verificar en esta corrida.'),
       ).toBeInTheDocument();
-      expect(screen.getByText('Verificador: sin asignaciones que revisar')).toBeInTheDocument();
     });
 
     it('muestra el error si la corrida falla', async () => {
@@ -339,26 +348,20 @@ describe('Inicio del panel administrativo', () => {
       expect(await screen.findByText(/IS101/)).toBeInTheDocument();
     });
 
-    it('enlaza a carga de datos, espacios, secciones y auditoría sin duplicar el contador pendiente', async () => {
+    it('enlaza a carga de datos, espacios, secciones y auditoría', async () => {
       montar();
       await screen.findByText(/IS101/);
-      expect(screen.getByRole('link', { name: /Carga de datos/ })).toBeInTheDocument();
-      expect(
-        // El nombre accesible del enlace es su contenido visible (título + descripción).
-        screen.getByRole('link', { name: /Espacios.*Aulas y laboratorios/ }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole('link', { name: /Secciones.*Gestión individual/ }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole('link', { name: /Auditoría.*Historial de asignaciones/ }),
-      ).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Informe de salones/ })).toBeInTheDocument();
-      const enlaceAlertas = screen.getByRole('link', { name: /Ver alertas/ });
-      expect(enlaceAlertas).not.toHaveTextContent(/\d/);
-      expect(screen.getByText(/alertas pendientes/).parentElement).toHaveTextContent(
-        '2 alertas pendientes',
-      );
+      // Se acota a la región «Accesos» del tablero: el menú superior usa los mismos nombres.
+      const accesos = screen.getByRole('region', { name: 'Accesos' });
+      expect(within(accesos).getByRole('link', { name: /Carga de datos/ })).toBeInTheDocument();
+      expect(within(accesos).getByRole('link', { name: 'Espacios' })).toBeInTheDocument();
+      expect(within(accesos).getByRole('link', { name: 'Secciones' })).toBeInTheDocument();
+      expect(within(accesos).getByRole('link', { name: 'Auditoría' })).toBeInTheDocument();
+      expect(within(accesos).getByRole('link', { name: 'Informe de salones' })).toBeInTheDocument();
+      // El atajo a las alertas lleva la cifra en el propio enlace.
+      const enlaceAlertas = within(accesos).getByRole('link', { name: /Ver alertas/ });
+      expect(enlaceAlertas).toHaveTextContent('2');
+      expect(enlaceAlertas).toHaveAttribute('href', '/admin/alertas');
     });
   });
 

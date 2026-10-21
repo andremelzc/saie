@@ -6,6 +6,7 @@ import { EsqueletoCarga } from '../../components/estudiante/ElementosHorario';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
+import { Drawer } from '../../components/ui/Drawer';
 import { RUTAS } from '../../config/rutas';
 import { useAuth } from '../../context/useAuth';
 import { useCarga } from '../../hooks/useCarga';
@@ -66,6 +67,34 @@ const Acceso: React.FC<{ to: string; titulo: string; descripcion: string; trazo:
     <span className="min-w-0 flex-1">
       <span className="block text-sm font-bold text-saie-text">{titulo}</span>
       <span className="block text-xs text-saie-muted">{descripcion}</span>
+    </span>
+  </Link>
+);
+
+/** Acceso compacto del tablero: solo icono y título; la descripción vive en la pestaña. */
+const Atajo: React.FC<{ to: string; titulo: string; trazo: string }> = ({ to, titulo, trazo }) => (
+  <Link
+    to={to}
+    className="flex min-w-0 items-center gap-2.5 rounded-xl border border-saie-divider bg-white p-2 no-underline transition-colors hover:border-saie-primary"
+  >
+    <span
+      aria-hidden="true"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-saie-primary/10 text-saie-primary"
+    >
+      <svg
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        viewBox="0 0 24 24"
+      >
+        <path d={trazo} />
+      </svg>
+    </span>
+    <span className="min-w-0 break-words text-sm font-semibold leading-tight text-saie-text">
+      {titulo}
     </span>
   </Link>
 );
@@ -212,7 +241,7 @@ const InicioJefatura: React.FC = () => {
 
   return (
     <LayoutAdmin dashboard titulo="Área administrativa" subtitulo="Jefatura de Laboratorios">
-      <div className="grid gap-4 lg:h-full lg:min-h-0 lg:grid-rows-[auto_1fr]">
+      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-rows-[auto_1fr]">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <Metrica valor={pendientes} etiqueta="Alertas pendientes" tono="text-saie-danger" />
           <Metrica
@@ -255,6 +284,7 @@ const InicioCoordinacion: React.FC = () => {
   const alertas = useCarga(obtenerAlertas);
   const [corriendo, setCorrida] = useState(false);
   const [confirmandoCorrida, setConfirmandoCorrida] = useState(false);
+  const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [reintentando, setReintentando] = useState<string | null>(null);
   const [resumenCorrida, setResumenCorrida] = useState<ResumenAsignacionDTO | null>(null);
   const [resultadoSeccion, setResultadoSeccion] = useState<{
@@ -310,7 +340,13 @@ const InicioCoordinacion: React.FC = () => {
 
   return (
     <LayoutAdmin dashboard titulo="Área administrativa" subtitulo="Coordinación Académica">
-      <div className="grid gap-4 lg:h-full lg:min-h-0 lg:grid-rows-[auto_auto_1fr]">
+      {/*
+        El tablero ocupa lo que queda del `main` (que es una columna flex) una vez descontados
+        el título y los espacios. Antes iba con `lg:h-full`, que sumaba el 100 % de `main` al
+        título y desbordaba: `main` recorta con `lg:overflow-hidden` y la última fila quedaba
+        inalcanzable, sin scroll para recuperarla.
+      */}
+      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-rows-[auto_auto_1fr]">
         {/* FILA 1 — las cuatro cifras que resumen la asignación */}
         <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 lg:grid-cols-4">
           <li>
@@ -337,25 +373,32 @@ const InicioCoordinacion: React.FC = () => {
 
         {/* FILA 2 — estado de la corrida y veredicto del verificador */}
         <div className="grid gap-4 lg:grid-cols-12">
+          {/*
+            La tarjeta guinda se estira hasta la altura de la del verificador, que es la que
+            crece al abrir el detalle de las reglas. Por eso reparte su contenido con
+            `justify-between`: el estado arriba y la acción abajo. Antes llevaba
+            `justify-center` y el texto quedaba flotando en medio de un bloque vacío de color.
+          */}
           <section
             aria-label="Estado de la asignación"
-            className="flex flex-col justify-center gap-3 rounded-2xl bg-gradient-to-br from-saie-primary to-saie-primary-dark p-4 text-white lg:col-span-8"
+            className="flex flex-col justify-between gap-3 rounded-2xl bg-gradient-to-br from-saie-primary to-saie-primary-dark p-4 text-white lg:col-span-8"
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="m-0 text-xs text-white/80">Asignación de aulas · Periodo {periodo}</p>
-                <p role="status" aria-live="polite" className="m-0 mt-0.5 text-sm">
-                  {resumenCorrida
-                    ? `${resumenCorrida.asignadas} con aula nueva · ${resumenCorrida.mantenidas} conservan la suya · ${resumenCorrida.escaladas} de ${resumenCorrida.totalSecciones} esperan revisión`
-                    : `${escaladas.datos?.total ?? '…'} secciones esperan revisión`}
+            <div className="min-w-0">
+              <p className="m-0 text-xs text-white/80">Asignación de aulas · Periodo {periodo}</p>
+              <p role="status" aria-live="polite" className="m-0 mt-0.5 text-sm">
+                {resumenCorrida
+                  ? `${resumenCorrida.asignadas} con aula nueva · ${resumenCorrida.mantenidas} conservan la suya · ${resumenCorrida.escaladas} de ${resumenCorrida.totalSecciones} esperan revisión`
+                  : `${escaladas.datos?.total ?? '…'} secciones esperan revisión`}
+              </p>
+              {ultimaCorrida && (
+                <p className="m-0 mt-1 text-xs text-white/75">
+                  Última actualización: {formatearFechaCorta(ultimaCorrida)}
                 </p>
-                {ultimaCorrida && (
-                  <p className="m-0 mt-1 text-xs text-white/75">
-                    Última actualización: {formatearFechaCorta(ultimaCorrida)}
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
+              )}
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-end gap-2">
                 {!confirmandoCorrida && (
                   <Boton
                     variante="secundario"
@@ -369,35 +412,35 @@ const InicioCoordinacion: React.FC = () => {
                   </Boton>
                 )}
               </div>
-            </div>
 
-            {confirmandoCorrida && (
-              <div className="rounded-xl border border-white/30 bg-white p-3 text-saie-text">
-                <p className="m-0 text-sm">
-                  Se volverán a asignar las aulas de las secciones del periodo {periodo}. Las
-                  asignaciones que siguen siendo válidas se conservan y no se duplican aulas.
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Boton
-                    variante="cancelar"
-                    tamano="sm"
-                    onClick={() => setConfirmandoCorrida(false)}
-                    disabled={corriendo}
-                  >
-                    Cancelar
-                  </Boton>
-                  <Boton
-                    variante="primario"
-                    tamano="sm"
-                    onClick={correr}
-                    cargando={corriendo}
-                    textoCargando="Asignando…"
-                  >
-                    Sí, asignar aulas
-                  </Boton>
+              {confirmandoCorrida && (
+                <div className="rounded-xl border border-white/30 bg-white p-3 text-saie-text">
+                  <p className="m-0 text-sm">
+                    Se volverán a asignar las aulas de las secciones del periodo {periodo}. Las
+                    asignaciones que siguen siendo válidas se conservan y no se duplican aulas.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Boton
+                      variante="cancelar"
+                      tamano="sm"
+                      onClick={() => setConfirmandoCorrida(false)}
+                      disabled={corriendo}
+                    >
+                      Cancelar
+                    </Boton>
+                    <Boton
+                      variante="primario"
+                      tamano="sm"
+                      onClick={correr}
+                      cargando={corriendo}
+                      textoCargando="Asignando…"
+                    >
+                      Sí, asignar aulas
+                    </Boton>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </section>
 
           <section
@@ -417,15 +460,17 @@ const InicioCoordinacion: React.FC = () => {
                 >
                   {textoVerificador(resumenCorrida.verificacion)}
                 </span>
-                {/* El detalle de las siete reglas queda plegado: el tablero no crece por ello. */}
-                <details className="mt-1">
-                  <summary className="cursor-pointer text-xs font-semibold text-saie-primary">
-                    Ver el detalle de las reglas
-                  </summary>
-                  <div className="mt-2">
-                    <VeredictoVerificacion verificacion={resumenCorrida.verificacion} />
-                  </div>
-                </details>
+                {/* El detalle de las siete reglas abre un drawer: el tablero no crece y no se
+                    esconde tras un scroll dentro de la tarjeta. Se muestra también sin
+                    verificación para explicar que no hubo nada que revisar. */}
+                <Boton
+                  variante="secundario"
+                  tamano="sm"
+                  onClick={() => setDetalleAbierto(true)}
+                  className="w-fit!"
+                >
+                  Ver el detalle de las reglas
+                </Boton>
               </>
             ) : (
               <p className="m-0 text-xs text-saie-muted">
@@ -479,76 +524,76 @@ const InicioCoordinacion: React.FC = () => {
             </div>
           </section>
 
-          <div className="flex min-h-0 flex-col gap-4 lg:col-span-4 lg:overflow-y-auto">
-            <section
-              aria-labelledby="titulo-resumen"
-              className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4"
-            >
-              <h2 id="titulo-resumen" className="m-0 text-sm font-bold text-saie-text">
-                Requieren tu atención
-              </h2>
-              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <span>
-                  <strong className="text-xl text-saie-danger">{pendientes}</strong> alertas
-                  pendientes
+          {/*
+            La columna derecha solo tiene los accesos: «Requieren tu atención» repetía las dos
+            cifras que ya están en la fila de métricas y obligaba a ocultar la columna tras un
+            scroll propio para que el tablero cabiera en 1280×800. La grilla de dos columnas
+            deja los cinco accesos a la vista sin scroll alguno.
+          */}
+          <section
+            aria-labelledby="titulo-accesos"
+            className="flex min-h-0 flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-4"
+          >
+            <h2 id="titulo-accesos" className="m-0 text-sm font-bold text-saie-text">
+              Accesos
+            </h2>
+            <div className="grid min-h-0 gap-2 sm:grid-cols-2 lg:grid-cols-2">
+              <Atajo
+                to={RUTAS.cargaAdmin}
+                titulo="Carga de datos"
+                trazo="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12l-4 4m4-4l4 4"
+              />
+              <Atajo
+                to={RUTAS.espaciosAdmin}
+                titulo="Espacios"
+                trazo="M3 21h18M5 21V7l7-4 7 4v14M9 9h1m4 0h1M9 13h1m4 0h1M9 17h1m4 0h1"
+              />
+              <Atajo
+                to={RUTAS.seccionesAdmin}
+                titulo="Secciones"
+                trazo="M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"
+              />
+              <Atajo
+                to={RUTAS.auditoriaAdmin}
+                titulo="Auditoría"
+                trazo="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+              />
+              <Atajo
+                to={RUTAS.reporteSalonesAdmin}
+                titulo="Informe de salones"
+                trazo="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+              {/*
+                Atajo a las alertas: la tarjeta «Requieren tu atención» repetía las dos cifras
+                de la fila de métricas; queda solo el enlace a la lista completa.
+              */}
+              <Link
+                to={RUTAS.alertasAdmin}
+                className="flex items-center justify-between gap-3 rounded-xl border border-saie-danger/30 bg-saie-danger-soft py-2.5 pl-4 pr-3 no-underline transition-colors hover:border-saie-danger sm:col-span-2"
+              >
+                <span className="flex items-center gap-2 text-sm font-bold text-saie-danger-strong">
+                  <span>Alertas pendientes</span>
+                  <strong className="text-lg leading-none">{pendientes}</strong>
                 </span>
-                <Link to={RUTAS.alertasAdmin} className="text-xs font-semibold text-saie-primary">
-                  Ver alertas →
-                </Link>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <span>
-                  <strong className="text-xl text-saie-warning-strong">
-                    {escaladas.datos?.total ?? '…'}
-                  </strong>{' '}
-                  secciones sin aula
-                </span>
-              </div>
-            </section>
-
-            <section
-              aria-labelledby="titulo-accesos"
-              className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4"
-            >
-              <h2 id="titulo-accesos" className="m-0 text-sm font-bold text-saie-text">
-                Accesos
-              </h2>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-                <Acceso
-                  to={RUTAS.cargaAdmin}
-                  titulo="Carga de datos"
-                  descripcion="Cursos, horarios, matrículas y docentes."
-                  trazo="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12l-4 4m4-4l4 4"
-                />
-                <Acceso
-                  to={RUTAS.espaciosAdmin}
-                  titulo="Espacios"
-                  descripcion="Aulas y laboratorios, capacidad y estado."
-                  trazo="M3 21h18M5 21V7l7-4 7 4v14M9 9h1m4 0h1M9 13h1m4 0h1M9 17h1m4 0h1"
-                />
-                <Acceso
-                  to={RUTAS.seccionesAdmin}
-                  titulo="Secciones"
-                  descripcion="Gestión individual de cada curso del periodo."
-                  trazo="M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"
-                />
-                <Acceso
-                  to={RUTAS.auditoriaAdmin}
-                  titulo="Auditoría"
-                  descripcion="Historial de asignaciones y bitácora del motor."
-                  trazo="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                />
-                <Acceso
-                  to={RUTAS.reporteSalonesAdmin}
-                  titulo="Informe de salones"
-                  descripcion="El cuadro de aulas, listo para presentar."
-                  trazo="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </div>
-            </section>
-          </div>
+                <span className="text-xs font-semibold text-saie-danger-strong">Ver alertas →</span>
+              </Link>
+            </div>
+          </section>
         </div>
       </div>
+
+      {/*
+        El detalle de las siete reglas vive en un drawer: es información de consulta que
+        aparece a petición, no algo que deba caber en el tablero. El drawer trae consigo el
+        cierre con Escape, el foco atrapado y el bloqueo del scroll del fondo.
+      */}
+      <Drawer
+        abierto={detalleAbierto}
+        onCerrar={() => setDetalleAbierto(false)}
+        titulo="Veredicto del verificador"
+      >
+        <VeredictoVerificacion verificacion={resumenCorrida?.verificacion ?? null} />
+      </Drawer>
     </LayoutAdmin>
   );
 };
