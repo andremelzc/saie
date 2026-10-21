@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { AlertaDTO, TipoAlerta } from '../../types/admin';
 import { formatearFechaAlerta } from '../../utils/admin';
+import { ESTADO_ALERTA, ETIQUETA_TIPO_ALERTA } from '../../utils/etiquetas';
 import { BadgeEstado } from '../ui/BadgeEstado';
 import { Boton } from '../ui/Boton';
 
@@ -13,12 +14,8 @@ function textoCursosOcultos(cantidad: number): string {
   return cantidad === 1 ? 'curso' : 'cursos';
 }
 
-const ESTILO_TIPO: Record<
-  TipoAlerta,
-  { etiqueta: string; borde: string; chip: string; trazo: string }
-> = {
+const ESTILO_TIPO: Record<TipoAlerta, { borde: string; chip: string; trazo: string }> = {
   SOFTWARE: {
-    etiqueta: 'Software',
     borde: 'border-l-saie-info',
     chip: 'bg-saie-info-soft text-saie-info',
     // Monitor
@@ -26,7 +23,6 @@ const ESTILO_TIPO: Record<
       'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
   },
   CAPACIDAD: {
-    etiqueta: 'Capacidad',
     borde: 'border-l-saie-warning-strong',
     chip: 'bg-saie-warning-soft text-saie-warning-strong',
     // Personas
@@ -57,9 +53,9 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
 
   return (
     <article
-      aria-label={`Alerta de ${estilo.etiqueta.toLowerCase()} en ${alerta.espacio.identificador}`}
+      aria-label={`Alerta de ${ETIQUETA_TIPO_ALERTA[alerta.tipo].toLowerCase()} en ${alerta.espacio.identificador}`}
       data-tipo={alerta.tipo}
-      className={`flex flex-col gap-3 rounded-xl border border-saie-divider border-l-4 ${estilo.borde} bg-white p-4 shadow-[var(--saie-shadow-1)] ${resuelta ? 'opacity-70' : ''}`}
+      className={`flex flex-col gap-3 rounded-xl border border-saie-divider border-l-4 ${estilo.borde} bg-white p-4 ${resuelta ? 'opacity-70' : ''}`}
     >
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-3">
@@ -90,10 +86,10 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${estilo.chip}`}>
-            {estilo.etiqueta}
+            {ETIQUETA_TIPO_ALERTA[alerta.tipo]}
           </span>
-          <BadgeEstado tono={resuelta ? 'exito' : 'peligro'}>
-            {resuelta ? 'Resuelta' : 'Pendiente'}
+          <BadgeEstado tono={ESTADO_ALERTA[alerta.estado].tono}>
+            {ESTADO_ALERTA[alerta.estado].etiqueta}
           </BadgeEstado>
         </div>
       </header>
@@ -108,7 +104,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
           <p className="m-0 text-sm text-saie-muted">Ninguno</p>
         ) : (
           <>
-            <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+            <ul className="m-0 flex list-none flex-wrap items-center gap-1.5 p-0">
               {visibles.map((a) => (
                 <li
                   key={a.asignacionId}
@@ -117,17 +113,19 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
                   {a.codigoCurso} · {a.codigoSeccion} — {a.nombreCurso}
                 </li>
               ))}
+              {cursos.length > MAX_CURSOS_VISIBLES && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setMostrarTodos((v) => !v)}
+                    aria-expanded={mostrarTodos}
+                    className="cursor-pointer rounded-md px-2 py-1 text-xs font-semibold text-saie-primary hover:bg-saie-primary/5"
+                  >
+                    {mostrarTodos ? 'Ver menos' : `+${ocultos} ${textoCursosOcultos(ocultos)} más`}
+                  </button>
+                </li>
+              )}
             </ul>
-            {cursos.length > MAX_CURSOS_VISIBLES && (
-              <button
-                type="button"
-                onClick={() => setMostrarTodos((v) => !v)}
-                aria-expanded={mostrarTodos}
-                className="mt-2 min-h-11 cursor-pointer rounded-md px-1 text-xs font-semibold text-saie-primary hover:underline"
-              >
-                {mostrarTodos ? 'Ver menos' : `+${ocultos} ${textoCursosOcultos(ocultos)} más`}
-              </button>
-            )}
           </>
         )}
       </div>

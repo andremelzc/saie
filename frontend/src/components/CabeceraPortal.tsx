@@ -3,34 +3,40 @@ import { Link } from 'react-router-dom';
 import BotonCerrarSesion from './auth/BotonCerrarSesion';
 import logoBlanco from '../assets/logo-blanco.svg';
 import { useAuth } from '../context/useAuth';
+import { etiquetaRol } from '../utils/admin';
 
 export interface CabeceraPortalProps {
-  /** Nombre del portal que se muestra en la cabecera (Estudiante, Docente, etc.). */
-  portal: string;
+  /** Nombre del portal que se muestra en la cabecera. Por defecto, el rol de la sesión. */
+  portal?: string;
+  /** Destino del logo (el inicio del portal). */
+  inicioTo?: string;
+  className?: string;
 }
 
-/** Cabecera común de las pantallas de portal (alumno, docente y estados de desarrollo). */
-export const CabeceraPortal: React.FC<CabeceraPortalProps> = ({ portal }) => {
+/**
+ * Cabecera única de las áreas privadas (alumno, docente y panel administrativo).
+ * El rol se muestra una sola vez, con su nombre legible, junto al logo.
+ */
+export const CabeceraPortal: React.FC<CabeceraPortalProps> = ({
+  portal,
+  inicioTo = '/',
+  className = '',
+}) => {
   const { sesion } = useAuth();
+  const etiqueta = portal ?? etiquetaRol(sesion?.rol);
 
   return (
-    <header className="bg-saie-primary text-white">
-      <div className="mx-auto flex h-[85px] w-full max-w-6xl items-center justify-between gap-3 px-4">
-        <div className="flex min-w-0 items-center gap-4">
-          <Link to="/" aria-label="Ir al inicio de SAIE" className="shrink-0">
-            <img src={logoBlanco} alt="SAIE" className="h-10 w-auto" />
+    <header className={`bg-saie-primary text-white ${className}`}>
+      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-3 px-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link to={inicioTo} aria-label="Ir al inicio de SAIE" className="shrink-0">
+            <img src={logoBlanco} alt="SAIE" className="h-9 w-auto" />
           </Link>
-          <span className="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-sm font-medium">
-            {portal}
+          <span className="hidden truncate rounded-full bg-white/15 px-3 py-1 text-sm font-medium sm:inline-flex">
+            {etiqueta}
           </span>
         </div>
-        <div className="flex items-center gap-4">
-          <p className="m-0 hidden text-right text-xs leading-4 text-white/80 sm:block">
-            Sesión activa
-            <strong className="block text-sm font-bold text-white">{sesion?.rol}</strong>
-          </p>
-          <BotonCerrarSesion className="h-11! border-white/30! bg-white/10! px-5! text-sm! text-white! hover:bg-white/20!" />
-        </div>
+        <BotonCerrarSesion className="h-10! shrink-0 border-white/30! bg-white/10! px-4! text-sm! text-white! hover:bg-white/20!" />
       </div>
     </header>
   );

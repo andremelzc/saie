@@ -5,6 +5,10 @@ import TelegramAlumnoPage from './TelegramAlumnoPage';
 import { desvincularTelegram, obtenerTelegram } from '../services/estudiante';
 import type { EstadoTelegramDTO } from '../types/perfil';
 
+vi.mock('../context/useAuth', () => ({
+  useAuth: () => ({ sesion: { rol: 'ALUMNO' }, cerrarSesion: vi.fn() }),
+}));
+
 vi.mock('../services/estudiante', () => ({
   obtenerTelegram: vi.fn(),
   desvincularTelegram: vi.fn(),

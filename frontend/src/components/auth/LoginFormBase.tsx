@@ -14,7 +14,7 @@ const PORTAL_DE_ROL: Record<'ALUMNO' | 'DOCENTE' | 'ADMIN', PortalId> = {
 
 /** Clases comunes de los campos de texto (altura 48 px, foco guinda, ver guía §4.5). */
 const CLASES_CAMPO =
-  'w-full h-12 rounded-[10px] bg-white text-saie-text placeholder-saie-muted text-base border border-[#8A8578] hover:border-saie-text/60 focus:border-saie-primary focus:ring-2 focus:ring-saie-primary/20 transition-colors outline-hidden disabled:bg-[#F1EDE3] disabled:text-saie-muted';
+  'w-full h-12 rounded-[10px] bg-white text-saie-text placeholder-saie-muted text-base border border-saie-border hover:border-saie-text/60 focus:border-saie-primary focus:ring-2 focus:ring-saie-primary/20 transition-colors outline-hidden disabled:bg-[#F1EDE3] disabled:text-saie-muted';
 
 export interface LoginFormBaseProps {
   rol: 'ALUMNO' | 'DOCENTE' | 'ADMIN';
@@ -165,7 +165,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
         <div
           role="alert"
           aria-live="polite"
-          className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-saie-danger flex items-start gap-2.5 font-medium"
+          className="p-3 bg-saie-danger-soft border border-saie-danger/30 rounded-xl text-sm text-saie-danger flex items-start gap-2.5 font-medium"
         >
           <svg
             className="w-5 h-5 text-saie-danger shrink-0 mt-0.5"

@@ -1,85 +1,56 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { RUTAS } from '../../config/rutas';
+import CabeceraPortal from '../CabeceraPortal';
 import { Icono } from './ElementosHorario';
 import NavegacionEstudiante from './NavegacionEstudiante';
 
 export interface CabeceraPantallaProps {
   titulo: string;
   subtitulo?: string;
-  /** Destino del enlace «Volver»; por defecto, el inicio del alumno. */
-  volverA?: string;
-  etiquetaVolver?: string;
   /** Trazo del ícono que acompaña al título. */
   trazoIcono?: string;
   /** Ancho máximo del contenido (debe coincidir con el de la pantalla). */
-  ancho?: 'max-w-4xl' | 'max-w-6xl';
+  ancho?: 'max-w-4xl' | 'max-w-7xl';
   /** Contenido extra a la derecha (insignias, datos rápidos). */
   extra?: React.ReactNode;
 }
 
-/** Banda guinda con enlace de retorno y título, común a las pantallas internas del alumno. */
+/**
+ * Cabecera de las pantallas internas del alumno. Usa la misma cabecera y la misma barra de
+ * navegación que el inicio del área, así todas las pantallas se sienten parte de un solo
+ * producto; el inicio está siempre a un clic desde la barra.
+ */
 export const CabeceraPantalla: React.FC<CabeceraPantallaProps> = ({
   titulo,
   subtitulo,
-  volverA = RUTAS.inicioAlumno,
-  etiquetaVolver = 'Volver al inicio',
   trazoIcono,
-  ancho = 'max-w-6xl',
+  ancho = 'max-w-7xl',
   extra,
 }) => (
   <>
-    <header className="relative overflow-hidden bg-gradient-to-br from-saie-primary to-saie-primary-dark text-white">
-      <span aria-hidden="true" className="saie-plano-fondo pointer-events-none absolute inset-0" />
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 320 140"
-        className="pointer-events-none absolute -right-6 bottom-0 hidden h-36 w-80 text-white/25 sm:block"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      >
-        <path
-          className="saie-trazo"
-          pathLength="1"
-          d="M10 130V30h120v100M130 60h90v70M220 30h90v100M10 130h300"
-        />
-        <path
-          className="saie-trazo"
-          pathLength="1"
-          d="M50 130V90h30v40M250 130V90h30v40M160 130V90h30v40"
-        />
-      </svg>
-      <div className={`relative mx-auto flex w-full ${ancho} flex-col gap-2 px-4 pb-7 pt-3`}>
-        <Link
-          to={volverA}
-          className="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-full bg-white/10 px-3.5 text-sm font-medium text-white no-underline transition-colors hover:bg-white/20 focus-visible:outline-white"
-        >
-          <span aria-hidden="true">&larr;</span>
-          <span>{etiquetaVolver}</span>
-        </Link>
-        <div className="saie-rise mt-1 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-4">
-            {trazoIcono && (
-              <span
-                aria-hidden="true"
-                className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 sm:flex"
-              >
-                <Icono trazo={trazoIcono} className="h-7 w-7" />
-              </span>
-            )}
-            <div className="min-w-0">
-              <h1 className="m-0 font-serif text-[28px] font-bold leading-9 sm:text-[34px] sm:leading-10">
-                {titulo}
-              </h1>
-              {subtitulo && <p className="m-0 mt-1 text-sm text-white/85">{subtitulo}</p>}
-            </div>
-          </div>
-          {extra}
+    <CabeceraPortal portal="Estudiante" inicioTo={RUTAS.inicioAlumno} />
+    <NavegacionEstudiante />
+    <div
+      className={`mx-auto flex w-full ${ancho} flex-wrap items-end justify-between gap-3 px-4 pt-6`}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        {trazoIcono && (
+          <span
+            aria-hidden="true"
+            className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-saie-primary/10 text-saie-primary sm:flex"
+          >
+            <Icono trazo={trazoIcono} className="h-6 w-6" />
+          </span>
+        )}
+        <div className="min-w-0">
+          <h1 className="m-0 font-serif text-2xl font-bold leading-8 text-saie-text sm:text-3xl">
+            {titulo}
+          </h1>
+          {subtitulo && <p className="m-0 mt-0.5 text-sm text-saie-muted">{subtitulo}</p>}
         </div>
       </div>
-    </header>
-    <NavegacionEstudiante />
+      {extra}
+    </div>
   </>
 );
 

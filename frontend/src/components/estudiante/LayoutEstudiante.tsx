@@ -1,9 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import BotonCerrarSesion from '../auth/BotonCerrarSesion';
-import logoBlanco from '../../assets/logo-blanco.svg';
+import CabeceraPortal from '../CabeceraPortal';
 import { RUTAS } from '../../config/rutas';
-import { useAuth } from '../../context/useAuth';
 import NavegacionEstudiante from './NavegacionEstudiante';
 
 export interface LayoutEstudianteProps {
@@ -33,33 +30,13 @@ export const LayoutEstudiante: React.FC<LayoutEstudianteProps> = ({
   dashboard = false,
   children,
 }) => {
-  const { sesion } = useAuth();
-
   return (
     <div
       className={`flex min-h-screen flex-col bg-saie-canvas pb-6 md:pb-0 ${
         dashboard ? 'lg:h-screen lg:overflow-hidden' : ''
       }`}
     >
-      <header className="bg-saie-primary text-white">
-        <div className="mx-auto flex h-[72px] w-full max-w-7xl items-center justify-between gap-3 px-4">
-          <div className="flex min-w-0 items-center gap-4">
-            <Link to={RUTAS.inicioAlumno} className="flex shrink-0 items-center">
-              <img src={logoBlanco} alt="SAIE" className="h-9 w-auto" />
-            </Link>
-            <span className="hidden rounded-full bg-white/15 px-3 py-1 text-sm font-medium sm:inline-flex">
-              Estudiante
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <p className="m-0 hidden text-right text-xs leading-4 text-white/80 sm:block">
-              Sesión activa
-              <strong className="block text-sm font-bold text-white">{sesion?.rol}</strong>
-            </p>
-            <BotonCerrarSesion className="h-10! border-white/30! bg-white/10! px-4! text-sm! text-white! hover:bg-white/20!" />
-          </div>
-        </div>
-      </header>
+      <CabeceraPortal portal="Estudiante" inicioTo={RUTAS.inicioAlumno} />
 
       <NavegacionEstudiante />
 

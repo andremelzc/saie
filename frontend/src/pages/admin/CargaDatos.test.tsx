@@ -153,11 +153,15 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
       ),
     ).toBeInTheDocument();
 
+    expect(screen.getByText(/^Verificación correcta ·/)).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
     const dialogo = screen.getByRole('dialog', {
       name: 'Resultado de la carga · 1. Cursos y secciones',
     });
-    expect(within(dialogo).getByText('CONFORME')).toBeInTheDocument();
+    expect(
+      within(dialogo).getByText('Todo correcto: se cumplen las 7 reglas.'),
+    ).toBeInTheDocument();
     expect(within(dialogo).getByText('Sin doble reserva')).toBeInTheDocument();
   });
 

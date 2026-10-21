@@ -95,7 +95,7 @@ export const HorarioMisCursos: React.FC<HorarioMisCursosProps> = ({
       return (
         <div
           role="alert"
-          className="flex flex-col items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-saie-danger"
+          className="flex flex-col items-start gap-3 rounded-xl border border-saie-danger/30 bg-saie-danger-soft p-4 text-sm font-medium text-saie-danger-strong"
         >
           <p className="m-0 flex items-start gap-2">
             <Icono trazo={TRAZO_ALERTA} className="mt-0.5 h-5 w-5 shrink-0" />
@@ -163,11 +163,11 @@ export const HorarioMisCursos: React.FC<HorarioMisCursosProps> = ({
     <div className="min-h-screen bg-saie-canvas text-saie-text">
       <CabeceraPantalla
         titulo="Mi horario y mis cursos"
-        subtitulo={horario.periodo ? `Periodo ${horario.periodo}` : 'Periodo académico sin definir'}
+        subtitulo={horario.periodo ? `Periodo ${horario.periodo}` : undefined}
         trazoIcono={TRAZO_CALENDARIO}
       />
 
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-6">
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-6">
         <SelectorSegmentado
           opciones={OPCIONES_SECCION}
           valor={seccion}

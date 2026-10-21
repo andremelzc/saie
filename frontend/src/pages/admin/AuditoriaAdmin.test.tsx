@@ -80,7 +80,7 @@ describe('Auditoria e historial (Issue 4.32)', () => {
     montar(<AuditoriaAdmin />);
 
     expect(await screen.findByText('IS101 · 1')).toBeInTheDocument();
-    expect(screen.getAllByText('Histórica').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Reemplazada').length).toBeGreaterThan(0);
     expect(screen.getByText('Lab 03')).toBeInTheDocument();
   });
 
@@ -196,7 +196,7 @@ describe('Informe de salones (Issue 4.33)', () => {
   it('avisa de las secciones que todavía no tienen aula', async () => {
     montar(<ReporteSalones />);
 
-    const aviso = await screen.findByText(/1 sección\(es\) todavía no tienen aula/);
+    const aviso = await screen.findByText(/1 sección todavía no tiene aula/);
     expect(aviso).toBeInTheDocument();
     expect(screen.getAllByText('Sin aula').length).toBeGreaterThan(0);
   });

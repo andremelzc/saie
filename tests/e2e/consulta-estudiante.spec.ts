@@ -161,7 +161,7 @@ test.describe('Flujo de Consulta Pública del Estudiante (Issue #181 / 5.9)', ()
     await expect(page.getByText(/1 clase encontrada para el código 20200001/i)).toBeVisible();
     await expect(page.getByText('Introducción a la Computación')).toBeVisible();
     await expect(page.getByText('Aula 101')).toBeVisible();
-    await expect(page.getByText('Aula Teórica')).toBeVisible();
+    await expect(page.getByText('Aula teórica')).toBeVisible();
     await expect(page.getByText('Piso 1')).toBeVisible();
     await expect(page.getByText('Dr. Roberto Torres')).toBeVisible();
   });

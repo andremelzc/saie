@@ -8,7 +8,7 @@ type Props = SVGProps<SVGSVGElement> & {
 /**
  * Logo SAIE (LogoEdificioGuinda).
  * El texto "SAIE" usa currentColor: cámbialo con Tailwind, p. ej.
- * <LogoEdificioGuinda className="h-8 text-[#7B1113]" />
+ * <LogoEdificioGuinda className="h-8 text-saie-primary" />
  */
 export default function LogoEdificioGuinda({ variant = 'full', ...props }: Props) {
   const full = variant === 'full';

@@ -9,7 +9,7 @@ export const BotonCerrarSesion: React.FC<{ className?: string }> = ({ className 
     <button
       type="button"
       onClick={() => cerrarSesion('manual')}
-      className={`h-12 px-6 rounded-[12px] font-medium text-base text-[#7B1113] bg-white border border-[#7B1113] hover:bg-[#FAF6ED] focus:outline-hidden focus:ring-3 focus:ring-[#222222] focus:ring-offset-2 transition-colors cursor-pointer ${className}`}
+      className={`h-12 px-6 rounded-[12px] font-medium text-base text-saie-primary bg-white border border-saie-primary hover:bg-saie-canvas focus:outline-hidden focus:ring-3 focus:ring-saie-text focus:ring-offset-2 transition-colors cursor-pointer ${className}`}
     >
       Cerrar sesión
     </button>

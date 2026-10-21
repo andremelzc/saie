@@ -25,27 +25,25 @@ import type {
   TipoEspacio,
 } from '../../types/admin';
 import { formatearFechaCorta } from '../../utils/admin';
+import {
+  ESTADO_SECCION,
+  ETIQUETA_COMPARACION_VERSION,
+  ETIQUETA_TIPO_ESPACIO,
+  ETIQUETA_TIPO_ESPACIO_PLURAL,
+  formatearBloqueHorario,
+} from '../../utils/etiquetas';
 
-const TIPO_ETIQUETA: Record<TipoEspacio, string> = {
-  AULA_TEORICA: 'Aula teórica',
-  LABORATORIO: 'Laboratorio',
-};
-
-const COMPARACIONES: { valor: ComparacionVersion; etiqueta: string }[] = [
-  { valor: 'CUALQUIERA', etiqueta: 'Cualquier versión' },
-  { valor: 'MINIMA', etiqueta: 'Versión mínima o superior' },
-  { valor: 'EXACTA', etiqueta: 'Versión exacta' },
-];
+const COMPARACIONES: ComparacionVersion[] = ['CUALQUIERA', 'MINIMA', 'EXACTA'];
+const TIPOS: TipoEspacio[] = ['AULA_TEORICA', 'LABORATORIO'];
 
 /** El estado de la asignación en lenguaje llano: lo que le importa a quien coordina. */
 function EtiquetaEstado({ seccion }: { seccion: SeccionAdminDTO }): React.ReactNode {
   if (!seccion.asignacion) {
-    return <BadgeEstado tono="neutro">Sin asignar</BadgeEstado>;
+    return <BadgeEstado tono="neutro">{ESTADO_SECCION.SIN_ASIGNAR.etiqueta}</BadgeEstado>;
   }
-  if (seccion.asignacion.estado === 'ESCALADA') {
-    return <BadgeEstado tono="advertencia">Sin aula · revisión</BadgeEstado>;
-  }
-  return <BadgeEstado tono="exito">Con aula</BadgeEstado>;
+  const { etiqueta, tono } =
+    ESTADO_SECCION[seccion.asignacion.estado === 'ESCALADA' ? 'EN_REVISION' : 'CON_AULA'];
+  return <BadgeEstado tono={tono}>{etiqueta}</BadgeEstado>;
 }
 
 /** La fila de una sección en la tabla de escritorio. */
@@ -58,9 +56,10 @@ const FilaSeccion: React.FC<{ seccion: SeccionAdminDTO; onVer: (s: SeccionAdminD
       <span className="block font-semibold text-saie-text">
         {seccion.codigoCurso} · {seccion.codigoSeccion}
       </span>
-      <span className="block text-xs text-saie-muted">{seccion.nombreCurso}</span>
+      <span className="block text-xs text-saie-muted">
+        {seccion.nombreCurso} · {ETIQUETA_TIPO_ESPACIO[seccion.tipoEspacioRequerido]}
+      </span>
     </td>
-    <td className="px-4 py-3">{TIPO_ETIQUETA[seccion.tipoEspacioRequerido]}</td>
     <td className="px-4 py-3">
       {seccion.asignacion?.espacios.length ? (
         <span className="font-medium text-saie-text">
@@ -73,7 +72,7 @@ const FilaSeccion: React.FC<{ seccion: SeccionAdminDTO; onVer: (s: SeccionAdminD
     <td className="px-4 py-3">
       {seccion.docente?.nombre ?? <span className="text-saie-muted">—</span>}
     </td>
-    <td className="px-4 py-3 text-center">{seccion.alumnosMatriculados}</td>
+    <td className="px-4 py-3 text-right tabular-nums">{seccion.alumnosMatriculados}</td>
     <td className="px-4 py-3">
       <EtiquetaEstado seccion={seccion} />
     </td>
@@ -104,7 +103,9 @@ const TarjetaSeccion: React.FC<{
         <h3 className="m-0 text-base font-bold text-saie-text">
           {seccion.codigoCurso} · {seccion.codigoSeccion}
         </h3>
-        <p className="m-0 text-xs text-saie-muted">{seccion.nombreCurso}</p>
+        <p className="m-0 text-xs text-saie-muted">
+          {seccion.nombreCurso} · {ETIQUETA_TIPO_ESPACIO[seccion.tipoEspacioRequerido]}
+        </p>
       </div>
       <EtiquetaEstado seccion={seccion} />
     </header>
@@ -195,8 +196,11 @@ const FormularioSeccion: React.FC<{
             onChange={(e) => setTipo(e.target.value as TipoEspacio)}
             className={CLASE_CAMPO}
           >
-            <option value="AULA_TEORICA">Aula teórica</option>
-            <option value="LABORATORIO">Laboratorio</option>
+            {TIPOS.map((t) => (
+              <option key={t} value={t}>
+                {ETIQUETA_TIPO_ESPACIO[t]}
+              </option>
+            ))}
           </select>
         </label>
 
@@ -264,11 +268,11 @@ const FormularioSeccion: React.FC<{
                         [s.id]: e.target.value as ComparacionVersion,
                       }))
                     }
-                    className="rounded-lg border border-saie-divider bg-white px-2 py-1 text-xs"
+                    className="min-h-11 rounded-lg border border-saie-border bg-white px-2 text-sm"
                   >
                     {COMPARACIONES.map((c) => (
-                      <option key={c.valor} value={c.valor}>
-                        {c.etiqueta}
+                      <option key={c} value={c}>
+                        {ETIQUETA_COMPARACION_VERSION[c]}
                       </option>
                     ))}
                   </select>
@@ -282,21 +286,12 @@ const FormularioSeccion: React.FC<{
       {error && <Aviso tono="error">{error}</Aviso>}
 
       <div className="flex flex-wrap gap-3">
-        <button
-          type="submit"
-          disabled={guardando}
-          className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl bg-saie-primary px-5 text-sm font-medium text-white hover:bg-saie-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {guardando ? 'Guardando…' : 'Guardar cambios'}
-        </button>
-        <button
-          type="button"
-          onClick={onCancelar}
-          disabled={guardando}
-          className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl border border-saie-divider bg-white px-5 text-sm font-medium text-saie-text hover:bg-saie-canvas"
-        >
+        <Boton type="submit" cargando={guardando} textoCargando="Guardando…">
+          Guardar cambios
+        </Boton>
+        <Boton variante="cancelar" onClick={onCancelar} disabled={guardando}>
           Cancelar
-        </button>
+        </Boton>
       </div>
     </form>
   );
@@ -362,7 +357,7 @@ export const SeccionesAdmin: React.FC = () => {
   };
 
   const lista =
-    secciones.length === 0 ? (
+    error && !datos ? null : secciones.length === 0 ? (
       <EstadoVacio
         titulo="Sin secciones"
         descripcion="Cuando se carguen cursos y secciones, aparecerán aquí."
@@ -379,22 +374,19 @@ export const SeccionesAdmin: React.FC = () => {
                 Sección
               </th>
               <th scope="col" className="px-4 py-3">
-                Tipo
-              </th>
-              <th scope="col" className="px-4 py-3">
                 Aula
               </th>
               <th scope="col" className="px-4 py-3">
                 Docente
               </th>
-              <th scope="col" className="px-4 py-3">
+              <th scope="col" className="px-4 py-3 text-right">
                 Alumnos
               </th>
               <th scope="col" className="px-4 py-3">
                 Estado
               </th>
               <th scope="col" className="px-4 py-3">
-                Detalle
+                <span className="sr-only">Acciones</span>
               </th>
             </tr>
           </thead>
@@ -450,8 +442,11 @@ export const SeccionesAdmin: React.FC = () => {
               className={CLASE_CAMPO}
             >
               <option value="TODOS">Todos</option>
-              <option value="AULA_TEORICA">Aulas teóricas</option>
-              <option value="LABORATORIO">Laboratorios</option>
+              {TIPOS.map((t) => (
+                <option key={t} value={t}>
+                  {ETIQUETA_TIPO_ESPACIO_PLURAL[t]}
+                </option>
+              ))}
             </select>
           </label>
           <label className="flex flex-col gap-1">
@@ -485,7 +480,15 @@ export const SeccionesAdmin: React.FC = () => {
       >
         {seleccionada && (
           <div className="flex flex-col gap-5">
-            <dl className="m-0 rounded-xl border border-saie-divider bg-white p-4 text-sm">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-saie-muted">
+              <EtiquetaEstado seccion={seleccionada} />
+              {seleccionada.asignacion && (
+                <span>
+                  Asignada el {formatearFechaCorta(seleccionada.asignacion.fechaAsignacion)}
+                </span>
+              )}
+            </div>
+            <dl className="m-0 rounded-xl border border-saie-divider bg-white px-4 py-2 text-sm">
               <div className="border-b border-saie-divider py-2">
                 <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
                   Curso
@@ -501,7 +504,7 @@ export const SeccionesAdmin: React.FC = () => {
                     ? seleccionada.asignacion.espacios
                         .map((e) => `${e.identificador} (${e.pabellon}, piso ${e.piso})`)
                         .join(', ')
-                    : 'Sin aula: esta sección espera revisión.'}
+                    : 'Sin aula todavía.'}
                 </dd>
               </div>
               <div className="border-b border-saie-divider py-2">
@@ -523,9 +526,7 @@ export const SeccionesAdmin: React.FC = () => {
                 <dd className="m-0 text-saie-text">
                   {seleccionada.horarios.length === 0
                     ? 'Sin horarios registrados.'
-                    : seleccionada.horarios
-                        .map((h) => `${h.diaSemana} ${h.horaInicio}-${h.horaFin}`)
-                        .join(' · ')}
+                    : seleccionada.horarios.map((h) => formatearBloqueHorario(h)).join(' · ')}
                 </dd>
               </div>
               <div className="py-2">
@@ -541,12 +542,6 @@ export const SeccionesAdmin: React.FC = () => {
                 </dd>
               </div>
             </dl>
-
-            {seleccionada.asignacion && (
-              <p className="m-0 text-xs text-saie-muted">
-                Asignada el {formatearFechaCorta(seleccionada.asignacion.fechaAsignacion)}.
-              </p>
-            )}
 
             {editando ? (
               <FormularioSeccion

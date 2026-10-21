@@ -60,7 +60,7 @@ describe('TarjetaResultado (Issue #135 / 3.6)', () => {
     render(<TarjetaResultado asignacion={mockAulaVigente} />);
 
     // 1. Tipo de espacio (Aula Teórica)
-    expect(screen.getByText('Aula Teórica')).toBeInTheDocument();
+    expect(screen.getByText('Aula teórica')).toBeInTheDocument();
 
     // 2. Pabellón
     expect(screen.getByText('Pabellón Antiguo')).toBeInTheDocument();
@@ -72,8 +72,8 @@ describe('TarjetaResultado (Issue #135 / 3.6)', () => {
     expect(screen.getByText('ANT-101')).toBeInTheDocument();
 
     // 5. Horario
-    expect(screen.getByText(/LUNES/i)).toBeInTheDocument();
-    expect(screen.getByText(/08:00 - 10:00/i)).toBeInTheDocument();
+    expect(screen.getByText(/Lunes/)).toBeInTheDocument();
+    expect(screen.getByText(/08:00 – 10:00/)).toBeInTheDocument();
 
     // 6. Docente
     expect(screen.getByText('D001 - Carlos Mendoza')).toBeInTheDocument();
@@ -90,8 +90,8 @@ describe('TarjetaResultado (Issue #135 / 3.6)', () => {
     expect(screen.getByText('Pabellón Nuevo')).toBeInTheDocument();
     expect(screen.getByText(/Piso 2/i)).toBeInTheDocument();
     expect(screen.getByText('NUE-lab-1')).toBeInTheDocument();
-    expect(screen.getByText(/MARTES/i)).toBeInTheDocument();
-    expect(screen.getByText(/10:00 - 12:00/i)).toBeInTheDocument();
+    expect(screen.getByText(/Martes/)).toBeInTheDocument();
+    expect(screen.getByText(/10:00 – 12:00/)).toBeInTheDocument();
     expect(screen.getByText('D002 - Ana Silva')).toBeInTheDocument();
   });
 
@@ -144,7 +144,7 @@ describe('TarjetaResultado (Issue #135 / 3.6)', () => {
 
     render(<TarjetaResultado asignacion={mockPendiente} />);
 
-    expect(screen.getByText('Sin asignar')).toBeInTheDocument();
+    expect(screen.getByText('Sin aula asignada')).toBeInTheDocument();
     expect(screen.getByText('Aún no hay aula asignada')).toBeInTheDocument();
     expect(
       screen.getByText(/La facultad todavía no confirma el aula o laboratorio/i),

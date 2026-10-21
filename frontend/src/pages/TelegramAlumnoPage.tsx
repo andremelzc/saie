@@ -80,7 +80,7 @@ export const TelegramAlumnoPage: React.FC = () => {
         ) : error && !estado ? (
           <div
             role="alert"
-            className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-saie-danger"
+            className="flex flex-col items-start gap-3 rounded-2xl border border-saie-danger/30 bg-saie-danger-soft p-4 text-sm font-medium text-saie-danger-strong"
           >
             <p className="m-0 flex items-start gap-2">
               <Icono trazo={TRAZO_ALERTA} className="mt-0.5 h-5 w-5 shrink-0" />
@@ -100,7 +100,7 @@ export const TelegramAlumnoPage: React.FC = () => {
               {error && (
                 <div
                   role="alert"
-                  className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-saie-danger"
+                  className="flex flex-col items-start gap-3 rounded-2xl border border-saie-danger/30 bg-saie-danger-soft p-4 text-sm font-medium text-saie-danger-strong"
                 >
                   <p className="m-0 flex items-start gap-2">
                     <Icono trazo={TRAZO_ALERTA} className="mt-0.5 h-5 w-5 shrink-0" />

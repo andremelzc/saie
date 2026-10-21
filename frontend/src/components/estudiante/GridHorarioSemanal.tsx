@@ -120,7 +120,7 @@ export const GridHorarioSemanal: React.FC<GridHorarioSemanalProps> = ({
                       <p className="m-0 truncate text-xs leading-4">
                         {resumenUbicacion(sesion.espacios)}
                       </p>
-                      <p className="m-0 truncate text-xs leading-4 text-[#444444]">
+                      <p className="m-0 truncate text-xs leading-4 text-saie-text/80">
                         {formatearRango(sesion.horaInicio, sesion.horaFin)}
                       </p>
                     </li>

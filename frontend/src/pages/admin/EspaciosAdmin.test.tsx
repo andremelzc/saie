@@ -79,10 +79,10 @@ describe('Gestión de espacios (Issue 4.15)', () => {
     expect(screen.getByText('No aplica')).toBeInTheDocument();
     expect(screen.getByText('Habilitado')).toBeInTheDocument();
     expect(screen.getByText('No asignable')).toBeInTheDocument();
-    expect(screen.getByText('2 espacio(s)')).toBeInTheDocument();
-    expect(screen.getByText('1 aula(s) teórica(s)')).toBeInTheDocument();
-    expect(screen.getByText('1 laboratorio(s)')).toBeInTheDocument();
-    expect(screen.getByText('1 no asignables')).toBeInTheDocument();
+    expect(screen.getByText('2 espacios')).toBeInTheDocument();
+    expect(screen.getByText(/1 aula teórica · 1 laboratorio/)).toBeInTheDocument();
+    // El conteo de no asignables es también el atajo para filtrarlos.
+    expect(screen.getByRole('button', { name: '1 no asignables' })).toBeInTheDocument();
   });
 
   it('filtra por tipo de espacio', async () => {
