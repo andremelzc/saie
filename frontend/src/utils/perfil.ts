@@ -70,6 +70,8 @@ export function valoresFichaMedica(ficha: FichaMedicaDTO | null): ValoresFormula
     alergias: aTexto(ficha?.alergias),
     condicionEspecial: aTexto(ficha?.condicionEspecial),
     contactoEmergencia: aTexto(ficha?.contactoEmergencia),
+    // La casilla es binaria: el vacío es «no», para que el formulario siga siendo de texto.
+    condicionAccesible: ficha?.condicionAccesible ? 'true' : '',
   };
 }
 
@@ -161,6 +163,7 @@ export function cambiosFichaMedica(valores: ValoresFormulario): CambiosPerfil {
       alergias: aValorOpcional(valores.alergias),
       condicionEspecial: aValorOpcional(valores.condicionEspecial),
       contactoEmergencia: aValorOpcional(valores.contactoEmergencia),
+      condicionAccesible: (valores.condicionAccesible ?? '') === 'true',
     },
   };
 }

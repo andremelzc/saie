@@ -58,6 +58,11 @@ export interface PerfilAlumnoDTO {
     alergias: string | null;
     condicionEspecial: string | null;
     contactoEmergencia: string | null;
+    /**
+     * El alumno declaró que tiene una condición que le impide subir a pisos superiores.
+     * El motor lo traduce a `Matricula.movilidadReducida` para priorizar las aulas del Piso 1.
+     */
+    condicionAccesible: boolean;
   } | null;
 }
 

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import InicioEstudiante from './InicioEstudiante';
 import api from '../services/api';
@@ -78,8 +78,10 @@ describe('InicioEstudiante', () => {
 
       expect(screen.getByText('Hoy no tienes clases')).toBeVisible();
       expect(screen.getByText(/Aprovecha para revisar tu horario/)).toBeVisible();
-      expect(screen.getByRole('heading', { name: 'Servicios disponibles' })).toBeVisible();
-      expect(screen.queryByRole('region', { name: 'Resumen de tu semana' })).toBeNull();
+      expect(
+        screen.getByRole('navigation', { name: 'Secciones del portal del estudiante' }),
+      ).toBeVisible();
+      expect(screen.queryByText('clases por semana')).toBeNull();
     });
 
     it('si la API falla, sigue mostrando los accesos a horario y perfil', async () => {
@@ -87,9 +89,9 @@ describe('InicioEstudiante', () => {
       montar();
 
       await waitFor(() => expect(get).toHaveBeenCalled());
-      expect(await screen.findByRole('link', { name: /Ir a mi horario/ })).toBeVisible();
-      expect(screen.getByRole('link', { name: /Ir a mi perfil/ })).toBeVisible();
-      expect(screen.queryByRole('region', { name: 'Resumen de tu semana' })).toBeNull();
+      expect(await screen.findByRole('link', { name: /Mi horario/ })).toBeVisible();
+      expect(screen.getByRole('link', { name: /Mi perfil/ })).toBeVisible();
+      expect(screen.queryByText('clases por semana')).toBeNull();
     });
 
     it('si la API falla, avisa del error y permite reintentar', async () => {
@@ -108,12 +110,34 @@ describe('InicioEstudiante', () => {
       expect(get).toHaveBeenCalledTimes(2);
     });
 
+    it('si el horario llega vacío, avisa en vez de mostrar una pantalla en blanco', async () => {
+      vi.spyOn(api, 'get').mockRejectedValue(new Error('caída'));
+      montar();
+
+      const alerta = await screen.findByRole('alert');
+      expect(alerta).toHaveTextContent('No pudimos cargar tu horario.');
+      // Aun sin horario, los accesos a las demás pantallas siguen disponibles.
+      expect(screen.getByRole('link', { name: /Mi horario/ })).toBeVisible();
+    });
+
+    it('si el reintento también falla, vuelve a avisar sin romper la pantalla', async () => {
+      vi.spyOn(api, 'get').mockRejectedValue(new Error('caída'));
+      montar();
+
+      const alerta = await screen.findByRole('alert');
+      fireEvent.click(within(alerta).getByRole('button', { name: 'Reintentar' }));
+
+      // Sigue habiendo un aviso y la pantalla no se queda a medio cargar.
+      await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+      expect(screen.getByRole('link', { name: /Mi horario/ })).toBeVisible();
+    });
+
     it('con el horario vacío muestra el periodo pero no resumen ni semana', async () => {
       responder(horarioCon({}));
       montar();
 
-      expect(await screen.findByText('Periodo Lectivo 2026-2')).toBeVisible();
-      expect(screen.queryByRole('region', { name: 'Resumen de tu semana' })).toBeNull();
+      expect(await screen.findByText('Periodo lectivo 2026-2')).toBeVisible();
+      expect(screen.queryByText('clases por semana')).toBeNull();
       expect(screen.queryByText('Tu semana de un vistazo')).toBeNull();
     });
 
@@ -151,7 +175,7 @@ describe('InicioEstudiante', () => {
       montar();
 
       expect(await screen.findByText('Clase en curso')).toBeVisible();
-      expect(screen.getByRole('article', { name: 'Tu próxima clase' })).toBeVisible();
+      expect(screen.getByRole('region', { name: 'Tu próxima clase' })).toBeVisible();
       expect(screen.getByRole('heading', { name: 'Tu día de hoy' })).toBeVisible();
       expect(screen.getByText('Tu semana de un vistazo')).toBeVisible();
       expect(
@@ -165,7 +189,7 @@ describe('InicioEstudiante', () => {
       responder(horarioCon({ [LUNES]: [sesion('MAT101', 'Matemática I', '10:00', '12:00')] }));
       montar();
 
-      const tarjeta = await screen.findByRole('article', { name: 'Tu próxima clase' });
+      const tarjeta = await screen.findByRole('region', { name: 'Tu próxima clase' });
       expect(tarjeta).toBeVisible();
       expect(screen.queryByText('Clase en curso')).toBeNull();
     });
@@ -216,7 +240,7 @@ describe('InicioEstudiante', () => {
       responder(horarioCon({ [LUNES]: [sesion('MAT101', 'Matemática I', '10:00', '11:00')] }));
       montar();
 
-      expect(await screen.findByRole('article', { name: 'Tu próxima clase' })).toBeVisible();
+      expect(await screen.findByRole('region', { name: 'Tu próxima clase' })).toBeVisible();
       expect(screen.queryByText('Clase en curso')).toBeNull();
 
       const llamada = intervalo.mock.calls.find(([, ms]) => ms === 60_000);
@@ -262,7 +286,7 @@ describe('InicioEstudiante', () => {
         }),
       ).toBeVisible();
       expect(screen.getByText('Química I', { selector: 'span' })).toBeVisible();
-      expect(screen.getByRole('link', { name: 'Ver mi semana' })).toBeVisible();
+      expect(screen.getByRole('link', { name: /Mi horario/ })).toBeVisible();
     });
   });
 });

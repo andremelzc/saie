@@ -245,6 +245,11 @@ model FichaMedica {
   alergias           String?
   condicionEspecial  String? @map("condicion_especial")
   contactoEmergencia String? @map("contacto_emergencia")
+  // El propio alumno declara si tiene una condición que le impide subir a pisos superiores.
+  // Al activarlo se propaga a `Matricula.movilidadReducida` para que el motor priorice las
+  // aulas del Piso 1 (Spec 03 §2.2). No es una etiqueta de discapacidad: describe un
+  // requisito de acceso al espacio, no un diagnóstico.
+  condicionAccesible Boolean @default(false) @map("condicion_accesible")
 
   alumno Alumno @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
 

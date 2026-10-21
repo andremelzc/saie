@@ -92,6 +92,108 @@ export function borrarSesion(): void {
   }
 }
 
+/**
+ * Guarda una sesión que vino de otra pestaña sin volver a anunciarla.
+ * `guardarSesion` sí la anuncia; esta no, para no provocar un eco entre pestañas.
+ */
+export function adoptarSesion(sesion: Sesion): Sesion {
+  respaldoEnMemoria = sesion;
+  try {
+    almacen()?.setItem(CLAVE_SESION, JSON.stringify(sesion));
+  } catch {
+    // Almacenamiento lleno o bloqueado: se usa solo el respaldo en memoria.
+  }
+  return sesion;
+}
+
+// ==========================================
+// SINCRONIZACIÓN ENTRE PESTAÑAS
+// ==========================================
+
+/**
+ * El token vive en `sessionStorage`, que es **por pestaña**: abrir `/horario` con control+clic
+ * abría una pestaña sin sesión y el guard la echaba al login. Para resolverlo sin mover el token
+ * a `localStorage` (que persistiría entre reinicios del navegador y ampliaría la ventana de robo
+ * por XSS), las pestañas se avisan entre sí con un `BroadcastChannel`:
+ *
+ *  - la pestaña que inicia sesión **anuncia** su sesión y las demás la adoptan;
+ *  - una pestaña que abre sin sesión **pregunta** y la primera que responde se la entrega;
+ *  - al cerrar sesión en una pestaña, las demás también lo hacen.
+ *
+ * El token nunca sale de `sessionStorage` de cada pestaña: solo se copia de una a otra dentro
+ * del mismo navegador y el mismo origen.
+ */
+
+const CANAL_SESION = 'saie.sesion';
+
+export type MensajeSesion =
+  | { tipo: 'peticion' }
+  | { tipo: 'respuesta'; sesion: Sesion }
+  | { tipo: 'actualizada'; sesion: Sesion }
+  | { tipo: 'cerrada' };
+
+let canal: BroadcastChannel | null = null;
+let manejadorSincronizacion: ((mensaje: MensajeSesion) => void) | null = null;
+
+/** `BroadcastChannel` no existe en navegadores muy antiguos ni en jsdom: se degrada sin ruido. */
+function canalDisponible(): boolean {
+  return typeof BroadcastChannel !== 'undefined';
+}
+
+/** El `AuthProvider` registra aquí qué hacer con los mensajes de las otras pestañas. */
+export function registrarManejadorSincronizacion(
+  manejador: ((mensaje: MensajeSesion) => void) | null,
+): void {
+  manejadorSincronizacion = manejador;
+}
+
+/**
+ * Abre el canal y empieza a escuchar. Es idempotente: llamarlo dos veces no abre dos canales.
+ * Devuelve la función para cerrarlo.
+ */
+export function iniciarSincronizacionSesion(): () => void {
+  if (!canalDisponible() || canal) {
+    return () => undefined;
+  }
+
+  canal = new BroadcastChannel(CANAL_SESION);
+  canal.onmessage = (evento: MessageEvent<MensajeSesion>) => {
+    const mensaje = evento.data;
+    if (!mensaje || typeof mensaje !== 'object' || !('tipo' in mensaje)) return;
+
+    if (mensaje.tipo === 'peticion') {
+      // Esta pestaña responde si tiene sesión; si no, la que pidan seguirá esperando.
+      const propia = leerSesionAlmacenada();
+      if (propia) {
+        canal?.postMessage({ tipo: 'respuesta', sesion: propia } satisfies MensajeSesion);
+      }
+      return;
+    }
+
+    manejadorSincronizacion?.(mensaje);
+  };
+
+  return () => {
+    canal?.close();
+    canal = null;
+  };
+}
+
+/** Pregunta a las demás pestañas si tienen una sesión abierta. */
+export function pedirSesionCompartida(): void {
+  canal?.postMessage({ tipo: 'peticion' } satisfies MensajeSesion);
+}
+
+/** Anuncia que esta pestaña acaba de iniciar sesión. */
+export function anunciarSesion(sesion: Sesion): void {
+  canal?.postMessage({ tipo: 'actualizada', sesion } satisfies MensajeSesion);
+}
+
+/** Anuncia que esta pestaña cerró sesión: las demás también lo hacen. */
+export function anunciarSesionCerrada(): void {
+  canal?.postMessage({ tipo: 'cerrada' } satisfies MensajeSesion);
+}
+
 export function obtenerToken(): string | null {
   return leerSesionAlmacenada()?.token ?? null;
 }

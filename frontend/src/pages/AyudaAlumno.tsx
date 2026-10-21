@@ -41,7 +41,7 @@ const GRUPOS: GrupoPreguntas[] = [
       {
         pregunta: '¿Por qué mi aula cambió?',
         respuesta:
-          'Coordinación puede reasignar espacios, por ejemplo si un laboratorio queda fuera de servicio. Tu horario siempre muestra el aula actual, así que conviene revisarlo antes de salir.',
+          'Coordinación puede reasignar espacios, por ejemplo si un laboratorio queda deshabilitado. Tu horario siempre muestra el aula actual, así que conviene revisarlo antes de salir.',
       },
     ],
   },

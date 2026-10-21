@@ -18,6 +18,11 @@ export interface FichaMedicaDTO {
   alergias: string | null;
   condicionEspecial: string | null;
   contactoEmergencia: string | null;
+  /**
+   * El alumno declaró que tiene una condición que le impide subir a pisos superiores o usar
+   * escaleras. Describe un requisito de acceso al espacio, no un diagnóstico.
+   */
+  condicionAccesible: boolean;
 }
 
 export interface PerfilAlumnoDTO {

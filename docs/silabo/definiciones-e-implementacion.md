@@ -37,7 +37,7 @@ Un proceso se considera **automatizado** cuando, tras un disparo humano puntual 
 
 * **7 procesos modelados.** **6 se automatizan** (0, 1, 2, 3, 4 y 5) y **1 es semiautomático** (0b: la captura es manual y solo la validación es automática).
 * **Ya funcionan en el backend: 4** (1, 2, 3 y 4), más el 0 en la rama del endpoint de importación.
-* Con el aviso por Telegram y el resumen diario (§6) se sumarían **2 procesos más**: **9 procesos, 8 automatizados.**
+* Con el aviso por Telegram y el resumen diario (§6) son **2 procesos más**: **9 procesos, 8 automatizados.** Los dos están construidos.
 
 Los procesos 1, 3 y 4 son los de mayor valor: sustituyen una decisión que antes se tomaba a mano.
 
@@ -212,9 +212,9 @@ Hoy los eventos internos se resuelven como llamadas directas entre servicios den
 | Cambio de PCs malogradas | La capacidad real queda bajo los matriculados | Crear alerta `CAPACIDAD` | `laboratorio.service.ts` | Aplicado |
 | Importación sin filas rechazadas | El periodo ya tiene secciones, horarios y matrículas | Ejecutar la corrida de asignación | `importacion.service.ts` | Aplicado (rama del endpoint) |
 | Reporte de incidencia | Cuenta con rol docente | Registrar la incidencia | `docente.controller.ts` | Aplicado |
-| Asignación cambiada | El alumno tiene Telegram vinculado | Enviar el aviso | — | Planificado (§6) |
-| Alerta creada | Siempre | Registrar auditoría de tipo `ALERTA` | — | Planificado (§6) |
-| Vence el intervalo diario | El alumno tiene clase ese día | Enviar el resumen de clases | — | Planificado (§6) |
+| Asignación cambiada | El alumno tiene Telegram vinculado | Enviar el aviso | `telegram/notificador.ts` | Aplicado (§6) |
+| Alerta creada | Siempre | Registrar auditoría de tipo `ALERTA` | `telegram/notificador.ts` | Aplicado (§6) |
+| Vence el intervalo diario | El alumno tiene clase ese día | Enviar el resumen de clases | `telegram/resumenDiario.service.ts` | Aplicado (§6) |
 
 **Qué se podría mejorar.** Las reglas ECA están dispersas en el código; solo la tabla de triggers de `docs/arquitectura.md` §7 las documenta, sin columna de condición. Incorporar la tabla ECA a la arquitectura (issue 6.13) y mantenerla junto al código.
 
@@ -352,7 +352,7 @@ El caso de **capacidad** (BPMN 4) es análogo y además rechaza un conteo de PCs
 | Jefatura | Atender y resolver alertas | — | Pendiente (issues 4.6 y 4.7) |
 | Jefatura | Resolver incidencias | — | Pendiente (issue 7.6) |
 | Coordinación | Ver el mapa de ocupación | — | Pendiente (issues 4.11 a 4.14) |
-| Estudiante | Recibir avisos de cambio de aula por Telegram | — | Planificado (§6) |
+| Estudiante | Recibir avisos de cambio de aula por Telegram | `POST /api/v1/telegram/webhook` (vinculación) y el bus de eventos (aviso) | Aplicado (§6) |
 
 **Diagrama UML** (código PlantUML en [`diagramas/casos-de-uso.puml`](diagramas/casos-de-uso.puml)): cuatro actores del sistema más Telegram como servicio externo, 16 casos de uso agrupados por módulo, relaciones `<<include>>` (inicio de sesión; detección de alertas) y `<<extend>>` (la asignación extiende la importación cuando el periodo está completo). Los colores distinguen lo implementado, lo pendiente y lo planificado.
 
@@ -492,19 +492,19 @@ Los cinco temas siguientes pertenecen al bloque de RPA del sílabo, pero son con
 
 ---
 
-## 6. Diseño planificado: aviso de cambio de aula por Telegram (4 temas)
+## 6. Diseño aplicado: aviso de cambio de aula por Telegram (4 temas)
 
-> **Estado: planificado. No existe en el código.** Este apartado define los cuatro temas y el diseño con el que SAIE los aplicaría. Requiere registrar el cambio de alcance (las notificaciones están excluidas en `docs/03_alcance_y_reglas.md` §3.2) y seguir el control de cambios de la línea base.
+> **Estado: construido.** El cambio de alcance fue aprobado por el CCC (Solicitud #247) y los documentos de la línea base ya lo reflejan. Este apartado describe lo que SAIE construyó: el bus de eventos, los dos manejadores, el temporizador y el bot.
 
-### 6.1. Sistemas orientados a eventos — Planificado
+### 6.1. Sistemas orientados a eventos — Aplicado
 
 **Definición.** Arquitectura en la que los componentes se comunican emitiendo y escuchando eventos, en lugar de llamarse directamente. El emisor no sabe quién reaccionará; eso reduce el acoplamiento y permite agregar reacciones sin tocar al emisor.
 
-**En SAIE.** Hoy el motor, las alertas y la auditoría se llaman directamente. Se propone un **bus de eventos interno** (`EventEmitter` de Node): el motor emite `asignacion.cambiada` y la detección emite `alerta.creada`; los suscriptores reaccionan. Es una versión ligera, dentro del mismo proceso, apropiada para el tamaño del sistema. Los eventos se emitirían **después de confirmar la transacción**, para no avisar de algo que luego se revierte.
+**En SAIE.** Hay un **bus de eventos interno** (`EventEmitter` de Node, `backend/src/events/bus.ts`): el motor emite `asignacion.cambiada` y la detección emite `alerta.creada`; los suscriptores reaccionan. Es una versión ligera, dentro del mismo proceso, apropiada para el tamaño del sistema. Los eventos se emiten **después de confirmar la transacción**, para no avisar de algo que luego se revierte.
 
 **Qué se podría mejorar.** Un `EventEmitter` no cruza procesos: con más de una instancia habría que pasar a una cola (por ejemplo, Redis). Documentar ese límite.
 
-### 6.2. Programación orientada a eventos — Planificado
+### 6.2. Programación orientada a eventos — Aplicado
 
 **Definición.** Estilo de programación en el que el flujo lo determinan eventos y sus manejadores (*handlers*), no una secuencia fija de llamadas.
 
@@ -513,19 +513,19 @@ Los cinco temas siguientes pertenecen al bloque de RPA del sílabo, pero son con
 | Evento | Manejador | Efecto |
 | :--- | :--- | :--- |
 | `asignacion.cambiada` | Notificador de Telegram | Avisa a los alumnos matriculados que tengan Telegram vinculado |
-| `alerta.creada` | Auditoría de alertas | Registra una fila `ALERTA` en `RegistroAuditoria`, hoy ausente (issue 5.11) |
+| `alerta.creada` | Auditoría de alertas | Registra una fila `ALERTA` en `RegistroAuditoria` |
 
 **Qué se podría mejorar.** Los manejadores deben ser idempotentes (un aviso no debe repetirse si el evento se emite dos veces) y registrar su resultado.
 
-### 6.3. Temporizadores — Planificado
+### 6.3. Temporizadores — Aplicado
 
 **Definición.** Disparadores basados en el paso del tiempo: un intervalo, una hora fija o un vencimiento.
 
-**En SAIE.** Un **resumen diario** de clases a primera hora: "Hoy tienes INF101 en el laboratorio L-201 a las 08:00". Un temporizador evita depender de que alguien dispare el aviso. En Render gratuito el contenedor se suspende tras 15 minutos sin tráfico, por lo que no conviene un temporizador interno; se dispararía desde fuera con una tarea programada (`schedule`) de GitHub Actions que llame a un endpoint protegido.
+**En SAIE.** Un **resumen diario** de clases a primera hora: "Hoy tienes INF101 en el laboratorio L-201 a las 08:00". Un temporizador evita depender de que alguien dispare el aviso. En Render gratuito el contenedor se suspende tras 15 minutos sin tráfico, por lo que no conviene un temporizador interno; se dispara desde fuera con una tarea programada (`schedule`) de GitHub Actions que llama a un endpoint protegido (`POST /api/v1/telegram/resumen-diario`, 07:30 hora de Lima, de lunes a sábado).
 
 **Qué se podría mejorar.** Vigilar que la tarea programada realmente corrió y alertar si no lo hizo; hoy un fallo silencioso de la tarea pasaría desapercibido.
 
-### 6.4. Bots de software — Planificado
+### 6.4. Bots de software — Aplicado
 
 **Definición.** Programas que ejecutan tareas de forma autónoma o conversan con usuarios. Un *chatbot* responde a mensajes; un bot de RPA opera interfaces (ver §7).
 
@@ -535,7 +535,7 @@ Los cinco temas siguientes pertenecen al bloque de RPA del sílabo, pero son con
 
 1. El alumno abre el bot y pulsa `/start`.
 2. Se identifica con su código y su clave de SAIE (verificada contra su cuenta, con bcrypt). No basta el código: la consulta por código es pública (D-04) y cualquiera podría suscribirse a los avisos de otro.
-3. El sistema guarda el `chat_id` asociado al alumno (requiere una tabla nueva y una migración).
+3. El sistema guarda el `chat_id` asociado al alumno (tabla `VinculacionTelegram` y su migración).
 4. El alumno puede darse de baja con un comando.
 
 **Aviso (automático desde entonces):**
@@ -546,7 +546,9 @@ Los cinco temas siguientes pertenecen al bloque de RPA del sílabo, pero son con
 
 **Excepciones:** si el alumno bloqueó el bot, Telegram responde con error; se desvincula y se registra. Los envíos fallidos se reintentan un número limitado de veces.
 
-**Procesos nuevos (§0):** 6, aviso de cambio de aula, y 7, resumen diario.
+**Procesos nuevos (§0):** 6, aviso de cambio de aula, y 7, resumen diario. Sus diagramas están en
+[`diagramas/proceso-6-aviso-cambio-aula.puml`](diagramas/proceso-6-aviso-cambio-aula.puml) y
+[`diagramas/proceso-7-resumen-diario.puml`](diagramas/proceso-7-resumen-diario.puml).
 
 **Qué se podría mejorar.** Además de avisar, el bot podría responder a comandos (`/horario`, `/aula`) reutilizando los endpoints de consulta. Agregar también un límite de intentos de vinculación.
 

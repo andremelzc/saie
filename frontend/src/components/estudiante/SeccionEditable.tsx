@@ -10,7 +10,7 @@ const TRAZO_ALERTA = 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
 export interface CampoPerfil {
   clave: string;
   etiqueta: string;
-  tipo: 'texto' | 'fecha' | 'telefono' | 'numero' | 'select' | 'area';
+  tipo: 'texto' | 'fecha' | 'telefono' | 'numero' | 'select' | 'area' | 'checkbox';
   opciones?: readonly string[];
   /** Texto de ayuda bajo el campo (p. ej. «8 dígitos»). */
   ayuda?: string;
@@ -145,17 +145,19 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
       <dl className="m-0 grid gap-x-6 gap-y-4 sm:grid-cols-2">
         {campos.map((campo) => {
           const valor = valores[campo.clave];
+          // La casilla es binaria: el valor vacío significa «no», no «sin registrar».
+          const texto = campo.tipo === 'checkbox' ? (valor === 'true' ? 'Sí' : 'No') : valor;
           return (
             <div key={campo.clave} className="min-w-0">
               <dt className="text-xs font-medium uppercase tracking-wide text-saie-muted">
                 {campo.etiqueta}
               </dt>
               <dd className="m-0 mt-1 break-words text-base text-saie-text">
-                {valor ? (
+                {texto ? (
                   campo.formatoLectura ? (
-                    campo.formatoLectura(valor)
+                    campo.formatoLectura(texto)
                   ) : (
-                    valor
+                    texto
                   )
                 ) : (
                   <span className="text-saie-muted italic">Sin registrar</span>
@@ -186,7 +188,23 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
     };
 
     let control: React.ReactNode;
-    if (campo.tipo === 'select') {
+    if (campo.tipo === 'checkbox') {
+      // Casilla binaria: el valor vacío es «no», así el formulario sigue siendo de texto.
+      control = (
+        <div className="flex min-h-12 items-center">
+          <input
+            id={idCampo}
+            name={campo.clave}
+            type="checkbox"
+            checked={borrador[campo.clave] === 'true'}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy || undefined}
+            className="h-6 w-6 cursor-pointer accent-saie-primary"
+            onChange={(e) => cambiarCampo(campo.clave, e.target.checked ? 'true' : '')}
+          />
+        </div>
+      );
+    } else if (campo.tipo === 'select') {
       control = (
         <select {...comunes} onChange={(e) => cambiarCampo(campo.clave, e.target.value)}>
           <option value="">Sin registrar</option>
@@ -300,7 +318,11 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
                 <div
                   key={campo.clave}
                   className={
-                    campo.tipo === 'area' || campo.clave === 'direccion' ? 'sm:col-span-2' : ''
+                    campo.tipo === 'area' ||
+                    campo.tipo === 'checkbox' ||
+                    campo.clave === 'direccion'
+                      ? 'sm:col-span-2'
+                      : ''
                   }
                 >
                   {renderCampo(campo)}

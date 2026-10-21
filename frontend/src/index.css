@@ -292,3 +292,25 @@ input::-ms-clear {
 .saie-respira {
   animation: saie-respira 2.4s ease-in-out infinite;
 }
+
+/* ── Impresión del informe de salones (Issue 4.33) ── */
+/* La vista imprimible usa el mismo HTML que la pantalla: el diálogo de impresión del
+   navegador genera el PDF («Guardar como PDF») sin dependencias ni maquetar un PDF aparte. */
+@media print {
+  .saie-no-imprimir {
+    display: none !important;
+  }
+  body {
+    background: #ffffff;
+    font-size: 11px;
+  }
+  .saie-imprimir-tabla thead {
+    display: table-header-group;
+  }
+  .saie-imprimir-tabla tr {
+    break-inside: avoid;
+  }
+  @page {
+    margin: 14mm;
+  }
+}

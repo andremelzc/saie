@@ -5,18 +5,37 @@ import {
   altaDocente,
   altaEspacio,
   consultarMapaOcupacion,
+  consultarReporteAsignaciones,
   editarEspacio,
+  editarSeccion,
   listarAlertas,
+  listarAuditoria,
+  listarDocentes,
   listarEscaladas,
   listarEspaciosAdmin,
+  listarHistorial,
   listarIncidenciasReportadas,
+  listarRegistrosAuditoria,
+  listarSeccionesAdmin,
   obtenerEspacio,
+  obtenerSeccion,
   registrarPcsMalogradasLaboratorio,
   registrarSoftwareLaboratorio,
   resolverAlertaPendiente,
   resolverIncidencia,
   restablecerClaveUsuario,
 } from '../../../src/controllers/admin.controller';
+import {
+  generarReporteAsignaciones,
+  listarAuditoria as listarAuditoriaServicio,
+  listarHistorialAsignaciones,
+} from '../../../src/services/auditoria.service';
+import {
+  actualizarSeccion as actualizarSeccionServicio,
+  listarDocentesParaAsignar,
+  listarSecciones,
+  obtenerSeccionAdmin,
+} from '../../../src/services/seccionAdmin.service';
 import { listarAlertasActivas, resolverAlerta } from '../../../src/services/alerta.service';
 import {
   actualizarEspacio,
@@ -91,6 +110,23 @@ jest.mock('../../../src/services/restablecerClave.service', () => {
 
 jest.mock('../../../src/lib/prisma', () => ({
   prisma: {},
+}));
+
+jest.mock('../../../src/services/seccionAdmin.service', () => {
+  const actual = jest.requireActual('../../../src/services/seccionAdmin.service');
+  return {
+    ...actual,
+    actualizarSeccion: jest.fn(),
+    listarDocentesParaAsignar: jest.fn(),
+    listarSecciones: jest.fn(),
+    obtenerSeccionAdmin: jest.fn(),
+  };
+});
+
+jest.mock('../../../src/services/auditoria.service', () => ({
+  generarReporteAsignaciones: jest.fn(),
+  listarAuditoria: jest.fn(),
+  listarHistorialAsignaciones: jest.fn(),
 }));
 
 function mockResponse() {
@@ -433,6 +469,181 @@ describe('Admin Controller (Sprint 4)', () => {
       await restablecerClaveUsuario(req, res);
 
       expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', 'no-store');
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true, data: mockData });
+    });
+  });
+
+  describe('gestion individual de secciones (Issue 4.31)', () => {
+    it('debe responder 200 al listar secciones', async () => {
+      const mockData = { items: [], total: 0, pagina: 1, limite: 50 };
+      (listarSecciones as jest.Mock).mockResolvedValue(mockData);
+
+      const req = {
+        query: { periodo: '2026-2', q: 'algorit' },
+        auth: authAdmin,
+      } as unknown as Request;
+      const res = mockResponse();
+
+      await listarSeccionesAdmin(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true, data: mockData });
+    });
+
+    it('debe responder 400 si el tipo de espacio no es valido', async () => {
+      const req = {
+        query: { tipo: 'SALON' },
+        auth: authAdmin,
+      } as unknown as Request;
+      const res = mockResponse();
+
+      await listarSeccionesAdmin(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it('debe responder 200 al obtener una seccion', async () => {
+      const mockData = { id: 'sec-1', codigoSeccion: '1' };
+      (obtenerSeccionAdmin as jest.Mock).mockResolvedValue(mockData);
+
+      const req = {
+        params: { id: 'sec-1' },
+        auth: authAdmin,
+      } as unknown as Request;
+      const res = mockResponse();
+
+      await obtenerSeccion(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true, data: mockData });
+    });
+
+    it('debe responder 400 al editar sin ningun campo', async () => {
+      const req = {
+        params: { id: 'sec-1' },
+        body: {},
+        auth: authAdmin,
+      } as unknown as Request;
+      const res = mockResponse();
+
+      await editarSeccion(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it('debe responder 200 al editar una seccion', async () => {
+      const mockData = { seccion: { id: 'sec-1' }, alertas: [] };
+      (actualizarSeccionServicio as jest.Mock).mockResolvedValue(mockData);
+
+      const req = {
+        params: { id: 'sec-1' },
+        body: { tipoEspacioRequerido: 'LABORATORIO' },
+        auth: authAdmin,
+      } as unknown as Request;
+      const res = mockResponse();
+
+      await editarSeccion(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true, data: mockData });
+    });
+
+    it('debe responder 200 al listar los docentes', async () => {
+      const mockData = [{ id: 'd1', codigoDocente: 'D001', nombre: 'Dra. Garcia' }];
+      (listarDocentesParaAsignar as jest.Mock).mockResolvedValue(mockData);
+
+      const req = { auth: authAdmin } as unknown as Request;
+      const res = mockResponse();
+
+      await listarDocentes(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true, data: mockData });
+    });
+  });
+
+  describe('auditoria, historial e informe (Issues 4.32 y 4.33)', () => {
+    it('debe responder 400 si el tipo de evento no es valido', async () => {
+      const req = {
+        query: { tipo: 'INVENTADO' },
+        auth: authAdmin,
+      } as unknown as Request;
+      const res = mockResponse();
+
+      await listarRegistrosAuditoria(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it('debe responder 200 al listar la auditoria', async () => {
+      const mockData = { items: [], total: 0, pagina: 1, limite: 50 };
+      (listarAuditoriaServicio as jest.Mock).mockResolvedValue(mockData);
+
+      const req = {
+        query: { tipo: 'ASIGNACION' },
+        auth: authAdmin,
+      } as unknown as Request;
+      const res = mockResponse();
+
+      await listarRegistrosAuditoria(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true, data: mockData });
+    });
+
+    it('debe responder 400 si el estado del historial no es valido', async () => {
+      const req = {
+        query: { estado: 'INVENTADO' },
+        auth: authAdmin,
+      } as unknown as Request;
+      const res = mockResponse();
+
+      await listarHistorial(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it('debe responder 200 al listar el historial de asignaciones', async () => {
+      const mockData = { items: [], total: 0, pagina: 1, limite: 50 };
+      (listarHistorialAsignaciones as jest.Mock).mockResolvedValue(mockData);
+
+      const req = {
+        query: { periodo: '2026-2', estado: 'HISTORICA' },
+        auth: authAdmin,
+      } as unknown as Request;
+      const res = mockResponse();
+
+      await listarHistorial(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true, data: mockData });
+    });
+
+    it('debe responder 400 si el periodo del informe no es valido', async () => {
+      const req = {
+        query: { periodo: '2026' },
+        auth: authAdmin,
+      } as unknown as Request;
+      const res = mockResponse();
+
+      await consultarReporteAsignaciones(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it('debe responder 200 con el informe de salones', async () => {
+      const mockData = { periodo: '2026-2', secciones: [], totales: {} };
+      (generarReporteAsignaciones as jest.Mock).mockResolvedValue(mockData);
+
+      const req = {
+        query: { periodo: '2026-2' },
+        auth: authAdmin,
+      } as unknown as Request;
+      const res = mockResponse();
+
+      await consultarReporteAsignaciones(req, res);
+
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: mockData });
     });

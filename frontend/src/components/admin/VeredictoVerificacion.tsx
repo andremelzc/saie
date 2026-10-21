@@ -155,8 +155,8 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({ ve
       </ul>
 
       <p className="m-0 text-xs text-saie-muted">
-        Verificación automática posterior a la corrida (Issue 2.17). Las violaciones quedan
-        registradas en la auditoría.
+        Verificación automática posterior a la corrida. Las violaciones quedan registradas en la
+        auditoría.
       </p>
     </section>
   );

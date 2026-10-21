@@ -2,15 +2,23 @@ import api from './api';
 import type {
   AlertaDTO,
   CambiosEspacio,
+  CambiosSeccion,
   EspacioAdminDTO,
+  ListadoAuditoriaDTO,
+  ListadoHistorialDTO,
+  ListadoSeccionesDTO,
   ListadoSoftwareDTO,
   NuevoEspacioDTO,
+  ReporteAsignacionesDTO,
   ResultadoEdicionEspacioDTO,
+  ResultadoEdicionSeccionDTO,
   ResultadoImportacionDTO,
   ResumenAsignacionDTO,
   SeccionesEscaladasDTO,
   TipoEspacio,
   TipoImportacion,
+  TipoEventoAuditoria,
+  EstadoAsignacion,
 } from '../types/admin';
 
 /**
@@ -146,6 +154,109 @@ export async function registrarPcsMalogradas(laboratorioId: string, pcsMalograda
   const { data } = await api.post<Respuesta<unknown>>(
     `/v1/admin/laboratorios/${encodeURIComponent(laboratorioId)}/pcs-malogradas`,
     { pcsMalogradas },
+  );
+  return data.data;
+}
+
+// ==========================================
+// GESTIÓN INDIVIDUAL DE SECCIONES (Issue 4.31)
+// ==========================================
+
+export interface FiltrosSecciones {
+  periodo?: string;
+  q?: string;
+  tipo?: TipoEspacio;
+  pagina?: number;
+  limite?: number;
+}
+
+/** GET /v1/admin/secciones[?periodo=&q=&tipo=] (Issue 4.31). */
+export async function obtenerSecciones(
+  filtros: FiltrosSecciones = {},
+): Promise<ListadoSeccionesDTO> {
+  const { data } = await api.get<Respuesta<ListadoSeccionesDTO>>('/v1/admin/secciones', {
+    params: filtros,
+  });
+  return data.data;
+}
+
+/** PATCH /v1/admin/secciones/:id (Issue 4.31). Solo Coordinación Académica. */
+export async function editarSeccion(
+  id: string,
+  cambios: CambiosSeccion,
+): Promise<ResultadoEdicionSeccionDTO> {
+  const { data } = await api.patch<Respuesta<ResultadoEdicionSeccionDTO>>(
+    `/v1/admin/secciones/${encodeURIComponent(id)}`,
+    cambios,
+  );
+  return data.data;
+}
+
+export interface DocenteParaAsignarDTO {
+  id: string;
+  codigoDocente: string;
+  nombre: string;
+  departamento: string;
+}
+
+/** GET /v1/admin/docentes (Issue 4.31): listado mínimo para asignar docente a una sección. */
+export async function obtenerDocentes(): Promise<DocenteParaAsignarDTO[]> {
+  const { data } = await api.get<Respuesta<DocenteParaAsignarDTO[]>>('/v1/admin/docentes');
+  return data.data;
+}
+
+// ==========================================
+// AUDITORÍA E HISTORIAL (Issue 4.32)
+// ==========================================
+
+export interface FiltrosAuditoria {
+  tipo?: TipoEventoAuditoria;
+  desde?: string;
+  hasta?: string;
+  pagina?: number;
+  limite?: number;
+}
+
+/** GET /v1/admin/auditoria[?tipo=&desde=&hasta=] (Issue 4.32). */
+export async function obtenerAuditoria(
+  filtros: FiltrosAuditoria = {},
+): Promise<ListadoAuditoriaDTO> {
+  const { data } = await api.get<Respuesta<ListadoAuditoriaDTO>>('/v1/admin/auditoria', {
+    params: filtros,
+  });
+  return data.data;
+}
+
+export interface FiltrosHistorial {
+  seccionId?: string;
+  periodo?: string;
+  estado?: EstadoAsignacion;
+  pagina?: number;
+  limite?: number;
+}
+
+/** GET /v1/admin/asignaciones/historial[?seccionId=&periodo=&estado=] (Issue 4.32). */
+export async function obtenerHistorial(
+  filtros: FiltrosHistorial = {},
+): Promise<ListadoHistorialDTO> {
+  const { data } = await api.get<Respuesta<ListadoHistorialDTO>>(
+    '/v1/admin/asignaciones/historial',
+    {
+      params: filtros,
+    },
+  );
+  return data.data;
+}
+
+/** GET /v1/admin/reporte/asignaciones[?periodo=] (Issue 4.33). */
+export async function obtenerReporteAsignaciones(
+  periodo?: string,
+): Promise<ReporteAsignacionesDTO> {
+  const { data } = await api.get<Respuesta<ReporteAsignacionesDTO>>(
+    '/v1/admin/reporte/asignaciones',
+    {
+      params: periodo ? { periodo } : undefined,
+    },
   );
   return data.data;
 }

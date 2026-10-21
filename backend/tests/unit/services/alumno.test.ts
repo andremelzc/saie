@@ -199,6 +199,7 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
       alergias: 'Penicilina',
       condicionEspecial: null,
       contactoEmergencia: '999888777',
+      condicionAccesible: false,
     },
   };
 
@@ -260,6 +261,7 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
       alergias: 'Penicilina',
       condicionEspecial: null,
       contactoEmergencia: '999888777',
+      condicionAccesible: false,
     });
   });
 
@@ -328,6 +330,109 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
     expect(prisma.alumno.findUnique).toHaveBeenCalledWith({ where: { cuentaId: 'cuenta-1' } });
     expect(tx.fichaMedica.findUnique).toHaveBeenCalledWith({ where: { alumnoId: 'alu-1' } });
     expect(tx.alumno.update).not.toHaveBeenCalled();
+  });
+
+  it('marcar la condición accesible propaga el flag de movilidad a las matrículas', async () => {
+    const prisma = prismaMock();
+    const tx = {
+      alumno: { update: jest.fn() },
+      fichaMedica: {
+        upsert: jest.fn().mockResolvedValue({
+          tipoSangre: null,
+          alergias: null,
+          condicionEspecial: null,
+          contactoEmergencia: null,
+          condicionAccesible: true,
+        }),
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
+      matricula: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
+    };
+    prisma.$transaction.mockImplementation((fn: any) => fn(tx));
+
+    const perfil = await actualizarPerfilAlumno(
+      'cuenta-1',
+      { fichaMedica: { condicionAccesible: true } },
+      prisma,
+    );
+
+    expect(tx.matricula.updateMany).toHaveBeenCalledWith({
+      where: { alumnoId: 'alu-1' },
+      data: { movilidadReducida: true },
+    });
+    expect(perfil.fichaMedica?.condicionAccesible).toBe(true);
+  });
+
+  it('desmarcar la condición accesible solo limpia el flag si la declaración estaba activa', async () => {
+    const prisma = prismaMock();
+    const tx = {
+      alumno: { update: jest.fn() },
+      fichaMedica: {
+        upsert: jest.fn().mockResolvedValue({
+          tipoSangre: null,
+          alergias: null,
+          condicionEspecial: null,
+          contactoEmergencia: null,
+          condicionAccesible: false,
+        }),
+        // La declaración anterior estaba activa: el flag sí lo puso el alumno.
+        findUnique: jest.fn().mockResolvedValue({ condicionAccesible: true }),
+      },
+      matricula: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    };
+    prisma.$transaction.mockImplementation((fn: any) => fn(tx));
+
+    await actualizarPerfilAlumno(
+      'cuenta-1',
+      { fichaMedica: { condicionAccesible: false } },
+      prisma,
+    );
+
+    expect(tx.matricula.updateMany).toHaveBeenCalledWith({
+      where: { alumnoId: 'alu-1' },
+      data: { movilidadReducida: false },
+    });
+  });
+
+  it('desmarcar sin declaración previa no toca el flag que puso la carga de datos', async () => {
+    const prisma = prismaMock();
+    const tx = {
+      alumno: { update: jest.fn() },
+      fichaMedica: {
+        upsert: jest.fn().mockResolvedValue({
+          tipoSangre: null,
+          alergias: null,
+          condicionEspecial: null,
+          contactoEmergencia: null,
+          condicionAccesible: false,
+        }),
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
+      matricula: { updateMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((fn: any) => fn(tx));
+
+    await actualizarPerfilAlumno(
+      'cuenta-1',
+      { fichaMedica: { condicionAccesible: false } },
+      prisma,
+    );
+
+    expect(tx.matricula.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('no tocar la ficha no toca las matrículas', async () => {
+    const prisma = prismaMock();
+    const tx = {
+      alumno: { update: jest.fn() },
+      fichaMedica: { upsert: jest.fn(), findUnique: jest.fn().mockResolvedValue(null) },
+      matricula: { updateMany: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation((fn: any) => fn(tx));
+
+    await actualizarPerfilAlumno('cuenta-1', { fichaMedica: { tipoSangre: 'A+' } }, prisma);
+
+    expect(tx.matricula.updateMany).not.toHaveBeenCalled();
   });
 
   it('la ficha médica nunca sale en la consulta pública por código (Issues 3.1–3.4)', async () => {

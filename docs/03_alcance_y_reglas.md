@@ -100,6 +100,7 @@ Coordinación Académica puede elegir espacios a mano para una sección escalada
 | Actualización de PCs y software con historial y alertas | RF-19, RF-20, RF-21 | Sin esto la matriz de software y la capacidad real quedan obsoletas a la segunda semana. |
 | Incidencias docentes | RF-18 | Canal formal para los problemas que hoy llegan por mensajes informales. |
 | Mapa de ocupación y auditoría | RF-22, RF-23 | Panel de control administrativo comprometido en la propuesta. |
+| Avisos de cambio de aula y resumen diario por Telegram, con vinculación voluntaria | RF-25, RF-26, RF-27 | La asignación puede cambiar tras una nueva corrida; avisar evita que el estudiante llegue a un aula equivocada (dolor 04). |
 
 ### 3.2. Fuera del MVP
 
@@ -112,7 +113,7 @@ Coordinación Académica puede elegir espacios a mano para una sección escalada
 | **Reserva o cambio de aula por parte de estudiantes o docentes** | Los estudiantes y docentes consultan y reportan; solo Coordinación asigna. Permitir autoservicio rompería la validación centralizada de reglas. |
 | **Navegación paso a paso (indoor)** | Se muestra el espacio en el plano SVG del piso. Un navegador guiado exige posicionamiento en interiores, fuera del alcance del curso. |
 | **Aplicación móvil nativa** | Una web responsive cubre la consulta desde el móvil sin publicar en tiendas de aplicaciones. |
-| **Notificaciones por correo o push** | Las alertas se muestran dentro del panel. El envío externo agrega infraestructura (servidor de correo, proveedor push) sin cambiar la decisión del motor. |
+| **Notificaciones por correo, SMS o push móvil** | Cada canal agrega infraestructura (servidor de correo, proveedor de SMS, certificados push). Se incorpora únicamente Telegram (D-06), cuya API es gratuita. |
 | **Optimización global exacta** (programación entera) | El motor usa una heurística determinista con orden de prioridad. Es explicable, fácil de probar y suficiente para el tamaño del edificio. |
 | **Varias facultades o sedes** | El MVP modela un solo edificio de 3 pisos con ascensor. El modelo de datos (`pabellón`) permite crecer después sin rediseño. |
 
@@ -127,6 +128,7 @@ Coordinación Académica puede elegir espacios a mano para una sección escalada
 | **D-03** | La contigüidad se modela como pares explícitos (`EspacioContiguo`), no por numeración. | Deducir contigüidad de números consecutivos (201–202). | La numeración no garantiza que haya puerta entre salas; los pares los define Coordinación con el plano. |
 | **D-04** | La consulta por código de alumno o curso es pública, pero solo devuelve datos de ubicación y horario. | Exigir inicio de sesión para toda consulta. | Reduce fricción el primer día de clases (RNF-01) sin exponer datos personales ni de salud (RNF-09). |
 | **D-05** | El motor es determinista (desempate por identificador). | Desempate aleatorio. | Permite pruebas parametrizadas reproducibles e idempotencia (RNF-06). |
+| **D-06** | Los avisos al estudiante se envían solo por Telegram, con vinculación voluntaria mediante código y clave de SAIE. El sistema incorpora un bus de eventos interno y una tarea programada externa; no incorpora colas ni servicios de mensajería. | Correo electrónico (ya existe `correo` por alumno); SMS y WhatsApp (de pago). | La Bot API de Telegram es gratuita y el alumno participa una sola vez. El bus es del mismo proceso, proporcional al tamaño del sistema. |
 
 ---
 
@@ -135,3 +137,4 @@ Coordinación Académica puede elegir espacios a mano para una sección escalada
 | Versión | Fecha | Autor | Descripción |
 | :--- | :--- | :--- | :--- |
 | 1.0.0 | 2026-09-23 | Grupo 6 | Versión inicial para la línea base funcional. R-07 definida como preferencia de mayor peso (Piso 1, luego cercanía al ascensor). |
+| 1.1.0 | 2026-10-21 | Grupo 6 | Cambio de alcance aprobado por el CCC (Solicitud #247): el canal de avisos al estudiante se incorpora con Telegram (D-06) y se reformula la exclusión de notificaciones externas (RF-25 a RF-27, RNF-11). |

@@ -95,11 +95,23 @@ const T_CARGA = 'M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12l-4 4m4-4l4 4
 const T_ESPACIOS = 'M3 21h18M5 21V7l7-4 7 4v14M9 9h1m4 0h1M9 13h1m4 0h1M9 17h1m4 0h1';
 const T_LAB =
   'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z';
+const T_SECCIONES =
+  'M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z';
+const T_AUDITORIA =
+  'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4';
+const T_REPORTE =
+  'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z';
 
 interface Pestana {
   to: string;
   etiqueta: string;
   trazo: string;
+  /**
+   * La pestaña solo aparece desde el ancho de escritorio. A 320 px la barra inferior del
+   * panel no cabe con las siete secciones, y una barra con scroll horizontal es peor que
+   * una barra de cuatro destinos: las demas se llegan desde los accesos del inicio.
+   */
+  soloEscritorio?: boolean;
 }
 
 export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
@@ -113,8 +125,26 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
   return [
     { to: RUTAS.inicioAdmin, etiqueta: 'Inicio', trazo: T_INICIO },
     { to: RUTAS.espaciosAdmin, etiqueta: 'Espacios', trazo: T_ESPACIOS },
+    {
+      to: RUTAS.seccionesAdmin,
+      etiqueta: 'Secciones',
+      trazo: T_SECCIONES,
+      soloEscritorio: true,
+    },
     { to: RUTAS.alertasAdmin, etiqueta: 'Alertas', trazo: T_ALERTA },
     { to: RUTAS.cargaAdmin, etiqueta: 'Carga', trazo: T_CARGA },
+    {
+      to: RUTAS.auditoriaAdmin,
+      etiqueta: 'Auditoría',
+      trazo: T_AUDITORIA,
+      soloEscritorio: true,
+    },
+    {
+      to: RUTAS.reporteSalonesAdmin,
+      etiqueta: 'Informe',
+      trazo: T_REPORTE,
+      soloEscritorio: true,
+    },
   ];
 }
 

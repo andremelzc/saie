@@ -92,6 +92,30 @@ Cada historia sigue la plantilla *Como [actor], quiero [acción], para [benefici
 
 **RF:** RF-03 · **Prioridad:** M
 
+#### HU-27 — Vincular mi cuenta con el bot de Telegram
+**Como** estudiante, **quiero** vincular mi cuenta de SAIE con el bot de Telegram con mi código y mi clave, **para** recibir avisos sin tener que estar pendiente del portal.
+
+**Criterios de aceptación**
+1. **Dado** que escribo al bot mi código y mi clave en un solo mensaje, **cuando** son correctos, **entonces** el bot confirma la vinculación y borra el mensaje con mi clave del chat.
+2. **Dado** que las credenciales son incorrectas, **entonces** el bot responde un mensaje genérico, sin revelar si el código existe; tras varios intentos fallidos el chat queda bloqueado un tiempo.
+3. **Dado** que estoy vinculado, **cuando** envío `/baja`, **entonces** la vinculación se desactiva y dejo de recibir mensajes.
+4. **Dado** que tengo dos cuentas de Telegram, **cuando** intento vincular una segunda, **entonces** el bot pide dar de baja la primera: un alumno nunca tiene dos vinculaciones activas.
+5. Solo se atienden conversaciones privadas.
+
+**RF:** RF-25 · **Prioridad:** S
+
+#### HU-28 — Recibir el aviso de cambio de aula y el resumen del día
+**Como** estudiante, **quiero** que me avisen por Telegram cuando cambie el aula de una de mis clases y que reciba el resumen de mis clases de cada mañana, **para** no llegar a un aula equivocada.
+
+**Criterios de aceptación**
+1. **Dado** que una corrida de asignación cambia los espacios de una sección en la que estoy matriculado y tengo Telegram vinculado, **entonces** recibo un mensaje con el curso, la sección, el aula anterior, la nueva y el horario.
+2. **Dado** que la corrida **no** cambia nada, **entonces** no recibo ningún mensaje: la asignación es idempotente y solo avisa cuando hay un cambio real.
+3. **Dado** que tengo clases hoy, **cuando** llega la hora del resumen diario (07:30, hora de Lima), **entonces** recibo la lista de mis clases del día con su aula; quien no tiene clases no recibe nada.
+4. **Dado** que el alumno bloqueó el bot, **entonces** la vinculación se desactiva automáticamente.
+5. Ningún mensaje incluye datos de mi ficha médica ni mi condición de movilidad reducida.
+
+**RF:** RF-26, RF-27 · **Prioridad:** S
+
 ### 3.2. Docente
 
 #### HU-07 — Ver mi horario con espacios asignados
@@ -310,8 +334,11 @@ Cada RF de `02_requisitos.md` tiene al menos una historia de origen.
 | RF-22 | Mapa de ocupación | HU-20, HU-26 |
 | RF-23 | Registro de auditoría | HU-21 |
 | RF-24 | Restablecer cuenta | HU-19 |
+| RF-25 | Vincular Telegram con código y clave | HU-27 |
+| RF-26 | Aviso de cambio de aula por Telegram | HU-28 |
+| RF-27 | Resumen diario de clases | HU-28 |
 
-**Cobertura:** 24 / 24 RF trazados · 26 historias · 4 actores.
+**Cobertura:** 27 / 27 RF trazados · 28 historias · 4 actores.
 
 ---
 
@@ -320,3 +347,4 @@ Cada RF de `02_requisitos.md` tiene al menos una historia de origen.
 | Versión | Fecha | Autor | Descripción |
 | :--- | :--- | :--- | :--- |
 | 1.0.0 | 2026-09-23 | Grupo 6 | Versión inicial para la línea base funcional. |
+| 1.1.0 | 2026-10-21 | Grupo 6 | Cambio de alcance aprobado por el CCC (Solicitud #247): se incorporan HU-27 (vincular Telegram) y HU-28 (aviso de cambio de aula y resumen diario), con sus filas en la matriz RF → HU. |

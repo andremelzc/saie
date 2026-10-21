@@ -5,12 +5,19 @@ import {
   altaDocente,
   altaEspacio,
   consultarMapaOcupacion,
+  consultarReporteAsignaciones,
   editarEspacio,
+  editarSeccion,
   listarAlertas,
   listarEscaladas,
   listarEspaciosAdmin,
+  listarHistorial,
   listarIncidenciasReportadas,
+  listarRegistrosAuditoria,
+  listarDocentes,
+  listarSeccionesAdmin,
   obtenerEspacio,
+  obtenerSeccion,
   registrarPcsMalogradasLaboratorio,
   registrarSoftwareLaboratorio,
   resolverAlertaPendiente,
@@ -80,6 +87,22 @@ router.get('/espacios', listarEspaciosAdmin);
 router.get('/espacios/:id', obtenerEspacio);
 router.post('/espacios', soloCoordinacion, altaEspacio);
 router.patch('/espacios/:id', editarEspacio);
+
+// Gestión individual de secciones (Issue 4.31): ver el catálogo del periodo y editar, sin
+// Coordinate, el tipo de aula, el docente y el software requerido.
+router.get('/secciones', listarSeccionesAdmin);
+router.get('/secciones/:id', obtenerSeccion);
+router.patch('/secciones/:id', soloCoordinacion, editarSeccion);
+
+// Docentes disponibles para asignar a una sección (Issue 4.31).
+router.get('/docentes', listarDocentes);
+
+// Auditoría e historial de asignaciones (Issue 4.32): lectura para los dos roles del panel.
+router.get('/auditoria', listarRegistrosAuditoria);
+router.get('/asignaciones/historial', listarHistorial);
+
+// Informe de salones para presentar (Issue 4.33): secciones con su aula asignada.
+router.get('/reporte/asignaciones', consultarReporteAsignaciones);
 
 // Alta individual de usuarios: solo Coordinación Académica (Issues 4.17 y 4.18)
 router.post('/alumnos', soloCoordinacion, altaAlumno);

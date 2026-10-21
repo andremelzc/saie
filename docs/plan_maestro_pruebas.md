@@ -56,6 +56,7 @@ Validan el **motor completo como una sola unidad**, contra una base PostgreSQL r
 | Issue de prueba | Valida (issue de origen) | Casos obligatorios |
 |---|---|---|
 | **5.7** — Flujo completo (feliz, batch, escalamiento) | 2.10, 2.11, 2.12, 2.14 (RF-05, RF-06, RF-15) | Camino feliz para una sección individual (aula y laboratorio); corrida batch del periodo (teóricas y prácticas); escalamiento cuando ningún bloque cumple capacidad/disponibilidad/contigüidad/software; **idempotencia**: segunda corrida sin cambios mantiene las asignaciones vigentes, y una corrida con una sección modificada pasa la anterior a HISTÓRICA; desempate por cercanía a secciones paralelas, incluido el caso en que solo queda un bloque válido |
+| **5.20** — Avisos al estudiante por Telegram | 2.16, 3.24 a 3.28 (RF-25, RF-26, RF-27, RNF-11) | Vinculación con código y clave correctas, con el mensaje de la clave siempre borrado; credenciales incorrectas con respuesta genérica y bloqueo tras cinco fallos en quince minutos; baja con `/baja`; **aviso de cambio de aula** solo cuando los espacios cambian de verdad (idempotencia: una corrida sin cambios no genera ningún mensaje) y **sin datos de ficha médica ni de movilidad reducida** (RNF-11); desvinculación automática ante un 403 de Telegram; resumen diario idempotente por vinculación y día, que solo se envía a quien tenga clases |
 
 **Herramientas:** `Jest` + `Supertest` (para los endpoints que disparan la asignación) contra una base de datos PostgreSQL de servicio (Docker, la misma imagen usada en CI vía GitHub Actions).
 
@@ -250,8 +251,9 @@ Este plan define, además, qué significa "terminado" para efectos del **Informe
 | Versión | Fecha | Autor | Descripción |
 |---|---|---|---|
 | 1.0.0 | 2026-09-16 | QA SAIE | Creación inicial del Plan Maestro de Pruebas (Issue #5.12) |
-| 1.1.0 | 2026-09-22 | QA SAIE | Alineación parcial con Backlog v2.0 |
+| **1.1.0** | 2026-09-22 | QA SAIE | Alineación parcial con Backlog v2.0 |
 | **2.0.0** | **2026-09-27** | **QA SAIE** | **Reescritura alineada al proyecto:** (1) corrige la confusión de dominio — el SAIE no tiene reservas, solo asignación automática + consulta; (2) reemplaza los endpoints y umbrales de k6 inventados por los reales (Issues 3.2/3.4, Issue 5.8), con nota explícita de que la asignación nunca corre bajo carga de alumnos; (3) añade trazabilidad completa a cada issue de prueba (5.1–5.9, 5.16) y su issue de origen; (4) restaura la distinción aula/laboratorio en cada módulo de pruebas unitarias (capacidad real y software); (5) elimina quality gates no solicitados por el proyecto (code smells, duplicación, vulnerabilidades) y la tabla de severidad sin respaldo documental; (6) corrige la política de bugs: la frontera real es "unitarias/integración (mismo sprint)" vs. "pruebas de sistema k6+E2E (issue `bug` trazable)", no un corte fijo por número de sprint; (7) añade sección de criterios de salida del proyecto, ligada al Issue 5.14. |
+| **2.1.0** | **2026-10-21** | **QA SAIE** | **Cambio de alcance aprobado por el CCC (Solicitud #247):** se añade la fila del Issue 5.20 (avisos al estudiante por Telegram) a las pruebas de integración, con los casos de vinculación, aviso de cambio de aula idempotente y resumen diario, y la verificación explícita de RNF-11. |
 
 ---
 

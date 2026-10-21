@@ -1,4 +1,4 @@
-# Registro de Cobertura del Sílabo (Semanas 1–8) — SAIE
+﻿# Registro de Cobertura del Sílabo (Semanas 1–8) — SAIE
 
 > **Curso:** Automatización y Control de Software (202W0801) — UNMSM, Ingeniería de Software, 2026-2.
 > **Qué es este documento:** el registro de los 45 temas de las semanas 2 a 8 y el tratamiento que cada uno recibe en SAIE.
@@ -15,25 +15,24 @@ Los 45 temas tienen un tratamiento definido. Se distinguen tres estados, que no 
 
 | Estado | Temas | Significado |
 | :--- | :---: | :--- |
-| **Aplicado** | 35 | Existe en el proyecto (código, documento o artefacto). |
-| **Planificado** | 4 | Tiene un diseño concreto en SAIE, pero **todavía no está construido**. |
+| **Aplicado** | 39 | Existe en el proyecto (código, documento o artefacto). |
+| **Planificado** | 0 | Tiene un diseño concreto en SAIE, pero **todavía no está construido**. |
 | **Justificado** | 6 | Se analizó y se concluye, con argumentos, que no aplica a SAIE (todos de RPA). |
 | **Total** | **45** | |
 
 | Bloque del sílabo | Semanas | Aplicado | Planificado | Justificado | Total |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | Introducción a la automatización y control | 2–3 | 8 | 0 | 0 | 8 |
-| Eventos, condiciones y reglas de control | 4 | 8 | 3 | 0 | 11 |
+| Eventos, condiciones y reglas de control | 4 | 11 | 0 | 0 | 11 |
 | Diseño de soluciones de automatización | 5–6 | 12 | 0 | 0 | 12 |
 | APIs e integración | 6 | 2 | 0 | 0 | 2 |
 | RPA | 7 | 5 | 1 | 6 | 12 |
-| **Total** | | **35** | **4** | **6** | **45** |
-
+| **Total** | | **39** | **0** | **6** | **45** |
 > **Matiz sobre los cinco temas de RPA marcados "Aplicado":** tareas repetitivas, manipulación de datos, control de flujo, reglas y excepciones, y diseño de un flujo automatizado son conceptos generales que SAIE aplica en su **automatización por API** (importadores, motor, BPMN). No se aplican a un bot RPA, que SAIE no tiene ni necesita (ver §4).
 
 ---
 
-## 2. Temas aplicados (35)
+## 2. Temas aplicados (39)
 
 | # | Tema | Sem. | Dónde está |
 | :---: | :--- | :---: | :--- |
@@ -75,18 +74,22 @@ Los 45 temas tienen un tratamiento definido. Se distinguen tres estados, que no 
 
 ---
 
-## 3. Temas planificados (4): falta construirlos
+## 3. Temas aplicados con el canal de avisos (4): construidos
 
-Estos cuatro temas se aplican con **una sola funcionalidad nueva**: el aviso de cambio de aula por Telegram. Hoy no existe nada de esto en el código.
+Estos cuatro temas se aplican con **una sola funcionalidad**: el aviso de cambio de aula y el
+resumen diario por Telegram. El cambio de alcance fue aprobado por el CCC (Solicitud #247) y
+los documentos de la línea base ya lo reflejan (`docs/02_requisitos.md` RF-25 a RF-27 y RNF-11,
+`docs/03_alcance_y_reglas.md` D-06).
 
-| # | Tema | Sem. | Cómo se construiría |
+| # | Tema | Sem. | Cómo se construyó |
 | :---: | :--- | :---: | :--- |
-| 36 | Sistemas orientados a eventos | 4 | Bus de eventos interno: la asignación emite "asignación cambiada" y los suscriptores reaccionan. |
-| 37 | Programación orientada a eventos | 4 | Manejadores suscritos a esos eventos (notificador de Telegram, auditoría de alertas). |
-| 38 | Temporizadores | 4 | Resumen diario de clases al alumno, disparado por una tarea programada. |
-| 39 | Bots de software | 7 | Bot de Telegram que vincula al alumno y le avisa del cambio de aula. |
+| 36 | Sistemas orientados a eventos | 4 | Bus de eventos interno (`backend/src/events/bus.ts`): la asignación emite `asignacion.cambiada` y los suscriptores reaccionan. |
+| 37 | Programación orientada a eventos | 4 | Manejadores suscritos a esos eventos (notificador de Telegram y auditoría de alertas). |
+| 38 | Temporizadores | 4 | Resumen diario de clases al alumno, disparado por una tarea programada (`.github/workflows/resumen-diario.yml`, 07:30 hora de Lima). |
+| 39 | Bots de software | 7 | Bot de Telegram que vincula al alumno y le avisa del cambio de aula (`backend/src/telegram/`). |
 
-Diseño detallado y límites en `definiciones-e-implementacion.md` §6. Requiere registrar el cambio de alcance (las notificaciones están excluidas en `docs/03_alcance_y_reglas.md` §3.2) y seguir el control de cambios de la línea base.
+Diseño detallado y límites en `definiciones-e-implementacion.md` §6. Diagramas de los procesos 6
+y 7 en `diagramas/proceso-6-aviso-cambio-aula.puml` y `diagramas/proceso-7-resumen-diario.puml`.
 
 ---
 
