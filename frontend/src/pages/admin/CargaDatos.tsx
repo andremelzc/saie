@@ -219,16 +219,13 @@ const ZonaArchivo: React.FC<{
   </>
 );
 
-/** Resultado de la importación: resumen, errores descargables y siguiente paso. */
+/** Resultado de la importación dentro del drawer: resumen, errores descargables y pasos. */
 const PanelResultado: React.FC<{
   resultado: ResultadoImportacionDTO;
   tipo: TipoImportacion;
   onCorregir: () => void;
-  onSiguiente?: () => void;
-  etiquetaSiguiente?: string;
-}> = ({ resultado, tipo, onCorregir, onSiguiente, etiquetaSiguiente }) => {
+}> = ({ resultado, tipo, onCorregir }) => {
   const conProblemas = resultado.errores.length > 0;
-  const haySiguiente = resultado.exitosa && Boolean(onSiguiente) && Boolean(etiquetaSiguiente);
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-saie-canvas p-4">
@@ -290,7 +287,12 @@ const PanelResultado: React.FC<{
             titulo={`Ver ${textoFilasConProblemas(resultado.errores.length)}`}
             abiertoInicial
           >
-            <ul className="m-0 max-h-48 list-disc overflow-auto pl-5 text-sm text-saie-text">
+            {/*
+              Sin tope de altura ni scroll interno: la lista vive en el drawer y es el drawer
+              el que se desplaza. Un scroll dentro de la tarjeta escondía las filas y era un
+              parche para que el tablero no creciera.
+            */}
+            <ul className="m-0 list-disc pl-5 text-sm text-saie-text">
               {resultado.errores.map((e, i) => (
                 <li key={i}>{e}</li>
               ))}
@@ -302,14 +304,53 @@ const PanelResultado: React.FC<{
       {resultado.asignacion && (
         <p className="m-0 text-sm text-saie-text">{textoAsignacion(resultado.asignacion)}</p>
       )}
+    </div>
+  );
+};
 
-      {haySiguiente && (
-        <div>
-          <Boton variante="secundario" tamano="sm" onClick={onSiguiente}>
+/**
+ * Resumen compacto del resultado que vive dentro de la tarjeta. El detalle completo (procesados,
+ * errores descargables y veredicto) abre un drawer con un clic: así la carga de un archivo no
+ * apila el resultado hacia abajo ni desplaza las demás zonas.
+ */
+const ResumenResultado: React.FC<{
+  resultado: ResultadoImportacionDTO;
+  onSiguiente?: () => void;
+  etiquetaSiguiente?: string;
+  onAbrir: () => void;
+}> = ({ resultado, onSiguiente, etiquetaSiguiente, onAbrir }) => {
+  const haySiguiente = resultado.exitosa && Boolean(onSiguiente) && Boolean(etiquetaSiguiente);
+
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-saie-canvas p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <output className="m-0 block text-sm font-bold text-saie-text">
+          {resultado.exitosa
+            ? 'Carga completada sin errores'
+            : `La carga tiene ${textoFilasConProblemas(resultado.errores.length)}`}
+        </output>
+        <BadgeEstado tono={resultado.exitosa ? 'exito' : 'advertencia'}>
+          {resultado.exitosa ? 'Sin errores' : `${resultado.errores.length} con problemas`}
+        </BadgeEstado>
+      </div>
+      <p className="m-0 text-sm text-saie-muted">
+        {resultado.filasRecibidas} filas leídas ·{' '}
+        {resultado.filasRecibidas - resultado.errores.length} guardadas
+        {resultado.errores.length > 0 && ` · ${resultado.errores.length} con problemas`}
+      </p>
+      {resultado.asignacion && (
+        <p className="m-0 text-sm text-saie-text">{textoAsignacion(resultado.asignacion)}</p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Boton variante="secundario" tamano="sm" onClick={onAbrir}>
+          Ver el resultado completo
+        </Boton>
+        {haySiguiente && (
+          <Boton variante="primario" tamano="sm" onClick={onSiguiente}>
             Continuar con {etiquetaSiguiente} →
           </Boton>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
@@ -339,6 +380,8 @@ export const ZonaCarga: React.FC<{
   const [resultado, setResultado] = useState<ResultadoImportacionDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [errorArchivo, setErrorArchivo] = useState<string | null>(null);
+  // El detalle del resultado vive en un drawer: la tarjeta solo conserva el resumen.
+  const [detalleAbierto, setDetalleAbierto] = useState(false);
   const idInput = `archivo-${tipo}`;
   const idAyuda = `ayuda-${tipo}`;
 
@@ -400,8 +443,11 @@ export const ZonaCarga: React.FC<{
     setError(null);
     setErrorArchivo(null);
     setArchivo(null);
+    setDetalleAbierto(false);
     limpiarInput();
-    document.getElementById(idInput)?.focus();
+    // Tras el cierre del drawer, este devuelve el foco a quien lo abrió (que ya no existe):
+    // el foco manda al campo de archivo, que es el siguiente paso natural.
+    setTimeout(() => document.getElementById(idInput)?.focus(), 0);
   }
 
   const insignia = insigniaDeEstado(estado, enviando);
@@ -455,18 +501,33 @@ export const ZonaCarga: React.FC<{
       </div>
 
       {resultado && (
-        <PanelResultado
+        <ResumenResultado
           resultado={resultado}
-          tipo={tipo}
-          onCorregir={corregir}
           onSiguiente={onSiguiente}
           etiquetaSiguiente={etiquetaSiguiente}
+          onAbrir={() => setDetalleAbierto(true)}
         />
       )}
 
-      {resultado?.asignacion?.resumen && (
-        <VeredictoVerificacion verificacion={resultado.asignacion.resumen.verificacion} />
-      )}
+      {/*
+        El detalle del resultado (procesados, errores descargables y veredicto del verificador)
+        se consulta bajo demanda en el drawer: no se apila dentro de la tarjeta ni desplaza
+        las demás zonas de carga hacia abajo.
+      */}
+      <Drawer
+        abierto={detalleAbierto}
+        onCerrar={() => setDetalleAbierto(false)}
+        titulo={`Resultado de la carga · ${titulo}`}
+      >
+        {resultado ? (
+          <div className="flex flex-col gap-4">
+            <PanelResultado resultado={resultado} tipo={tipo} onCorregir={corregir} />
+            {resultado.asignacion?.resumen?.verificacion && (
+              <VeredictoVerificacion verificacion={resultado.asignacion.resumen.verificacion} />
+            )}
+          </div>
+        ) : null}
+      </Drawer>
     </section>
   );
 };

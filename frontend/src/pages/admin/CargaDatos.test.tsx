@@ -67,12 +67,19 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     elegirArchivo('horarios', 'x,y');
     fireEvent.click(botonImportar('2. Horarios'));
 
+    // En la tarjeta queda el resumen; el detalle (procesados) va en el drawer.
     expect(await screen.findByText('Carga completada sin errores')).toBeInTheDocument();
     expect(importar).toHaveBeenCalledWith('horarios', 'x,y');
-    expect(screen.getByText('bloques de horario')).toBeInTheDocument();
-    expect(screen.getByText('10')).toBeInTheDocument();
     expect(screen.getByText('Cargado')).toBeInTheDocument();
     expect(screen.getByText(/Última carga:/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
+    const dialogo = screen.getByRole('dialog', { name: 'Resultado de la carga · 2. Horarios' });
+    expect(within(dialogo).getByText('bloques de horario')).toBeInTheDocument();
+    expect(within(dialogo).getByText('10')).toBeInTheDocument();
+
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Cerrar' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('lista las filas rechazadas y desactiva la continuación', async () => {
@@ -86,13 +93,21 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     elegirArchivo('matriculas');
     fireEvent.click(botonImportar('3. Matrículas'));
 
+    // La tarjeta solo resume; el detalle de las filas va en el drawer.
     expect(await screen.findByText('La carga tiene 2 filas con problemas')).toBeInTheDocument();
-    expect(screen.getByText(/No se asignaron aulas/)).toBeInTheDocument();
-    expect(screen.getByText('Fila 2: código inválido')).toBeInTheDocument();
-    expect(screen.getByText('Fila 5: falta columna')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Descargar errores (CSV)' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Continuar con/ })).toBeNull();
     expect(screen.getByText('Con errores')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Continuar con/ })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
+    const dialogo = screen.getByRole('dialog', { name: 'Resultado de la carga · 3. Matrículas' });
+    expect(
+      within(dialogo).getByText(/No se asignaron aulas porque el archivo tiene filas/),
+    ).toBeInTheDocument();
+    expect(within(dialogo).getByText('Fila 2: código inválido')).toBeInTheDocument();
+    expect(within(dialogo).getByText('Fila 5: falta columna')).toBeInTheDocument();
+    expect(
+      within(dialogo).getByRole('button', { name: 'Descargar errores (CSV)' }),
+    ).toBeInTheDocument();
   });
 
   it('informa si la asignación se ejecutó tras importar', async () => {
@@ -131,13 +146,19 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     elegirArchivo('cursos-secciones');
     fireEvent.click(botonImportar('1. Cursos y secciones'));
 
+    // La tarjeta resume la asignación en una línea; el veredicto va en el drawer.
     expect(
       await screen.findByText(
         'Asignación de aulas: 4 secciones con aula nueva, 0 secciones que conservan la suya y 1 sección pendiente de revisión.',
       ),
     ).toBeInTheDocument();
-    expect(await screen.findByText('CONFORME')).toBeInTheDocument();
-    expect(screen.getByText('Sin doble reserva')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
+    const dialogo = screen.getByRole('dialog', {
+      name: 'Resultado de la carga · 1. Cursos y secciones',
+    });
+    expect(within(dialogo).getByText('CONFORME')).toBeInTheDocument();
+    expect(within(dialogo).getByText('Sin doble reserva')).toBeInTheDocument();
   });
 
   it('informa el motivo cuando la asignación no se ejecutó', async () => {
@@ -232,9 +253,12 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     fireEvent.click(botonImportar('3. Matrículas'));
     await screen.findByText('La carga tiene 1 fila con problemas');
 
+    // «Corregir» vive dentro del drawer del detalle: al confirmarlo se cierra y limpia la zona.
+    fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
     fireEvent.click(screen.getByRole('button', { name: 'Corregir y volver a subir' }));
 
     expect(screen.queryByText(/La carga tiene 1 fila/)).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(botonImportar('3. Matrículas')).toBeDisabled();
   });
 });
