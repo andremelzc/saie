@@ -30,8 +30,23 @@ blob-report/
 # Base de datos y contenedores
 postgres_data/
 
+# Exportaciones a CSV del estado real de la base (se regeneran con `npm run prisma:export`)
+backend/prisma/export/
+
+# Vercel CLI (vínculo local con el proyecto)
+.vercel/
+
 # Configuración y archivos de editores / SO
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+.vercel
+.env*
+
+# Datos reales del seed (incluyen datos personales): no subir al repositorio
+backend/prisma/data/*.xlsx
+~$*
+
+# Reporte local del backfill del catálogo de software
+backend/prisma/backfill-software-reporte.json

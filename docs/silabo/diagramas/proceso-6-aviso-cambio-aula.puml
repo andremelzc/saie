@@ -1,0 +1,103 @@
+@startuml proceso-6-aviso-cambio-aula
+' SAIE — Proceso 6: aviso de cambio de aula al alumno por Telegram
+' Modela el flujo construido en backend/src/events/emisores.ts (detectarCambioDeEspacios),
+' backend/src/telegram/notificador.ts y backend/src/telegram/bot.service.ts.
+' Render: java -jar plantuml.jar -tpng docs/silabo/diagramas/proceso-6-aviso-cambio-aula.puml
+
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #444444
+skinparam activity {
+  BackgroundColor #E8F1FA
+  BorderColor #1F4E79
+}
+skinparam activityDiamond {
+  BackgroundColor #FFF4D6
+  BorderColor #B8860B
+}
+skinparam note {
+  BackgroundColor #F2F2F2
+  BorderColor #7F7F7F
+}
+
+title SAIE — Proceso 6: aviso de cambio de aula
+
+start
+
+:Corrida de asignación
+(confianza de una sección);
+:Cambiar los espacios
+de la sección;
+:Estado **VIGENTE**
+(nueva asignación); <<#E3F4E3>>
+
+if (¿Había una asignación previa **VIGENTE**?) then (no)
+  :No hay aviso: es la primera
+  asignación de la sección;
+  stop
+else (sí)
+endif
+
+if (¿Los espacios son los mismos?) then (sí)
+  :No hay aviso: la asignación
+  se conservó por idempotencia;
+  note right
+    La huella de entrada no cambió, así que
+    no se escribe nada y no se notifica.
+    Solo avisa un cambio real.
+  end note
+  stop
+else (no)
+endif
+
+:Emitir el evento
+**asignacion.cambiada**
+(tras confirmar la transacción);
+note right
+  El evento se emite fuera de la transacción:
+  si la escritura falla, no hay un aviso
+  de un cambio que no ocurrió.
+end note
+
+:Manejador del bus busca a los
+matriculados de la sección con
+vinculación **activa**;
+
+if (¿Hay alumnos vinculados?) then (no)
+  :No hay aviso;
+  stop
+else (sí)
+endif
+
+:Preparar el mensaje
+(curso, sección, aula anterior,
+aula nueva y horario);
+note right
+  **Sin** datos de ficha médica ni de
+  movilidad reducida (RNF-11).
+end note
+
+:Enviar por la cola global
+(40 ms entre mensajes);
+:Reintentar hasta 3 veces
+si el fallo es transitorio;
+
+if (¿Telegram responde 403?) then (sí)
+  :Desactivar la vinculación
+  (el alumno bloqueó el bot);
+  :Registrar el asiento
+  en la auditoría;
+  stop
+else (no)
+endif
+
+if (¿El envío fue exitoso?) then (sí)
+  :Mensaje entregado; <<#E3F4E3>>
+  stop
+else (no)
+  :Registrar el fallo
+  (sin datos sensibles);
+  stop
+endif
+
+@enduml

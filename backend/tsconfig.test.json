@@ -1,7 +1,14 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "isolatedModules": true
+    "isolatedModules": true,
+    "rootDir": "../",
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "supertest": ["./node_modules/@types/supertest"]
+    },
+    "typeRoots": ["./node_modules/@types", "../node_modules/@types"]
   },
-  "include": ["src/**/*", "../tests/**/*"]
+  "include": ["src/**/*", "tests/**/*", "../tests/**/*"]
 }

@@ -1,0 +1,146 @@
+name: CI
+
+# Se dispara en cada Pull Request hacia develop o main y en cada push a main
+# (cumple el primer criterio de aceptación del Issue 5.10a).
+# Los push a develop los ejecuta cd.yml, que llama a este workflow antes de
+# desplegar, para no correr el CI dos veces.
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - main
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  # Job 1: lint y formato — no necesita base de datos, corre rápido
+  lint-and-format:
+    name: Lint y formato
+    runs-on: ubuntu-latest
+
+    # prisma generate no se conecta a ninguna base real en este job,
+    # pero prisma.config.ts necesita que la variable exista para poder
+    # resolver el archivo de configuración. Un valor de relleno alcanza.
+    env:
+      DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/saie_dev?schema=public
+      DIRECT_URL: postgresql://postgres:postgrespassword@localhost:5432/saie_dev?schema=public
+
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js (según .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'   # caché de dependencias
+
+      - name: Instalar dependencias (backend + frontend, workspaces)
+        run: npm ci
+
+      - name: Generar cliente de Prisma
+        run: npm run prisma:generate --workspace=backend
+
+      - name: Verificar compilación TypeScript (Backend)
+        # Issue 5.24: un error de tipos debe romper el CI, no llegar a develop.
+        working-directory: backend
+        run: npx tsc --noEmit
+
+      - name: Verificar compilación TypeScript (Frontend)
+        # Issue 5.24: tsc -b valida el proyecto y sus referencias sin emitir el bundle.
+        working-directory: frontend
+        run: npx tsc -b
+
+      - name: Ejecutar linter (ESLint)
+        run: npm run lint
+
+      - name: Verificar formato (Prettier)
+        run: npm run format:check
+
+  # Job 2: pruebas unitarias y parametrizadas, contra una base PostgreSQL
+  # de servicio (igual a docker-compose.yml), preparando el terreno para
+  # cuando se sumen las pruebas de integración (Issue 5.7).
+  unit-tests:
+    name: Pruebas unitarias y parametrizadas
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+          POSTGRES_DB: saie_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/saie_dev?schema=public
+      DIRECT_URL: postgresql://postgres:postgrespassword@localhost:5432/saie_dev?schema=public
+
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js (según .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'   # caché de dependencias
+
+      - name: Instalar dependencias (backend + frontend, workspaces)
+        run: npm ci
+
+      - name: Generar cliente de Prisma
+        run: npm run prisma:generate --workspace=backend
+
+      - name: Ejecutar pruebas unitarias y parametrizadas con cobertura (Backend)
+        # Issue 5.10b: Usar cobertura para el análisis de SonarCloud
+        run: npm run test:coverage --workspace=backend
+
+      - name: Ejecutar pruebas unitarias con cobertura (Frontend)
+        # Issue 5.22 (#268): Generar frontend/coverage/lcov.info para SonarCloud
+        run: npm run test:coverage --workspace=frontend
+
+      - name: Analisis en SonarCloud
+        # Issue 5.10b: Quality Gate (cobertura >= 85%, 0 bugs)
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # Job 3: pruebas E2E con Playwright y auditoría de accesibilidad con axe en un
+  # navegador real. Los specs interceptan el backend, así que no necesita base de datos.
+  e2e:
+    name: Pruebas E2E y accesibilidad
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js (según .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm' # caché de dependencias
+
+      - name: Instalar dependencias (backend + frontend, workspaces)
+        run: npm ci
+
+      - name: Instalar el navegador de Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Ejecutar las pruebas E2E
+        run: npm run test:e2e
+

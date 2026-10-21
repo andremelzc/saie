@@ -1,0 +1,419 @@
+import { Prisma, PrismaClient, RolCuenta, TipoAlerta, TipoEspacio } from '@prisma/client';
+import { z } from 'zod';
+import { HttpError } from '../lib/http';
+import { formatearSoftware } from '../lib/software';
+import { AlertaRegistradaDTO } from '../types/alertas';
+import { TokenPayload } from '../types/auth';
+import {
+  CampoEspacio,
+  EspacioAdminDTO,
+  FiltrosEspacios,
+  ResultadoEdicionEspacioDTO,
+} from '../types/espacios';
+import { verificarAccesoEspacio } from './acceso.service';
+import { registrarAlertaDesdeDeteccion } from './alerta.service';
+import { evaluarCapacidadInsuficiente } from './deteccionAlertas.service';
+import { registrarCambioPcsMalogradas, registrarCambioSoftware } from './laboratorio.service';
+import { resolverSoftwareIds } from './software.service';
+
+const CAMPOS_COORDINACION: CampoEspacio[] = [
+  'identificador',
+  'pabellon',
+  'piso',
+  'aforoNominal',
+  'contiguos',
+  'habilitado',
+  'descripcionUso',
+];
+const CAMPOS_LABORATORIO: CampoEspacio[] = ['softwareIds', 'pcsMalogradas'];
+
+/** Relación de software que se incluye en las respuestas del panel (Issue 4.28). */
+const ESPACIO_CON_SOFTWARE = {
+  softwareInstaladoCatalogo: { include: { software: true } },
+} satisfies Prisma.EspacioInclude;
+
+type EspacioConSoftware = Prisma.EspacioGetPayload<{ include: typeof ESPACIO_CON_SOFTWARE }>;
+
+/** Campos que cada rol puede editar según el tipo de espacio (Issue 4.15). */
+export function camposEditables(rol: RolCuenta, tipo: TipoEspacio): CampoEspacio[] {
+  const esLab = tipo === TipoEspacio.LABORATORIO;
+  if (rol === RolCuenta.COORDINACION_ACADEMICA) {
+    return esLab ? [...CAMPOS_COORDINACION, ...CAMPOS_LABORATORIO] : CAMPOS_COORDINACION;
+  }
+  if (rol === RolCuenta.JEFATURA_LABORATORIOS && esLab) {
+    return CAMPOS_LABORATORIO;
+  }
+  return [];
+}
+
+const identificador = z.string().trim().min(1, 'El identificador es requerido').max(60);
+const pabellon = z.string().trim().min(1, 'El pabellón es requerido').max(40);
+const piso = z.number({ error: 'El piso debe ser un entero' }).int('El piso debe ser un entero');
+// 0 = "sin definir": solo se admite en espacios deshabilitados (ver `exigirAforoSiHabilitado`).
+const aforoNominal = z
+  .number({ error: 'El aforo nominal debe ser un entero' })
+  .int('El aforo nominal debe ser un entero')
+  .min(0, 'El aforo nominal no puede ser negativo');
+const MENSAJE_AFORO_HABILITADO = 'El aforo nominal debe ser mayor a 0 en un espacio habilitado';
+const pcsMalogradas = z
+  .number({ error: 'pcsMalogradas debe ser un número entero' })
+  .int('pcsMalogradas debe ser un número entero')
+  .min(0, 'pcsMalogradas no puede ser negativo');
+const softwareIds = z
+  .array(z.string().uuid('Cada software debe ser un id válido'))
+  .max(100, 'Demasiados programas en la lista');
+const descripcionUso = z.string().trim().min(1).max(120, 'La descripción de uso es muy larga');
+const contiguos = z.array(z.string().min(1)).max(50, 'Demasiados espacios contiguos');
+
+export const CrearEspacioSchema = z
+  .object({
+    identificador,
+    tipo: z.enum(TipoEspacio, { error: 'El tipo de espacio no es válido' }),
+    pabellon,
+    piso,
+    aforoNominal: aforoNominal.optional(),
+    softwareIds: softwareIds.optional(),
+    pcsMalogradas: pcsMalogradas.optional(),
+    contiguos: contiguos.optional(),
+    habilitado: z.boolean({ error: 'habilitado debe ser verdadero o falso' }).optional(),
+    descripcionUso: descripcionUso.optional(),
+  })
+  .strict()
+  .superRefine((e, ctx) => {
+    if (e.habilitado !== false && (e.aforoNominal ?? 0) < 1) {
+      ctx.addIssue({ code: 'custom', path: ['aforoNominal'], message: MENSAJE_AFORO_HABILITADO });
+    }
+    if (e.tipo === TipoEspacio.AULA_TEORICA) {
+      if (e.softwareIds !== undefined || e.pcsMalogradas !== undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Un aula teórica no tiene software ni PCs malogradas',
+        });
+      }
+    } else if ((e.pcsMalogradas ?? 0) > (e.aforoNominal ?? 0)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Las PCs malogradas no pueden exceder el aforo nominal',
+      });
+    }
+  });
+
+export const ActualizarEspacioSchema = z
+  .object({
+    identificador: identificador.optional(),
+    pabellon: pabellon.optional(),
+    piso: piso.optional(),
+    aforoNominal: aforoNominal.optional(),
+    softwareIds: softwareIds.optional(),
+    pcsMalogradas: pcsMalogradas.optional(),
+    contiguos: contiguos.optional(),
+    habilitado: z.boolean({ error: 'habilitado debe ser verdadero o falso' }).optional(),
+    // null borra el rótulo
+    descripcionUso: descripcionUso.nullable().optional(),
+  })
+  .strict()
+  .refine((e) => Object.values(e).some((v) => v !== undefined), {
+    message: 'Indica al menos un campo a modificar',
+  });
+
+export type CrearEspacioInput = z.infer<typeof CrearEspacioSchema>;
+export type ActualizarEspacioInput = z.infer<typeof ActualizarEspacioSchema>;
+
+type Db = Prisma.TransactionClient;
+
+function esConflictoUnico(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+}
+
+async function contiguosDe(espacioId: string, db: Pick<Db, 'espacioContiguo'>): Promise<string[]> {
+  const relaciones = await db.espacioContiguo.findMany({ where: { espacioIdA: espacioId } });
+  return relaciones.map((r) => r.espacioIdB).sort((a, b) => a.localeCompare(b));
+}
+
+async function aEspacioDTO(
+  espacio: EspacioConSoftware,
+  rol: RolCuenta,
+  db: Pick<Db, 'espacioContiguo'>,
+): Promise<EspacioAdminDTO> {
+  const esLab = espacio.tipo === TipoEspacio.LABORATORIO;
+  return {
+    id: espacio.id,
+    identificador: espacio.identificador,
+    tipo: espacio.tipo,
+    pabellon: espacio.pabellon,
+    piso: espacio.piso,
+    aforoNominal: espacio.aforoNominal,
+    softwareInstalado: esLab
+      ? espacio.softwareInstaladoCatalogo
+          .map((fila) => ({
+            id: fila.softwareId,
+            nombre: fila.software.nombre,
+            version: fila.software.version,
+          }))
+          .sort((a, b) => formatearSoftware(a).localeCompare(formatearSoftware(b)))
+      : null,
+    pcsMalogradas: esLab ? espacio.pcsMalogradas : null,
+    habilitado: espacio.habilitado,
+    descripcionUso: espacio.descripcionUso,
+    contiguos: await contiguosDe(espacio.id, db),
+    camposEditables: camposEditables(rol, espacio.tipo),
+  };
+}
+
+/** La contigüidad solo relaciona espacios distintos y del mismo tipo (Issue 2.3). */
+async function validarContiguos(
+  espacioId: string | null,
+  tipo: TipoEspacio,
+  ids: string[],
+  db: Pick<Db, 'espacio'>,
+): Promise<string[]> {
+  const unicos = [...new Set(ids)];
+  if (espacioId && unicos.includes(espacioId)) {
+    throw new HttpError(422, 'Un espacio no puede ser contiguo a sí mismo');
+  }
+  if (unicos.length === 0) return [];
+
+  const vecinos = await db.espacio.findMany({ where: { id: { in: unicos } } });
+  if (vecinos.length !== unicos.length) {
+    throw new HttpError(404, 'Alguno de los espacios contiguos indicados no existe');
+  }
+  if (vecinos.some((v) => v.tipo !== tipo)) {
+    throw new HttpError(422, 'La contigüidad solo se permite entre espacios del mismo tipo');
+  }
+  return unicos;
+}
+
+/** Reemplaza el conjunto de contiguos de un espacio, guardando ambos sentidos de la relación. */
+async function reemplazarContiguos(espacioId: string, ids: string[], db: Db): Promise<void> {
+  await db.espacioContiguo.deleteMany({
+    where: { OR: [{ espacioIdA: espacioId }, { espacioIdB: espacioId }] },
+  });
+  if (ids.length === 0) return;
+  await db.espacioContiguo.createMany({
+    data: ids.flatMap((otro) => [
+      { espacioIdA: espacioId, espacioIdB: otro },
+      { espacioIdA: otro, espacioIdB: espacioId },
+    ]),
+  });
+}
+
+async function obtenerEspacio(espacioId: string, db: Pick<Db, 'espacio'>) {
+  const espacio = await db.espacio.findUnique({
+    where: { id: espacioId },
+    include: ESPACIO_CON_SOFTWARE,
+  });
+  if (!espacio) {
+    throw new HttpError(404, `El espacio con ID '${espacioId}' no existe`);
+  }
+  return espacio;
+}
+
+/**
+ * Issue 4.15: lista los espacios con sus contiguos y los campos editables del rol.
+ * Jefatura solo ve los laboratorios que tiene a su cargo.
+ */
+export async function listarEspacios(
+  filtros: FiltrosEspacios,
+  auth: TokenPayload,
+  prisma: Pick<PrismaClient, 'espacio' | 'espacioContiguo'>,
+): Promise<EspacioAdminDTO[]> {
+  const esJefatura = auth.rol === RolCuenta.JEFATURA_LABORATORIOS;
+  const espacios = await prisma.espacio.findMany({
+    where: {
+      ...(filtros.tipo && { tipo: filtros.tipo }),
+      ...(filtros.pabellon && { pabellon: { equals: filtros.pabellon, mode: 'insensitive' } }),
+      ...(filtros.piso !== undefined && { piso: filtros.piso }),
+      ...(esJefatura && {
+        tipo: TipoEspacio.LABORATORIO,
+        responsables: { some: { cuentaId: auth.sub } },
+      }),
+    },
+    orderBy: [{ pabellon: 'asc' }, { piso: 'asc' }, { identificador: 'asc' }],
+    include: ESPACIO_CON_SOFTWARE,
+  });
+  return Promise.all(espacios.map((e) => aEspacioDTO(e, auth.rol, prisma)));
+}
+
+export async function obtenerEspacioAdmin(
+  espacioId: string,
+  auth: TokenPayload,
+  prisma: Pick<PrismaClient, 'espacio' | 'espacioContiguo' | 'espacioResponsable'>,
+): Promise<EspacioAdminDTO> {
+  const espacio = await obtenerEspacio(espacioId, prisma);
+  await verificarAccesoEspacio(auth, espacio.id, prisma);
+  return aEspacioDTO(espacio, auth.rol, prisma);
+}
+
+/** Issue 4.15: alta de un espacio (solo Coordinación). Sin asignaciones no hay alertas que evaluar. */
+export async function crearEspacio(
+  entrada: CrearEspacioInput,
+  auth: TokenPayload,
+  prisma: PrismaClient,
+): Promise<EspacioAdminDTO> {
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const vecinos = await validarContiguos(null, entrada.tipo, entrada.contiguos ?? [], tx);
+      const esLab = entrada.tipo === TipoEspacio.LABORATORIO;
+
+      // Issue 4.28: el software se resuelve contra el catálogo; un id inexistente o dado de
+      // baja cancela el alta completa (la transacción no deja el espacio a medias).
+      const software = esLab ? await resolverSoftwareIds(entrada.softwareIds ?? [], tx) : [];
+
+      const creado = await tx.espacio.create({
+        data: {
+          identificador: entrada.identificador,
+          tipo: entrada.tipo,
+          pabellon: entrada.pabellon,
+          piso: entrada.piso,
+          aforoNominal: entrada.aforoNominal ?? 0,
+          pcsMalogradas: esLab ? (entrada.pcsMalogradas ?? 0) : null,
+          habilitado: entrada.habilitado ?? true,
+          descripcionUso: entrada.descripcionUso ?? null,
+        },
+      });
+
+      if (software.length > 0) {
+        await tx.espacioSoftware.createMany({
+          data: software.map((s) => ({
+            espacioId: creado.id,
+            softwareId: s.id,
+            registradoPorId: auth.sub,
+          })),
+        });
+      }
+
+      await reemplazarContiguos(creado.id, vecinos, tx);
+      const conSoftware = await tx.espacio.findUniqueOrThrow({
+        where: { id: creado.id },
+        include: ESPACIO_CON_SOFTWARE,
+      });
+      return aEspacioDTO(conSoftware, auth.rol, tx);
+    });
+  } catch (error: unknown) {
+    if (esConflictoUnico(error)) {
+      throw new HttpError(
+        409,
+        `Ya existe el espacio '${entrada.identificador}' en el pabellón ${entrada.pabellon}`,
+      );
+    }
+    throw error;
+  }
+}
+
+/**
+ * Issue 4.15: edición de un espacio con campos acotados por rol.
+ *
+ * - Coordinación edita todos los campos; Jefatura solo PCs y software de sus laboratorios.
+ *   Cualquier campo fuera de lo permitido se rechaza con 403 antes de tocar la base.
+ * - Los campos de laboratorio no existen en un aula teórica (400).
+ * - Un cambio de aforo evalúa la capacidad (Issue 4.4) y persiste la alerta (Issue 4.5).
+ * - PCs y software NO se escriben directo: pasan por los servicios de los Issues 4.2 y 4.1,
+ *   que dejan historial y generan alertas. Se aplican después de los campos propios del
+ *   espacio, en transacciones separadas.
+ */
+export async function actualizarEspacio(
+  espacioId: string,
+  entrada: ActualizarEspacioInput,
+  auth: TokenPayload,
+  prisma: PrismaClient,
+): Promise<ResultadoEdicionEspacioDTO> {
+  const actual = await obtenerEspacio(espacioId, prisma);
+  await verificarAccesoEspacio(auth, actual.id, prisma);
+
+  const permitidos = camposEditables(auth.rol, actual.tipo);
+  const solicitados = (Object.keys(entrada) as CampoEspacio[]).filter(
+    (c) => entrada[c] !== undefined,
+  );
+
+  const camposDeLab = solicitados.filter((c) => CAMPOS_LABORATORIO.includes(c));
+  if (actual.tipo === TipoEspacio.AULA_TEORICA && camposDeLab.length > 0) {
+    throw new HttpError(400, 'Un aula teórica no tiene software ni PCs malogradas');
+  }
+
+  const noPermitidos = solicitados.filter((c) => !permitidos.includes(c));
+  if (noPermitidos.length > 0) {
+    throw new HttpError(
+      403,
+      `Tu rol no puede editar: ${noPermitidos.join(', ')}`,
+      noPermitidos.map((c) => `Campo no editable: ${c}`),
+    );
+  }
+
+  const aforoFinal = entrada.aforoNominal ?? actual.aforoNominal;
+  const habilitadoFinal = entrada.habilitado ?? actual.habilitado;
+  if (habilitadoFinal && aforoFinal < 1) {
+    throw new HttpError(422, MENSAJE_AFORO_HABILITADO, [
+      'Define un aforo nominal mayor a 0 antes de habilitar el espacio',
+    ]);
+  }
+  const pcsFinal = entrada.pcsMalogradas ?? actual.pcsMalogradas ?? 0;
+  if (actual.tipo === TipoEspacio.LABORATORIO && pcsFinal > aforoFinal) {
+    throw new HttpError(
+      422,
+      `El conteo de PCs malogradas (${pcsFinal}) excede el aforo nominal (${aforoFinal})`,
+    );
+  }
+
+  const alertas: AlertaRegistradaDTO[] = [];
+  const hayCamposPropios = solicitados.some((c) => CAMPOS_COORDINACION.includes(c));
+
+  if (hayCamposPropios) {
+    try {
+      await prisma.$transaction(async (tx) => {
+        const vecinos =
+          entrada.contiguos !== undefined
+            ? await validarContiguos(actual.id, actual.tipo, entrada.contiguos, tx)
+            : null;
+
+        const actualizado = await tx.espacio.update({
+          where: { id: actual.id },
+          data: {
+            ...(entrada.identificador !== undefined && { identificador: entrada.identificador }),
+            ...(entrada.pabellon !== undefined && { pabellon: entrada.pabellon }),
+            ...(entrada.piso !== undefined && { piso: entrada.piso }),
+            ...(entrada.aforoNominal !== undefined && { aforoNominal: entrada.aforoNominal }),
+            ...(entrada.habilitado !== undefined && { habilitado: entrada.habilitado }),
+            ...(entrada.descripcionUso !== undefined && { descripcionUso: entrada.descripcionUso }),
+          },
+        });
+
+        if (vecinos) {
+          await reemplazarContiguos(actual.id, vecinos, tx);
+        }
+
+        if (entrada.aforoNominal !== undefined && entrada.aforoNominal !== actual.aforoNominal) {
+          const afectadas = await evaluarCapacidadInsuficiente(
+            actual.id,
+            { aforoNominal: entrada.aforoNominal },
+            tx,
+          );
+          const alerta = await registrarAlertaDesdeDeteccion(
+            TipoAlerta.CAPACIDAD,
+            actual.id,
+            actualizado.identificador,
+            afectadas,
+            tx,
+          );
+          if (alerta) alertas.push(alerta);
+        }
+      });
+    } catch (error: unknown) {
+      if (esConflictoUnico(error)) {
+        throw new HttpError(409, 'Ya existe un espacio con ese identificador en el pabellón');
+      }
+      throw error;
+    }
+  }
+
+  if (entrada.pcsMalogradas !== undefined) {
+    const r = await registrarCambioPcsMalogradas(actual.id, entrada.pcsMalogradas, auth, prisma);
+    alertas.push(...r.alertas);
+  }
+  if (entrada.softwareIds !== undefined) {
+    const r = await registrarCambioSoftware(actual.id, entrada.softwareIds, auth, prisma);
+    alertas.push(...r.alertas);
+  }
+
+  const final = await obtenerEspacio(actual.id, prisma);
+  return { espacio: await aEspacioDTO(final, auth.rol, prisma), alertas };
+}

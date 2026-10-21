@@ -1,12 +1,14 @@
-# Sistema de Apoyo a la Integración Escolar (SAIE)
+# Sistema de Asignación Inteligente de Espacios (SAIE)
 
-> Plataforma integral para la gestión, seguimiento y acompañamiento de la integración escolar de estudiantes con necesidades específicas de apoyo educativo.
+> Plataforma integral para la asignación inteligente y óptima de espacios académicos (aulas teóricas y laboratorios), considerando capacidad real, compatibilidad de software, contigüidad física y priorización de accesibilidad e inclusión para estudiantes con movilidad reducida.
+>
+> **Facultad de Ingeniería de Sistemas e Informática — UNMSM (Grupo 6 - 2026)**
 
 ---
 
 ## 1. Tabla del Stack Tecnológico Acordado
 
-A continuación se resume el stack tecnológico del proyecto. Para la justificación y análisis de cada herramienta, remitirse a la [Sección 4 del Documento de Arquitectura](docs/arquitectura.md#4-stack-tecnol%C3%B3gico-acordado-y-justificaci%C3%B3n).
+A continuación se resume el stack tecnológico del proyecto. Para la justificación y análisis de cada herramienta, remitirse a la [Sección 4 del Documento de Arquitectura](docs/arquitectura.md#4-tecnolog%C3%ADas-y-herramientas).
 
 | Área / Componente | Tecnología | Propósito |
 | :--- | :--- | :--- |
@@ -38,7 +40,8 @@ saie/
 ├── docker-compose.yml          # Contenedor de PostgreSQL local para desarrollo
 ├── package.json                # Workspaces de npm y scripts unificados
 ├── docs/                       # Documentación técnica del proyecto
-│   ├── arquitectura.md         # Documento de Arquitectura (Sección 4: Stack)
+│   ├── arquitectura.md         # Documento de Arquitectura (DA)
+│   ├── modelo-datos.md         # Documento de Modelo de Datos (DMD)
 │   └── git-workflow.md         # Convenciones de Commits y Branching
 ├── assets/                     # Recursos estáticos globales
 │   └── planos/                 # Planos vectoriales SVG (Issue 6.10)
@@ -201,10 +204,94 @@ k6 run tests/load/smoke-load-test.js
 
 ---
 
-## 8. Convenciones de Trabajo y Commits
+## 8. Convenciones de Trabajo, Ramas y Commits
 
-Este proyecto sigue rigurosamente el estándar de **Conventional Commits** y una estrategia de ramas basada en **Feature Branching**:
+El proyecto adopta un flujo de trabajo basado en **GitFlow / Feature Branching** y el estándar de **Conventional Commits**:
 
-- Consulta la guía completa en [docs/git-workflow.md](docs/git-workflow.md).
-- Formato de commits: `tipo(ámbito): descripción breve en imperativo` (ej: `feat(api): endpoint de registro de docentes`).
-- Ramas: `feature/<issue-id>-<descripcion>`, `bugfix/...`, `hotfix/...`.
+### 8.1. Estructura de Ramas
+* **`main`**: Producción y entregables estables congelados. Protegida contra pushes directos.
+* **`develop`**: Rama base de integración continua durante cada Sprint.
+* **Ramas de trabajo**: Se ramifican desde `develop` con la nomenclatura:
+  * `feature/<issue-id>-<descripcion>`: Nuevas funcionalidades (ej. `feature/1.2-modelo-datos`).
+  * `docs/<issue-id>-<descripcion>`: Documentación formal (ej. `docs/1.2-6.5-arquitectura-y-modelo-datos`).
+  * `bugfix/<issue-id>-<descripcion>`: Corrección de incidencias.
+  * `chore/<issue-id>-<descripcion>`: Mantenimiento, dependencias y configuración.
+
+### 8.2. Política de Pull Requests (PR)
+1. Los cambios se integran hacia `develop` mediante **Pull Request**.
+2. Cada PR carga automáticamente la plantilla obligatoria ([`.github/pull_request_template.md`](.github/pull_request_template.md)), requiriendo:
+   * Vinculación explícita al issue (`Closes #ID`).
+   * Aprobación mediante revisión de código (*Code Review*).
+   * Verificación de calidad: compilación limpia (`npm run build`), linters (`npm run lint`), formateo (`npm run format:check`) y pruebas (`npm run test`).
+3. Al cierre de cada Sprint, se realiza el PR de integración de `develop` hacia `main`.
+
+### 8.3. Commits
+* Formato: `tipo(ámbito opcional): descripción breve en presente imperativo` (ej: `docs(arquitectura): actualizar diagrama y principios de diseno`).
+* Guía completa y detallada en [docs/git-workflow.md](docs/git-workflow.md).
+
+---
+
+## 9. Despliegue y Ambientes (Producción / Demo)
+
+El sistema SAIE se encuentra desplegado y disponible en un entorno de demostración continuo utilizando plataformas en la nube:
+
+### 9.1. URLs Públicas del Sistema
+
+| Servicio / Capa | Plataforma | URL Pública |
+| :--- | :--- | :--- |
+| **Frontend Web** | Vercel | [https://saie-plum.vercel.app/](https://saie-plum.vercel.app/) |
+| **Backend API** | Render | [https://saie-backend.onrender.com/api](https://saie-backend.onrender.com/api) |
+| **Health Check** | Render | [https://saie-backend.onrender.com/api/health](https://saie-backend.onrender.com/api/health) |
+| **Base de Datos** | Supabase | PostgreSQL administrado con RLS y Connection Pooler |
+
+### 9.2. Flujo de Despliegue Continuo (CI/CD)
+
+El despliegue está 100% automatizado y blindado mediante GitHub Actions, con dos workflows: la integración continua ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) y el despliegue continuo ([`.github/workflows/cd.yml`](.github/workflows/cd.yml)), que reutiliza el CI como puerta de calidad:
+
+1. **Pull Request:** Al abrir o actualizar un PR hacia `develop`, se ejecutan automáticamente los análisis de calidad (compilación TypeScript sin emisión con `tsc --noEmit`/`tsc -b`, ESLint, Prettier y pruebas Jest). Un error de tipos rompe el CI. Ningún despliegue se ejecuta en esta etapa.
+2. **Merge a `develop`:** Al integrarse cambios a la rama principal, `cd.yml` ejecuta primero el CI (`ci.yml`) como quality gate.
+3. **Migración y Despliegue:** **Únicamente si todos los checks pasan en verde**, el job `deploy` de `cd.yml`:
+   * Aplica las migraciones de Prisma directamente sobre Supabase mediante la conexión directa (`DIRECT_URL`, puerto 5432).
+   * Dispara el webhook seguro de Render (`RENDER_DEPLOY_HOOK_URL`) para compilar y desplegar la nueva versión del backend.
+   * Construye y despliega el frontend en Vercel con la CLI (`vercel pull`, `vercel build` y `vercel deploy --prebuilt`), autenticada con los secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` y `VERCEL_PROJECT_ID`.
+   * **Verifica la salud posterior al despliegue (Issue 5.24):** consulta `GET /api/health` del backend y la URL del frontend con reintentos (para tolerar el arranque en frío de Render); el job `deploy` falla si alguno no responde dentro de la ventana de espera.
+
+### 9.3. Limitaciones y Notas Operativas (Capa Gratuita)
+
+* **Tiempo de calentamiento en Render (*Cold Start*):** En el tier gratuito de Render, el contenedor entra en estado de suspensión tras 15 minutos sin tráfico. La primera petición posterior puede tardar entre 45 y 60 segundos en responder mientras se inicializa el servidor. Las solicitudes posteriores responden de forma instantánea.
+* **Pausa por inactividad en Supabase:** La base de datos de Supabase entra en pausa automáticamente si transcurren 7 días continuos sin consultas. Para reactivarla, ingresar a [Supabase Dashboard](https://supabase.com/dashboard) y presionar *"Restore project"*.
+* **Reconstrucción de la Base de Datos:** Si se requiere reiniciar o reaplicar el esquema con el dataset semilla del edificio:
+  ```bash
+  npm run prisma:migrate --workspace=backend
+  npm run prisma:seed --workspace=backend
+  ```
+
+### 9.4. Secretos del Repositorio (GitHub Actions)
+
+Se configuran en *Settings → Secrets and variables → Actions* y nunca se versionan:
+
+| Secreto | Usado por | Propósito |
+| :--- | :--- | :--- |
+| `DIRECT_URL` | `cd.yml` | Conexión directa a Supabase (puerto 5432) para aplicar migraciones. |
+| `RENDER_DEPLOY_HOOK_URL` | `cd.yml` | Webhook que dispara el despliegue del backend en Render. |
+| `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | `cd.yml` | Autenticación de la CLI de Vercel para desplegar el frontend. |
+| `BACKEND_URL` | `cd.yml`, `resumen-diario.yml` | URL pública del backend, sin barra final. Alimenta el health check posterior al despliegue y el resumen diario. |
+| `FRONTEND_URL` | `cd.yml` | URL pública del frontend (p. ej. `https://saie-plum.vercel.app`). Habilita el health check del frontend; si no está configurado, esa verificación se omite con una advertencia. |
+| `ASIGNACION_PROGRAMADA_TOKEN` | `asignacion-programada.yml` | Token de servicio de `POST /api/v1/asignaciones/programada` (corrida desatendida nocturna). |
+| `RESUMEN_DIARIO_TOKEN` | `resumen-diario.yml` | Token de servicio de `POST /api/v1/telegram/resumen-diario`. |
+| `SONAR_TOKEN` | `ci.yml` | Análisis estático en SonarCloud. |
+
+### 9.5. Tareas Programadas (Automatización Desatendida)
+
+Además del despliegue, dos workflows de GitHub Actions ejecutan tareas sin intervención humana:
+
+| Workflow | Cadencia (UTC) | Qué hace |
+| :--- | :--- | :--- |
+| `resumen-diario.yml` | 12:30, lunes a sábado | Envía por Telegram el resumen de clases del día a los alumnos vinculados (Issue 3.27). |
+| `asignacion-programada.yml` | 07:00 (02:00 en Lima), a diario | Ejecuta la corrida de asignación del periodo vigente, publica el resumen en la pestaña *Actions* y falla si el verificador reporta violaciones (Issue 2.18). |
+
+Ambos toleran el arranque en frío de Render reintentando la llamada.
+
+> [!NOTE]
+> El candado que evita corridas simultáneas vive en la memoria del proceso. Es válido mientras el backend corra en una sola instancia (el plan gratuito de Render); si se escala a varias instancias, habrá que moverlo a un almacén compartido.
+

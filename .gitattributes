@@ -1,0 +1,4 @@
+# Fuerza LF (Unix) en todos los archivos de texto, sin importar el sistema
+# operativo o la configuración local de Git de cada desarrollador.
+# Evita conflictos de formato con Prettier causados por CRLF en Windows.
+* text=auto eol=lf

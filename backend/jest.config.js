@@ -2,7 +2,7 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/src', '<rootDir>/../tests/integration'],
+  roots: ['<rootDir>/src', '<rootDir>/tests', '<rootDir>/../tests/integration'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   testPathIgnorePatterns: ['/node_modules/', '/tests/e2e/'],
   moduleDirectories: ['node_modules', '<rootDir>/node_modules', '<rootDir>/../node_modules'],

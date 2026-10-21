@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 912 818" role="img" aria-labelledby="plano-titulo plano-desc" data-piso="1">
+  <title id="plano-titulo">Plano del piso 1 — FISI UNMSM (pabellón nuevo y pabellón antiguo)</title>
+  <desc id="plano-desc">Plano esquemático del primer piso, trazado en ángulos rectos. Cada espacio es una figura con id PABELLON-IDENTIFICADOR (NUE-101, ANT-101). Capas: patios, circulacion, espacios, escaleras, ascensores, estructura, muros, puertas, entrada, etiquetas.</desc>
+  <style>
+    :root {
+      --plano-fondo: var(--saie-canvas, #FAF6ED);
+      --plano-patio: #CFDDB0;
+      --plano-circulacion: #F5EEE6;
+      --plano-aula: #EEE5D6;
+      --plano-laboratorio: #D3C4AD;
+      --plano-administrativo: #D6C3B6;
+      --plano-servicio: #EEE5D6;
+      --plano-bano: #BCD3D4;
+      --plano-escalera: #E1B9B7;
+      --plano-ascensor: #8FD0F2;
+      --plano-linea: var(--saie-text, #222222);
+      --plano-muro: #4A4A44;
+      --plano-puerta: #7B1113;
+    }
+    .fondo { fill: var(--plano-fondo); }
+    .patio { fill: var(--plano-patio); stroke: none; }
+    .circulacion { fill: var(--plano-circulacion); stroke: none; }
+    .espacio, .escalera, .ascensor { stroke: var(--plano-linea); stroke-width: 1; stroke-linejoin: miter; }
+    .espacio.aula { fill: var(--plano-aula); }
+    .espacio.laboratorio { fill: var(--plano-laboratorio); }
+    .espacio.administrativo { fill: var(--plano-administrativo); }
+    .espacio.servicio { fill: var(--plano-servicio); }
+    .espacio.bano { fill: var(--plano-bano); }
+    .escalera { fill: var(--plano-escalera); fill-rule: evenodd; }
+    .ascensor { fill: var(--plano-ascensor); stroke-width: 1.5; }
+    .estructura { fill: var(--plano-muro); stroke: var(--plano-linea); stroke-width: 1; }
+    .escalera-eje, .escalera-peldano { stroke: var(--plano-linea); stroke-width: .8; fill: none; pointer-events: none; }
+    .escalera-eje { stroke-width: 1.4; }
+    .muro { fill: none; stroke: var(--plano-muro); stroke-width: 3; stroke-linecap: square; stroke-linejoin: miter; }
+    .puerta { stroke: #FFFFFF; stroke-width: 4.5; stroke-linecap: butt; }
+    .entrada-facultad { stroke: var(--plano-puerta); stroke-width: 6; stroke-linecap: butt; }
+    .entrada { fill: var(--plano-puerta); stroke: #FFFFFF; stroke-width: 1.5; }
+    .etiqueta { font: 600 9px/1.1 system-ui, sans-serif; fill: var(--plano-linea); text-anchor: middle; pointer-events: none; }
+    .espacio, .escalera, .ascensor { cursor: pointer; }
+  </style>
+  <g id="fondo"><rect class="fondo" x="0" y="0" width="912" height="818"/></g>
+  <g id="circulacion">
+    <polygon id="vestibulo-nuevo" class="circulacion" points="205,68 253,68 253,92 205,92"/>
+    <polygon id="plaza-patios" class="circulacion" points="300,190 620,190 620,548 300,548"/>
+    <polygon id="pasadizo-norte" class="circulacion" points="85,92 672,92 672,140 85,140"/>
+    <polygon id="pasadizo-oeste" class="circulacion" points="211,140 364,140 364,190 300,190 300,716 238,716 238,780 185,780 185,432 85,432 85,410 225,410 225,190 211,190"/>
+    <polygon id="pasadizo-central" class="circulacion" points="300,600 692,600 692,646 300,646"/>
+  </g>
+  <g id="patios">
+    <polygon id="patio-auditorio" class="patio" points="85,190 225,190 225,226 85,226"/>
+    <polygon id="patio-norte" class="patio" points="364,208 548,208 548,372 364,372"/>
+    <polygon id="patio-sur" class="patio" points="364,392 548,392 548,548 318,548 318,428 364,428"/>
+    <polygon id="jardin-sur" class="patio" points="300,698 692,698 692,780 300,780"/>
+  </g>
+  <g id="espacios">
+    <g id="espacios-nuevo">
+      <rect id="NUE-sin-codigo-1" class="espacio aula" data-pabellon="nuevo" data-clase="aula" x="85" y="40" width="62" height="52"><title>Sin etiqueta en el plano — pabellón nuevo</title></rect>
+      <rect id="NUE-101" class="espacio aula" data-pabellon="nuevo" data-clase="aula" x="147" y="40" width="58" height="52"><title>Salón 101 — pabellón nuevo</title></rect>
+      <rect id="NUE-sin-codigo-3" class="espacio aula" data-pabellon="nuevo" data-clase="aula" x="277" y="40" width="87" height="52"><title>Sin etiqueta en el plano — pabellón nuevo</title></rect>
+      <rect id="NUE-103" class="espacio aula" data-pabellon="nuevo" data-clase="aula" x="364" y="40" width="60" height="52"><title>Salón 103 — pabellón nuevo</title></rect>
+      <rect id="NUE-104" class="espacio aula" data-pabellon="nuevo" data-clase="aula" x="424" y="40" width="66" height="52"><title>Salón 104 — pabellón nuevo</title></rect>
+      <rect id="NUE-105" class="espacio aula" data-pabellon="nuevo" data-clase="aula" x="490" y="40" width="62" height="52"><title>Salón 105 — pabellón nuevo</title></rect>
+      <rect id="NUE-106" class="espacio aula" data-pabellon="nuevo" data-clase="aula" x="552" y="40" width="68" height="52"><title>Salón 106 — pabellón nuevo</title></rect>
+      <rect id="NUE-109" class="espacio aula" data-pabellon="nuevo" data-clase="aula" x="364" y="140" width="64" height="50"><title>Salón 109 — pabellón nuevo</title></rect>
+      <rect id="NUE-bano-1" class="espacio bano" data-pabellon="nuevo" data-clase="bano" x="428" y="140" width="32" height="50"><title>Baño — pabellón nuevo</title></rect>
+      <rect id="NUE-108" class="espacio aula" data-pabellon="nuevo" data-clase="aula" x="460" y="140" width="68" height="50"><title>Salón 108 — pabellón nuevo</title></rect>
+      <rect id="NUE-107" class="espacio aula" data-pabellon="nuevo" data-clase="aula" x="528" y="140" width="66" height="50"><title>Salón 107 — pabellón nuevo</title></rect>
+      <rect id="NUE-100" class="espacio aula" data-pabellon="nuevo" data-clase="aula" x="85" y="140" width="62" height="50"><title>Salón 100 — pabellón nuevo</title></rect>
+      <rect id="NUE-sin-codigo-2" class="espacio aula" data-pabellon="nuevo" data-clase="aula" x="147" y="140" width="64" height="50"><title>Sin etiqueta en el plano — pabellón nuevo</title></rect>
+    </g>
+    <g id="espacios-antiguo">
+      <rect id="ANT-auditorio" class="espacio servicio" data-pabellon="antiguo" data-clase="servicio" x="85" y="270" width="140" height="140"><title>Auditorio — pabellón antiguo</title></rect>
+      <rect id="ANT-salon-profesores" class="espacio servicio" data-pabellon="antiguo" data-clase="servicio" x="85" y="226" width="140" height="44"><title>Salón de profesores — pabellón antiguo</title></rect>
+      <rect id="ANT-cuarto-limpieza" class="espacio servicio" data-pabellon="antiguo" data-clase="servicio" x="85" y="432" width="100" height="46"><title>Cuarto de limpieza — pabellón antiguo</title></rect>
+      <rect id="ANT-bano-1" class="espacio bano" data-pabellon="antiguo" data-clase="bano" x="85" y="478" width="100" height="62"><title>Baño de primera planta n° 1 — pabellón antiguo</title></rect>
+      <rect id="ANT-usg" class="espacio administrativo" data-pabellon="antiguo" data-clase="administrativo" x="131" y="570" width="54" height="36"><title>Unidad de Serv. Generales, Operaciones y Mantenimiento — pabellón antiguo</title></rect>
+      <rect id="ANT-dpto-cc" class="espacio administrativo" data-pabellon="antiguo" data-clase="administrativo" x="131" y="606" width="54" height="36"><title>Departamento Académico de CC — pabellón antiguo</title></rect>
+      <rect id="ANT-cerseu" class="espacio administrativo" data-pabellon="antiguo" data-clase="administrativo" x="131" y="642" width="54" height="38"><title>CERSEU — pabellón antiguo</title></rect>
+      <rect id="ANT-dga" class="espacio administrativo" data-pabellon="antiguo" data-clase="administrativo" x="131" y="680" width="54" height="30"><title>DGA — pabellón antiguo</title></rect>
+      <rect id="ANT-economia" class="espacio administrativo" data-pabellon="antiguo" data-clase="administrativo" x="131" y="710" width="54" height="70"><title>Unidad de economía — pabellón antiguo</title></rect>
+      <rect id="ANT-109" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="300" y="548" width="66" height="52"><title>Salón 109 — pabellón antiguo</title></rect>
+      <rect id="ANT-108" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="366" y="548" width="66" height="52"><title>Salón 108 — pabellón antiguo</title></rect>
+      <rect id="ANT-107" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="432" y="548" width="66" height="52"><title>Salón 107 — pabellón antiguo</title></rect>
+      <rect id="ANT-106" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="498" y="548" width="66" height="52"><title>Salón 106 — pabellón antiguo</title></rect>
+      <rect id="ANT-105" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="564" y="548" width="56" height="52"><title>Salón 105 — pabellón antiguo</title></rect>
+      <rect id="ANT-laboratorio-1" class="espacio laboratorio" data-pabellon="antiguo" data-clase="laboratorio" x="620" y="548" width="72" height="52"><title>Laboratorio primer nivel — pabellón antiguo</title></rect>
+      <rect id="ANT-capilla" class="espacio servicio" data-pabellon="antiguo" data-clase="servicio" x="564" y="492" width="56" height="56"><title>Capilla de la Fisi — pabellón antiguo</title></rect>
+      <rect id="ANT-biblioteca" class="espacio servicio" data-pabellon="antiguo" data-clase="servicio" x="692" y="492" width="116" height="176"><title>Biblioteca — pabellón antiguo</title></rect>
+      <rect id="ANT-104" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="300" y="646" width="68" height="52"><title>Sin etiqueta en el plano — pabellón antiguo</title></rect>
+      <rect id="ANT-103" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="368" y="646" width="68" height="52"><title>Salón 103 — pabellón antiguo</title></rect>
+      <rect id="ANT-102" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="436" y="646" width="68" height="52"><title>Salón 102 — pabellón antiguo</title></rect>
+      <rect id="ANT-101" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="504" y="646" width="68" height="52"><title>Salón 101 — pabellón antiguo</title></rect>
+      <rect id="ANT-100" class="espacio aula" data-pabellon="antiguo" data-clase="aula" x="572" y="646" width="68" height="52"><title>Salón 100 — pabellón antiguo</title></rect>
+      <rect id="ANT-recepcion" class="espacio servicio" data-pabellon="antiguo" data-clase="servicio" x="238" y="716" width="62" height="64"><title>Recepción — pabellón antiguo</title></rect>
+    </g>
+  </g>
+  <g id="escaleras">
+    <rect id="NUE-escalera-1" class="escalera" data-pabellon="nuevo" data-clase="escalera" x="205" y="16" width="48" height="52"><title>Escaleras — pabellón nuevo</title></rect>
+    <rect id="NUE-escalera-2" class="escalera" data-pabellon="nuevo" data-clase="escalera" x="620" y="40" width="52" height="52"><title>Escaleras — pabellón nuevo</title></rect>
+    <rect id="ANT-escalera-oeste" class="escalera" data-pabellon="antiguo" data-clase="escalera" x="131" y="540" width="54" height="30"><title>Escaleras — pabellón antiguo</title></rect>
+    <rect id="ANT-escalera-este" class="escalera" data-pabellon="antiguo" data-clase="escalera" x="640" y="646" width="52" height="52"><title>Escaleras — pabellón antiguo</title></rect>
+    <rect id="ANT-escalera-exterior" class="escalera" data-pabellon="antiguo" data-clase="escalera" x="300" y="280" width="50" height="140"><title>Escaleras — pabellón antiguo</title></rect>
+    <g class="escalera-marcas" data-escalera="NUE-escalera-1" aria-hidden="true">
+      <line class="escalera-eje" x1="229.0" y1="68.0" x2="229.0" y2="27.4"/>
+      <line class="escalera-peldano" x1="207.9" y1="62.0" x2="250.1" y2="62.0"/>
+      <line class="escalera-peldano" x1="207.9" y1="56.0" x2="250.1" y2="56.0"/>
+      <line class="escalera-peldano" x1="207.9" y1="50.0" x2="250.1" y2="50.0"/>
+      <line class="escalera-peldano" x1="207.9" y1="44.0" x2="250.1" y2="44.0"/>
+      <line class="escalera-peldano" x1="207.9" y1="38.0" x2="250.1" y2="38.0"/>
+      <line class="escalera-peldano" x1="207.9" y1="32.0" x2="250.1" y2="32.0"/>
+    </g>
+    <g class="escalera-marcas" data-escalera="NUE-escalera-2" aria-hidden="true">
+      <line class="escalera-eje" x1="646.0" y1="92.0" x2="646.0" y2="51.4"/>
+      <line class="escalera-peldano" x1="623.1" y1="86.0" x2="668.9" y2="86.0"/>
+      <line class="escalera-peldano" x1="623.1" y1="80.0" x2="668.9" y2="80.0"/>
+      <line class="escalera-peldano" x1="623.1" y1="74.0" x2="668.9" y2="74.0"/>
+      <line class="escalera-peldano" x1="623.1" y1="68.0" x2="668.9" y2="68.0"/>
+      <line class="escalera-peldano" x1="623.1" y1="62.0" x2="668.9" y2="62.0"/>
+      <line class="escalera-peldano" x1="623.1" y1="56.0" x2="668.9" y2="56.0"/>
+    </g>
+    <g class="escalera-marcas" data-escalera="ANT-escalera-oeste" aria-hidden="true">
+      <line class="escalera-eje" x1="185.0" y1="555.0" x2="142.9" y2="555.0"/>
+      <line class="escalera-peldano" x1="179.0" y1="568.2" x2="179.0" y2="541.8"/>
+      <line class="escalera-peldano" x1="173.0" y1="568.2" x2="173.0" y2="541.8"/>
+      <line class="escalera-peldano" x1="167.0" y1="568.2" x2="167.0" y2="541.8"/>
+      <line class="escalera-peldano" x1="161.0" y1="568.2" x2="161.0" y2="541.8"/>
+      <line class="escalera-peldano" x1="155.0" y1="568.2" x2="155.0" y2="541.8"/>
+      <line class="escalera-peldano" x1="149.0" y1="568.2" x2="149.0" y2="541.8"/>
+      <line class="escalera-peldano" x1="143.0" y1="568.2" x2="143.0" y2="541.8"/>
+    </g>
+    <g class="escalera-marcas" data-escalera="ANT-escalera-este" aria-hidden="true">
+      <line class="escalera-eje" x1="666.0" y1="646.0" x2="666.0" y2="686.6"/>
+      <line class="escalera-peldano" x1="688.9" y1="652.0" x2="643.1" y2="652.0"/>
+      <line class="escalera-peldano" x1="688.9" y1="658.0" x2="643.1" y2="658.0"/>
+      <line class="escalera-peldano" x1="688.9" y1="664.0" x2="643.1" y2="664.0"/>
+      <line class="escalera-peldano" x1="688.9" y1="670.0" x2="643.1" y2="670.0"/>
+      <line class="escalera-peldano" x1="688.9" y1="676.0" x2="643.1" y2="676.0"/>
+      <line class="escalera-peldano" x1="688.9" y1="682.0" x2="643.1" y2="682.0"/>
+    </g>
+    <g class="escalera-marcas" data-escalera="ANT-escalera-exterior" aria-hidden="true">
+      <line class="escalera-peldano" x1="303.0" y1="414.0" x2="347.0" y2="414.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="408.0" x2="347.0" y2="408.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="402.0" x2="347.0" y2="402.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="396.0" x2="347.0" y2="396.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="390.0" x2="347.0" y2="390.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="384.0" x2="347.0" y2="384.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="378.0" x2="347.0" y2="378.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="372.0" x2="347.0" y2="372.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="366.0" x2="347.0" y2="366.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="360.0" x2="347.0" y2="360.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="354.0" x2="347.0" y2="354.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="348.0" x2="347.0" y2="348.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="342.0" x2="347.0" y2="342.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="336.0" x2="347.0" y2="336.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="330.0" x2="347.0" y2="330.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="324.0" x2="347.0" y2="324.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="318.0" x2="347.0" y2="318.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="312.0" x2="347.0" y2="312.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="306.0" x2="347.0" y2="306.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="300.0" x2="347.0" y2="300.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="294.0" x2="347.0" y2="294.0"/>
+      <line class="escalera-peldano" x1="303.0" y1="288.0" x2="347.0" y2="288.0"/>
+    </g>
+  </g>
+  <g id="ascensores">
+    <rect id="NUE-ascensor" class="ascensor" data-pabellon="nuevo" x="253" y="68" width="24" height="24"><title>Ascensor — pabellón nuevo</title></rect>
+    <rect id="ANT-ascensor" class="ascensor" data-pabellon="antiguo" x="276" y="420" width="24" height="24"><title>Ascensor — pabellón antiguo</title></rect>
+  </g>
+  <g id="estructura">
+    <rect id="NUE-bloque-ascensor" class="estructura" x="253" y="16" width="24" height="52"/>
+    <rect id="ANT-columna-escalera" class="estructura" x="656" y="646" width="20" height="41"/>
+  </g>
+  <g id="muros">
+    <polyline id="cerco-perimetral" class="muro" points="238,780 300,780 300,698 692,698 692,668 808,668 808,492 692,492 692,548 620,548 620,190 594,190 594,140 672,140 672,40 277,40 277,16 205,16 205,40 85,40 85,540 131,540 131,780 185,780"/>
+    <polyline id="muro-patio-central" class="muro" points="300,190 300,548"/>
+    <polyline id="muro-ascensor-nuevo" class="muro" points="277,68 277,92 253,92"/>
+    <polyline id="muro-ascensor-antiguo" class="muro" points="276,444 276,420 300,420"/>
+  </g>
+  <g id="puertas">
+    <line id="puerta-NUE-ascensor" class="puerta" data-espacio="NUE-ascensor" x1="253" y1="74" x2="253" y2="86"/>
+    <line id="puerta-ANT-ascensor" class="puerta" data-espacio="ANT-ascensor" x1="276" y1="426" x2="276" y2="438"/>
+    <line id="puerta-NUE-sin-codigo-1" class="puerta" data-espacio="NUE-sin-codigo-1" x1="124.0" y1="92.0" x2="108.0" y2="92.0"/>
+    <line id="puerta-NUE-101" class="puerta" data-espacio="NUE-101" x1="184.0" y1="92.0" x2="168.0" y2="92.0"/>
+    <line id="puerta-NUE-sin-codigo-3" class="puerta" data-espacio="NUE-sin-codigo-3" x1="328.5" y1="92.0" x2="312.5" y2="92.0"/>
+    <line id="puerta-NUE-103" class="puerta" data-espacio="NUE-103" x1="402.0" y1="92.0" x2="386.0" y2="92.0"/>
+    <line id="puerta-NUE-104" class="puerta" data-espacio="NUE-104" x1="465.0" y1="92.0" x2="449.0" y2="92.0"/>
+    <line id="puerta-NUE-105" class="puerta" data-espacio="NUE-105" x1="529.0" y1="92.0" x2="513.0" y2="92.0"/>
+    <line id="puerta-NUE-106" class="puerta" data-espacio="NUE-106" x1="594.0" y1="92.0" x2="578.0" y2="92.0"/>
+    <line id="puerta-NUE-109" class="puerta" data-espacio="NUE-109" x1="388.0" y1="140.0" x2="404.0" y2="140.0"/>
+    <line id="puerta-NUE-bano-1" class="puerta" data-espacio="NUE-bano-1" x1="436.0" y1="140.0" x2="452.0" y2="140.0"/>
+    <line id="puerta-NUE-108" class="puerta" data-espacio="NUE-108" x1="486.0" y1="140.0" x2="502.0" y2="140.0"/>
+    <line id="puerta-NUE-107" class="puerta" data-espacio="NUE-107" x1="553.0" y1="140.0" x2="569.0" y2="140.0"/>
+    <line id="puerta-NUE-100" class="puerta" data-espacio="NUE-100" x1="108.0" y1="140.0" x2="124.0" y2="140.0"/>
+    <line id="puerta-NUE-sin-codigo-2" class="puerta" data-espacio="NUE-sin-codigo-2" x1="171.0" y1="140.0" x2="187.0" y2="140.0"/>
+    <line id="puerta-ANT-auditorio" class="puerta" data-espacio="ANT-auditorio" x1="225.0" y1="332.0" x2="225.0" y2="348.0"/>
+    <line id="puerta-ANT-auditorio-2" class="puerta" data-espacio="ANT-auditorio" x1="129.4" y1="410.0" x2="113.4" y2="410.0"/>
+    <line id="puerta-ANT-salon-profesores" class="puerta" data-espacio="ANT-salon-profesores" x1="225.0" y1="240.0" x2="225.0" y2="256.0"/>
+    <line id="puerta-ANT-cuarto-limpieza" class="puerta" data-espacio="ANT-cuarto-limpieza" x1="185.0" y1="447.0" x2="185.0" y2="463.0"/>
+    <line id="puerta-ANT-bano-1" class="puerta" data-espacio="ANT-bano-1" x1="185.0" y1="501.0" x2="185.0" y2="517.0"/>
+    <line id="puerta-ANT-usg" class="puerta" data-espacio="ANT-usg" x1="185.0" y1="580.0" x2="185.0" y2="596.0"/>
+    <line id="puerta-ANT-dpto-cc" class="puerta" data-espacio="ANT-dpto-cc" x1="185.0" y1="616.0" x2="185.0" y2="632.0"/>
+    <line id="puerta-ANT-cerseu" class="puerta" data-espacio="ANT-cerseu" x1="185.0" y1="653.0" x2="185.0" y2="669.0"/>
+    <line id="puerta-ANT-dga" class="puerta" data-espacio="ANT-dga" x1="185.0" y1="687.0" x2="185.0" y2="703.0"/>
+    <line id="puerta-ANT-economia" class="puerta" data-espacio="ANT-economia" x1="185.0" y1="737.0" x2="185.0" y2="753.0"/>
+    <line id="puerta-ANT-109" class="puerta" data-espacio="ANT-109" x1="341.0" y1="600.0" x2="325.0" y2="600.0"/>
+    <line id="puerta-ANT-108" class="puerta" data-espacio="ANT-108" x1="407.0" y1="600.0" x2="391.0" y2="600.0"/>
+    <line id="puerta-ANT-107" class="puerta" data-espacio="ANT-107" x1="473.0" y1="600.0" x2="457.0" y2="600.0"/>
+    <line id="puerta-ANT-106" class="puerta" data-espacio="ANT-106" x1="539.0" y1="600.0" x2="523.0" y2="600.0"/>
+    <line id="puerta-ANT-105" class="puerta" data-espacio="ANT-105" x1="600.0" y1="600.0" x2="584.0" y2="600.0"/>
+    <line id="puerta-ANT-laboratorio-1" class="puerta" data-espacio="ANT-laboratorio-1" x1="664.0" y1="600.0" x2="648.0" y2="600.0"/>
+    <line id="puerta-ANT-capilla" class="puerta" data-espacio="ANT-capilla" x1="584.0" y1="492.0" x2="600.0" y2="492.0"/>
+    <line id="puerta-ANT-biblioteca" class="puerta" data-espacio="ANT-biblioteca" x1="692.0" y1="630.9" x2="692.0" y2="614.9"/>
+    <line id="puerta-ANT-104" class="puerta" data-espacio="ANT-104" x1="326.0" y1="646.0" x2="342.0" y2="646.0"/>
+    <line id="puerta-ANT-103" class="puerta" data-espacio="ANT-103" x1="394.0" y1="646.0" x2="410.0" y2="646.0"/>
+    <line id="puerta-ANT-102" class="puerta" data-espacio="ANT-102" x1="462.0" y1="646.0" x2="478.0" y2="646.0"/>
+    <line id="puerta-ANT-101" class="puerta" data-espacio="ANT-101" x1="530.0" y1="646.0" x2="546.0" y2="646.0"/>
+    <line id="puerta-ANT-100" class="puerta" data-espacio="ANT-100" x1="598.0" y1="646.0" x2="614.0" y2="646.0"/>
+  </g>
+  <g id="entradas">
+    <line id="entrada-facultad" class="entrada-facultad" x1="185" y1="780" x2="238" y2="780"><title>Entrada principal de la Facultad</title></line>
+  </g>
+  <g id="etiquetas" aria-hidden="true">
+    <text class="etiqueta" x="176" y="69"><tspan x="176" dy="0">Salón 101</tspan></text>
+    <text class="etiqueta" x="394" y="69"><tspan x="394" dy="0">Salón 103</tspan></text>
+    <text class="etiqueta" x="457" y="69"><tspan x="457" dy="0">Salón 104</tspan></text>
+    <text class="etiqueta" x="521" y="69"><tspan x="521" dy="0">Salón 105</tspan></text>
+    <text class="etiqueta" x="586" y="69"><tspan x="586" dy="0">Salón 106</tspan></text>
+    <text class="etiqueta" x="396" y="168"><tspan x="396" dy="0">Salón 109</tspan></text>
+    <text class="etiqueta" x="444" y="168"><tspan x="444" dy="0">Baño</tspan></text>
+    <text class="etiqueta" x="494" y="168"><tspan x="494" dy="0">Salón 108</tspan></text>
+    <text class="etiqueta" x="561" y="168"><tspan x="561" dy="0">Salón 107</tspan></text>
+    <text class="etiqueta" x="116" y="168"><tspan x="116" dy="0">Salón 100</tspan></text>
+    <text class="etiqueta" x="155" y="343"><tspan x="155" dy="0">Auditorio</tspan></text>
+    <text class="etiqueta" x="155" y="246"><tspan x="155" dy="0">Salón de</tspan><tspan x="155" dy="10">profesores</tspan></text>
+    <text class="etiqueta" x="135" y="458"><tspan x="135" dy="0">Limpieza</tspan></text>
+    <text class="etiqueta" x="135" y="512"><tspan x="135" dy="0">Baño 1</tspan></text>
+    <text class="etiqueta" x="158" y="591"><tspan x="158" dy="0">Serv. Gen.</tspan></text>
+    <text class="etiqueta" x="158" y="627"><tspan x="158" dy="0">Dpto. CC</tspan></text>
+    <text class="etiqueta" x="158" y="664"><tspan x="158" dy="0">CERSEU</tspan></text>
+    <text class="etiqueta" x="158" y="698"><tspan x="158" dy="0">DGA</tspan></text>
+    <text class="etiqueta" x="158" y="748"><tspan x="158" dy="0">Economía</tspan></text>
+    <text class="etiqueta" x="333" y="577"><tspan x="333" dy="0">Salón 109</tspan></text>
+    <text class="etiqueta" x="399" y="577"><tspan x="399" dy="0">Salón 108</tspan></text>
+    <text class="etiqueta" x="465" y="577"><tspan x="465" dy="0">Salón 107</tspan></text>
+    <text class="etiqueta" x="531" y="577"><tspan x="531" dy="0">Salón 106</tspan></text>
+    <text class="etiqueta" x="592" y="577"><tspan x="592" dy="0">Salón 105</tspan></text>
+    <text class="etiqueta" x="656" y="572"><tspan x="656" dy="0">Laboratorio</tspan><tspan x="656" dy="10">primer nivel</tspan></text>
+    <text class="etiqueta" x="592" y="518"><tspan x="592" dy="0">Capilla de la</tspan><tspan x="592" dy="10">Fisi</tspan></text>
+    <text class="etiqueta" x="750" y="583"><tspan x="750" dy="0">Biblioteca</tspan></text>
+    <text class="etiqueta" x="402" y="675"><tspan x="402" dy="0">Salón 103</tspan></text>
+    <text class="etiqueta" x="470" y="675"><tspan x="470" dy="0">Salón 102</tspan></text>
+    <text class="etiqueta" x="538" y="675"><tspan x="538" dy="0">Salón 101</tspan></text>
+    <text class="etiqueta" x="606" y="675"><tspan x="606" dy="0">Salón 100</tspan></text>
+    <text class="etiqueta" x="269" y="751"><tspan x="269" dy="0">Recepción</tspan></text>
+  </g>
+</svg>
