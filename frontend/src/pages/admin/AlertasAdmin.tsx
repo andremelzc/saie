@@ -9,13 +9,13 @@ import { useCarga } from '../../hooks/useCarga';
 import { obtenerAlertas, resolverAlerta } from '../../services/admin';
 import { mensajeDeError } from '../../services/estudiante';
 import type { AlertaDTO, TipoAlerta } from '../../types/admin';
+import { ETIQUETA_TIPO_ALERTA } from '../../utils/etiquetas';
 
 type Filtro = 'TODAS' | TipoAlerta;
 
 const ETIQUETAS_FILTRO: Record<Filtro, string> = {
   TODAS: 'Todas',
-  SOFTWARE: 'Software',
-  CAPACIDAD: 'Capacidad',
+  ...ETIQUETA_TIPO_ALERTA,
 };
 
 /**
@@ -187,10 +187,6 @@ export const AlertasAdmin: React.FC = () => {
             </p>
           )}
         </div>
-        <p className="m-0 text-xs text-saie-muted">
-          Al resolver una alerta deja de aparecer en esta lista; el historial completo llegará con
-          la próxima actualización.
-        </p>
       </div>
 
       {errorAccion && (
