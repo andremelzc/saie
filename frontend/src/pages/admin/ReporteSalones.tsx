@@ -70,7 +70,7 @@ export const ReporteSalones: React.FC = () => {
           <article className="flex flex-col gap-5">
             <header className="flex flex-wrap items-end justify-between gap-3 border-b border-saie-divider pb-4">
               <div>
-                <h2 className="m-0 text-2xl font-bold text-saie-text">
+                <h2 className="m-0 font-serif text-2xl font-bold text-saie-text">
                   Cuadro de asignación de aulas
                 </h2>
                 <p className="m-0 mt-1 text-sm text-saie-muted">

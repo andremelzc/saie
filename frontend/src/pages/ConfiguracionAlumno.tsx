@@ -91,7 +91,7 @@ export const ConfiguracionAlumno: React.FC = () => {
           className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-5 shadow-sm sm:p-6"
         >
           <div>
-            <h2 id="config-accesibilidad" className="m-0 text-xl font-bold">
+            <h2 id="config-accesibilidad" className="m-0 font-serif text-xl font-bold">
               Accesibilidad
             </h2>
             <p className="m-0 mt-1 text-sm text-saie-muted">

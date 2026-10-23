@@ -1,6 +1,8 @@
 @import 'tailwindcss';
-/* Inter autoalojada (variable, 100–900): la app ya no depende de Google Fonts. */
+/* Fuentes autoalojadas (sin Google Fonts): Inter variable para la interfaz y Playfair Display solo en
+   negrita (700, subconjunto latino) para marca, H1 y H2 de sección mayor (guía de estilos, §3). */
 @import '@fontsource-variable/inter/wght.css';
+@import '@fontsource/playfair-display/latin-700.css';
 
 /* Tokens de diseño: ÚNICA fuente de verdad (docs/07_guia_de_estilos_ui_ux.md, Anexo A).
    Tailwind los publica como utilidades (`bg-saie-primary`, `shadow-sm`,
@@ -29,9 +31,16 @@
   --color-saie-info: #1f5fa8;
   --color-saie-info-soft: #e7eff9;
 
-  /* Tipografía: una sola familia (Inter) y una pila monoespaciada explícita */
+  /* Tipografía (guía §3): serif editorial solo para marca, H1 y H2 mayores; Inter para el resto */
+  --font-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --font-sans: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', Consolas, 'SF Mono', Menlo, monospace;
+}
+
+/* El H1 de cada pantalla va en serif; los H2 de sección mayor lo piden con `font-serif`. Las cifras,
+   tablas, botones y badges nunca: llevan Inter con `tabular-nums`. */
+h1 {
+  font-family: var(--font-serif);
 }
 
 body {

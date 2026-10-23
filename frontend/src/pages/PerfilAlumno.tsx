@@ -165,7 +165,7 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
               <Icono trazo={TRAZO_USUARIO} />
               Estudiante
             </p>
-            <h2 className="m-0 mt-2 text-2xl font-bold leading-8">{alumno.nombre}</h2>
+            <h2 className="m-0 mt-2 font-serif text-2xl font-bold leading-8">{alumno.nombre}</h2>
             <dl className="m-0 mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-saie-muted">
               <div className="flex gap-1.5">
                 <dt>Código:</dt>

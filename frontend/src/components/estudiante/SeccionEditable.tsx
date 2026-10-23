@@ -274,7 +274,7 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
             <Icono trazo={trazoIcono} className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <h2 id={idTitulo} className="m-0 text-xl font-bold leading-7">
+            <h2 id={idTitulo} className="m-0 font-serif text-xl font-bold leading-7">
               {titulo}
             </h2>
             {descripcion && <p className="m-0 mt-0.5 text-sm text-saie-muted">{descripcion}</p>}

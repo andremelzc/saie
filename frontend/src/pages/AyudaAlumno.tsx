@@ -125,7 +125,7 @@ export const AyudaAlumno: React.FC = () => (
           aria-labelledby={`ayuda-${grupo.id}`}
           className="flex flex-col gap-3"
         >
-          <h2 id={`ayuda-${grupo.id}`} className="m-0 text-xl font-bold">
+          <h2 id={`ayuda-${grupo.id}`} className="m-0 font-serif text-xl font-bold">
             {grupo.titulo}
           </h2>
           <div className="flex flex-col gap-3">

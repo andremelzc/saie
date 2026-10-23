@@ -118,7 +118,10 @@ export const TelegramAlumnoPage: React.FC = () => {
                       <Icono trazo={TRAZO_TELEGRAM} className="h-5 w-5" />
                     </span>
                     <div className="min-w-0">
-                      <h2 id="titulo-telegram" className="m-0 text-xl font-bold leading-7">
+                      <h2
+                        id="titulo-telegram"
+                        className="m-0 font-serif text-xl font-bold leading-7"
+                      >
                         Tu cuenta de Telegram
                       </h2>
                       <p className="m-0 mt-1 text-sm text-saie-muted">
@@ -227,7 +230,10 @@ export const TelegramAlumnoPage: React.FC = () => {
                 aria-labelledby="titulo-como-vincular"
                 className="rounded-2xl border border-saie-divider bg-white p-5 shadow-sm sm:p-6"
               >
-                <h2 id="titulo-como-vincular" className="m-0 text-xl font-bold leading-7">
+                <h2
+                  id="titulo-como-vincular"
+                  className="m-0 font-serif text-xl font-bold leading-7"
+                >
                   Cómo vincular tu cuenta
                 </h2>
                 <ol className="m-0 mt-4 flex list-none flex-col gap-4 p-0">
@@ -301,7 +307,7 @@ export const TelegramAlumnoPage: React.FC = () => {
                 aria-labelledby="titulo-comandos"
                 className="rounded-2xl border border-saie-divider bg-white p-5 shadow-sm sm:p-6"
               >
-                <h2 id="titulo-comandos" className="m-0 text-xl font-bold leading-7">
+                <h2 id="titulo-comandos" className="m-0 font-serif text-xl font-bold leading-7">
                   Qué puedes consultar en el bot
                 </h2>
                 <ul className="m-0 mt-3 grid list-none gap-2 p-0 text-sm sm:grid-cols-2">

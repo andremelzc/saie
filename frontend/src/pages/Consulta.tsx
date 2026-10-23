@@ -46,7 +46,7 @@ const Resultados: React.FC<{ resultado: ResultadoConsulta }> = ({ resultado }) =
     return (
       <section aria-labelledby="titulo-resultado" className="flex flex-col gap-3">
         <div>
-          <h2 id="titulo-resultado" className="m-0 text-xl font-bold" tabIndex={-1}>
+          <h2 id="titulo-resultado" className="m-0 font-serif text-xl font-bold" tabIndex={-1}>
             Tus clases
           </h2>
           <p role="status" className="m-0 mt-1 text-sm text-saie-muted">
@@ -101,7 +101,11 @@ const Resultados: React.FC<{ resultado: ResultadoConsulta }> = ({ resultado }) =
   return (
     <section aria-labelledby="titulo-resultado" className="flex flex-col gap-3">
       <div>
-        <h2 id="titulo-resultado" className="m-0 text-xl font-bold break-words" tabIndex={-1}>
+        <h2
+          id="titulo-resultado"
+          className="m-0 font-serif text-xl font-bold break-words"
+          tabIndex={-1}
+        >
           {curso.codigo} · {curso.nombre}
         </h2>
         <p role="status" className="m-0 mt-1 text-sm text-saie-muted">

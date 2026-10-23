@@ -71,7 +71,7 @@ const TarjetaProxima: React.FC<{
     const primera = proximoDia?.sesiones[0] ?? null;
     return (
       <div className="flex h-full flex-col justify-center gap-2">
-        <h2 className="m-0 text-xl font-bold">
+        <h2 className="m-0 font-serif text-xl font-bold">
           {hayClasesHoy ? 'Ya terminaron tus clases de hoy' : 'Hoy no tienes clases'}
         </h2>
         {primera && proximoDia ? (
@@ -102,7 +102,7 @@ const TarjetaProxima: React.FC<{
         </p>
         <BadgeEstadoClase estado={estado} />
       </div>
-      <h2 className="m-0 text-2xl font-bold leading-8">{sesion.nombreCurso}</h2>
+      <h2 className="m-0 font-serif text-2xl font-bold leading-8">{sesion.nombreCurso}</h2>
       <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm text-white/90">
         <li className="flex items-center gap-2">
           <span className="font-medium">{formatearRango(sesion.horaInicio, sesion.horaFin)}</span>

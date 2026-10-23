@@ -131,7 +131,7 @@ export const Home: React.FC = () => {
             </div>
 
             <div className="relative max-w-xl">
-              <h2 className="m-0 text-2xl md:text-3xl font-bold">Bienvenido a SAIE</h2>
+              <h2 className="m-0 font-serif text-2xl md:text-3xl font-bold">Bienvenido a SAIE</h2>
               <p className="mt-2 text-white/90">
                 Consulta, asigna y supervisa aulas y laboratorios de la Facultad de Ingeniería de
                 Sistemas e Informática. Elige tu portal para iniciar sesión.
