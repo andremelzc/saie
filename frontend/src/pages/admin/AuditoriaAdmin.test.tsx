@@ -79,14 +79,24 @@ describe('Auditoria e historial (Issue 4.32)', () => {
   it('muestra el historial de asignaciones con su estado', async () => {
     montar(<AuditoriaAdmin />);
 
-    expect(await screen.findByText('IS101 · 1')).toBeInTheDocument();
+    expect((await screen.findAllByText('IS101 · 1')).length).toBeGreaterThan(0);
     expect(screen.getAllByText('Anterior').length).toBeGreaterThan(0);
-    expect(screen.getByText('Lab 03')).toBeInTheDocument();
+    expect(screen.getAllByText('Lab 03').length).toBeGreaterThan(0);
+  });
+
+  it('agrupa por corrida con un resumen legible y sin mostrar el UUID', async () => {
+    montar(<AuditoriaAdmin />);
+    await screen.findAllByText('IS101 · 1');
+
+    expect(
+      screen.getByRole('heading', { level: 3, name: /^Corrida del .* · 1 asignada/ }),
+    ).toBeVisible();
+    expect(screen.queryByText('c1')).not.toBeInTheDocument();
   });
 
   it('filtra el historial por periodo y estado', async () => {
     montar(<AuditoriaAdmin />);
-    await screen.findByText('IS101 · 1');
+    await screen.findAllByText('IS101 · 1');
 
     fireEvent.change(screen.getByLabelText('Periodo'), { target: { value: '2026-1' } });
     await waitFor(() =>
@@ -110,11 +120,11 @@ describe('Auditoria e historial (Issue 4.32)', () => {
 
   it('cambia a la vista de auditoría y filtra por tipo de evento', async () => {
     montar(<AuditoriaAdmin />);
-    await screen.findByText('IS101 · 1');
+    await screen.findAllByText('IS101 · 1');
 
     fireEvent.click(screen.getByRole('tab', { name: 'Registro de actividad' }));
-    expect(await screen.findByText('Asignación automática exitosa')).toBeInTheDocument();
-    expect(screen.getByText('IS101 · 1')).toBeInTheDocument();
+    expect((await screen.findAllByText('Asignación automática exitosa')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('IS101 · 1').length).toBeGreaterThan(0);
 
     fireEvent.change(screen.getByLabelText('Tipo de evento'), {
       target: { value: 'ALERTA' },
