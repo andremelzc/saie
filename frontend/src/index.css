@@ -43,6 +43,12 @@ h1 {
   font-family: var(--font-serif);
 }
 
+/* El foco se mueve al h1 al cambiar de pantalla (Issue 3.45): es un destino, no un control, y no
+   necesita el aro de foco. */
+h1[tabindex='-1']:focus {
+  outline: none;
+}
+
 body {
   margin: 0;
   background: var(--color-saie-canvas);
