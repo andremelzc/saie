@@ -1,4 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { RUTAS } from '../../config/rutas';
+import { ICONOS } from '../../components/ui/iconos';
+import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
 import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
@@ -108,7 +111,13 @@ const VistaHistorial: React.FC<{ version: number }> = ({ version }) => {
         ) : items.length === 0 ? (
           <EstadoVacio
             titulo="Sin asignaciones registradas"
+            icono={ICONOS.portapapeles}
             descripcion="Cuando se asignen aulas, aquí quedará el registro de cada asignación."
+            accion={
+              <BotonEnlace to={RUTAS.inicioAdmin} variante="secundario" tamano="sm">
+                Ir a Asignar aulas
+              </BotonEnlace>
+            }
           />
         ) : (
           <TablaDatos etiqueta="Historial de asignaciones">
@@ -186,7 +195,13 @@ const VistaAuditoria: React.FC<{ version: number }> = ({ version }) => {
         ) : items.length === 0 ? (
           <EstadoVacio
             titulo="Sin actividad registrada"
+            icono={ICONOS.portapapeles}
             descripcion="Cada asignación automática de aulas deja aquí su registro."
+            accion={
+              <BotonEnlace to={RUTAS.inicioAdmin} variante="secundario" tamano="sm">
+                Ir a Asignar aulas
+              </BotonEnlace>
+            }
           />
         ) : (
           <TablaDatos etiqueta="Registros de auditoría">

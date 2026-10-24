@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { ICONOS } from '../../components/ui/iconos';
+import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import { Link } from 'react-router-dom';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import FormularioEspacio from '../../components/admin/FormularioEspacio';
@@ -402,7 +404,13 @@ export const EspaciosAdmin: React.FC = () => {
       return (
         <EstadoVacio
           titulo="Sin espacios registrados"
+          icono={ICONOS.edificio}
           descripcion="Cuando se carguen los espacios, aparecerán aquí."
+          accion={
+            <BotonEnlace to={RUTAS.cargaAdmin} variante="secundario" tamano="sm">
+              Ir a Carga de datos
+            </BotonEnlace>
+          }
         />
       );
     }
@@ -410,6 +418,7 @@ export const EspaciosAdmin: React.FC = () => {
       return (
         <EstadoVacio
           titulo="Sin coincidencias"
+          icono={ICONOS.edificio}
           descripcion="No hay espacios que coincidan con los filtros."
           accion={
             <Boton variante="secundario" tamano="sm" onClick={limpiarFiltros}>

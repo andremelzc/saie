@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import TarjetaAlerta from '../../components/admin/TarjetaAlerta';
+import { ICONOS } from '../../components/ui/iconos';
 import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
 import { Boton } from '../../components/ui/Boton';
 import { useAvisos } from '../../components/ui/useAvisos';
@@ -50,6 +51,7 @@ const ListaAlertas: React.FC<{
     return (
       <EstadoVacio
         titulo="Sin alertas pendientes"
+        icono={ICONOS.escudo}
         descripcion="No hay alertas de software ni de capacidad en este momento."
       />
     );

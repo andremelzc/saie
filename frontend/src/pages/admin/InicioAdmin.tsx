@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
-import { EsqueletoCarga } from '../../components/estudiante/ElementosHorario';
+import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
@@ -215,9 +215,11 @@ const ListaEscaladas: React.FC<{
 
   if (secciones.length === 0) {
     return (
-      <p className="m-0 rounded-xl border border-dashed border-saie-divider bg-saie-canvas p-6 text-center text-sm text-saie-muted">
-        No hay secciones pendientes de revisión. Todas tienen un espacio asignado.
-      </p>
+      <EstadoVacio
+        titulo="Nada por revisar"
+        icono={ICONOS.escudo}
+        descripcion="No hay secciones pendientes de revisión. Todas tienen un espacio asignado."
+      />
     );
   }
 

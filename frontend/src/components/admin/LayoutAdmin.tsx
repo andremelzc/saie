@@ -137,9 +137,9 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
 };
 
 /** Mensaje de error uniforme con botón de reintento (ver `EstadoError`). */
-export const AvisoError: React.FC<{ mensaje: string; onReintentar?: () => void }> = ({
-  mensaje,
-  onReintentar,
-}) => <EstadoError mensaje={mensaje} onReintentar={onReintentar} />;
+export const AvisoError: React.FC<{
+  mensaje: string;
+  onReintentar?: () => void | Promise<void>;
+}> = ({ mensaje, onReintentar }) => <EstadoError mensaje={mensaje} onReintentar={onReintentar} />;
 
 export default LayoutAdmin;

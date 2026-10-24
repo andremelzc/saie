@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import {
   BadgeEstadoClase,
   BarraProgresoClase,
+  EstadoVacio,
   Icono,
   PuntoEnVivo,
 } from '../components/estudiante/ElementosHorario';
 import LayoutEstudiante from '../components/estudiante/LayoutEstudiante';
+import { BotonEnlace } from '../components/ui/BotonEnlace';
 import { EstadoError } from '../components/ui/EstadoError';
 import { RUTAS } from '../config/rutas';
 import { useAuth } from '../context/useAuth';
@@ -449,9 +451,15 @@ export const InicioEstudiante: React.FC = () => {
               )
             ) : (
               !cargandoHorario && (
-                <p className="m-0 rounded-xl border border-dashed border-saie-divider bg-white p-6 text-center text-sm text-saie-muted">
-                  Cuando se asignen las aulas de tus cursos, aquí verás tus clases del día.
-                </p>
+                <EstadoVacio
+                  titulo="Sin clases todavía"
+                  descripcion="Cuando se asignen las aulas de tus cursos, aquí verás tus clases del día."
+                  accion={
+                    <BotonEnlace to={RUTAS.horarioAlumno} variante="secundario" tamano="sm">
+                      Ver mi horario
+                    </BotonEnlace>
+                  }
+                />
               )
             )}
           </div>

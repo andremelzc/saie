@@ -1,4 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { RUTAS } from '../../config/rutas';
+import { ICONOS } from '../../components/ui/iconos';
+import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
 import { Aviso } from '../../components/ui/Aviso';
@@ -381,7 +384,13 @@ export const SeccionesAdmin: React.FC = () => {
     secciones.length === 0 ? (
       <EstadoVacio
         titulo="Sin secciones"
+        icono={ICONOS.libro}
         descripcion="Cuando se carguen cursos y secciones, aparecerán aquí."
+        accion={
+          <BotonEnlace to={RUTAS.cargaAdmin} variante="secundario" tamano="sm">
+            Ir a Carga de datos
+          </BotonEnlace>
+        }
       />
     ) : esPantallaAncha ? (
       <TablaDatos etiqueta="Listado de secciones">

@@ -213,7 +213,8 @@ export const TelegramAlumnoPage: React.FC = () => {
                       variante="peligro"
                       tamano="sm"
                       onClick={ejecutarBaja}
-                      disabled={desvinculando}
+                      cargando={desvinculando}
+                      textoCargando="Reintentando…"
                     >
                       Reintentar
                     </Boton>
