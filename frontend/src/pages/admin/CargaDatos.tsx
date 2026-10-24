@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import LayoutAdmin from '../../components/admin/LayoutAdmin';
 import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
@@ -15,6 +15,7 @@ import { useAccion } from '../../hooks/useAccion';
 import { usePantallaAncha } from '../../hooks/usePantallaAncha';
 import { importarCsv } from '../../services/admin';
 import type { ResultadoImportacionDTO, TipoImportacion } from '../../types/admin';
+import { agruparErroresPorTipo } from '../../utils/erroresImportacion';
 import { formatearFechaCorta } from '../../utils/fechas';
 
 /**
@@ -230,27 +231,11 @@ const PanelResultado: React.FC<{
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-saie-canvas p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <output className="m-0 block text-sm font-bold text-saie-text">
-          {resultado.exitosa
-            ? 'Carga completada sin errores'
-            : `La carga tiene ${textoFilasConProblemas(resultado.errores.length)}`}
-        </output>
-        <BadgeEstado tono={resultado.exitosa ? 'exito' : 'advertencia'}>
-          {resultado.exitosa ? 'Sin errores' : `${resultado.errores.length} con problemas`}
-        </BadgeEstado>
-      </div>
-      <p className="m-0 text-sm text-saie-muted">
-        {/*
-          Cada importador genera una entrada por fila rechazada (las varias incidencias de
-          validación de una misma fila se unen en un solo mensaje), así que la resta es
-          exacta: son las filas que sí se guardaron.
-        */}
-        {resultado.filasRecibidas} filas leídas ·{' '}
-        {resultado.filasRecibidas - resultado.errores.length} guardadas
-        {resultado.errores.length > 0 && ` · ${resultado.errores.length} con problemas`}
-      </p>
-
+      {/*
+        El resumen («N filas leídas · M guardadas») está una sola vez, en la tarjeta de la zona
+        de carga. Aquí solo va el detalle (Issue 4.53). Cada importador genera una entrada por
+        fila rechazada, así que `filasRecibidas - errores` son las filas que sí se guardaron.
+      */}
       {Object.keys(resultado.procesados).length > 0 && (
         <dl className="m-0 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
           {Object.entries(resultado.procesados).map(([clave, valor]) => (
@@ -284,27 +269,48 @@ const PanelResultado: React.FC<{
               Corregir y volver a subir
             </Boton>
           </div>
-          <Acordeon
-            titulo={`Ver ${textoFilasConProblemas(resultado.errores.length)}`}
-            abiertoInicial
-          >
-            {/*
-              Sin tope de altura ni scroll interno: la lista vive en el drawer y es el drawer
-              el que se desplaza. Un scroll dentro de la tarjeta escondía las filas y era un
-              parche para que el tablero no creciera.
-            */}
-            <ul className="m-0 list-disc pl-5 text-sm text-saie-text">
-              {resultado.errores.map((e, i) => (
-                <li key={i}>{e}</li>
-              ))}
-            </ul>
-          </Acordeon>
+          <ErroresAgrupados errores={resultado.errores} />
         </>
       )}
 
       {resultado.asignacion && (
         <p className="m-0 text-sm text-saie-text">{textoAsignacion(resultado.asignacion)}</p>
       )}
+    </div>
+  );
+};
+
+/** Cuántas filas de cada tipo de error se listan; el resto se descarga en el CSV. */
+const FILAS_POR_GRUPO = 20;
+
+/**
+ * Los errores de la importación agrupados por tipo, con su conteo (Issue 4.53). Cada grupo muestra
+ * solo sus primeras filas: un archivo de miles de filas con problemas no debe pintar miles de
+ * líneas. «Descargar errores (CSV)» trae todos.
+ */
+const ErroresAgrupados: React.FC<{ errores: string[] }> = ({ errores }) => {
+  const grupos = useMemo(() => agruparErroresPorTipo(errores), [errores]);
+  return (
+    <div className="flex flex-col gap-2">
+      {grupos.map((grupo, i) => (
+        <Acordeon
+          key={grupo.tipo}
+          titulo={`${grupo.tipo} (${textoFilasConProblemas(grupo.errores.length)})`}
+          abiertoInicial={i === 0}
+        >
+          <ul className="m-0 list-disc pl-5 text-sm text-saie-text">
+            {grupo.errores.slice(0, FILAS_POR_GRUPO).map((e, j) => (
+              <li key={j}>{e}</li>
+            ))}
+          </ul>
+          {grupo.errores.length > FILAS_POR_GRUPO && (
+            <p className="m-0 mt-2 text-xs text-saie-muted">
+              Se muestran las primeras {FILAS_POR_GRUPO} de {grupo.errores.length}. Descarga el CSV
+              para ver todas.
+            </p>
+          )}
+        </Acordeon>
+      ))}
     </div>
   );
 };
