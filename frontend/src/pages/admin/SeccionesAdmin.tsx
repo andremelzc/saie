@@ -7,9 +7,11 @@ import { Boton } from '../../components/ui/Boton';
 import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
 import { CLASE_PIE_DRAWER, Drawer } from '../../components/ui/Drawer';
 import { useAvisos } from '../../components/ui/useAvisos';
+import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
 import { Campo } from '../../components/ui/Campo';
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
 import { useCarga } from '../../hooks/useCarga';
+import { useValorDiferido } from '../../hooks/useValorDiferido';
 import { usePantallaAncha } from '../../hooks/usePantallaAncha';
 import {
   editarSeccion,
@@ -326,15 +328,19 @@ export const SeccionesAdmin: React.FC = () => {
   const [cambiosPendientes, setCambiosPendientes] = useState(false);
   const { mostrar } = useAvisos();
 
+  // Se espera una pausa al escribir para no pedir al servidor una vez por tecla (Issue 4.41).
+  const textoDiferido = useValorDiferido(texto);
+  const periodoDiferido = useValorDiferido(periodo);
+
   const cargar = useCallback(async () => {
     const listado = await obtenerSecciones({
-      q: texto.trim() || undefined,
+      q: textoDiferido.trim() || undefined,
       tipo: tipo === 'TODOS' ? undefined : tipo,
-      periodo: periodo.trim() || undefined,
+      periodo: periodoDiferido.trim() || undefined,
       limite: 200,
     });
     return listado.items;
-  }, [texto, tipo, periodo]);
+  }, [textoDiferido, tipo, periodoDiferido]);
 
   const { datos, cargando, error, recargar } = useCarga(cargar);
   const docentes = useCarga(obtenerDocentes);
@@ -451,7 +457,9 @@ export const SeccionesAdmin: React.FC = () => {
       </section>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      {cargando && !datos ? <EsqueletoCarga texto="Cargando secciones…" forma="tabla" /> : lista}
+      <ZonaActualizable actualizando={cargando && datos !== null}>
+        {cargando && !datos ? <EsqueletoCarga texto="Cargando secciones…" forma="tabla" /> : lista}
+      </ZonaActualizable>
 
       <Drawer
         abierto={seleccionada !== null}
