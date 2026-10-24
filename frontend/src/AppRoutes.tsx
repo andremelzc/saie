@@ -26,6 +26,9 @@ const InicioDocentePage = lazy(() => import('./pages/docente/InicioDocentePage')
 const HorarioDocentePage = lazy(() => import('./pages/docente/HorarioDocentePage'));
 const EspaciosDocentePage = lazy(() => import('./pages/docente/EspaciosDocentePage'));
 const IncidenciasDocentePage = lazy(() => import('./pages/docente/IncidenciasDocentePage'));
+const SolicitudesSoftwareDocentePage = lazy(
+  () => import('./pages/docente/SolicitudesSoftwareDocentePage'),
+);
 const InicioAdmin = lazy(() => import('./pages/admin/InicioAdmin'));
 const AlertasAdmin = lazy(() => import('./pages/admin/AlertasAdmin'));
 const CargaDatos = lazy(() => import('./pages/admin/CargaDatos'));
@@ -170,6 +173,15 @@ export const AppRoutes: React.FC = () => {
               </RutaProtegida>
             }
           />
+          <Route
+            path={RUTAS.solicitudesSoftwareDocente}
+            element={
+              <RutaProtegida rolesPermitidos={['DOCENTE']} rutaLogin={RUTAS.loginDocente}>
+                <SolicitudesSoftwareDocentePage />
+              </RutaProtegida>
+            }
+          />
+
           {/* Panel administrativo (Issues 4.9, 4.10, 4.19, 4.20 y 1.9) */}
           <Route
             path={RUTAS.inicioAdmin}
