@@ -102,7 +102,7 @@ export function SelectorSegmentado<T extends string>({
                 : { 'aria-pressed': activa })}
               disabled={deshabilitado}
               onClick={() => onCambiar(opcion.valor)}
-              className={`relative min-h-11 min-w-24 cursor-pointer whitespace-nowrap rounded-lg bg-transparent px-4 text-sm transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`relative min-h-11 min-w-0 cursor-pointer whitespace-nowrap rounded-lg bg-transparent px-1 text-sm sm:min-w-24 sm:px-4 transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
                 activa
                   ? 'font-bold text-white'
                   : 'font-medium text-saie-text hover:bg-saie-primary/5'
