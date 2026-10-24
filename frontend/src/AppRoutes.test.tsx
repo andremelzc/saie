@@ -113,7 +113,6 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
       ['COORDINACION_ACADEMICA', '/admin/docentes/nuevo', 'Alta de docentes'],
       ['COORDINACION_ACADEMICA', '/admin/claves', 'Claves y contraseñas'],
       ['COORDINACION_ACADEMICA', '/admin/software', 'Catálogo de software'],
-      ['COORDINACION_ACADEMICA', '/admin/solicitudes-software', 'Solicitudes de software'],
       ['JEFATURA_LABORATORIOS', '/admin/incidencias', 'Revisión de incidencias'],
       ['JEFATURA_LABORATORIOS', '/admin/claves', 'Claves y contraseñas'],
     ] as const)('%s autorizado ve "%s"', async (rol, ruta, titulo) => {
@@ -122,6 +121,31 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
 
       expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument();
       expect(screen.getByRole('status')).toHaveTextContent(/próximamente/i);
+    });
+
+    // Estas dos pantallas ya no están «en desarrollo» (Issue 4.29): se comprueba el acceso por rol.
+    it('Coordinación entra a la bandeja de solicitudes de software', async () => {
+      iniciarSesionDePrueba('COORDINACION_ACADEMICA');
+      renderizar('/admin/solicitudes-software');
+      expect(
+        await screen.findByRole('heading', { name: 'Solicitudes de software' }),
+      ).toBeInTheDocument();
+    });
+
+    it('el docente entra a sus solicitudes de software', async () => {
+      iniciarSesionDePrueba('DOCENTE');
+      renderizar('/docente/solicitudes-software');
+      expect(
+        await screen.findByRole('heading', { name: 'Solicitudes de software' }),
+      ).toBeInTheDocument();
+    });
+
+    it('un alumno no entra a las solicitudes de software del docente', async () => {
+      iniciarSesionDePrueba('ALUMNO');
+      renderizar('/docente/solicitudes-software');
+      expect(
+        await screen.findByRole('heading', { name: 'Acceso no autorizado' }),
+      ).toBeInTheDocument();
     });
 
     it('un alumno no entra a las pantallas del panel', async () => {
