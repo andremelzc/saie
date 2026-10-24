@@ -15,11 +15,11 @@ export const InicioDocentePage: React.FC = () => (
     <CabeceraPortal portal="Docente" />
 
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-10">
-      <h1 className="m-0 font-serif text-2xl font-bold sm:text-3xl">Portal del docente</h1>
+      <h1 className="m-0 text-2xl font-bold sm:text-3xl tracking-tight">Portal del docente</h1>
 
       <section
         aria-label="Portal en preparación"
-        className="flex flex-col gap-4 rounded-2xl border border-saie-divider bg-white p-6 shadow-[var(--saie-shadow-1)]"
+        className="flex flex-col gap-4 rounded-2xl border border-saie-divider bg-white p-6 shadow-sm"
       >
         <output className="m-0 block text-base font-bold text-saie-primary">
           {MENSAJE_EN_DESARROLLO}

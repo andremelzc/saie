@@ -11,7 +11,7 @@ function errorAxios(status: number, message?: string, conRespuesta = true) {
 describe('mensajeDeError', () => {
   it('traduce los fallos de red y de sesión a lenguaje natural', () => {
     expect(mensajeDeError(errorAxios(0, undefined, false))).toBe(
-      'Revisa tu conexión e inténtalo de nuevo.',
+      'No hay conexión con el servidor. Revisa tu internet e inténtalo de nuevo.',
     );
     expect(mensajeDeError(errorAxios(401))).toBe('Tu sesión venció. Vuelve a iniciar sesión.');
     expect(mensajeDeError(errorAxios(403))).toBe('No tienes permiso para hacer esta acción.');

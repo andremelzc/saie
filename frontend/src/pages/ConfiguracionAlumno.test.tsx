@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../context/AuthProvider';
@@ -81,11 +81,7 @@ describe('ConfiguracionAlumno (Issue 3.17)', () => {
     fireEvent.click(screen.getByRole('switch', { name: 'Texto grande' }));
 
     expect(screen.getByRole('status')).toHaveTextContent('Cambio guardado en este dispositivo.');
-    // «Cerrar sesión» vive solo en la cabecera común, no se repite en el contenido.
-    expect(screen.getAllByRole('button', { name: 'Cerrar sesión' })).toHaveLength(1);
-    expect(
-      within(screen.getByRole('main')).queryByRole('button', { name: 'Cerrar sesión' }),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cerrar sesión' })).toBeNull();
   });
 
   it('si el sistema pide menos movimiento y no hay nada guardado, parte activado', () => {

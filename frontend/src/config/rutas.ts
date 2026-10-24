@@ -12,6 +12,8 @@ export const RUTAS = {
   rutaAlumno: '/estudiante/ruta',
   perfilAlumno: '/estudiante/perfil',
   telegramAlumno: '/estudiante/telegram',
+  ayudaAlumno: '/estudiante/ayuda',
+  configuracionAlumno: '/estudiante/configuracion',
   inicioDocente: '/docente',
   horarioDocente: '/docente/horario',
   espaciosDocente: '/docente/espacios',

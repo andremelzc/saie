@@ -15,7 +15,6 @@ import { importarCsv } from '../../services/admin';
 import { mensajeDeError } from '../../services/estudiante';
 import type { ResultadoImportacionDTO, TipoImportacion } from '../../types/admin';
 import { formatearFechaCorta } from '../../utils/admin';
-import { textoResumenVerificacion } from '../../utils/etiquetas';
 
 /**
  * Issue 1.9 — cuatro flujos de carga independientes. Las zonas van primero y en orden; la guía
@@ -178,7 +177,7 @@ const ZonaArchivo: React.FC<{
           <span className="max-w-full break-all font-semibold text-saie-primary">
             {archivo.name}
           </span>
-          <span id={idAyuda} className="text-xs text-saie-muted">
+          <span className="text-xs text-saie-muted">
             {(archivo.size / 1024).toFixed(1)} KB · listo para importar
           </span>
         </>
@@ -187,9 +186,7 @@ const ZonaArchivo: React.FC<{
           <span className="font-semibold text-saie-primary">
             Arrastra tu CSV o elige un archivo
           </span>
-          <span id={idAyuda} className="text-xs text-saie-muted">
-            Archivo .csv de hasta 10 MB, con los nombres de las columnas en la primera fila
-          </span>
+          <span className="text-xs text-saie-muted">Máx. 10 MB · solo archivos .csv</span>
         </>
       )}
       <input
@@ -202,17 +199,21 @@ const ZonaArchivo: React.FC<{
         onChange={(e) => onSeleccionar(e.target.files?.[0] ?? null)}
       />
     </label>
+    <p id={idAyuda} className="m-0 text-xs text-saie-muted">
+      Se aceptan archivos .csv de hasta 10 MB. La primera fila debe tener los nombres de las
+      columnas.
+    </p>
 
     {archivo && (
       <div className="flex justify-end">
-        <button
-          type="button"
+        <Boton
+          variante="fantasma"
+          tamano="sm"
           onClick={() => onSeleccionar(null)}
           disabled={enviando}
-          className="min-h-11 cursor-pointer rounded-lg px-2 text-sm font-semibold text-saie-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
         >
           Quitar archivo
-        </button>
+        </Boton>
       </div>
     )}
   </>
@@ -282,16 +283,21 @@ const PanelResultado: React.FC<{
               Corregir y volver a subir
             </Boton>
           </div>
-          {/*
-            Sin tope de altura ni scroll interno: la lista vive en el drawer y es el drawer
-            el que se desplaza. Un scroll dentro de la tarjeta escondía las filas y era un
-            parche para que el tablero no creciera.
-          */}
-          <ul className="m-0 list-disc pl-5 text-sm text-saie-text">
-            {resultado.errores.map((e, i) => (
-              <li key={i}>{e}</li>
-            ))}
-          </ul>
+          <Acordeon
+            titulo={`Ver ${textoFilasConProblemas(resultado.errores.length)}`}
+            abiertoInicial
+          >
+            {/*
+              Sin tope de altura ni scroll interno: la lista vive en el drawer y es el drawer
+              el que se desplaza. Un scroll dentro de la tarjeta escondía las filas y era un
+              parche para que el tablero no creciera.
+            */}
+            <ul className="m-0 list-disc pl-5 text-sm text-saie-text">
+              {resultado.errores.map((e, i) => (
+                <li key={i}>{e}</li>
+              ))}
+            </ul>
+          </Acordeon>
         </>
       )}
 
@@ -334,11 +340,6 @@ const ResumenResultado: React.FC<{
       </p>
       {resultado.asignacion && (
         <p className="m-0 text-sm text-saie-text">{textoAsignacion(resultado.asignacion)}</p>
-      )}
-      {resultado.asignacion?.resumen && (
-        <p className="m-0 text-sm font-semibold text-saie-text">
-          {textoResumenVerificacion(resultado.asignacion.resumen.verificacion)}
-        </p>
       )}
       <div className="flex flex-wrap gap-2">
         <Boton variante="secundario" tamano="sm" onClick={onAbrir}>
@@ -428,8 +429,6 @@ export const ZonaCarga: React.FC<{
     try {
       const respuesta = await importarCsv(tipo, await leerArchivo(archivo));
       setResultado(respuesta);
-      // El archivo ya se procesó: se suelta para no invitar a importarlo dos veces.
-      setArchivo(null);
       onEstado(tipo, respuesta.exitosa ? 'cargado' : 'con-errores', new Date().toISOString());
     } catch (e) {
       setError(mensajeDeError(e));
@@ -458,22 +457,20 @@ export const ZonaCarga: React.FC<{
       id={`carga-${tipo}`}
       tabIndex={-1}
       aria-label={titulo}
-      className="flex scroll-mt-24 flex-col gap-3 rounded-2xl border border-saie-divider bg-white p-5 focus:outline-3 focus:outline-offset-2 focus:outline-saie-primary"
+      className="flex h-full scroll-mt-24 flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-sm focus:outline-3 focus:outline-offset-2 focus:outline-saie-primary"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="m-0 text-base font-bold text-saie-text">{titulo}</h2>
           <p className="m-0 text-sm text-saie-muted">{descripcion}</p>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <BadgeEstado tono={insignia.tono}>{insignia.texto}</BadgeEstado>
-          {ultimaCarga && (
-            <span className="text-xs text-saie-muted">
-              Última carga: {formatearFechaCorta(ultimaCarga)}
-            </span>
-          )}
-        </div>
+        <BadgeEstado tono={insignia.tono}>{insignia.texto}</BadgeEstado>
       </div>
+      {ultimaCarga && (
+        <p className="m-0 text-xs text-saie-muted">
+          Última carga: {formatearFechaCorta(ultimaCarga)}
+        </p>
+      )}
 
       <ZonaArchivo
         idInput={idInput}
@@ -520,7 +517,8 @@ export const ZonaCarga: React.FC<{
       <Drawer
         abierto={detalleAbierto}
         onCerrar={() => setDetalleAbierto(false)}
-        titulo={`Resultado de la carga · ${titulo}`}
+        titulo="Resultado de la carga"
+        subtitulo={titulo}
       >
         {resultado ? (
           <div className="flex flex-col gap-4">
@@ -691,7 +689,7 @@ const TarjetaPlantilla: React.FC<{ plantilla: PlantillaCSV }> = ({ plantilla }) 
   const esPantallaAncha = usePantallaAncha(640);
 
   return (
-    <article className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-[var(--saie-shadow-1)]">
+    <article className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-sm">
       <header className="flex flex-col gap-1">
         <h3 className="m-0 text-base font-bold text-saie-text">{plantilla.titulo}</h3>
         <p className="m-0 text-sm text-saie-muted">{plantilla.descripcion}</p>
@@ -832,15 +830,23 @@ export const CargaDatos: React.FC = () => {
   return (
     <LayoutAdmin
       titulo="Carga de datos"
-      subtitulo="Sigue el orden 1 → 4. Cada carga es independiente y se puede repetir sin duplicar datos."
+      subtitulo="Sube un archivo por vez. Cada carga es independiente y se puede repetir."
       acciones={
         <Boton variante="secundario" onClick={() => setGuiaAbierta(true)}>
           Guía y plantillas
         </Boton>
       }
     >
-      <section aria-label="Cargar un archivo" className="flex flex-col gap-3">
-        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+      <p className="m-0 rounded-xl border border-saie-divider bg-white px-4 py-3 text-sm text-saie-muted">
+        Sigue el orden 1 → 2 → 3 → 4. Si un archivo tiene filas con problemas, las demás sí se
+        guardan, pero no se asignan aulas en ese periodo.
+      </p>
+
+      <section aria-labelledby="titulo-zonas" className="flex flex-col gap-3">
+        <h2 id="titulo-zonas" className="m-0 text-lg font-bold text-saie-text">
+          Cargar un archivo
+        </h2>
+        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
           {FLUJOS.map((flujo, indice) => {
             const siguiente = FLUJOS[indice + 1];
             return (
@@ -864,6 +870,7 @@ export const CargaDatos: React.FC = () => {
         abierto={guiaAbierta}
         onCerrar={() => setGuiaAbierta(false)}
         titulo="Guía y plantillas"
+        tamano="lg"
       >
         <div className="flex flex-col gap-4">
           <SelectorSegmentado<Ayuda>

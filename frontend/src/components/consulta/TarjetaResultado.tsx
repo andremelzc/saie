@@ -1,8 +1,8 @@
 import React from 'react';
 import type { ItemConsultaAsignacion, TipoEspacio } from '../../types/consulta';
-import { ESTADO_CLASE_ASIGNADA, ETIQUETA_TIPO_ESPACIO, etiquetaDia } from '../../utils/etiquetas';
-import { formatearRango } from '../../utils/horario';
-import { BadgeEstado } from '../ui/BadgeEstado';
+import { describirEstadoAsignacion, etiquetaTipoEspacio } from '../../utils/diccionarios';
+import { ETIQUETA_DIA, estadoAMostrar } from '../../utils/horario';
+import { ICONOS } from '../ui/iconos';
 
 export interface TarjetaResultadoProps {
   asignacion?: ItemConsultaAsignacion | null;
@@ -20,50 +20,115 @@ export interface TarjetaResultadoProps {
   className?: string;
 }
 
-const TRAZO_LAB =
-  'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z';
-const TRAZO_AULA =
-  'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253';
+/**
+ * Renderiza el ícono y etiqueta correspondiente al tipo de espacio
+ * garantizando distinción visual accesible mediante forma, ícono y texto (no solo color).
+ */
+const BadgeTipoEspacio: React.FC<{ tipo: TipoEspacio }> = ({ tipo }) => {
+  if (tipo === 'LABORATORIO') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-semibold bg-teal-50 text-teal-800 border border-teal-200">
+        {/* Ícono de monitor / laboratorio de cómputo */}
+        <svg
+          className="w-3.5 h-3.5 text-teal-700"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={ICONOS.monitor} />
+        </svg>
+        <span>{etiquetaTipoEspacio('LABORATORIO')}</span>
+      </span>
+    );
+  }
 
-/** Tipo de espacio con ícono y texto: la distinción no depende solo del color. */
-const BadgeTipoEspacio: React.FC<{ tipo: TipoEspacio }> = ({ tipo }) => (
-  <span className="inline-flex items-center gap-1.5 rounded-full border border-saie-divider bg-white px-2.5 py-1 text-sm font-semibold text-saie-text">
-    <svg
-      className="h-3.5 w-3.5 text-saie-primary"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <path d={tipo === 'LABORATORIO' ? TRAZO_LAB : TRAZO_AULA} />
-    </svg>
-    <span>{ETIQUETA_TIPO_ESPACIO[tipo]}</span>
-  </span>
-);
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-semibold bg-indigo-50 text-indigo-900 border border-indigo-200">
+      {/* Ícono de aula teórica / pizarra */}
+      <svg
+        className="w-3.5 h-3.5 text-indigo-700"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+        />
+      </svg>
+      <span>{etiquetaTipoEspacio('AULA_TEORICA')}</span>
+    </span>
+  );
+};
 
-/** Aviso dentro de la tarjeta: en revisión o todavía sin aula (nunca los dos a la vez). */
-const NotaEstado: React.FC<{
-  tono: 'advertencia' | 'neutro';
-  etiqueta: string;
-  titulo: string;
-  texto: string;
-}> = ({ tono, etiqueta, titulo, texto }) => (
-  <div
-    role="note"
-    aria-label={etiqueta}
-    className={`rounded-xl border px-3.5 py-3 text-sm ${
-      tono === 'advertencia'
-        ? 'border-saie-warning-strong/30 bg-saie-warning-soft text-saie-warning-strong'
-        : 'border-saie-divider bg-saie-canvas text-saie-text'
-    }`}
-  >
-    <p className="m-0 font-semibold">{titulo}</p>
-    <p className="m-0 mt-0.5">{texto}</p>
-  </div>
-);
+/**
+ * Renderiza el badge de estado de la asignación (VIGENTE, ESCALADA, PENDIENTE)
+ */
+const BadgeEstadoAsignacion: React.FC<{
+  estado: 'VIGENTE' | 'ESCALADA' | 'PENDIENTE';
+}> = ({ estado }) => {
+  if (estado === 'VIGENTE') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300">
+        <svg
+          className="w-3.5 h-3.5 text-emerald-600"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+          aria-hidden="true"
+        >
+          <path fillRule="evenodd" d={ICONOS.checkCirculo} clipRule="evenodd" />
+        </svg>
+        <span>{describirEstadoAsignacion('VIGENTE').etiqueta}</span>
+      </span>
+    );
+  }
+
+  if (estado === 'ESCALADA') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-amber-50 text-amber-900 border border-amber-300">
+        <svg
+          className="w-3.5 h-3.5 text-amber-600"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          />
+        </svg>
+        <span>{describirEstadoAsignacion('ESCALADA').etiqueta}</span>
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-rose-50 text-rose-800 border border-rose-300">
+      <svg
+        className="w-3.5 h-3.5 text-rose-600"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+      <span>{describirEstadoAsignacion('PENDIENTE').etiqueta}</span>
+    </span>
+  );
+};
 
 export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
   asignacion,
@@ -81,7 +146,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
         role="status"
         aria-label="Consultando espacios"
         aria-busy="true"
-        className={`w-full max-w-xl mx-auto p-4 sm:p-6 bg-white border border-saie-divider rounded-xl shadow-[0_2px_8px_rgba(34,34,34,0.08)] flex flex-col gap-3 ${className}`}
+        className={`w-full max-w-xl mx-auto p-4 sm:p-6 bg-white border border-saie-divider rounded-xl shadow-sm flex flex-col gap-3 ${className}`}
       >
         <div
           aria-hidden="true"
@@ -108,15 +173,11 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
       <div
         role="alert"
         aria-label="Error de consulta"
-        className={`w-full max-w-xl mx-auto p-4 sm:p-5 bg-white border border-saie-danger/30 border-l-4 border-l-saie-danger rounded-xl shadow-[0_2px_8px_rgba(34,34,34,0.08)] flex items-start gap-3.5 ${className}`}
+        className={`w-full max-w-xl mx-auto p-4 sm:p-5 bg-white border border-rose-200 border-l-4 border-l-saie-danger rounded-xl shadow-sm flex items-start gap-3.5 ${className}`}
       >
-        <div className="w-10 h-10 shrink-0 rounded-full bg-saie-danger-soft border border-saie-danger/30 flex items-center justify-center text-saie-danger">
+        <div className="w-10 h-10 shrink-0 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center text-saie-danger">
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-            <path
-              fillRule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-              clipRule="evenodd"
-            />
+            <path fillRule="evenodd" d={ICONOS.errorCirculo} clipRule="evenodd" />
           </svg>
         </div>
         <div className="min-w-0">
@@ -135,7 +196,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
       <div
         role="status"
         aria-label="Sin resultados de consulta"
-        className={`w-full max-w-xl mx-auto p-6 sm:p-8 bg-white border border-saie-divider rounded-xl shadow-[0_2px_8px_rgba(34,34,34,0.08)] flex flex-col items-center text-center ${className}`}
+        className={`w-full max-w-xl mx-auto p-6 sm:p-8 bg-white border border-saie-divider rounded-xl shadow-sm flex flex-col items-center text-center ${className}`}
       >
         <div className="w-12 h-12 rounded-full bg-saie-canvas border border-saie-divider flex items-center justify-center text-saie-primary mb-3">
           <svg
@@ -176,21 +237,26 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
   const tieneEspacios = espacios.length > 0;
   const esBloqueMultiple = espacios.length > 1;
 
+  // Un estado «VIGENTE» que llega sin espacios no es una clase confirmada: se trata como
+  // pendiente. Así la insignia y los avisos cuentan siempre la misma historia (antes se veía
+  // «Espacio confirmado» junto a «Aún no hay aula asignada»).
+  const estadoVisible = estadoAMostrar(estadoAsignacion, espacios.length) ?? 'VIGENTE';
+
   // Extracción de datos generales de ubicación cuando es un espacio único
   const espacioPrincipal = espacios[0];
 
   return (
     <article
       aria-label={`Resultado de consulta para ${codigoCurso || 'curso'} sección ${codigoSeccion}`}
-      className={`w-full max-w-xl mx-auto bg-white border border-saie-divider rounded-xl shadow-[0_2px_8px_rgba(34,34,34,0.08)] p-4 sm:p-6 flex flex-col gap-4 text-saie-text transition-all ${className}`}
+      className={`w-full max-w-xl mx-auto bg-white border border-saie-divider rounded-xl shadow-sm p-4 sm:p-6 flex flex-col gap-4 text-saie-text transition-all ${className}`}
     >
       {/* Cabecera del Curso y Estado */}
       <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 border-b border-saie-divider pb-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            {!ocultarCurso && (
+            {!ocultarCurso && codigoCurso && (
               <span className="text-sm font-bold text-saie-primary bg-saie-canvas px-2 py-0.5 rounded-sm border border-saie-divider">
-                {codigoCurso || 'CURSO'}
+                {codigoCurso}
               </span>
             )}
             <span className="text-sm font-medium text-saie-muted">Sección {codigoSeccion}</span>
@@ -204,28 +270,72 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
         </div>
 
         <div className="self-start sm:self-auto shrink-0">
-          <BadgeEstado tono={ESTADO_CLASE_ASIGNADA[estadoAsignacion].tono} tamano="md">
-            {ESTADO_CLASE_ASIGNADA[estadoAsignacion].etiqueta}
-          </BadgeEstado>
+          <BadgeEstadoAsignacion estado={estadoVisible} />
         </div>
       </header>
 
-      {estadoAsignacion === 'ESCALADA' ? (
-        <NotaEstado
-          tono="advertencia"
-          etiqueta="Detalle de la revisión de esta clase"
-          titulo="Tu clase está en revisión"
-          texto="Coordinación Académica está revisando el aula o laboratorio de esta sección. Cuando se confirme, aparecerá aquí."
-        />
-      ) : (
-        (!tieneEspacios || estadoAsignacion === 'PENDIENTE') && (
-          <NotaEstado
-            tono="neutro"
-            etiqueta="Aviso de aula sin asignar"
-            titulo="Aún no hay aula asignada"
-            texto="La facultad todavía no confirma el aula o laboratorio de esta sección. Vuelve a consultar más tarde."
-          />
-        )
+      {/* Alerta visible en caso de asignación ESCALADA */}
+      {estadoVisible === 'ESCALADA' && (
+        <div
+          role="note"
+          aria-label="Detalle de la revisión de esta clase"
+          className="p-3 bg-amber-50 border-l-4 border-amber-500 rounded-r-md text-sm text-amber-900 flex items-start gap-2"
+        >
+          <svg
+            className="w-5 h-5 text-amber-600 shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <div>
+            <p className="font-semibold text-sm uppercase tracking-wide text-amber-800">
+              Tu clase está en revisión
+            </p>
+            <p className="text-sm text-amber-900 mt-0.5">
+              Coordinación Académica está revisando el aula o laboratorio de esta sección. Cuando se
+              confirme, aparecerá aquí.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Caso borde: sección pendiente de asignación (una escalada ya tiene su propio aviso) */}
+      {estadoVisible === 'PENDIENTE' && (
+        <div
+          role="note"
+          aria-label="Aviso de aula sin asignar"
+          className="p-3.5 bg-rose-50 border border-rose-200 rounded-lg text-sm text-rose-900 flex items-center gap-2.5"
+        >
+          <svg
+            className="w-5 h-5 text-rose-600 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
+          <div>
+            <p className="font-semibold text-sm text-rose-800">Aún no hay aula asignada</p>
+            <p className="text-sm text-rose-700">
+              La facultad todavía no confirma el aula o laboratorio de esta sección. Vuelve a
+              consultar más tarde.
+            </p>
+          </div>
+        </div>
       )}
 
       {/* Los 6 campos requeridos de la consulta */}
@@ -319,9 +429,9 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
               <ul className="mt-0.5 flex flex-col gap-0.5" aria-label="Horarios programados">
                 {horarios.map((h, idx) => (
                   <li key={idx} className="font-semibold text-saie-text text-sm">
-                    {etiquetaDia(h.diaSemana)}{' '}
-                    <span className="font-normal text-saie-muted">
-                      {formatearRango(h.horaInicio, h.horaFin)}
+                    {ETIQUETA_DIA[h.diaSemana]}{' '}
+                    <span className="font-normal text-saie-muted font-mono">
+                      {h.horaInicio} - {h.horaFin}
                     </span>
                   </li>
                 ))}
@@ -348,7 +458,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth="2"
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                d={ICONOS.usuarioRelleno}
               />
             </svg>
           </div>

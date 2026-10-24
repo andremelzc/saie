@@ -3,8 +3,29 @@ import api from '../../services/api';
 import isotipoPlaca from '../../assets/isotipo-placa.svg';
 import { PORTALES } from '../../config/portales';
 import type { PortalId } from '../../config/portales';
+import { useTituloPagina } from '../../hooks/useTituloPagina';
+import { Boton } from '../ui/Boton';
+import { estadoHttp, mensajeDeError, mensajeSeguroDelServidor } from '../../services/errores';
 import type { LoginResponseDTO } from '../../types/auth';
 import IconoPortal from './IconoPortal';
+import { ICONOS } from '../ui/iconos';
+
+const MENSAJE_CREDENCIALES =
+  'Credenciales inválidas. Las cuentas de acceso son administradas por Coordinación Académica.';
+
+/**
+ * Mensaje del login. Un 401 es «credenciales inválidas»; si no hubo respuesta (servidor caído,
+ * sin internet, tiempo agotado) se dice eso, y solo se muestra el texto del servidor si es seguro.
+ */
+function mensajeDeLogin(err: unknown): string {
+  const estado = estadoHttp(err);
+  if (estado === 401) return MENSAJE_CREDENCIALES;
+  if (estado === undefined) return mensajeDeError(err);
+  return (
+    mensajeSeguroDelServidor(err) ??
+    'Error al conectar con el servicio de autenticación. Por favor, intenta de nuevo.'
+  );
+}
 
 const PORTAL_DE_ROL: Record<'ALUMNO' | 'DOCENTE' | 'ADMIN', PortalId> = {
   ALUMNO: 'estudiante',
@@ -14,7 +35,7 @@ const PORTAL_DE_ROL: Record<'ALUMNO' | 'DOCENTE' | 'ADMIN', PortalId> = {
 
 /** Clases comunes de los campos de texto (altura 48 px, foco guinda, ver guía §4.5). */
 const CLASES_CAMPO =
-  'w-full h-12 rounded-[10px] bg-white text-saie-text placeholder-saie-muted text-base border border-saie-border hover:border-saie-text/60 focus:border-saie-primary focus:ring-2 focus:ring-saie-primary/20 transition-colors outline-hidden disabled:bg-[#F1EDE3] disabled:text-saie-muted';
+  'w-full h-12 rounded-xl bg-white text-saie-text placeholder-saie-muted text-base border border-saie-border hover:border-saie-text/60 focus:border-saie-primary focus:ring-2 focus:ring-saie-primary/20 transition-colors outline-hidden disabled:bg-saie-canvas-dark disabled:text-saie-muted';
 
 export interface LoginFormBaseProps {
   rol: 'ALUMNO' | 'DOCENTE' | 'ADMIN';
@@ -44,6 +65,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
   avisoSesion,
   className = '',
 }) => {
+  useTituloPagina(titulo);
   const [identificador, setIdentificador] = useState('');
   const [clave, setClave] = useState('');
   const [mostrarClave, setMostrarClave] = useState(false);
@@ -77,32 +99,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
         onLoginExitoso?.(response.data.data);
       }
     } catch (err: unknown) {
-      let mensaje =
-        'Credenciales inválidas. Las cuentas de acceso son asignadas por Coordinación Académica.';
-
-      if (
-        typeof err === 'object' &&
-        err !== null &&
-        'response' in err &&
-        typeof (err as { response?: { status?: number; data?: { message?: string } } }).response ===
-          'object'
-      ) {
-        const axiosErr = err as {
-          response?: { status?: number; data?: { message?: string } };
-        };
-
-        if (axiosErr.response?.status === 401) {
-          mensaje =
-            'Credenciales inválidas. Las cuentas de acceso son administradas por Coordinación Académica.';
-        } else if (axiosErr.response?.data?.message) {
-          mensaje = axiosErr.response.data.message;
-        } else {
-          mensaje =
-            'Error al conectar con el servicio de autenticación. Por favor, intenta de nuevo.';
-        }
-      }
-
-      setErrorLogin(mensaje);
+      setErrorLogin(mensajeDeLogin(err));
     } finally {
       setCargando(false);
     }
@@ -112,12 +109,12 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
 
   return (
     <div
-      className={`saie-rise relative w-full max-w-md md:max-w-lg lg:max-w-md mx-auto overflow-hidden bg-white border border-saie-divider rounded-xl shadow-[0_8px_24px_rgba(34,34,34,0.16)] p-6 sm:p-8 flex flex-col gap-5 text-saie-text ${className}`}
+      className={`saie-rise relative w-full max-w-md md:max-w-lg lg:max-w-md mx-auto overflow-hidden bg-white border border-saie-divider rounded-xl shadow-lg p-6 sm:p-8 flex flex-col gap-5 text-saie-text ${className}`}
     >
       {/* Acento superior de la tarjeta */}
       <span
         aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-saie-primary to-[#A8383A]"
+        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-saie-primary to-saie-primary-light"
       />
 
       {/* Cabecera: isotipo SAIE, portal y título */}
@@ -126,13 +123,13 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
           src={isotipoPlaca}
           alt=""
           aria-hidden="true"
-          className="h-16 w-16 rounded-2xl shadow-[0_2px_8px_rgba(34,34,34,0.16)]"
+          className="h-16 w-16 rounded-2xl shadow-sm"
         />
         <span className="mt-1 inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-saie-primary/10 text-saie-primary text-xs font-medium tracking-[0.2px]">
           <IconoPortal portal={portal.id} className="h-3.5 w-3.5" />
           {portal.etiqueta}
         </span>
-        <h1 className="m-0 font-serif text-[28px] leading-9 sm:text-[32px] sm:leading-10 font-bold text-saie-text">
+        <h1 className="m-0 text-2xl sm:text-3xl font-bold text-saie-text tracking-tight">
           {titulo}
         </h1>
         <p className="m-0 text-sm text-saie-muted max-w-xs">{subtitulo}</p>
@@ -165,7 +162,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
         <div
           role="alert"
           aria-live="polite"
-          className="p-3 bg-saie-danger-soft border border-saie-danger/30 rounded-xl text-sm text-saie-danger flex items-start gap-2.5 font-medium"
+          className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-saie-danger flex items-start gap-2.5 font-medium"
         >
           <svg
             className="w-5 h-5 text-saie-danger shrink-0 mt-0.5"
@@ -173,11 +170,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
             viewBox="0 0 20 20"
             aria-hidden="true"
           >
-            <path
-              fillRule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-              clipRule="evenodd"
-            />
+            <path fillRule="evenodd" d={ICONOS.errorCirculo} clipRule="evenodd" />
           </svg>
           <div className="flex-1">
             <span>{errorLogin}</span>
@@ -327,49 +320,16 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
         </div>
 
         {/* Botón de envío */}
-        <button
+        <Boton
           type="submit"
-          disabled={!esValido || cargando}
-          aria-busy={cargando}
-          className="group w-full h-12 mt-2 px-6 rounded-xl font-medium text-base text-white shadow-[0_2px_8px_rgba(123,17,19,0.25)] transition-all duration-200 flex items-center justify-center gap-2 bg-saie-primary hover:bg-saie-primary-dark hover:shadow-[0_8px_24px_rgba(123,17,19,0.28)] active:bg-saie-primary-dark disabled:bg-saie-divider disabled:text-saie-muted disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
+          disabled={!esValido}
+          cargando={cargando}
+          textoCargando="Iniciando sesión..."
+          claseContenedor="w-full"
+          className="mt-2 w-full"
         >
-          {cargando ? (
-            <>
-              <svg
-                className="animate-spin h-5 w-5 text-current"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                />
-              </svg>
-              <span>Iniciando sesión...</span>
-            </>
-          ) : (
-            <>
-              <span>Iniciar sesión</span>
-              <span
-                aria-hidden="true"
-                className="inline-block transition-transform duration-300 group-enabled:group-hover:translate-x-1.5"
-              >
-                &rarr;
-              </span>
-            </>
-          )}
-        </button>
+          Iniciar sesión <span aria-hidden="true">&rarr;</span>
+        </Boton>
       </form>
 
       {/* Nota institucional de no autorregistro */}

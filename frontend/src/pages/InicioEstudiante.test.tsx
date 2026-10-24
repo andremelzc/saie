@@ -72,12 +72,12 @@ describe('InicioEstudiante', () => {
   });
 
   describe('sin horario disponible', () => {
-    it('mientras carga muestra los accesos y no afirma nada sobre las clases, sin resumen', () => {
+    it('mientras carga muestra los accesos y la tarjeta por defecto, sin resumen', () => {
       vi.spyOn(api, 'get').mockReturnValue(new Promise(() => {}) as never);
       montar();
 
-      // Hasta que llegue el horario no se sabe si hay clases hoy.
-      expect(screen.queryByText('Hoy no tienes clases')).toBeNull();
+      expect(screen.getByText('Hoy no tienes clases')).toBeVisible();
+      expect(screen.getByText(/Aprovecha para revisar tu horario/)).toBeVisible();
       expect(
         screen.getByRole('navigation', { name: 'Secciones del portal del estudiante' }),
       ).toBeVisible();

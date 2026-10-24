@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
+import { EstadoError } from '../components/ui/EstadoError';
+import { Contenedor } from '../components/ui/Contenedor';
+import { ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
 import { Icono } from '../components/estudiante/ElementosHorario';
 import SeccionEditable from '../components/estudiante/SeccionEditable';
 import type { CampoPerfil } from '../components/estudiante/SeccionEditable';
@@ -16,13 +19,13 @@ import {
   valoresFichaMedica,
 } from '../utils/perfil';
 import type { ValoresFormulario } from '../utils/perfil';
+import { ICONOS } from '../components/ui/iconos';
 
-const TRAZO_USUARIO = 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z';
+const TRAZO_USUARIO = ICONOS.usuarioRelleno;
 const TRAZO_CORAZON =
   'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z';
 const TRAZO_CANDADO =
   'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z';
-const TRAZO_ALERTA = 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
 
 const CAMPOS_DATOS_PERSONALES: CampoPerfil[] = [
   {
@@ -105,7 +108,7 @@ const EsqueletoPerfil: React.FC = () => (
       <div
         key={i}
         aria-hidden="true"
-        className="h-40 animate-pulse rounded-2xl bg-saie-divider/60 motion-reduce:animate-none"
+        className="saie-esqueleto h-40 rounded-2xl border border-saie-divider"
       />
     ))}
   </div>
@@ -135,24 +138,10 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
 
     if (error) {
       return (
-        <div
-          role="alert"
-          className="flex flex-col items-start gap-3 rounded-xl border border-saie-danger/30 bg-saie-danger-soft p-4 text-sm font-medium text-saie-danger-strong"
-        >
-          <p className="m-0 flex items-start gap-2">
-            <Icono trazo={TRAZO_ALERTA} className="mt-0.5 h-5 w-5 shrink-0" />
-            <span>{`No pudimos cargar tu perfil. ${error}`}</span>
-          </p>
-          {onReintentar && (
-            <button
-              type="button"
-              onClick={onReintentar}
-              className="min-h-11 cursor-pointer rounded-xl bg-saie-primary px-5 text-sm font-medium text-white hover:bg-saie-primary-dark"
-            >
-              Reintentar
-            </button>
-          )}
-        </div>
+        <EstadoError
+          mensaje={`No pudimos cargar tu perfil. ${error}`}
+          onReintentar={onReintentar}
+        />
       );
     }
 
@@ -163,11 +152,11 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
       <>
         <section
           aria-label="Datos institucionales"
-          className="flex flex-col gap-5 rounded-2xl border border-saie-divider bg-white p-5 shadow-[0_2px_8px_rgba(34,34,34,0.06)] sm:flex-row sm:items-center sm:p-6"
+          className="flex flex-col gap-5 rounded-2xl border border-saie-divider bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:p-6"
         >
           <div
             aria-hidden="true"
-            className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-saie-primary to-saie-primary-dark font-serif text-3xl font-bold text-white"
+            className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-saie-primary to-saie-primary-dark text-3xl font-bold text-white"
           >
             {iniciales(alumno.nombre)}
           </div>
@@ -237,12 +226,18 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
         titulo="Mi perfil"
         subtitulo="Tus datos personales y tu ficha médica."
         trazoIcono={TRAZO_USUARIO}
-        ancho="max-w-4xl"
+        ancho="normal"
       />
 
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6">
+      <Contenedor
+        como="main"
+        ancho="normal"
+        id={ID_CONTENIDO}
+        tabIndex={-1}
+        className="flex flex-col gap-6 py-6 focus:outline-none"
+      >
         {renderCuerpo()}
-      </main>
+      </Contenedor>
     </div>
   );
 };

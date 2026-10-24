@@ -1,11 +1,13 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
-import { Drawer } from '../../components/ui/Drawer';
+import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
+import { CLASE_PIE_DRAWER, Drawer } from '../../components/ui/Drawer';
 import { useAvisos } from '../../components/ui/useAvisos';
+import { Campo } from '../../components/ui/Campo';
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
 import { useCarga } from '../../hooks/useCarga';
 import { usePantallaAncha } from '../../hooks/usePantallaAncha';
@@ -25,25 +27,21 @@ import type {
   TipoEspacio,
 } from '../../types/admin';
 import { formatearFechaCorta } from '../../utils/admin';
-import {
-  ESTADO_SECCION,
-  ETIQUETA_COMPARACION_VERSION,
-  ETIQUETA_TIPO_ESPACIO,
-  ETIQUETA_TIPO_ESPACIO_PLURAL,
-  formatearBloqueHorario,
-} from '../../utils/etiquetas';
+import { ETIQUETA_DIA, formatearRango } from '../../utils/horario';
+import { describirEstadoAsignacion, etiquetaTipoEspacio } from '../../utils/diccionarios';
+import { plural } from '../../utils/texto';
 
-const COMPARACIONES: ComparacionVersion[] = ['CUALQUIERA', 'MINIMA', 'EXACTA'];
-const TIPOS: TipoEspacio[] = ['AULA_TEORICA', 'LABORATORIO'];
+const COMPARACIONES: { valor: ComparacionVersion; etiqueta: string }[] = [
+  { valor: 'CUALQUIERA', etiqueta: 'Cualquier versión' },
+  { valor: 'MINIMA', etiqueta: 'Versión mínima o superior' },
+  { valor: 'EXACTA', etiqueta: 'Versión exacta' },
+];
 
 /** El estado de la asignación en lenguaje llano: lo que le importa a quien coordina. */
 function EtiquetaEstado({ seccion }: { seccion: SeccionAdminDTO }): React.ReactNode {
-  if (!seccion.asignacion) {
-    return <BadgeEstado tono="neutro">{ESTADO_SECCION.SIN_ASIGNAR.etiqueta}</BadgeEstado>;
-  }
-  const { etiqueta, tono } =
-    ESTADO_SECCION[seccion.asignacion.estado === 'ESCALADA' ? 'EN_REVISION' : 'CON_AULA'];
-  return <BadgeEstado tono={tono}>{etiqueta}</BadgeEstado>;
+  const codigo = seccion.asignacion ? seccion.asignacion.estado : 'PENDIENTE';
+  const estado = describirEstadoAsignacion(codigo);
+  return <BadgeEstado tono={estado.tono}>{estado.etiqueta}</BadgeEstado>;
 }
 
 /** La fila de una sección en la tabla de escritorio. */
@@ -56,10 +54,9 @@ const FilaSeccion: React.FC<{ seccion: SeccionAdminDTO; onVer: (s: SeccionAdminD
       <span className="block font-semibold text-saie-text">
         {seccion.codigoCurso} · {seccion.codigoSeccion}
       </span>
-      <span className="block text-xs text-saie-muted">
-        {seccion.nombreCurso} · {ETIQUETA_TIPO_ESPACIO[seccion.tipoEspacioRequerido]}
-      </span>
+      <span className="block text-xs text-saie-muted">{seccion.nombreCurso}</span>
     </td>
+    <td className="px-4 py-3">{etiquetaTipoEspacio(seccion.tipoEspacioRequerido)}</td>
     <td className="px-4 py-3">
       {seccion.asignacion?.espacios.length ? (
         <span className="font-medium text-saie-text">
@@ -72,7 +69,7 @@ const FilaSeccion: React.FC<{ seccion: SeccionAdminDTO; onVer: (s: SeccionAdminD
     <td className="px-4 py-3">
       {seccion.docente?.nombre ?? <span className="text-saie-muted">—</span>}
     </td>
-    <td className="px-4 py-3 text-right tabular-nums">{seccion.alumnosMatriculados}</td>
+    <td className="px-4 py-3 text-center tabular-nums">{seccion.alumnosMatriculados}</td>
     <td className="px-4 py-3">
       <EtiquetaEstado seccion={seccion} />
     </td>
@@ -103,9 +100,7 @@ const TarjetaSeccion: React.FC<{
         <h3 className="m-0 text-base font-bold text-saie-text">
           {seccion.codigoCurso} · {seccion.codigoSeccion}
         </h3>
-        <p className="m-0 text-xs text-saie-muted">
-          {seccion.nombreCurso} · {ETIQUETA_TIPO_ESPACIO[seccion.tipoEspacioRequerido]}
-        </p>
+        <p className="m-0 text-xs text-saie-muted">{seccion.nombreCurso}</p>
       </div>
       <EtiquetaEstado seccion={seccion} />
     </header>
@@ -131,6 +126,17 @@ const TarjetaSeccion: React.FC<{
   </article>
 );
 
+/** ¿El software marcado en el formulario es el mismo que ya exige la sección? */
+function mismoSoftware(
+  elegidos: Record<string, ComparacionVersion>,
+  actuales: SeccionAdminDTO['softwareRequerido'],
+): boolean {
+  const ids = Object.keys(elegidos);
+  return (
+    ids.length === actuales.length && actuales.every((s) => elegidos[s.id] === s.comparacionVersion)
+  );
+}
+
 /** Formulario de edición: tipo de aula, docente y software requerido (Issue 4.31). */
 const FormularioSeccion: React.FC<{
   seccion: SeccionAdminDTO;
@@ -138,7 +144,9 @@ const FormularioSeccion: React.FC<{
   catalogo: SoftwareDTO[];
   onGuardado: (resultado: { alertas: { motivo: string }[] }) => void;
   onCancelar: () => void;
-}> = ({ seccion, docentes, catalogo, onGuardado, onCancelar }) => {
+  /** Avisa al drawer si hay cambios sin guardar, para pedir confirmación al cerrarlo. */
+  onCambiosPendientes?: (hay: boolean) => void;
+}> = ({ seccion, docentes, catalogo, onGuardado, onCancelar, onCambiosPendientes }) => {
   const [tipo, setTipo] = useState<TipoEspacio>(seccion.tipoEspacioRequerido);
   const [docenteId, setDocenteId] = useState<string>(seccion.docente?.id ?? '');
   const [busqueda, setBusqueda] = useState('');
@@ -147,6 +155,16 @@ const FormularioSeccion: React.FC<{
   );
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const hayCambios =
+    tipo !== seccion.tipoEspacioRequerido ||
+    docenteId !== (seccion.docente?.id ?? '') ||
+    !mismoSoftware(elegidos, seccion.softwareRequerido);
+
+  useEffect(() => {
+    onCambiosPendientes?.(hayCambios);
+    return () => onCambiosPendientes?.(false);
+  }, [hayCambios, onCambiosPendientes]);
 
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -189,23 +207,18 @@ const FormularioSeccion: React.FC<{
   return (
     <form onSubmit={guardar} noValidate className="flex flex-col gap-5">
       <div className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1">
-          <span className={CLASE_ETIQUETA}>Tipo de espacio que necesita</span>
+        <Campo etiqueta="Tipo de espacio que necesita">
           <select
             value={tipo}
             onChange={(e) => setTipo(e.target.value as TipoEspacio)}
             className={CLASE_CAMPO}
           >
-            {TIPOS.map((t) => (
-              <option key={t} value={t}>
-                {ETIQUETA_TIPO_ESPACIO[t]}
-              </option>
-            ))}
+            <option value="AULA_TEORICA">Aula teórica</option>
+            <option value="LABORATORIO">Laboratorio</option>
           </select>
-        </label>
+        </Campo>
 
-        <label className="flex flex-col gap-1">
-          <span className={CLASE_ETIQUETA}>Docente</span>
+        <Campo etiqueta="Docente">
           <select
             value={docenteId}
             onChange={(e) => setDocenteId(e.target.value)}
@@ -218,7 +231,7 @@ const FormularioSeccion: React.FC<{
               </option>
             ))}
           </select>
-        </label>
+        </Campo>
       </div>
 
       <fieldset className="m-0 flex flex-col gap-2">
@@ -268,11 +281,11 @@ const FormularioSeccion: React.FC<{
                         [s.id]: e.target.value as ComparacionVersion,
                       }))
                     }
-                    className="min-h-11 rounded-lg border border-saie-border bg-white px-2 text-sm"
+                    className="rounded-lg border border-saie-divider bg-white px-2 py-1 text-xs"
                   >
                     {COMPARACIONES.map((c) => (
-                      <option key={c} value={c}>
-                        {ETIQUETA_COMPARACION_VERSION[c]}
+                      <option key={c.valor} value={c.valor}>
+                        {c.etiqueta}
                       </option>
                     ))}
                   </select>
@@ -285,13 +298,14 @@ const FormularioSeccion: React.FC<{
 
       {error && <Aviso tono="error">{error}</Aviso>}
 
-      <div className="flex flex-wrap gap-3">
-        <Boton type="submit" cargando={guardando} textoCargando="Guardando…">
+      <div className={`${CLASE_PIE_DRAWER} flex flex-wrap items-center gap-3`}>
+        <Boton type="submit" tamano="sm" cargando={guardando} textoCargando="Guardando…">
           Guardar cambios
         </Boton>
-        <Boton variante="cancelar" onClick={onCancelar} disabled={guardando}>
+        <Boton variante="cancelar" tamano="sm" onClick={onCancelar} disabled={guardando}>
           Cancelar
         </Boton>
+        {hayCambios && <BadgeEstado tono="advertencia">Cambios sin guardar</BadgeEstado>}
       </div>
     </form>
   );
@@ -309,6 +323,7 @@ export const SeccionesAdmin: React.FC = () => {
   const [periodo, setPeriodo] = useState('');
   const [seleccionadaId, setSeleccionadaId] = useState<string | null>(null);
   const [editando, setEditando] = useState(false);
+  const [cambiosPendientes, setCambiosPendientes] = useState(false);
   const { mostrar } = useAvisos();
 
   const cargar = useCallback(async () => {
@@ -349,7 +364,7 @@ export const SeccionesAdmin: React.FC = () => {
     if (resultado.alertas.length > 0) {
       mostrar(
         'info',
-        `La sección se guardó y generó ${resultado.alertas.length} alerta(s) en el panel.`,
+        `La sección se guardó y generó ${plural(resultado.alertas.length, 'alerta', 'alertas')} en el panel.`,
       );
     } else {
       mostrar('exito', 'Sección actualizada.');
@@ -357,46 +372,22 @@ export const SeccionesAdmin: React.FC = () => {
   };
 
   const lista =
-    error && !datos ? null : secciones.length === 0 ? (
+    secciones.length === 0 ? (
       <EstadoVacio
         titulo="Sin secciones"
         descripcion="Cuando se carguen cursos y secciones, aparecerán aquí."
       />
     ) : esPantallaAncha ? (
-      <section
-        aria-label="Listado de secciones"
-        className="overflow-x-auto rounded-xl border border-saie-divider bg-white"
-      >
-        <table className="w-full text-left text-sm">
-          <thead className="bg-saie-canvas text-xs uppercase tracking-wide text-saie-muted">
-            <tr>
-              <th scope="col" className="px-4 py-3">
-                Sección
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Aula
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Docente
-              </th>
-              <th scope="col" className="px-4 py-3 text-right">
-                Alumnos
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Estado
-              </th>
-              <th scope="col" className="px-4 py-3">
-                <span className="sr-only">Acciones</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {secciones.map((s) => (
-              <FilaSeccion key={s.id} seccion={s} onVer={abrirDetalle} />
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <TablaDatos etiqueta="Listado de secciones">
+        <CabeceraTabla
+          columnas={['Sección', 'Tipo', 'Aula', 'Docente', 'Alumnos', 'Estado', 'Detalle']}
+        />
+        <tbody>
+          {secciones.map((s) => (
+            <FilaSeccion key={s.id} seccion={s} onVer={abrirDetalle} />
+          ))}
+        </tbody>
+      </TablaDatos>
     ) : (
       <ul className="m-0 flex list-none flex-col gap-3 p-0" aria-label="Listado de secciones">
         {secciones.map((s) => (
@@ -424,8 +415,7 @@ export const SeccionesAdmin: React.FC = () => {
     >
       <section aria-label="Filtros de secciones" className="flex flex-col gap-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Buscar sección</span>
+          <Campo etiqueta="Buscar sección">
             <input
               type="search"
               placeholder="Ej. 2020101 o Cálculo"
@@ -433,24 +423,19 @@ export const SeccionesAdmin: React.FC = () => {
               onChange={(e) => setTexto(e.target.value)}
               className={CLASE_CAMPO}
             />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Tipo de espacio</span>
+          </Campo>
+          <Campo etiqueta="Tipo de espacio">
             <select
               value={tipo}
               onChange={(e) => setTipo(e.target.value as 'TODOS' | TipoEspacio)}
               className={CLASE_CAMPO}
             >
               <option value="TODOS">Todos</option>
-              {TIPOS.map((t) => (
-                <option key={t} value={t}>
-                  {ETIQUETA_TIPO_ESPACIO_PLURAL[t]}
-                </option>
-              ))}
+              <option value="AULA_TEORICA">Aulas teóricas</option>
+              <option value="LABORATORIO">Laboratorios</option>
             </select>
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Periodo</span>
+          </Campo>
+          <Campo etiqueta="Periodo">
             <input
               type="text"
               placeholder="Ej. 2026-2"
@@ -458,7 +443,7 @@ export const SeccionesAdmin: React.FC = () => {
               onChange={(e) => setPeriodo(e.target.value)}
               className={CLASE_CAMPO}
             />
-          </label>
+          </Campo>
         </div>
         <p className="m-0 text-sm text-saie-muted" aria-live="polite">
           {secciones.length} {secciones.length === 1 ? 'sección' : 'secciones'}
@@ -466,7 +451,7 @@ export const SeccionesAdmin: React.FC = () => {
       </section>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      {cargando && !datos ? <EsqueletoCarga texto="Cargando secciones…" /> : lista}
+      {cargando && !datos ? <EsqueletoCarga texto="Cargando secciones…" forma="tabla" /> : lista}
 
       <Drawer
         abierto={seleccionada !== null}
@@ -477,24 +462,14 @@ export const SeccionesAdmin: React.FC = () => {
         titulo={
           seleccionada ? `${seleccionada.codigoCurso} · ${seleccionada.codigoSeccion}` : 'Sección'
         }
+        subtitulo={seleccionada?.nombreCurso}
+        insignia={seleccionada && <EtiquetaEstado seccion={seleccionada} />}
+        hayCambios={editando && cambiosPendientes}
+        vista={editando ? 'editar' : 'detalle'}
       >
         {seleccionada && (
           <div className="flex flex-col gap-5">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-saie-muted">
-              <EtiquetaEstado seccion={seleccionada} />
-              {seleccionada.asignacion && (
-                <span>
-                  Asignada el {formatearFechaCorta(seleccionada.asignacion.fechaAsignacion)}
-                </span>
-              )}
-            </div>
-            <dl className="m-0 rounded-xl border border-saie-divider bg-white px-4 py-2 text-sm">
-              <div className="border-b border-saie-divider py-2">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
-                  Curso
-                </dt>
-                <dd className="m-0 text-saie-text">{seleccionada.nombreCurso}</dd>
-              </div>
+            <dl className="m-0 rounded-xl border border-saie-divider bg-white p-4 text-sm">
               <div className="border-b border-saie-divider py-2">
                 <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
                   Aula asignada
@@ -504,7 +479,7 @@ export const SeccionesAdmin: React.FC = () => {
                     ? seleccionada.asignacion.espacios
                         .map((e) => `${e.identificador} (${e.pabellon}, piso ${e.piso})`)
                         .join(', ')
-                    : 'Sin aula todavía.'}
+                    : 'Sin aula: esta sección espera revisión.'}
                 </dd>
               </div>
               <div className="border-b border-saie-divider py-2">
@@ -526,7 +501,12 @@ export const SeccionesAdmin: React.FC = () => {
                 <dd className="m-0 text-saie-text">
                   {seleccionada.horarios.length === 0
                     ? 'Sin horarios registrados.'
-                    : seleccionada.horarios.map((h) => formatearBloqueHorario(h)).join(' · ')}
+                    : seleccionada.horarios
+                        .map(
+                          (h) =>
+                            `${ETIQUETA_DIA[h.diaSemana]} ${formatearRango(h.horaInicio, h.horaFin)}`,
+                        )
+                        .join(' · ')}
                 </dd>
               </div>
               <div className="py-2">
@@ -543,6 +523,12 @@ export const SeccionesAdmin: React.FC = () => {
               </div>
             </dl>
 
+            {seleccionada.asignacion && (
+              <p className="m-0 text-xs text-saie-muted">
+                Asignada el {formatearFechaCorta(seleccionada.asignacion.fechaAsignacion)}
+              </p>
+            )}
+
             {editando ? (
               <FormularioSeccion
                 seccion={seleccionada}
@@ -550,6 +536,7 @@ export const SeccionesAdmin: React.FC = () => {
                 catalogo={catalogo.datos?.items ?? []}
                 onGuardado={manejarGuardado}
                 onCancelar={() => setEditando(false)}
+                onCambiosPendientes={setCambiosPendientes}
               />
             ) : (
               <div className="flex flex-col gap-2">

@@ -5,10 +5,6 @@ import HorarioMisCursosPage from './HorarioMisCursosPage';
 import api from '../services/api';
 import type { CursoMatriculadoDTO, HorarioSemanalDTO } from '../types/horario';
 
-vi.mock('../context/useAuth', () => ({
-  useAuth: () => ({ sesion: { rol: 'ALUMNO' }, cerrarSesion: vi.fn() }),
-}));
-
 const HORARIO: HorarioSemanalDTO = { periodo: '2026-2', vista: 'semana', dias: {} };
 const CURSOS: CursoMatriculadoDTO[] = [];
 

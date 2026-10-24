@@ -6,10 +6,6 @@ import HorarioMisCursos from './HorarioMisCursos';
 import { CURSOS_FIXTURE, HORARIO_FIXTURE } from '../test/fixtures/horario';
 import type { CursoMatriculadoDTO } from '../types/horario';
 
-vi.mock('../context/useAuth', () => ({
-  useAuth: () => ({ sesion: { rol: 'ALUMNO' }, cerrarSesion: vi.fn() }),
-}));
-
 /** Martes 13/10/2026, 10:30 (hora local). */
 const MARTES_10_30 = new Date(2026, 9, 13, 10, 30);
 

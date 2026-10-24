@@ -5,10 +5,6 @@ import PerfilAlumnoPage from './PerfilAlumnoPage';
 import api from '../services/api';
 import { PERFIL_FIXTURE } from '../test/fixtures/perfil';
 
-vi.mock('../context/useAuth', () => ({
-  useAuth: () => ({ sesion: { rol: 'ALUMNO' }, cerrarSesion: vi.fn() }),
-}));
-
 function renderizar() {
   return render(
     <MemoryRouter>

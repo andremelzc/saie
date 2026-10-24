@@ -6,10 +6,6 @@ import PerfilAlumno from './PerfilAlumno';
 import { PERFIL_FIXTURE, PERFIL_VACIO_FIXTURE } from '../test/fixtures/perfil';
 import { aplicarCambios } from '../utils/perfil';
 
-vi.mock('../context/useAuth', () => ({
-  useAuth: () => ({ sesion: { rol: 'ALUMNO' }, cerrarSesion: vi.fn() }),
-}));
-
 type Props = Partial<React.ComponentProps<typeof PerfilAlumno>>;
 
 function renderizar(props: Props = {}) {
@@ -27,11 +23,14 @@ function renderizar(props: Props = {}) {
 const seccion = (nombre: RegExp) => screen.getByRole('region', { name: nombre });
 
 describe('PerfilAlumno (Issue 3.17)', () => {
-  it('muestra el título, los datos institucionales y el acceso al inicio', () => {
+  it('muestra el título, los datos institucionales y el enlace para volver', () => {
     renderizar();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Mi perfil' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Inicio' })).toHaveAttribute('href', '/estudiante');
+    expect(screen.getByRole('link', { name: /Volver al inicio/i })).toHaveAttribute(
+      'href',
+      '/estudiante',
+    );
     const institucional = seccion(/Datos institucionales/i);
     expect(within(institucional).getByText('Ana Lucía Quispe Ramos')).toBeVisible();
     expect(within(institucional).getByText('22200001')).toBeVisible();

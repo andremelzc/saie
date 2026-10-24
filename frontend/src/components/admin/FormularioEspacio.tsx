@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Aviso } from '../ui/Aviso';
 import { BadgeEstado } from '../ui/BadgeEstado';
 import { Boton } from '../ui/Boton';
 import { CLASE_AYUDA, CLASE_CAMPO, CLASE_ETIQUETA } from '../ui/campos';
+import { CLASE_PIE_DRAWER } from '../ui/Drawer';
 import { useCarga } from '../../hooks/useCarga';
 import { crearEspacio, editarEspacio, obtenerCatalogoActivo } from '../../services/admin';
 import { mensajeDeError } from '../../services/estudiante';
@@ -63,6 +64,8 @@ export interface FormularioEspacioProps {
   espacios: EspacioAdminDTO[];
   onGuardado: (resultado: ResultadoEdicionEspacioDTO) => void;
   onCancelar: () => void;
+  /** Avisa al drawer si hay cambios sin guardar, para pedir confirmación al cerrarlo. */
+  onCambiosPendientes?: (hay: boolean) => void;
 }
 
 function estadoInicial(espacio: EspacioAdminDTO): EstadoFormulario {
@@ -471,7 +474,7 @@ const GrupoCapacidad: React.FC<{
       ) : (
         <p id="ayuda-aforo" className={CLASE_AYUDA}>
           Al cambiarla se revisa si las secciones asignadas siguen cabiendo y se genera la alerta
-          correspondiente. Deja 0 solo si el espacio queda deshabilitado.
+          correspondiente. Deja 0 solo si el espacio queda fuera de servicio.
         </p>
       )}
     </div>
@@ -483,7 +486,7 @@ const GrupoCapacidad: React.FC<{
     >
       <span className="font-semibold text-saie-text">Espacio en servicio</span>
       <span className="block text-xs text-saie-muted">
-        Si lo deshabilitas, el motor deja de asignarlo y queda fuera de la consulta de
+        Si lo pones fuera de servicio, el sistema deja de asignarlo y queda fuera de la consulta de
         disponibilidad.
       </span>
     </Casilla>
@@ -573,7 +576,7 @@ const GrupoLaboratorio: React.FC<{
 
       <div className="flex flex-col gap-1">
         <EtiquetaCampo htmlFor="espacio-pcs" obligatorio={original.pcsMalogradas !== ''}>
-          PCs fuera de servicio
+          PCs malogradas
         </EtiquetaCampo>
         <input
           id="espacio-pcs"
@@ -690,6 +693,7 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
   espacios,
   onGuardado,
   onCancelar,
+  onCambiosPendientes,
 }) => {
   const original = useMemo(
     () => (modo === 'editar' && espacio ? estadoInicial(espacio) : estadoInicialAlta()),
@@ -717,6 +721,14 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
   );
   const cambios = useMemo(() => calcularCambios(form, original, campos), [form, original, campos]);
   const hayCambios = modo === 'crear' ? true : Object.keys(cambios).length > 0;
+  // En el alta «hayCambios» siempre es verdadero (hay un espacio por crear): para decidir si se
+  // pide confirmación al cerrar se compara con el formulario vacío.
+  const sinGuardar = JSON.stringify(form) !== JSON.stringify(original);
+
+  useEffect(() => {
+    onCambiosPendientes?.(sinGuardar);
+    return () => onCambiosPendientes?.(false);
+  }, [sinGuardar, onCambiosPendientes]);
   const hayErrores = Object.keys(errores).length > 0;
 
   const candidatos = useMemo(
@@ -864,7 +876,9 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
 
       {error && <Aviso tono="error">{error}</Aviso>}
 
-      <footer className="flex flex-col gap-3 border-t border-saie-divider pt-4 sm:flex-row sm:items-start sm:justify-between">
+      <footer
+        className={`${CLASE_PIE_DRAWER} flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between`}
+      >
         <div className="flex min-w-0 flex-col gap-2">
           {hayCambios ? (
             <BadgeEstado tono="advertencia">

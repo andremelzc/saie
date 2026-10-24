@@ -1,10 +1,13 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import CabeceraPortal from '../CabeceraPortal';
-import { RUTAS } from '../../config/rutas';
-import { AvisoError } from '../ui/AvisoError';
+import BotonCerrarSesion from '../auth/BotonCerrarSesion';
+import logoBlanco from '../../assets/logo-blanco.svg';
 import { useAuth } from '../../context/useAuth';
-import { pestanasDeRol } from '../../utils/admin';
+import { useTituloPagina } from '../../hooks/useTituloPagina';
+import { etiquetaRol, pestanasDeRol } from '../../utils/admin';
+import { Contenedor } from '../ui/Contenedor';
+import { EnlaceSaltar, ID_CONTENIDO } from '../ui/EnlaceSaltar';
+import { EstadoError } from '../ui/EstadoError';
 
 /**
  * Marco común del panel administrativo.
@@ -52,6 +55,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
 }) => {
   const { sesion } = useAuth();
   const pestanas = pestanasDeRol(sesion?.rol);
+  useTituloPagina(titulo);
 
   const claseLink = ({ isActive }: { isActive: boolean }) =>
     `flex flex-1 flex-col items-center gap-0.5 px-2 py-2 text-xs transition-colors md:flex-none md:flex-row md:gap-2 md:rounded-lg md:px-4 md:text-sm ${
@@ -66,13 +70,35 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
         dashboard ? 'lg:h-screen lg:overflow-hidden' : ''
       }`}
     >
-      <CabeceraPortal inicioTo={RUTAS.inicioAdmin} className="saie-no-imprimir" />
+      <EnlaceSaltar />
+      <header className="bg-saie-primary text-white saie-no-imprimir">
+        <Contenedor className="flex h-18 items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-4">
+            <img src={logoBlanco} alt="SAIE" className="h-9 w-auto shrink-0" />
+            <span className="hidden rounded-full bg-white/15 px-3 py-1 text-sm font-medium sm:inline-flex">
+              {etiquetaRol(sesion?.rol)}
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <p className="m-0 hidden text-right text-xs leading-4 text-white/80 sm:block">
+              <span>Sesión activa</span>
+              <strong className="block text-sm font-bold text-white">
+                {etiquetaRol(sesion?.rol)}
+              </strong>
+            </p>
+            <BotonCerrarSesion
+              compacto
+              className="border-white/30! bg-white/10! text-white! hover:bg-white/20!"
+            />
+          </div>
+        </Contenedor>
+      </header>
 
       <nav
         aria-label="Navegación del panel"
         className="saie-no-imprimir fixed inset-x-0 bottom-0 z-30 border-t border-saie-divider bg-white md:static md:border-b md:border-t-0"
       >
-        <ul className="mx-auto m-0 flex w-full max-w-7xl list-none gap-1 p-0 md:px-4 md:py-2">
+        <Contenedor como="ul" className="m-0 flex list-none gap-1 py-0 md:py-2">
           {pestanas.map((p) => (
             <li
               key={p.to}
@@ -84,17 +110,20 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
               </NavLink>
             </li>
           ))}
-        </ul>
+        </Contenedor>
       </nav>
 
-      <main
-        className={`mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-4 py-4 ${
+      <Contenedor
+        como="main"
+        id={ID_CONTENIDO}
+        tabIndex={-1}
+        className={`flex flex-1 flex-col gap-4 py-4 focus:outline-none ${
           dashboard ? 'lg:min-h-0 lg:overflow-hidden' : ''
         }`}
       >
         <div className="saie-no-imprimir flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="m-0 font-serif text-2xl font-bold text-saie-text sm:text-3xl">
+            <h1 className="m-0 text-2xl font-bold text-saie-text sm:text-3xl tracking-tight">
               {titulo}
             </h1>
             {subtitulo && <p className="m-0 mt-1 text-sm text-saie-muted">{subtitulo}</p>}
@@ -102,12 +131,15 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
           {acciones}
         </div>
         {children}
-      </main>
+      </Contenedor>
     </div>
   );
 };
 
-/** Se reexporta para las pantallas que ya lo importaban desde aquí. */
-export { AvisoError };
+/** Mensaje de error uniforme con botón de reintento (ver `EstadoError`). */
+export const AvisoError: React.FC<{ mensaje: string; onReintentar?: () => void }> = ({
+  mensaje,
+  onReintentar,
+}) => <EstadoError mensaje={mensaje} onReintentar={onReintentar} />;
 
 export default LayoutAdmin;

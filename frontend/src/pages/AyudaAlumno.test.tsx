@@ -1,12 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 
 import { MemoryRouter } from 'react-router-dom';
 import AyudaAlumno from './AyudaAlumno';
-
-vi.mock('../context/useAuth', () => ({
-  useAuth: () => ({ sesion: { rol: 'ALUMNO' }, cerrarSesion: vi.fn() }),
-}));
 
 function renderizar() {
   return render(
@@ -49,6 +45,9 @@ describe('AyudaAlumno (Issue 3.17)', () => {
       'href',
       '/estudiante/configuracion',
     );
-    expect(screen.getByRole('link', { name: 'Inicio' })).toHaveAttribute('href', '/estudiante');
+    expect(screen.getByRole('link', { name: /Volver al inicio/ })).toHaveAttribute(
+      'href',
+      '/estudiante',
+    );
   });
 });

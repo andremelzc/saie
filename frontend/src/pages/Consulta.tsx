@@ -3,8 +3,11 @@ import { Link } from 'react-router-dom';
 import FormularioBusqueda from '../components/consulta/FormularioBusqueda';
 import TarjetaResultado from '../components/consulta/TarjetaResultado';
 import logoBlanco from '../assets/logo-blanco.svg';
+import { EnlaceSaltar, ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
+import { useTituloPagina } from '../hooks/useTituloPagina';
 import type { ResultadoConsulta } from '../types/consulta';
 import { agruparPorCurso } from '../utils/horario';
+import { plural } from '../utils/texto';
 
 /** Fases de la consulta: la vista muestra solo una a la vez. */
 type Fase =
@@ -13,9 +16,6 @@ type Fase =
   | { tipo: 'resultado'; resultado: ResultadoConsulta }
   | { tipo: 'sinResultado'; mensaje: string }
   | { tipo: 'error'; mensaje: string };
-
-const plural = (n: number, singular: string, pluralTexto: string) =>
-  `${n} ${n === 1 ? singular : pluralTexto}`;
 
 /** Agrupa un estado de una sola tarjeta bajo un <h2> (solo lectores de pantalla): h1 → h2 → h3. */
 const EstadoUnico: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -46,7 +46,7 @@ const Resultados: React.FC<{ resultado: ResultadoConsulta }> = ({ resultado }) =
     return (
       <section aria-labelledby="titulo-resultado" className="flex flex-col gap-3">
         <div>
-          <h2 id="titulo-resultado" className="m-0 text-xl font-bold" tabIndex={-1}>
+          <h2 id="titulo-resultado" className="m-0 font-serif text-xl font-bold" tabIndex={-1}>
             Tus clases
           </h2>
           <p role="status" className="m-0 mt-1 text-sm text-saie-muted">
@@ -101,7 +101,11 @@ const Resultados: React.FC<{ resultado: ResultadoConsulta }> = ({ resultado }) =
   return (
     <section aria-labelledby="titulo-resultado" className="flex flex-col gap-3">
       <div>
-        <h2 id="titulo-resultado" className="m-0 text-xl font-bold break-words" tabIndex={-1}>
+        <h2
+          id="titulo-resultado"
+          className="m-0 font-serif text-xl font-bold break-words"
+          tabIndex={-1}
+        >
           {curso.codigo} · {curso.nombre}
         </h2>
         <p role="status" className="m-0 mt-1 text-sm text-saie-muted">
@@ -178,6 +182,7 @@ const QueVeras: React.FC = () => (
 );
 
 export const Consulta: React.FC = () => {
+  useTituloPagina('Consulta de espacios');
   const [fase, setFase] = useState<Fase>({ tipo: 'inicial' });
   const zonaResultado = useRef<HTMLDivElement>(null);
 
@@ -191,9 +196,10 @@ export const Consulta: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-saie-canvas text-saie-text">
+      <EnlaceSaltar />
       {/* Header fijo con ancho extendido de 1200px para separar el logo y el enlace de retorno */}
-      <header className="sticky top-0 z-10 bg-saie-primary text-white shadow-[0_2px_8px_rgba(34,34,34,0.08)]">
-        <div className="max-w-[1200px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-10 bg-saie-primary text-white shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 h-18 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-white no-underline">
             <img src={logoBlanco} alt="SAIE" className="h-10 w-auto shrink-0" />
           </Link>
@@ -208,8 +214,10 @@ export const Consulta: React.FC = () => {
       </header>
 
       <main
+        id={ID_CONTENIDO}
+        tabIndex={-1}
         aria-label="Consulta de espacios"
-        className="mx-auto max-w-xl px-4 py-6 sm:py-10 flex flex-col gap-6"
+        className="mx-auto max-w-xl px-4 py-6 sm:py-10 flex flex-col gap-6 focus:outline-none"
       >
         <div>
           <p className="m-0 mb-2 inline-flex items-center gap-1.5 text-sm font-semibold text-saie-primary">
@@ -228,7 +236,7 @@ export const Consulta: React.FC = () => {
             </svg>
             Consulta pública, sin iniciar sesión
           </p>
-          <h1 className="m-0 font-serif text-[28px] leading-9 sm:text-[32px] sm:leading-10 font-bold">
+          <h1 className="m-0 text-2xl sm:text-3xl font-bold tracking-tight">
             Consulta de espacios
           </h1>
           <p className="m-0 mt-2 text-base text-saie-muted">
@@ -237,10 +245,10 @@ export const Consulta: React.FC = () => {
           </p>
         </div>
 
-        <div className="saie-rise relative overflow-hidden bg-white border border-saie-divider rounded-2xl shadow-[0_2px_8px_rgba(34,34,34,0.08)] p-4 pt-5 sm:p-6 sm:pt-7">
+        <div className="saie-rise relative overflow-hidden bg-white border border-saie-divider rounded-2xl shadow-sm p-4 pt-5 sm:p-6 sm:pt-7">
           <span
             aria-hidden="true"
-            className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-saie-primary to-[#A8383A]"
+            className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-saie-primary to-saie-primary-light"
           />
           <FormularioBusqueda
             mostrarErrorServidor={false}

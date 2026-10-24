@@ -80,7 +80,7 @@ describe('Auditoria e historial (Issue 4.32)', () => {
     montar(<AuditoriaAdmin />);
 
     expect(await screen.findByText('IS101 · 1')).toBeInTheDocument();
-    expect(screen.getAllByText('Reemplazada').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Anterior').length).toBeGreaterThan(0);
     expect(screen.getByText('Lab 03')).toBeInTheDocument();
   });
 
@@ -112,7 +112,7 @@ describe('Auditoria e historial (Issue 4.32)', () => {
     montar(<AuditoriaAdmin />);
     await screen.findByText('IS101 · 1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Auditoría' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Registro de actividad' }));
     expect(await screen.findByText('Asignación automática exitosa')).toBeInTheDocument();
     expect(screen.getByText('IS101 · 1')).toBeInTheDocument();
 
@@ -128,15 +128,15 @@ describe('Auditoria e historial (Issue 4.32)', () => {
     auditoria.mockResolvedValue({ items: [], total: 0, pagina: 1, limite: 200 });
     montar(<AuditoriaAdmin />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Auditoría' }));
-    expect(await screen.findByText(/Sin asientos de auditoría/)).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'Registro de actividad' }));
+    expect(await screen.findByText(/Sin actividad registrada/)).toBeInTheDocument();
   });
 
   it('avisa si la auditoría no se puede cargar', async () => {
     auditoria.mockRejectedValue(new Error('sin red'));
     montar(<AuditoriaAdmin />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Auditoría' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Registro de actividad' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
   });
 });
@@ -223,7 +223,7 @@ describe('Informe de salones (Issue 4.33)', () => {
 
     montar(<ReporteSalones />);
     await screen.findByText('Cuadro de asignación de aulas');
-    fireEvent.click(screen.getByRole('button', { name: 'Descargar PDF' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Imprimir o guardar como PDF' }));
 
     expect(imprimir).toHaveBeenCalled();
     vi.unstubAllGlobals();

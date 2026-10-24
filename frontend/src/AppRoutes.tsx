@@ -8,6 +8,9 @@ import PerfilAlumnoPage from './pages/PerfilAlumnoPage';
 import MapaOcupacionPage from './pages/MapaOcupacionPage';
 import RutaAlumnoPage from './pages/RutaAlumnoPage';
 import TelegramAlumnoPage from './pages/TelegramAlumnoPage';
+import AyudaAlumno from './pages/AyudaAlumno';
+import ConfiguracionAlumno from './pages/ConfiguracionAlumno';
+import NoEncontrada from './pages/NoEncontrada';
 import InicioDocentePage from './pages/docente/InicioDocentePage';
 import HorarioDocentePage from './pages/docente/HorarioDocentePage';
 import EspaciosDocentePage from './pages/docente/EspaciosDocentePage';
@@ -97,6 +100,23 @@ export const AppRoutes: React.FC = () => {
           element={
             <RutaProtegida rolesPermitidos={['ALUMNO']} rutaLogin={RUTAS.loginAlumno}>
               <TelegramAlumnoPage />
+            </RutaProtegida>
+          }
+        />
+        {/* Ayuda y preferencias de accesibilidad (Issue 3.17): existían pero no tenían ruta. */}
+        <Route
+          path={RUTAS.ayudaAlumno}
+          element={
+            <RutaProtegida rolesPermitidos={['ALUMNO']} rutaLogin={RUTAS.loginAlumno}>
+              <AyudaAlumno />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path={RUTAS.configuracionAlumno}
+          element={
+            <RutaProtegida rolesPermitidos={['ALUMNO']} rutaLogin={RUTAS.loginAlumno}>
+              <ConfiguracionAlumno />
             </RutaProtegida>
           }
         />
@@ -296,7 +316,7 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
-        <Route path="*" element={<Home />} />
+        <Route path="*" element={<NoEncontrada />} />
       </Routes>
     </ProveedorAvisos>
   );

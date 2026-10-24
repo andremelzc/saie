@@ -20,7 +20,7 @@ describe('describirMotivoEscalamiento', () => {
     const motivo = describirMotivoEscalamiento('Texto libre');
 
     expect(motivo.codigo).toBeNull();
-    expect(motivo.etiqueta).toBe('Motivo sin clasificar');
+    expect(motivo.etiqueta).toBe('Requiere revisión');
     expect(motivo.descripcion).toBe('Texto libre');
     expect(motivo.accion).toBeNull();
   });

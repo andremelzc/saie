@@ -77,12 +77,12 @@ describe('Gestión de espacios (Issue 4.15)', () => {
     expect(screen.queryByText(/Pab\./)).toBeNull();
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('No aplica')).toBeInTheDocument();
-    expect(screen.getByText('Habilitado')).toBeInTheDocument();
-    expect(screen.getByText('No asignable')).toBeInTheDocument();
+    expect(screen.getByText('En servicio')).toBeInTheDocument();
+    expect(screen.getByText('Fuera de servicio')).toBeInTheDocument();
     expect(screen.getByText('2 espacios')).toBeInTheDocument();
-    expect(screen.getByText(/1 aula teórica · 1 laboratorio/)).toBeInTheDocument();
-    // El conteo de no asignables es también el atajo para filtrarlos.
-    expect(screen.getByRole('button', { name: '1 no asignables' })).toBeInTheDocument();
+    expect(screen.getByText('1 aula teórica')).toBeInTheDocument();
+    expect(screen.getByText('1 laboratorio')).toBeInTheDocument();
+    expect(screen.getByText('1 fuera de servicio')).toBeInTheDocument();
   });
 
   it('filtra por tipo de espacio', async () => {
@@ -137,7 +137,7 @@ describe('Gestión de espacios (Issue 4.15)', () => {
     montar();
     await screen.findByText('AULA-101');
 
-    fireEvent.click(screen.getByLabelText('Solo deshabilitados'));
+    fireEvent.click(screen.getByLabelText('Solo fuera de servicio'));
     expect(screen.queryByText('AULA-101')).toBeNull();
     expect(screen.getByText('LAB-301')).toBeInTheDocument();
     expect(screen.getByText(/de 2 coinciden/)).toHaveTextContent('1 de 2 coinciden');
@@ -174,7 +174,7 @@ describe('Gestión de espacios (Issue 4.15)', () => {
     await screen.findByText('LAB-301');
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver detalle de LAB-301' }));
-    const dialogo = screen.getByRole('dialog', { name: 'LAB-301' });
+    const dialogo = screen.getByRole('dialog', { name: /LAB-301/ });
     expect(within(dialogo).getByText('Datos del espacio')).toBeVisible();
     expect(within(dialogo).getByText('3 PCs')).toBeInTheDocument();
     expect(within(dialogo).getByText('Sin software registrado.')).toBeInTheDocument();
@@ -206,7 +206,7 @@ describe('Gestión de espacios (Issue 4.15)', () => {
     await screen.findByText('AULA-101');
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver detalle de AULA-101' }));
-    const dialogo = screen.getByRole('dialog', { name: 'AULA-101' });
+    const dialogo = screen.getByRole('dialog', { name: /AULA-101/ });
     expect(within(dialogo).getByText(/Puedes editar: el código, la capacidad/)).toBeInTheDocument();
 
     fireEvent.click(within(dialogo).getByRole('button', { name: 'Editar espacio' }));
@@ -226,7 +226,7 @@ describe('Gestión de espacios (Issue 4.15)', () => {
     await screen.findByText('AULA-101');
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver detalle de AULA-101' }));
-    const dialogo = screen.getByRole('dialog', { name: 'AULA-101' });
+    const dialogo = screen.getByRole('dialog', { name: /AULA-101/ });
     fireEvent.click(within(dialogo).getByRole('button', { name: 'Editar espacio' }));
 
     fireEvent.change(within(dialogo).getByLabelText(/Capacidad \(aforo nominal\)/), {
@@ -256,7 +256,7 @@ describe('Gestión de espacios (Issue 4.15)', () => {
     await screen.findByText('AULA-101');
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver detalle de AULA-101' }));
-    const dialogo = screen.getByRole('dialog', { name: 'AULA-101' });
+    const dialogo = screen.getByRole('dialog', { name: /AULA-101/ });
     fireEvent.click(within(dialogo).getByRole('button', { name: 'Editar espacio' }));
 
     fireEvent.change(within(dialogo).getByLabelText(/Capacidad \(aforo nominal\)/), {

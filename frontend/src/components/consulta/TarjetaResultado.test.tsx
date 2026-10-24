@@ -72,14 +72,14 @@ describe('TarjetaResultado (Issue #135 / 3.6)', () => {
     expect(screen.getByText('ANT-101')).toBeInTheDocument();
 
     // 5. Horario
-    expect(screen.getByText(/Lunes/)).toBeInTheDocument();
-    expect(screen.getByText(/08:00 – 10:00/)).toBeInTheDocument();
+    expect(screen.getByText(/LUNES/i)).toBeInTheDocument();
+    expect(screen.getByText(/08:00 - 10:00/i)).toBeInTheDocument();
 
     // 6. Docente
     expect(screen.getByText('D001 - Carlos Mendoza')).toBeInTheDocument();
 
     // Estado vigente
-    expect(screen.getByText('Espacio confirmado')).toBeInTheDocument();
+    expect(screen.getByText('Aula confirmada')).toBeInTheDocument();
   });
 
   it('muestra correctamente los 6 campos requeridos diferenciando un laboratorio con ícono y etiqueta', () => {
@@ -90,8 +90,8 @@ describe('TarjetaResultado (Issue #135 / 3.6)', () => {
     expect(screen.getByText('Pabellón Nuevo')).toBeInTheDocument();
     expect(screen.getByText(/Piso 2/i)).toBeInTheDocument();
     expect(screen.getByText('NUE-lab-1')).toBeInTheDocument();
-    expect(screen.getByText(/Martes/)).toBeInTheDocument();
-    expect(screen.getByText(/10:00 – 12:00/)).toBeInTheDocument();
+    expect(screen.getByText(/MARTES/i)).toBeInTheDocument();
+    expect(screen.getByText(/10:00 - 12:00/i)).toBeInTheDocument();
     expect(screen.getByText('D002 - Ana Silva')).toBeInTheDocument();
   });
 

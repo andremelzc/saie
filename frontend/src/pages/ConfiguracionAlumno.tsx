@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
+import { Contenedor } from '../components/ui/Contenedor';
+import { ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
 import { aplicarPreferencias, guardarPreferencias, leerPreferencias } from '../utils/preferencias';
 import type { PreferenciasApp } from '../utils/preferencias';
+import { ICONOS } from '../components/ui/iconos';
 
-const TRAZO_AJUSTES =
-  'M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75';
+const TRAZO_AJUSTES = ICONOS.ajustes;
 
 interface OpcionPreferencia {
   clave: keyof PreferenciasApp;
@@ -74,16 +76,22 @@ export const ConfiguracionAlumno: React.FC = () => {
         titulo="Configuración"
         subtitulo="Ajusta la app a tu comodidad."
         trazoIcono={TRAZO_AJUSTES}
-        ancho="max-w-4xl"
+        ancho="normal"
       />
 
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-3 px-4 py-6">
+      <Contenedor
+        como="main"
+        ancho="normal"
+        id={ID_CONTENIDO}
+        tabIndex={-1}
+        className="flex flex-col gap-3 py-6 focus:outline-none"
+      >
         <section
           aria-labelledby="config-accesibilidad"
-          className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-5 shadow-[0_2px_8px_rgba(34,34,34,0.06)] sm:p-6"
+          className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-5 shadow-sm sm:p-6"
         >
           <div>
-            <h2 id="config-accesibilidad" className="m-0 text-xl font-bold">
+            <h2 id="config-accesibilidad" className="m-0 font-serif text-xl font-bold">
               Accesibilidad
             </h2>
             <p className="m-0 mt-1 text-sm text-saie-muted">
@@ -112,7 +120,7 @@ export const ConfiguracionAlumno: React.FC = () => {
         <p role="status" className="m-0 min-h-5 px-1 text-sm text-saie-muted">
           {guardado ? 'Cambio guardado en este dispositivo.' : ''}
         </p>
-      </main>
+      </Contenedor>
     </div>
   );
 };

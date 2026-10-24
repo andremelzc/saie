@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
 import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
+import { EstadoError } from '../components/ui/EstadoError';
+import { Contenedor } from '../components/ui/Contenedor';
+import { ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
 import { EsqueletoCarga, Icono } from '../components/estudiante/ElementosHorario';
+import { Boton } from '../components/ui/Boton';
+import { clasesBoton } from '../components/ui/clasesBoton';
+import { DialogoConfirmacion } from '../components/ui/DialogoConfirmacion';
 import { useCarga } from '../hooks/useCarga';
+import { ZONA_HORARIA } from '../utils/admin';
 import { desvincularTelegram, mensajeDeError, obtenerTelegram } from '../services/estudiante';
 import type { EstadoTelegramDTO } from '../types/perfil';
 
 const TRAZO_TELEGRAM = 'M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z';
 const TRAZO_CANDADO =
   'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4';
-const TRAZO_ALERTA =
-  'M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z';
 
 type Mensaje = { tipo: 'ok' | 'error'; texto: string } | null;
 
@@ -18,11 +23,13 @@ function formatearFechaHora(iso: string | null): string | null {
   if (!iso) return null;
   const fecha = new Date(iso);
   if (Number.isNaN(fecha.getTime())) return null;
-  return fecha.toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' });
+  return fecha.toLocaleDateString('es-PE', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: ZONA_HORARIA,
+  });
 }
-
-const estilosBoton =
-  'inline-flex min-h-11 w-fit cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-saie-primary disabled:cursor-not-allowed disabled:opacity-60';
 
 /**
  * Issue 3.28 — pantalla de avisos por Telegram. La vinculación se hace desde el bot (el alumno
@@ -71,54 +78,36 @@ export const TelegramAlumnoPage: React.FC = () => {
         titulo="Avisos por Telegram"
         subtitulo="Recibe un aviso cuando cambie el aula o el laboratorio de una de tus clases."
         trazoIcono={TRAZO_TELEGRAM}
-        ancho="max-w-4xl"
+        ancho="normal"
       />
 
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6">
+      <Contenedor
+        como="main"
+        ancho="normal"
+        id={ID_CONTENIDO}
+        tabIndex={-1}
+        className="flex flex-col gap-6 py-6 focus:outline-none"
+      >
         {cargando && !estado ? (
           <EsqueletoCarga texto="Consultando tu vinculación…" />
         ) : error && !estado ? (
-          <div
-            role="alert"
-            className="flex flex-col items-start gap-3 rounded-2xl border border-saie-danger/30 bg-saie-danger-soft p-4 text-sm font-medium text-saie-danger-strong"
-          >
-            <p className="m-0 flex items-start gap-2">
-              <Icono trazo={TRAZO_ALERTA} className="mt-0.5 h-5 w-5 shrink-0" />
-              <span>{`No pudimos consultar tu vinculación. ${error}`}</span>
-            </p>
-            <button
-              type="button"
-              onClick={reintentarCarga}
-              className={`${estilosBoton} bg-saie-primary text-white hover:bg-saie-primary-dark`}
-            >
-              Reintentar
-            </button>
-          </div>
+          <EstadoError
+            mensaje={`No pudimos consultar tu vinculación. ${error}`}
+            onReintentar={reintentarCarga}
+          />
         ) : (
           estado && (
             <>
               {error && (
-                <div
-                  role="alert"
-                  className="flex flex-col items-start gap-3 rounded-2xl border border-saie-danger/30 bg-saie-danger-soft p-4 text-sm font-medium text-saie-danger-strong"
-                >
-                  <p className="m-0 flex items-start gap-2">
-                    <Icono trazo={TRAZO_ALERTA} className="mt-0.5 h-5 w-5 shrink-0" />
-                    <span>{`No pudimos actualizar tu vinculación. ${error}`}</span>
-                  </p>
-                  <button
-                    type="button"
-                    onClick={reintentarCarga}
-                    className={`${estilosBoton} bg-saie-primary text-white hover:bg-saie-primary-dark`}
-                  >
-                    Reintentar
-                  </button>
-                </div>
+                <EstadoError
+                  mensaje={`No pudimos actualizar tu vinculación. ${error}`}
+                  onReintentar={reintentarCarga}
+                />
               )}
 
               <section
                 aria-labelledby="titulo-telegram"
-                className="rounded-2xl border border-saie-divider bg-white p-5 shadow-[0_2px_8px_rgba(34,34,34,0.06)] sm:p-6"
+                className="rounded-2xl border border-saie-divider bg-white p-5 shadow-sm sm:p-6"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
@@ -171,55 +160,38 @@ export const TelegramAlumnoPage: React.FC = () => {
 
                 <div className="mt-5 border-t border-saie-divider pt-4">
                   {estado.vinculado ? (
-                    confirmando ? (
-                      <div
-                        role="group"
-                        aria-label="Confirmar desvinculación"
-                        className="rounded-xl bg-saie-canvas p-4"
-                      >
-                        <p className="m-0 text-sm text-saie-text">
-                          ¿Seguro que quieres dejar de recibir avisos? Podrás volver a vincularte
-                          cuando quieras.
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={ejecutarBaja}
-                            disabled={desvinculando}
-                            className={`${estilosBoton} bg-saie-danger text-white hover:opacity-90`}
-                          >
-                            {desvinculando ? 'Desvinculando…' : 'Sí, desvincular'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmando(false)}
-                            disabled={desvinculando}
-                            className={`${estilosBoton} border border-saie-divider bg-white text-saie-text hover:bg-saie-canvas`}
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
+                    <>
+                      <Boton
+                        variante="cancelar"
+                        tamano="sm"
                         onClick={() => {
                           setMensaje(null);
                           setConfirmando(true);
                         }}
-                        className={`${estilosBoton} border border-saie-divider bg-white text-saie-text hover:bg-saie-canvas`}
                       >
                         Desvincular mi Telegram
-                      </button>
-                    )
+                      </Boton>
+                      <DialogoConfirmacion
+                        abierto={confirmando}
+                        titulo="¿Dejar de recibir avisos por Telegram?"
+                        descripcion="Podrás volver a vincularte cuando quieras."
+                        textoConfirmar="Sí, desvincular"
+                        variante="peligro"
+                        cargando={desvinculando}
+                        textoCargando="Desvinculando…"
+                        onConfirmar={ejecutarBaja}
+                        onCancelar={() => setConfirmando(false)}
+                      />
+                    </>
                   ) : estado.botUsername ? (
                     <a
                       href={`https://t.me/${estado.botUsername}`}
                       target="_blank"
                       rel="noreferrer"
-                      className={`${estilosBoton} bg-saie-primary text-white no-underline hover:bg-saie-primary-dark`}
+                      className={clasesBoton('primario', 'sm')}
                     >
                       Abrir el bot en Telegram
+                      <span className="sr-only"> (se abre en una pestaña nueva)</span>
                     </a>
                   ) : (
                     <p className="m-0 text-sm text-saie-muted">
@@ -242,21 +214,21 @@ export const TelegramAlumnoPage: React.FC = () => {
                   <span aria-hidden="true">{mensaje.tipo === 'error' ? '⚠' : '✓'}</span>
                   <span className="min-w-0 flex-1">{mensaje.texto}</span>
                   {mensaje.tipo === 'error' && (
-                    <button
-                      type="button"
+                    <Boton
+                      variante="peligro"
+                      tamano="sm"
                       onClick={ejecutarBaja}
                       disabled={desvinculando}
-                      className={`${estilosBoton} bg-saie-danger text-white hover:opacity-90`}
                     >
                       Reintentar
-                    </button>
+                    </Boton>
                   )}
                 </div>
               )}
 
               <section
                 aria-labelledby="titulo-como-vincular"
-                className="rounded-2xl border border-saie-divider bg-white p-5 shadow-[0_2px_8px_rgba(34,34,34,0.06)] sm:p-6"
+                className="rounded-2xl border border-saie-divider bg-white p-5 shadow-sm sm:p-6"
               >
                 <h2
                   id="titulo-como-vincular"
@@ -333,7 +305,7 @@ export const TelegramAlumnoPage: React.FC = () => {
 
               <section
                 aria-labelledby="titulo-comandos"
-                className="rounded-2xl border border-saie-divider bg-white p-5 shadow-[0_2px_8px_rgba(34,34,34,0.06)] sm:p-6"
+                className="rounded-2xl border border-saie-divider bg-white p-5 shadow-sm sm:p-6"
               >
                 <h2 id="titulo-comandos" className="m-0 font-serif text-xl font-bold leading-7">
                   Qué puedes consultar en el bot
@@ -356,7 +328,7 @@ export const TelegramAlumnoPage: React.FC = () => {
             </>
           )
         )}
-      </main>
+      </Contenedor>
     </div>
   );
 };

@@ -101,7 +101,7 @@ describe('Lista de alertas (Issue 4.10)', () => {
 
     const tarjeta = await screen.findByRole('article');
     fireEvent.click(within(tarjeta).getByRole('button', { name: 'Marcar como resuelta' }));
-    fireEvent.click(within(tarjeta).getByRole('button', { name: 'Sí, resolver' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, resolver' }));
 
     await waitFor(() => expect(patch).toHaveBeenCalledWith('/v1/admin/alertas/a1/resolver'));
     expect(await screen.findByText('Alerta de LAB-301 marcada como resuelta.')).toBeInTheDocument();
@@ -163,7 +163,7 @@ describe('Lista de alertas (Issue 4.10)', () => {
 
     const tarjeta = await screen.findByRole('article');
     fireEvent.click(within(tarjeta).getByRole('button', { name: 'Marcar como resuelta' }));
-    fireEvent.click(within(tarjeta).getByRole('button', { name: 'Sí, resolver' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, resolver' }));
 
     const aviso = await screen.findByRole('alert');
     expect(aviso).toHaveTextContent('Inténtalo de nuevo en unos minutos.');

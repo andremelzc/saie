@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import type { AlertaDTO, TipoAlerta } from '../../types/admin';
 import { formatearFechaAlerta } from '../../utils/admin';
-import { ESTADO_ALERTA, ETIQUETA_TIPO_ALERTA } from '../../utils/etiquetas';
+import { etiquetaTipoAlerta } from '../../utils/diccionarios';
 import { BadgeEstado } from '../ui/BadgeEstado';
 import { Boton } from '../ui/Boton';
+import { DialogoConfirmacion } from '../ui/DialogoConfirmacion';
+import { ICONOS } from '../ui/iconos';
 
 /** Issue 4.9 — fila/tarjeta de alerta. Cada tipo tiene color, ícono y etiqueta propios. */
 
@@ -14,15 +16,19 @@ function textoCursosOcultos(cantidad: number): string {
   return cantidad === 1 ? 'curso' : 'cursos';
 }
 
-const ESTILO_TIPO: Record<TipoAlerta, { borde: string; chip: string; trazo: string }> = {
+const ESTILO_TIPO: Record<
+  TipoAlerta,
+  { etiqueta: string; borde: string; chip: string; trazo: string }
+> = {
   SOFTWARE: {
+    etiqueta: 'Software',
     borde: 'border-l-saie-info',
     chip: 'bg-saie-info-soft text-saie-info',
     // Monitor
-    trazo:
-      'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+    trazo: ICONOS.monitor,
   },
   CAPACIDAD: {
+    etiqueta: 'Capacidad',
     borde: 'border-l-saie-warning-strong',
     chip: 'bg-saie-warning-soft text-saie-warning-strong',
     // Personas
@@ -42,7 +48,10 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
   onResolver,
   resolviendo = false,
 }) => {
-  const estilo = ESTILO_TIPO[alerta.tipo];
+  const estilo = ESTILO_TIPO[alerta.tipo] ?? {
+    ...ESTILO_TIPO.SOFTWARE,
+    etiqueta: etiquetaTipoAlerta(alerta.tipo),
+  };
   const resuelta = alerta.estado === 'RESUELTA';
   const [confirmando, setConfirmando] = useState(false);
   const [mostrarTodos, setMostrarTodos] = useState(false);
@@ -53,9 +62,9 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
 
   return (
     <article
-      aria-label={`Alerta de ${ETIQUETA_TIPO_ALERTA[alerta.tipo].toLowerCase()} en ${alerta.espacio.identificador}`}
+      aria-label={`Alerta de ${estilo.etiqueta.toLowerCase()} en ${alerta.espacio.identificador}`}
       data-tipo={alerta.tipo}
-      className={`flex flex-col gap-3 rounded-xl border border-saie-divider border-l-4 ${estilo.borde} bg-white p-4 ${resuelta ? 'opacity-70' : ''}`}
+      className={`flex flex-col gap-3 rounded-xl border border-saie-divider border-l-4 ${estilo.borde} bg-white p-4 shadow-sm ${resuelta ? 'opacity-70' : ''}`}
     >
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-3">
@@ -86,10 +95,10 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${estilo.chip}`}>
-            {ETIQUETA_TIPO_ALERTA[alerta.tipo]}
+            {estilo.etiqueta}
           </span>
-          <BadgeEstado tono={ESTADO_ALERTA[alerta.estado].tono}>
-            {ESTADO_ALERTA[alerta.estado].etiqueta}
+          <BadgeEstado tono={resuelta ? 'exito' : 'peligro'}>
+            {resuelta ? 'Resuelta' : 'Pendiente'}
           </BadgeEstado>
         </div>
       </header>
@@ -104,7 +113,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
           <p className="m-0 text-sm text-saie-muted">Ninguno</p>
         ) : (
           <>
-            <ul className="m-0 flex list-none flex-wrap items-center gap-1.5 p-0">
+            <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
               {visibles.map((a) => (
                 <li
                   key={a.asignacionId}
@@ -113,19 +122,18 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
                   {a.codigoCurso} · {a.codigoSeccion} — {a.nombreCurso}
                 </li>
               ))}
-              {cursos.length > MAX_CURSOS_VISIBLES && (
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => setMostrarTodos((v) => !v)}
-                    aria-expanded={mostrarTodos}
-                    className="cursor-pointer rounded-md px-2 py-1 text-xs font-semibold text-saie-primary hover:bg-saie-primary/5"
-                  >
-                    {mostrarTodos ? 'Ver menos' : `+${ocultos} ${textoCursosOcultos(ocultos)} más`}
-                  </button>
-                </li>
-              )}
             </ul>
+            {cursos.length > MAX_CURSOS_VISIBLES && (
+              <Boton
+                variante="fantasma"
+                tamano="sm"
+                onClick={() => setMostrarTodos((v) => !v)}
+                aria-expanded={mostrarTodos}
+                className="mt-1"
+              >
+                {mostrarTodos ? 'Ver menos' : `+${ocultos} ${textoCursosOcultos(ocultos)} más`}
+              </Boton>
+            )}
           </>
         )}
       </div>
@@ -136,45 +144,27 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
         </time>
         {!resuelta && onResolver && (
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {confirmando ? (
-              <fieldset
-                aria-label="Confirmar resolución"
-                className="flex flex-wrap items-center justify-end gap-2 border-0 p-0"
-              >
-                <span className="text-sm font-semibold text-saie-text">¿Marcar como resuelta?</span>
-                <Boton
-                  variante="cancelar"
-                  tamano="sm"
-                  onClick={() => setConfirmando(false)}
-                  disabled={resolviendo}
-                >
-                  Cancelar
-                </Boton>
-                <Boton
-                  variante="primario"
-                  tamano="sm"
-                  onClick={() => {
-                    setConfirmando(false);
-                    onResolver(alerta.id);
-                  }}
-                  cargando={resolviendo}
-                  textoCargando="Marcando…"
-                >
-                  Sí, resolver
-                </Boton>
-              </fieldset>
-            ) : (
-              <Boton
-                variante="primario"
-                tamano="sm"
-                onClick={() => setConfirmando(true)}
-                disabled={resolviendo}
-                cargando={resolviendo}
-                textoCargando="Marcando…"
-              >
-                Marcar como resuelta
-              </Boton>
-            )}
+            <Boton
+              variante="primario"
+              tamano="sm"
+              onClick={() => setConfirmando(true)}
+              disabled={resolviendo}
+              cargando={resolviendo}
+              textoCargando="Marcando…"
+            >
+              Marcar como resuelta
+            </Boton>
+            <DialogoConfirmacion
+              abierto={confirmando}
+              titulo="¿Marcar como resuelta?"
+              descripcion={`La alerta de ${alerta.espacio.identificador} dejará de aparecer en la lista de pendientes.`}
+              textoConfirmar="Sí, resolver"
+              onConfirmar={() => {
+                setConfirmando(false);
+                onResolver(alerta.id);
+              }}
+              onCancelar={() => setConfirmando(false)}
+            />
           </div>
         )}
       </footer>

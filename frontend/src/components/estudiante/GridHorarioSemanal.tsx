@@ -106,7 +106,7 @@ export const GridHorarioSemanal: React.FC<GridHorarioSemanalProps> = ({
                     <li
                       key={`${sesion.seccionId}-${sesion.horaInicio}`}
                       title={sesion.nombreCurso}
-                      className="absolute inset-x-1 overflow-hidden rounded-lg border-l-4 px-2 py-1 text-saie-text shadow-[0_1px_2px_rgba(34,34,34,0.12)]"
+                      className="absolute inset-x-1 overflow-hidden rounded-lg border-l-4 px-2 py-1 text-saie-text shadow-sm"
                       style={{
                         top: `${top}%`,
                         height: `calc(${height}% - 2px)`,
@@ -120,7 +120,7 @@ export const GridHorarioSemanal: React.FC<GridHorarioSemanalProps> = ({
                       <p className="m-0 truncate text-xs leading-4">
                         {resumenUbicacion(sesion.espacios)}
                       </p>
-                      <p className="m-0 truncate text-xs leading-4 text-saie-text/80">
+                      <p className="m-0 truncate text-xs leading-4 text-saie-muted">
                         {formatearRango(sesion.horaInicio, sesion.horaFin)}
                       </p>
                     </li>

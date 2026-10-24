@@ -5,10 +5,6 @@ import TelegramAlumnoPage from './TelegramAlumnoPage';
 import { desvincularTelegram, obtenerTelegram } from '../services/estudiante';
 import type { EstadoTelegramDTO } from '../types/perfil';
 
-vi.mock('../context/useAuth', () => ({
-  useAuth: () => ({ sesion: { rol: 'ALUMNO' }, cerrarSesion: vi.fn() }),
-}));
-
 vi.mock('../services/estudiante', () => ({
   obtenerTelegram: vi.fn(),
   desvincularTelegram: vi.fn(),
@@ -45,7 +41,7 @@ describe('TelegramAlumnoPage', () => {
 
     expect(await screen.findByText('Sin vincular')).toBeInTheDocument();
     expect(screen.getByText('22200101 miClave')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Abrir el bot en Telegram' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Abrir el bot en Telegram/ })).toHaveAttribute(
       'href',
       'https://t.me/saie_bot',
     );
@@ -59,7 +55,9 @@ describe('TelegramAlumnoPage', () => {
     montar();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Desvincular mi Telegram' }));
-    expect(screen.getByRole('group', { name: 'Confirmar desvinculación' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('alertdialog', { name: /Dejar de recibir avisos/ }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Sí, desvincular' }));
 
@@ -75,7 +73,7 @@ describe('TelegramAlumnoPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Desvincular mi Telegram' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
 
-    expect(screen.queryByRole('group', { name: 'Confirmar desvinculación' })).toBeNull();
+    expect(screen.queryByRole('alertdialog', { name: /Dejar de recibir avisos/ })).toBeNull();
     expect(baja).not.toHaveBeenCalled();
   });
 
@@ -112,6 +110,6 @@ describe('TelegramAlumnoPage', () => {
     montar();
 
     expect(await screen.findByText(/no está configurado todavía/)).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Abrir el bot en Telegram' })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Abrir el bot en Telegram/ })).toBeNull();
   });
 });

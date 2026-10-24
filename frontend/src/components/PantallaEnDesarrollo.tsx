@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTituloPagina } from '../hooks/useTituloPagina';
 import CabeceraPortal from './CabeceraPortal';
+import { EnlaceSaltar, ID_CONTENIDO } from './ui/EnlaceSaltar';
 
 /** Texto único de todas las pantallas aún no construidas. */
 export const MENSAJE_EN_DESARROLLO = 'Esta sección estará disponible próximamente.';
@@ -35,7 +37,7 @@ export const AvisoEnDesarrollo: React.FC<AvisoEnDesarrolloProps> = ({
   <section
     aria-label={titulo ? undefined : 'Funcionalidad en desarrollo'}
     aria-labelledby={titulo ? 'titulo-pantalla' : undefined}
-    className="relative overflow-hidden rounded-2xl border border-saie-divider bg-white p-6 shadow-[var(--saie-shadow-1)] sm:p-8"
+    className="relative overflow-hidden rounded-2xl border border-saie-divider bg-white p-6 shadow-sm sm:p-8"
   >
     <span
       aria-hidden="true"
@@ -59,7 +61,7 @@ export const AvisoEnDesarrollo: React.FC<AvisoEnDesarrolloProps> = ({
 
       <div className="flex flex-col gap-2">
         {titulo && (
-          <h1 id="titulo-pantalla" className="m-0 font-serif text-2xl font-bold sm:text-3xl">
+          <h1 id="titulo-pantalla" className="m-0 text-2xl font-bold sm:text-3xl tracking-tight">
             {titulo}
           </h1>
         )}
@@ -115,27 +117,36 @@ export const PantallaEnDesarrollo: React.FC<PantallaEnDesarrolloProps> = ({
   funciones = [],
   volverA,
   portal = 'Estudiante',
-}) => (
-  <div className="min-h-screen bg-saie-canvas text-saie-text">
-    <CabeceraPortal portal={portal} />
+}) => {
+  useTituloPagina(titulo);
 
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-10">
-      <nav aria-label="Ruta de navegación" className="text-sm">
-        <Link
-          to={volverA.to}
-          className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-saie-primary px-4 font-medium text-saie-primary no-underline transition-colors hover:bg-white"
-        >
-          <span aria-hidden="true" className="rotate-180">
-            <IconoFlecha />
-          </span>
-          {volverA.etiqueta}
-        </Link>
-      </nav>
+  return (
+    <div className="min-h-screen bg-saie-canvas text-saie-text">
+      <EnlaceSaltar />
+      <CabeceraPortal portal={portal} />
 
-      <AvisoEnDesarrollo titulo={titulo} descripcion={descripcion} funciones={funciones} />
-    </main>
-  </div>
-);
+      <main
+        id={ID_CONTENIDO}
+        tabIndex={-1}
+        className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-10 focus:outline-none"
+      >
+        <nav aria-label="Ruta de navegación" className="text-sm">
+          <Link
+            to={volverA.to}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-saie-primary px-4 font-medium text-saie-primary no-underline transition-colors hover:bg-white"
+          >
+            <span aria-hidden="true" className="rotate-180">
+              <IconoFlecha />
+            </span>
+            {volverA.etiqueta}
+          </Link>
+        </nav>
+
+        <AvisoEnDesarrollo titulo={titulo} descripcion={descripcion} funciones={funciones} />
+      </main>
+    </div>
+  );
+};
 
 const IconoFlecha: React.FC = () => (
   <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">

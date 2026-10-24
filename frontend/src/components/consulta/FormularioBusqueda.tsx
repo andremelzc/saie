@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import api from '../../services/api';
+import { TEXTOS_ERROR } from '../../config/textos';
+import { Boton } from '../ui/Boton';
+import { estadoHttp, mensajeDeError, mensajeSeguroDelServidor } from '../../services/errores';
 import type {
   ConsultaAlumnoResponseDTO,
   ConsultaCursoResponseDTO,
@@ -7,6 +10,7 @@ import type {
   TipoCodigoConsulta,
 } from '../../types/consulta';
 import { detectarTipoCodigo } from '../../utils/consulta';
+import { ICONOS } from '../ui/iconos';
 
 export interface FormularioBusquedaProps {
   onBuscar?: (resultado: ResultadoConsulta, codigo: string, tipo: TipoCodigoConsulta) => void;
@@ -108,31 +112,24 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
         onBuscar?.(resultado, codigoCurso, 'CURSO');
       }
     } catch (err: unknown) {
+      const estado = estadoHttp(err);
       let mensaje = 'Error al realizar la consulta. Por favor, intenta de nuevo.';
-      let estado: number | undefined;
 
-      if (
-        typeof err === 'object' &&
-        err !== null &&
-        'response' in err &&
-        typeof (err as { response?: { data?: { message?: string }; status?: number } }).response ===
-          'object'
-      ) {
-        const axiosErr = err as {
-          response?: { data?: { message?: string }; status?: number };
-        };
-        estado = axiosErr.response?.status;
-        if (axiosErr.response?.data?.message) {
-          mensaje = axiosErr.response.data.message;
-        } else if (axiosErr.response?.status === 404) {
-          mensaje =
-            tipoDetectado === 'ALUMNO'
-              ? `No se encontró ningún estudiante con el código ${codigoNormalizado}`
-              : `No se encontró ningún curso con el código ${codigoNormalizado.toUpperCase()}`;
-        }
+      if (estado === undefined) {
+        // Sin respuesta: un tiempo agotado se distingue de no tener conexión.
+        const general = mensajeDeError(err);
+        mensaje =
+          general === TEXTOS_ERROR.tiempoAgotado
+            ? general
+            : 'No se pudo conectar con el servicio. Revisa tu conexión e inténtalo de nuevo.';
       } else {
-        // Sin respuesta del servidor: no hay conexión o el servicio no está disponible.
-        mensaje = 'No se pudo conectar con el servicio. Revisa tu conexión e inténtalo de nuevo.';
+        mensaje =
+          mensajeSeguroDelServidor(err) ??
+          (estado === 404
+            ? tipoDetectado === 'ALUMNO'
+              ? `No se encontró ningún estudiante con el código ${codigoNormalizado}`
+              : `No se encontró ningún curso con el código ${codigoNormalizado.toUpperCase()}`
+            : mensaje);
       }
 
       setErrorServidor(mensaje);
@@ -172,11 +169,7 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
                 viewBox="0 0 20 20"
                 aria-hidden="true"
               >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
+                <path fillRule="evenodd" d={ICONOS.checkCirculo} clipRule="evenodd" />
               </svg>
               {tipoDetectado === 'ALUMNO' ? 'Estudiante detectado' : 'Curso detectado'}
             </span>
@@ -225,49 +218,23 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
               aria-required="true"
               aria-invalid={tieneError}
               aria-describedby={tieneError ? 'mensaje-error-consulta' : idAyuda}
-              className={`w-full h-12 pl-11 pr-4 rounded-[10px] bg-white text-saie-text placeholder-saie-muted text-base border transition-colors outline-hidden ${
+              className={`w-full h-12 pl-11 pr-4 rounded-xl bg-white text-saie-text placeholder:text-saie-muted text-base border transition-colors outline-hidden ${
                 tieneError
                   ? 'border-2 border-saie-danger focus:ring-3 focus:ring-saie-danger/20'
                   : 'border-saie-border hover:border-saie-text/60 focus:border-2 focus:border-saie-primary focus:ring-3 focus:ring-saie-primary/20'
-              } disabled:bg-[#F1EDE3] disabled:text-saie-muted disabled:border-saie-divider`}
+              } disabled:bg-saie-canvas-dark disabled:text-saie-muted disabled:border-saie-divider`}
             />
           </div>
 
-          <button
+          <Boton
             type="submit"
-            disabled={cargando}
-            aria-busy={cargando}
-            className="w-full lg:w-auto min-w-[120px] h-12 px-6 rounded-[12px] font-medium text-base text-white transition-all duration-150 flex items-center justify-center gap-2 shadow-[0_2px_8px_rgba(123,17,19,0.25)] focus:outline-hidden focus:ring-3 focus:ring-saie-text focus:ring-offset-2 bg-saie-primary hover:bg-saie-primary-dark active:bg-saie-primary-dark disabled:bg-saie-divider disabled:text-saie-muted disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
+            cargando={cargando}
+            textoCargando="Buscando..."
+            claseContenedor="w-full lg:w-auto"
+            className="w-full lg:w-auto lg:min-w-30"
           >
-            {cargando ? (
-              <>
-                <svg
-                  className="animate-spin h-5 w-5 text-current"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                  />
-                </svg>
-                <span>Buscando...</span>
-              </>
-            ) : (
-              <span>Buscar</span>
-            )}
-          </button>
+            Buscar
+          </Boton>
         </div>
 
         {/* Error: ícono y texto en 14 px (Guía de Estilos §4.5); nunca solo color */}
@@ -283,11 +250,7 @@ export const FormularioBusqueda: React.FC<FormularioBusquedaProps> = ({
               viewBox="0 0 20 20"
               aria-hidden="true"
             >
-              <path
-                fillRule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                clipRule="evenodd"
-              />
+              <path fillRule="evenodd" d={ICONOS.errorCirculo} clipRule="evenodd" />
             </svg>
             <span>{mensajeError}</span>
           </div>

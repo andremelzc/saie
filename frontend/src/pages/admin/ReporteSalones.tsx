@@ -3,7 +3,9 @@ import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { EsqueletoCarga } from '../../components/estudiante/ElementosHorario';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
-import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
+import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
+import { Campo } from '../../components/ui/Campo';
+import { CLASE_CAMPO } from '../../components/ui/campos';
 import { useCarga } from '../../hooks/useCarga';
 import { obtenerReporteAsignaciones } from '../../services/admin';
 import { formatearFechaCorta } from '../../utils/admin';
@@ -40,14 +42,13 @@ export const ReporteSalones: React.FC = () => {
             Actualizar
           </Boton>
           <Boton variante="primario" onClick={imprimir} disabled={!datos}>
-            Descargar PDF
+            Imprimir o guardar como PDF
           </Boton>
         </div>
       }
     >
       <div className="flex flex-col gap-4">
-        <label className="flex max-w-xs flex-col gap-1 saie-no-imprimir">
-          <span className={CLASE_ETIQUETA}>Periodo</span>
+        <Campo etiqueta="Periodo" className="flex max-w-xs flex-col gap-1 saie-no-imprimir">
           <input
             type="text"
             placeholder="Ej. 2026-2 (vacío = vigente)"
@@ -55,7 +56,7 @@ export const ReporteSalones: React.FC = () => {
             onChange={(e) => setPeriodo(e.target.value)}
             className={CLASE_CAMPO}
           />
-        </label>
+        </Campo>
 
         {error && (
           <div className="saie-no-imprimir">
@@ -64,7 +65,7 @@ export const ReporteSalones: React.FC = () => {
         )}
 
         {cargando && !datos ? (
-          <EsqueletoCarga texto="Preparando el informe…" />
+          <EsqueletoCarga texto="Preparando el informe…" forma="tabla" />
         ) : datos ? (
           <article className="flex flex-col gap-5">
             <header className="flex flex-wrap items-end justify-between gap-3 border-b border-saie-divider pb-4">
@@ -107,72 +108,54 @@ export const ReporteSalones: React.FC = () => {
             {datos.totales.sinAula > 0 && (
               <p className="saie-no-imprimir m-0 rounded-xl border border-saie-warning-strong/30 bg-saie-warning-soft p-3 text-sm font-medium text-saie-warning-strong">
                 {datos.totales.sinAula === 1
-                  ? '1 sección todavía no tiene aula'
-                  : `${datos.totales.sinAula} secciones todavía no tienen aula`}
-                : están marcadas en la tabla y conviene resolverlas antes de presentar el cuadro.
+                  ? '1 sección todavía no tiene aula: está marcada en la tabla y conviene resolverla antes de presentar el cuadro.'
+                  : `${datos.totales.sinAula} secciones todavía no tienen aula: están marcadas en la tabla y conviene resolverlas antes de presentar el cuadro.`}
               </p>
             )}
 
-            <div className="saie-imprimir-tabla overflow-x-auto rounded-xl border border-saie-divider bg-white">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-saie-canvas text-xs uppercase tracking-wide text-saie-muted">
-                  <tr>
-                    <th scope="col" className="px-3 py-2">
-                      Código
-                    </th>
-                    <th scope="col" className="px-3 py-2">
-                      Curso
-                    </th>
-                    <th scope="col" className="px-3 py-2">
-                      Sec.
-                    </th>
-                    <th scope="col" className="px-3 py-2">
-                      Aula
-                    </th>
-                    <th scope="col" className="px-3 py-2">
-                      Horario
-                    </th>
-                    <th scope="col" className="px-3 py-2">
-                      Docente
-                    </th>
-                    <th scope="col" className="px-3 py-2">
-                      Alm.
-                    </th>
-                    <th scope="col" className="px-3 py-2">
-                      Software
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {datos.secciones.map((s) => (
-                    <tr
-                      key={`${s.codigoCurso}-${s.codigoSeccion}`}
-                      className="border-t border-saie-divider"
-                    >
-                      <td className="px-3 py-2 font-mono text-xs">{s.codigoCurso}</td>
-                      <td className="px-3 py-2">{s.nombreCurso}</td>
-                      <td className="px-3 py-2 font-semibold">{s.codigoSeccion}</td>
-                      <td className="px-3 py-2">
-                        {s.aula ? (
-                          <span>
-                            <span className="font-semibold">{s.aula.identificador}</span>
-                            <span className="block text-xs text-saie-muted">
-                              {s.aula.pabellon} · piso {s.aula.piso}
-                            </span>
+            <TablaDatos etiqueta="Cuadro de asignación de aulas" className="saie-imprimir-tabla">
+              <CabeceraTabla
+                compacta
+                columnas={[
+                  'Código',
+                  'Curso',
+                  'Sección',
+                  'Aula',
+                  'Horario',
+                  'Docente',
+                  'Alumnos',
+                  'Software',
+                ]}
+              />
+              <tbody>
+                {datos.secciones.map((s) => (
+                  <tr
+                    key={`${s.codigoCurso}-${s.codigoSeccion}`}
+                    className="border-t border-saie-divider"
+                  >
+                    <td className="px-3 py-2 font-mono text-xs">{s.codigoCurso}</td>
+                    <td className="px-3 py-2">{s.nombreCurso}</td>
+                    <td className="px-3 py-2 font-semibold">{s.codigoSeccion}</td>
+                    <td className="px-3 py-2">
+                      {s.aula ? (
+                        <span>
+                          <span className="font-semibold">{s.aula.identificador}</span>
+                          <span className="block text-xs text-saie-muted">
+                            {s.aula.pabellon} · piso {s.aula.piso}
                           </span>
-                        ) : (
-                          <BadgeEstado tono="advertencia">Sin aula</BadgeEstado>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-xs">{s.horarios.join(' · ') || '—'}</td>
-                      <td className="px-3 py-2 text-xs">{s.docente ?? '—'}</td>
-                      <td className="px-3 py-2 text-center">{s.alumnosMatriculados}</td>
-                      <td className="px-3 py-2 text-xs">{s.softwareRequerido.join(', ') || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        </span>
+                      ) : (
+                        <BadgeEstado tono="advertencia">Sin aula asignada</BadgeEstado>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-xs">{s.horarios.join(' · ') || '—'}</td>
+                    <td className="px-3 py-2 text-xs">{s.docente ?? '—'}</td>
+                    <td className="px-3 py-2 text-center tabular-nums">{s.alumnosMatriculados}</td>
+                    <td className="px-3 py-2 text-xs">{s.softwareRequerido.join(', ') || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </TablaDatos>
 
             <footer className="border-t border-saie-divider pt-3 text-xs text-saie-muted">
               <p className="m-0">
