@@ -28,7 +28,7 @@ import type {
   SoftwareDTO,
   TipoEspacio,
 } from '../../types/admin';
-import { formatearFechaCorta } from '../../utils/admin';
+import { formatearFechaCorta } from '../../utils/fechas';
 import { ETIQUETA_DIA, formatearRango } from '../../utils/horario';
 import { describirEstadoAsignacion, etiquetaTipoEspacio } from '../../utils/diccionarios';
 import { plural } from '../../utils/texto';

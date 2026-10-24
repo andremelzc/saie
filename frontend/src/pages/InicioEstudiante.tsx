@@ -15,6 +15,7 @@ import { mensajeDeError } from '../services/estudiante';
 import type { DiaSemana } from '../types/consulta';
 import type { HorarioSemanalDTO, SesionDTO } from '../types/horario';
 import { etiquetaRol } from '../utils/admin';
+import { fechaLarga } from '../utils/fechas';
 import { ICONOS } from '../components/ui/iconos';
 import {
   ABREVIATURA_DIA,
@@ -26,7 +27,6 @@ import {
   diaDeFecha,
   estadoDeClase,
   fechaActual,
-  fechaLarga,
   formatearMinutos,
   formatearRango,
   minutosDeFecha,

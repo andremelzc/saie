@@ -17,7 +17,7 @@ import {
 } from '../../services/admin';
 import { mensajeDeError } from '../../services/estudiante';
 import type { EspacioAdminDTO } from '../../types/admin';
-import { formatearFechaCorta } from '../../utils/admin';
+import { formatearFechaCorta } from '../../utils/fechas';
 
 /**
  * Issue 4.19 — cambio de laboratorio (Jefatura). Software y PCs se editan en dos pestañas,

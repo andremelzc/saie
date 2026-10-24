@@ -12,7 +12,7 @@ import { useCarga } from '../../hooks/useCarga';
 import { useValorDiferido } from '../../hooks/useValorDiferido';
 import { obtenerAuditoria, obtenerHistorial } from '../../services/admin';
 import type { EstadoAsignacion, TipoEventoAuditoria } from '../../types/admin';
-import { formatearFechaAlerta } from '../../utils/admin';
+import { formatearFechaAlerta } from '../../utils/fechas';
 import { describirEstadoAsignacion, describirEventoAuditoria } from '../../utils/diccionarios';
 
 /** Vuelve a pedir los datos cuando cambia `version` (botón «Actualizar»), sin tocar los filtros. */

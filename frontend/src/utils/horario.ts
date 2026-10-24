@@ -176,12 +176,20 @@ export const PALETA_CURSOS: ColorCurso[] = [
   { fondo: '#FCE4EC', borde: '#AD1457' },
 ];
 
-/** Asigna un color estable a cada código de curso (orden alfabético). */
+/** Color de un curso: depende solo de su código, así que no cambia entre pantallas (Issue 3.40). */
+export function colorDeCurso(codigo: string): ColorCurso {
+  // Hash djb2 del código: estable, sin estado compartido y sin depender de qué otros cursos
+  // aparezcan en la pantalla.
+  let hash = 5381;
+  for (let i = 0; i < codigo.length; i++) {
+    hash = ((hash << 5) + hash + codigo.charCodeAt(i)) >>> 0;
+  }
+  return PALETA_CURSOS[hash % PALETA_CURSOS.length];
+}
+
+/** Color de cada código de curso (ver `colorDeCurso`): el mismo en Inicio, Horario y Mis cursos. */
 export function asignarColoresCursos(codigos: string[]): Record<string, ColorCurso> {
-  const unicos = [...new Set(codigos)].sort((a, b) => a.localeCompare(b));
-  return Object.fromEntries(
-    unicos.map((codigo, i) => [codigo, PALETA_CURSOS[i % PALETA_CURSOS.length]]),
-  );
+  return Object.fromEntries([...new Set(codigos)].map((codigo) => [codigo, colorDeCurso(codigo)]));
 }
 
 /** «Buenos días», «Buenas tardes» o «Buenas noches» según la hora. */
@@ -214,15 +222,6 @@ export function cuentaRegresiva(
     return `Empieza en ${formatearMinutos(aMinutos(sesion.horaInicio) - ahoraEnMinutos)}`;
   }
   return 'Ya terminó';
-}
-
-/** «domingo 18 de octubre». */
-export function fechaLarga(fecha: Date): string {
-  return new Intl.DateTimeFormat('es-PE', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  }).format(fecha);
 }
 
 /** ¿El bloque de horario se cruza con la franja dada (mismo día y horas que se solapan)? */

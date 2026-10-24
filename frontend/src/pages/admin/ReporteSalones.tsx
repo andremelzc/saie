@@ -10,7 +10,7 @@ import { CLASE_CAMPO } from '../../components/ui/campos';
 import { useCarga } from '../../hooks/useCarga';
 import { useValorDiferido } from '../../hooks/useValorDiferido';
 import { obtenerReporteAsignaciones } from '../../services/admin';
-import { formatearFechaCorta } from '../../utils/admin';
+import { formatearFechaCorta } from '../../utils/fechas';
 
 /**
  * Issue 4.33 — informe de salones.

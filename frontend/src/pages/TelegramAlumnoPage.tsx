@@ -8,7 +8,7 @@ import { Boton } from '../components/ui/Boton';
 import { clasesBoton } from '../components/ui/clasesBoton';
 import { DialogoConfirmacion } from '../components/ui/DialogoConfirmacion';
 import { useCarga } from '../hooks/useCarga';
-import { ZONA_HORARIA } from '../utils/admin';
+import { formatearFechaLarga, formatearFechaRelativa } from '../utils/fechas';
 import { desvincularTelegram, mensajeDeError, obtenerTelegram } from '../services/estudiante';
 import type { EstadoTelegramDTO } from '../types/perfil';
 
@@ -18,17 +18,12 @@ const TRAZO_CANDADO =
 
 type Mensaje = { tipo: 'ok' | 'error'; texto: string } | null;
 
-/** ISO 8601 → «1 de octubre de 2026». */
-function formatearFechaHora(iso: string | null): string | null {
-  if (!iso) return null;
-  const fecha = new Date(iso);
-  if (Number.isNaN(fecha.getTime())) return null;
-  return fecha.toLocaleDateString('es-PE', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: ZONA_HORARIA,
-  });
+/** «hace 2 h» si fue hace menos de un día; si no, «1 de octubre de 2026» (hora de Lima). */
+function fechaDeEstado(iso: string | null): string | null {
+  const larga = formatearFechaLarga(iso);
+  if (!larga || !iso) return null;
+  const relativa = formatearFechaRelativa(iso);
+  return relativa.startsWith('hace ') || relativa === 'ahora mismo' ? relativa : larga;
 }
 
 /**
@@ -69,8 +64,8 @@ export const TelegramAlumnoPage: React.FC = () => {
     }
   }
 
-  const fechaVinculacion = formatearFechaHora(estado?.fechaVinculacion ?? null);
-  const fechaBaja = formatearFechaHora(estado?.fechaBaja ?? null);
+  const fechaVinculacion = fechaDeEstado(estado?.fechaVinculacion ?? null);
+  const fechaBaja = fechaDeEstado(estado?.fechaBaja ?? null);
 
   return (
     <div className="min-h-screen bg-saie-canvas text-saie-text">

@@ -7,6 +7,7 @@ import {
   aMinutos,
   agruparPorCurso,
   asignarColoresCursos,
+  colorDeCurso,
   diaDeFecha,
   diaLectivoInicial,
   estadoAMostrar,
@@ -118,8 +119,11 @@ describe('utilidades del horario del alumno (Issue #145 / 3.16)', () => {
     const b = asignarColoresCursos(['CC-101', 'MA-201']);
 
     expect(a).toEqual(b);
-    expect(a['CC-101']).toBe(PALETA_CURSOS[0]);
-    expect(a['MA-201']).toBe(PALETA_CURSOS[1]);
+    // El color solo depende del código: un curso no cambia de color porque otra pantalla
+    // muestre más o menos cursos (Issue 3.40).
+    expect(a['CC-101']).toBe(colorDeCurso('CC-101'));
+    expect(asignarColoresCursos(['CC-101'])['CC-101']).toBe(a['CC-101']);
+    expect(PALETA_CURSOS).toContain(a['MA-201']);
   });
 
   it('reúne todas las sesiones del horario de ejemplo', () => {

@@ -14,7 +14,7 @@ import { usePantallaAncha } from '../../hooks/usePantallaAncha';
 import { importarCsv } from '../../services/admin';
 import { mensajeDeError } from '../../services/estudiante';
 import type { ResultadoImportacionDTO, TipoImportacion } from '../../types/admin';
-import { formatearFechaCorta } from '../../utils/admin';
+import { formatearFechaCorta } from '../../utils/fechas';
 
 /**
  * Issue 1.9 — cuatro flujos de carga independientes. Las zonas van primero y en orden; la guía

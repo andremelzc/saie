@@ -24,7 +24,8 @@ import type {
   ResultadoVerificacionDTO,
   SeccionEscaladaDTO,
 } from '../../types/admin';
-import { describirMotivoEscalamiento, formatearFechaCorta } from '../../utils/admin';
+import { describirMotivoEscalamiento } from '../../utils/admin';
+import { formatearFechaCorta } from '../../utils/fechas';
 import { plural } from '../../utils/texto';
 import { ICONOS } from '../../components/ui/iconos';
 

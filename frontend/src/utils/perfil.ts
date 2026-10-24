@@ -10,31 +10,7 @@ import type {
 export type ValoresFormulario = Record<string, string>;
 export type ErroresFormulario = Record<string, string>;
 
-const MESES = [
-  'enero',
-  'febrero',
-  'marzo',
-  'abril',
-  'mayo',
-  'junio',
-  'julio',
-  'agosto',
-  'septiembre',
-  'octubre',
-  'noviembre',
-  'diciembre',
-];
-
-/** «2003-04-12» → «12 de abril de 2003». Devuelve null si no hay fecha o no es válida. */
-export function formatearFecha(iso: string | null | undefined): string | null {
-  if (!iso) return null;
-  const coincidencia = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  if (!coincidencia) return null;
-  const [, anio, mes, dia] = coincidencia;
-  const nombreMes = MESES[Number(mes) - 1];
-  if (!nombreMes) return null;
-  return `${Number(dia)} de ${nombreMes} de ${anio}`;
-}
+export { formatearFechaCivil as formatearFecha } from './fechas';
 
 /** Iniciales para el avatar: primera letra de las dos primeras palabras del nombre. */
 export function iniciales(nombre: string): string {
