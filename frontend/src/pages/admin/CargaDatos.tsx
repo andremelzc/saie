@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import LayoutAdmin from '../../components/admin/LayoutAdmin';
 import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
 import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
+import { idPanelPestana, idPestana } from '../../components/estudiante/idsPestanas';
 import { Acordeon } from '../../components/ui/Acordeon';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
@@ -878,9 +879,16 @@ export const CargaDatos: React.FC = () => {
             valor={pestanaAyuda}
             onCambiar={setPestanaAyuda}
             etiquetaGrupo="Contenido de ayuda"
+            idBase="ayuda-carga"
             className="w-full"
           />
-          {pestanaAyuda === 'guia' ? <GuiaCarga /> : <PlantillasCarga />}
+          <div
+            role="tabpanel"
+            id={idPanelPestana('ayuda-carga', pestanaAyuda)}
+            aria-labelledby={idPestana('ayuda-carga', pestanaAyuda)}
+          >
+            {pestanaAyuda === 'guia' ? <GuiaCarga /> : <PlantillasCarga />}
+          </div>
         </div>
       </Drawer>
     </LayoutAdmin>

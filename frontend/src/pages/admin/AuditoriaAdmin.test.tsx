@@ -112,7 +112,7 @@ describe('Auditoria e historial (Issue 4.32)', () => {
     montar(<AuditoriaAdmin />);
     await screen.findByText('IS101 · 1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Registro de actividad' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Registro de actividad' }));
     expect(await screen.findByText('Asignación automática exitosa')).toBeInTheDocument();
     expect(screen.getByText('IS101 · 1')).toBeInTheDocument();
 
@@ -128,7 +128,7 @@ describe('Auditoria e historial (Issue 4.32)', () => {
     auditoria.mockResolvedValue({ items: [], total: 0, pagina: 1, limite: 200 });
     montar(<AuditoriaAdmin />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Registro de actividad' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Registro de actividad' }));
     expect(await screen.findByText(/Sin actividad registrada/)).toBeInTheDocument();
   });
 
@@ -136,7 +136,7 @@ describe('Auditoria e historial (Issue 4.32)', () => {
     auditoria.mockRejectedValue(new Error('sin red'));
     montar(<AuditoriaAdmin />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Registro de actividad' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Registro de actividad' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
   });
 });

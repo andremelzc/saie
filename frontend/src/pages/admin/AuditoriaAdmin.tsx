@@ -5,6 +5,7 @@ import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
 import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
+import { idPanelPestana, idPestana } from '../../components/estudiante/idsPestanas';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
 import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
@@ -255,9 +256,14 @@ export const AuditoriaAdmin: React.FC = () => {
         valor={vista}
         onCambiar={setVista}
         etiquetaGrupo="Vista de la auditoría"
+        idBase="auditoria"
         className="self-start"
       />
-      <section aria-label="Contenido de la auditoría">
+      <section
+        role="tabpanel"
+        id={idPanelPestana('auditoria', vista)}
+        aria-labelledby={idPestana('auditoria', vista)}
+      >
         {vista === 'historial' ? (
           <VistaHistorial version={version} />
         ) : (

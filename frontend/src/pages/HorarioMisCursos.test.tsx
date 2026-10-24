@@ -32,9 +32,9 @@ describe('HorarioMisCursos (Issue #145 / 3.16)', () => {
       screen.getByRole('heading', { level: 1, name: /Mi horario y mis cursos/i }),
     ).toBeVisible();
     expect(screen.getByText('Periodo 2026-II')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Horario' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Mis cursos' })).toHaveAttribute(
-      'aria-pressed',
+    expect(screen.getByRole('tab', { name: 'Horario' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Mis cursos' })).toHaveAttribute(
+      'aria-selected',
       'false',
     );
   });
@@ -136,7 +136,7 @@ describe('HorarioMisCursos (Issue #145 / 3.16)', () => {
     it('lista los cursos con docente, horarios y próximo espacio', () => {
       renderizar();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Mis cursos' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Mis cursos' }));
 
       expect(screen.getByText('6 cursos matriculados')).toBeVisible();
 
@@ -164,7 +164,7 @@ describe('HorarioMisCursos (Issue #145 / 3.16)', () => {
       ];
       renderizar({ cursos: conLaboratorio });
 
-      fireEvent.click(screen.getByRole('button', { name: 'Mis cursos' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Mis cursos' }));
 
       // Un solo curso (no dos secciones): el bloque es el curso.
       expect(screen.getByText('1 curso matriculado')).toBeVisible();
@@ -177,7 +177,7 @@ describe('HorarioMisCursos (Issue #145 / 3.16)', () => {
     it('avisa cuando el espacio está pendiente o la asignación está en revisión', () => {
       renderizar();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Mis cursos' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Mis cursos' }));
 
       const redaccion = screen.getByRole('article', { name: 'Redacción y Comunicación' });
       expect(within(redaccion).getByText('Sin aula asignada')).toBeVisible();
@@ -190,7 +190,7 @@ describe('HorarioMisCursos (Issue #145 / 3.16)', () => {
     it('muestra un estado vacío si no hay cursos matriculados', () => {
       renderizar({ cursos: [] });
 
-      fireEvent.click(screen.getByRole('button', { name: 'Mis cursos' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Mis cursos' }));
 
       expect(screen.getByText('Aún no tienes cursos matriculados')).toBeVisible();
     });
