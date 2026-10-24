@@ -347,9 +347,15 @@ export const SeccionesAdmin: React.FC = () => {
     return listado.items;
   }, [textoDiferido, tipo, periodoDiferido]);
 
-  const { datos, cargando, error, recargar } = useCarga(cargar);
-  const docentes = useCarga(obtenerDocentes);
-  const catalogo = useCarga(obtenerCatalogoActivo);
+  const { datos, cargando, error, recargar } = useCarga(cargar, {
+    clave: `secciones:${textoDiferido.trim()}|${tipo}|${periodoDiferido.trim()}`,
+  });
+  // Docentes y catálogo solo hacen falta al editar: no se piden hasta abrir la edición (Issue 3.49).
+  const docentes = useCarga(obtenerDocentes, { clave: 'docentes', habilitado: editando });
+  const catalogo = useCarga(obtenerCatalogoActivo, {
+    clave: 'catalogo-activo',
+    habilitado: editando,
+  });
 
   /** El listado vacío es una referencia estable: si no, invalidaría los `useMemo` de abajo. */
   const secciones = useMemo(() => datos ?? [], [datos]);
@@ -572,14 +578,27 @@ export const SeccionesAdmin: React.FC = () => {
             )}
 
             {editando ? (
-              <FormularioSeccion
-                seccion={seleccionada}
-                docentes={docentes.datos ?? []}
-                catalogo={catalogo.datos?.items ?? []}
-                onGuardado={manejarGuardado}
-                onCancelar={() => setEditando(false)}
-                onCambiosPendientes={setCambiosPendientes}
-              />
+              // Docentes y catálogo se piden al abrir la edición (y salen de la caché si ya se vieron).
+              docentes.datos && catalogo.datos ? (
+                <FormularioSeccion
+                  seccion={seleccionada}
+                  docentes={docentes.datos}
+                  catalogo={catalogo.datos.items}
+                  onGuardado={manejarGuardado}
+                  onCancelar={() => setEditando(false)}
+                  onCambiosPendientes={setCambiosPendientes}
+                />
+              ) : docentes.error || catalogo.error ? (
+                <AvisoError
+                  mensaje={docentes.error ?? catalogo.error ?? ''}
+                  onReintentar={() => {
+                    if (docentes.error) docentes.recargar();
+                    if (catalogo.error) catalogo.recargar();
+                  }}
+                />
+              ) : (
+                <EsqueletoCarga texto="Cargando docentes y catálogo de software…" />
+              )
             ) : (
               <div className="flex flex-col gap-2">
                 {seleccionada.camposEditables.length > 0 ? (

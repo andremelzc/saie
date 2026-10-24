@@ -143,7 +143,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
 
     // El formulario ofrece el tipo de aula, el docente y el software requerido.
-    expect(within(panel).getByLabelText('Tipo de espacio que necesita')).toBeInTheDocument();
+    expect(await within(panel).findByLabelText('Tipo de espacio que necesita')).toBeInTheDocument();
     expect(within(panel).getByLabelText('Docente')).toBeInTheDocument();
     expect(within(panel).getByText('Software que exige la sección')).toBeInTheDocument();
   });
@@ -233,7 +233,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
 
-    fireEvent.change(within(panel).getByLabelText('Tipo de espacio que necesita'), {
+    fireEvent.change(await within(panel).findByLabelText('Tipo de espacio que necesita'), {
       target: { value: 'AULA_TEORICA' },
     });
     fireEvent.change(within(panel).getByLabelText('Docente'), { target: { value: 'd1' } });

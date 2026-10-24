@@ -30,7 +30,9 @@ export const ReporteSalones: React.FC = () => {
     [periodoDiferido],
   );
 
-  const { datos, cargando, error, recargar } = useCarga(cargar);
+  const { datos, cargando, error, recargar } = useCarga(cargar, {
+    clave: `reporte:${periodoDiferido.trim()}`,
+  });
 
   const imprimir = () => {
     window.print();

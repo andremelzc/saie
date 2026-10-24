@@ -6,7 +6,7 @@ import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/Element
 import { Boton } from '../../components/ui/Boton';
 import { useAuth } from '../../context/useAuth';
 import { useAccion } from '../../hooks/useAccion';
-import { useCarga } from '../../hooks/useCarga';
+import { invalidarCacheCarga, useCarga } from '../../hooks/useCarga';
 import { obtenerAlertas, resolverAlerta } from '../../services/admin';
 import type { AlertaDTO, TipoAlerta } from '../../types/admin';
 import { ETIQUETA_TIPO_ALERTA } from '../../utils/etiquetas';
@@ -86,7 +86,7 @@ const ListaAlertas: React.FC<{
 
 export const AlertasAdmin: React.FC = () => {
   const { sesion } = useAuth();
-  const { datos, cargando, error, recargar } = useCarga(obtenerAlertas);
+  const { datos, cargando, error, recargar } = useCarga(obtenerAlertas, { clave: 'alertas' });
   const { ejecutar } = useAccion();
   const [resueltasLocal, setResueltasLocal] = useState<Set<string>>(new Set());
   const [enCurso, setEnCurso] = useState<string | null>(null);
@@ -118,6 +118,8 @@ export const AlertasAdmin: React.FC = () => {
       avisarError: false,
     });
     if (resultado?.ok) {
+      // La caché de alertas quedó vieja: la próxima visita no debe mostrar esta como pendiente.
+      invalidarCacheCarga('alertas');
       setResueltasLocal((prev) => new Set(prev).add(id));
     } else if (resultado) {
       setErrorAccion({ mensaje: resultado.error, reintentar: () => manejarResolver(id) });

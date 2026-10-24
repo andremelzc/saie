@@ -171,7 +171,9 @@ const VistaHistorial: React.FC<{ version: number }> = ({ version }) => {
     [periodoDiferido, estado],
   );
 
-  const { datos, cargando, error, recargar } = useCarga(cargar);
+  const { datos, cargando, error, recargar } = useCarga(cargar, {
+    clave: `historial:${periodoDiferido.trim()}|${estado}`,
+  });
   useRecargarAl(version, recargar);
   const items = useMemo(() => datos?.items ?? [], [datos]);
   const grupos = useMemo(() => agruparPorCorrida(items), [items]);
@@ -243,7 +245,7 @@ const VistaAuditoria: React.FC<{ version: number }> = ({ version }) => {
     [tipo],
   );
 
-  const { datos, cargando, error, recargar } = useCarga(cargar);
+  const { datos, cargando, error, recargar } = useCarga(cargar, { clave: `auditoria:${tipo}` });
   useRecargarAl(version, recargar);
   const items = datos?.items ?? [];
 

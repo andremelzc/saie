@@ -240,7 +240,7 @@ const ListaEscaladas: React.FC<{
 
 /** Jefatura: resumen de sus alertas y acceso al formulario de laboratorio (Issue 4.19). */
 const InicioJefatura: React.FC = () => {
-  const { datos, cargando, error, recargar } = useCarga(obtenerAlertas);
+  const { datos, cargando, error, recargar } = useCarga(obtenerAlertas, { clave: 'alertas' });
   const pendientes = datos?.filter((a) => a.estado === 'PENDIENTE').length ?? 0;
 
   return (
@@ -284,8 +284,8 @@ const InicioJefatura: React.FC = () => {
 
 /** Issue 4.20 — inicio de Coordinación Académica, en modo tablero. */
 const InicioCoordinacion: React.FC = () => {
-  const escaladas = useCarga(obtenerEscaladas);
-  const alertas = useCarga(obtenerAlertas);
+  const escaladas = useCarga(obtenerEscaladas, { clave: 'escaladas' });
+  const alertas = useCarga(obtenerAlertas, { clave: 'alertas' });
   const accionCorrida = useAccion();
   const accionSeccion = useAccion();
   const [corriendo, setCorrida] = useState(false);
