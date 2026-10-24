@@ -11,9 +11,9 @@ import { Boton } from '../../components/ui/Boton';
 import { Drawer } from '../../components/ui/Drawer';
 import { PLANTILLAS, descargarPlantilla } from '../../config/plantillas';
 import type { PlantillaCSV } from '../../config/plantillas';
+import { useAccion } from '../../hooks/useAccion';
 import { usePantallaAncha } from '../../hooks/usePantallaAncha';
 import { importarCsv } from '../../services/admin';
-import { mensajeDeError } from '../../services/estudiante';
 import type { ResultadoImportacionDTO, TipoImportacion } from '../../types/admin';
 import { formatearFechaCorta } from '../../utils/fechas';
 
@@ -377,6 +377,7 @@ export const ZonaCarga: React.FC<{
 }) => {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
+  const { ejecutar } = useAccion();
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<ResultadoImportacionDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -427,16 +428,18 @@ export const ZonaCarga: React.FC<{
     setEnviando(true);
     setError(null);
     setResultado(null);
-    try {
-      const respuesta = await importarCsv(tipo, await leerArchivo(archivo));
-      setResultado(respuesta);
-      onEstado(tipo, respuesta.exitosa ? 'cargado' : 'con-errores', new Date().toISOString());
-    } catch (e) {
-      setError(mensajeDeError(e));
-    } finally {
-      setEnviando(false);
-      limpiarInput();
+    // El error se muestra en línea, junto a la zona de carga.
+    const salida = await ejecutar(async () => importarCsv(tipo, await leerArchivo(archivo)), {
+      avisarError: false,
+    });
+    if (salida?.ok) {
+      setResultado(salida.valor);
+      onEstado(tipo, salida.valor.exitosa ? 'cargado' : 'con-errores', new Date().toISOString());
+    } else if (salida) {
+      setError(salida.error);
     }
+    setEnviando(false);
+    limpiarInput();
   }
 
   function corregir() {

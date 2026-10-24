@@ -7,9 +7,10 @@ import { EsqueletoCarga, Icono } from '../components/estudiante/ElementosHorario
 import { Boton } from '../components/ui/Boton';
 import { clasesBoton } from '../components/ui/clasesBoton';
 import { DialogoConfirmacion } from '../components/ui/DialogoConfirmacion';
+import { useAccion } from '../hooks/useAccion';
 import { useCarga } from '../hooks/useCarga';
 import { formatearFechaLarga, formatearFechaRelativa } from '../utils/fechas';
-import { desvincularTelegram, mensajeDeError, obtenerTelegram } from '../services/estudiante';
+import { desvincularTelegram, obtenerTelegram } from '../services/estudiante';
 import type { EstadoTelegramDTO } from '../types/perfil';
 
 const TRAZO_TELEGRAM = 'M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z';
@@ -37,6 +38,7 @@ export const TelegramAlumnoPage: React.FC = () => {
   const [estadoLocal, setEstadoLocal] = useState<EstadoTelegramDTO | null>(null);
   const estado = estadoLocal ?? datos;
   const [confirmando, setConfirmando] = useState(false);
+  const { ejecutar } = useAccion();
   const [desvinculando, setDesvinculando] = useState(false);
   const [mensaje, setMensaje] = useState<Mensaje>(null);
 
@@ -48,19 +50,19 @@ export const TelegramAlumnoPage: React.FC = () => {
   async function ejecutarBaja() {
     setDesvinculando(true);
     setMensaje(null);
-    try {
-      const nuevo = await desvincularTelegram();
-      setEstadoLocal(nuevo);
+    // El resultado se muestra en el bloque de mensaje de la pantalla, con su «Reintentar».
+    const resultado = await ejecutar(() => desvincularTelegram(), { avisarError: false });
+    setDesvinculando(false);
+    if (resultado?.ok) {
+      setEstadoLocal(resultado.valor);
       setConfirmando(false);
       setMensaje({
         tipo: 'ok',
         texto:
           'Listo, ya no recibirás avisos por Telegram. Puedes volver a vincularte cuando quieras.',
       });
-    } catch (e) {
-      setMensaje({ tipo: 'error', texto: mensajeDeError(e) });
-    } finally {
-      setDesvinculando(false);
+    } else if (resultado) {
+      setMensaje({ tipo: 'error', texto: resultado.error });
     }
   }
 

@@ -8,6 +8,7 @@ import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
 import { CLASE_AYUDA, CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
 import { DialogoConfirmacion } from '../../components/ui/DialogoConfirmacion';
+import { useAccion } from '../../hooks/useAccion';
 import { useAdvertenciaSalida } from '../../hooks/useAdvertenciaSalida';
 import { useCarga } from '../../hooks/useCarga';
 import {
@@ -16,7 +17,6 @@ import {
   registrarPcsMalogradas,
   registrarSoftware,
 } from '../../services/admin';
-import { mensajeDeError } from '../../services/estudiante';
 import type { EspacioAdminDTO } from '../../types/admin';
 import { formatearFechaCorta } from '../../utils/fechas';
 
@@ -222,6 +222,7 @@ export const CambioLaboratorio: React.FC = () => {
   const [seleccion, setSeleccion] = useState<Set<string> | null>(null);
   const [pcs, setPcs] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const { ejecutar } = useAccion();
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState<Mensaje>(null);
   const [ultimaGuardado, setUltimaGuardado] = useState<string | null>(null);
@@ -292,31 +293,37 @@ export const CambioLaboratorio: React.FC = () => {
     let guardadoPcs = false;
     const partes: string[] = [];
 
-    try {
-      if (softwareCambiado) {
-        await registrarSoftware(labId, [...seleccionActual]);
-        guardadoSoftware = true;
-        partes.push('software');
-      }
-      if (pcsCambiado) {
-        await registrarPcsMalogradas(labId, pcsNumero);
-        guardadoPcs = true;
-        partes.push('PCs');
-      }
+    // El resultado se muestra en el bloque de mensaje del formulario.
+    const resultado = await ejecutar(
+      async () => {
+        if (softwareCambiado) {
+          await registrarSoftware(labId, [...seleccionActual]);
+          guardadoSoftware = true;
+          partes.push('software');
+        }
+        if (pcsCambiado) {
+          await registrarPcsMalogradas(labId, pcsNumero);
+          guardadoPcs = true;
+          partes.push('PCs');
+        }
+      },
+      { avisarError: false },
+    );
+    if (resultado?.ok) {
       setMensaje({ tipo: 'exito', texto: `Cambios guardados: ${partes.join(' y ')}.` });
       setUltimaGuardado(new Date().toISOString());
       setSeleccion(null);
-    } catch (err) {
-      const base = mensajeDeError(err);
+    } else if (resultado) {
       setMensaje({
         tipo: 'error',
         texto:
-          guardadoSoftware || guardadoPcs ? `${base} Los demás cambios sí se guardaron.` : base,
+          guardadoSoftware || guardadoPcs
+            ? `${resultado.error} Los demás cambios sí se guardaron.`
+            : resultado.error,
       });
-    } finally {
-      if (guardadoSoftware || guardadoPcs) labs.recargar();
-      setGuardando(false);
     }
+    if (guardadoSoftware || guardadoPcs) labs.recargar();
+    setGuardando(false);
   }
 
   const motivoDeshabilitado = motivoDeGuardado({ lab, pcsValido, hayCambios });

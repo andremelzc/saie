@@ -11,6 +11,7 @@ import { DialogoConfirmacion } from '../../components/ui/DialogoConfirmacion';
 import { Drawer } from '../../components/ui/Drawer';
 import { RUTAS } from '../../config/rutas';
 import { useAuth } from '../../context/useAuth';
+import { useAccion } from '../../hooks/useAccion';
 import { useCarga } from '../../hooks/useCarga';
 import {
   ejecutarCorrida,
@@ -18,7 +19,6 @@ import {
   obtenerEscaladas,
   reintentarSeccion,
 } from '../../services/admin';
-import { mensajeDeError } from '../../services/estudiante';
 import type {
   ResumenAsignacionDTO,
   ResultadoVerificacionDTO,
@@ -286,6 +286,8 @@ const InicioJefatura: React.FC = () => {
 const InicioCoordinacion: React.FC = () => {
   const escaladas = useCarga(obtenerEscaladas);
   const alertas = useCarga(obtenerAlertas);
+  const accionCorrida = useAccion();
+  const accionSeccion = useAccion();
   const [corriendo, setCorrida] = useState(false);
   const [confirmandoCorrida, setConfirmandoCorrida] = useState(false);
   const [detalleAbierto, setDetalleAbierto] = useState(false);
@@ -311,35 +313,42 @@ const InicioCoordinacion: React.FC = () => {
     setResultadoSeccion(null);
     setCorrida(true);
     setErrorAccion(null);
-    try {
-      const resumen = await ejecutarCorrida();
-      setResumenCorrida(resumen);
-      setUltimaCorrida(new Date().toISOString());
-      // La corrida crea y resuelve alertas: hay que volver a pedirlas, no solo las escaladas.
-      escaladas.recargar();
-      alertas.recargar();
-    } catch (e) {
-      setErrorAccion({ mensaje: mensajeDeError(e), reintentar: correr });
-    } finally {
-      setCorrida(false);
+    const resultado = await accionCorrida.ejecutar(
+      async () => {
+        const resumen = await ejecutarCorrida();
+        setResumenCorrida(resumen);
+        setUltimaCorrida(new Date().toISOString());
+        // La corrida crea y resuelve alertas: hay que volver a pedirlas, no solo las escaladas.
+        escaladas.recargar();
+        alertas.recargar();
+      },
+      // El error se muestra en línea, con su «Reintentar».
+      { avisarError: false },
+    );
+    if (resultado && !resultado.ok) {
+      setErrorAccion({ mensaje: resultado.error, reintentar: correr });
     }
+    setCorrida(false);
   }
 
   async function reintentar(seccion: SeccionEscaladaDTO) {
     if (reintentando) return;
     setReintentando(seccion.seccion.id);
     setErrorAccion(null);
-    try {
-      // El resultado de una sección no es la corrida del periodo: se muestra aparte.
-      const resumen = await reintentarSeccion(seccion.seccion.id);
-      setResultadoSeccion({ resumen, seccion });
-      escaladas.recargar();
-      alertas.recargar();
-    } catch (e) {
-      setErrorAccion({ mensaje: mensajeDeError(e), reintentar: () => reintentar(seccion) });
-    } finally {
-      setReintentando(null);
+    const resultado = await accionSeccion.ejecutar(
+      async () => {
+        // El resultado de una sección no es la corrida del periodo: se muestra aparte.
+        const resumen = await reintentarSeccion(seccion.seccion.id);
+        setResultadoSeccion({ resumen, seccion });
+        escaladas.recargar();
+        alertas.recargar();
+      },
+      { avisarError: false },
+    );
+    if (resultado && !resultado.ok) {
+      setErrorAccion({ mensaje: resultado.error, reintentar: () => reintentar(seccion) });
     }
+    setReintentando(null);
   }
 
   return (

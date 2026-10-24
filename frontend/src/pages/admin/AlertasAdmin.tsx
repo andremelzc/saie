@@ -4,11 +4,10 @@ import TarjetaAlerta from '../../components/admin/TarjetaAlerta';
 import { ICONOS } from '../../components/ui/iconos';
 import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
 import { Boton } from '../../components/ui/Boton';
-import { useAvisos } from '../../components/ui/useAvisos';
 import { useAuth } from '../../context/useAuth';
+import { useAccion } from '../../hooks/useAccion';
 import { useCarga } from '../../hooks/useCarga';
 import { obtenerAlertas, resolverAlerta } from '../../services/admin';
-import { mensajeDeError } from '../../services/estudiante';
 import type { AlertaDTO, TipoAlerta } from '../../types/admin';
 import { ETIQUETA_TIPO_ALERTA } from '../../utils/etiquetas';
 
@@ -88,7 +87,7 @@ const ListaAlertas: React.FC<{
 export const AlertasAdmin: React.FC = () => {
   const { sesion } = useAuth();
   const { datos, cargando, error, recargar } = useCarga(obtenerAlertas);
-  const { mostrar } = useAvisos();
+  const { ejecutar } = useAccion();
   const [resueltasLocal, setResueltasLocal] = useState<Set<string>>(new Set());
   const [enCurso, setEnCurso] = useState<string | null>(null);
   const [errorAccion, setErrorAccion] = useState<{
@@ -108,21 +107,22 @@ export const AlertasAdmin: React.FC = () => {
   const total = base.length;
 
   async function manejarResolver(id: string) {
+    if (enCurso) return;
     setEnCurso(id);
     setErrorAccion(null);
-    try {
-      await resolverAlerta(id);
-      setResueltasLocal((prev) => new Set(prev).add(id));
-      const espacio = datos?.find((a) => a.id === id)?.espacio.identificador;
-      mostrar(
-        'exito',
+    const espacio = datos?.find((a) => a.id === id)?.espacio.identificador;
+    const resultado = await ejecutar(() => resolverAlerta(id), {
+      exito: () =>
         espacio ? `Alerta de ${espacio} marcada como resuelta.` : 'Alerta marcada como resuelta.',
-      );
-    } catch (e) {
-      setErrorAccion({ mensaje: mensajeDeError(e), reintentar: () => manejarResolver(id) });
-    } finally {
-      setEnCurso(null);
+      // El error se muestra en línea, con su «Reintentar».
+      avisarError: false,
+    });
+    if (resultado?.ok) {
+      setResueltasLocal((prev) => new Set(prev).add(id));
+    } else if (resultado) {
+      setErrorAccion({ mensaje: resultado.error, reintentar: () => manejarResolver(id) });
     }
+    setEnCurso(null);
   }
 
   const subtitulo =

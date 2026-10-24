@@ -13,6 +13,7 @@ import { useAvisos } from '../../components/ui/useAvisos';
 import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
 import { Campo } from '../../components/ui/Campo';
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
+import { useAccion } from '../../hooks/useAccion';
 import { useCarga } from '../../hooks/useCarga';
 import { useValorDiferido } from '../../hooks/useValorDiferido';
 import { usePantallaAncha } from '../../hooks/usePantallaAncha';
@@ -23,7 +24,6 @@ import {
   obtenerSecciones,
 } from '../../services/admin';
 import type { DocenteParaAsignarDTO } from '../../services/admin';
-import { mensajeDeError } from '../../services/estudiante';
 import type {
   CambiosSeccion,
   ComparacionVersion,
@@ -158,6 +158,7 @@ const FormularioSeccion: React.FC<{
   const [elegidos, setElegidos] = useState<Record<string, ComparacionVersion>>(() =>
     Object.fromEntries(seccion.softwareRequerido.map((s) => [s.id, s.comparacionVersion])),
   );
+  const { ejecutar } = useAccion();
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -191,22 +192,21 @@ const FormularioSeccion: React.FC<{
     if (guardando) return;
     setGuardando(true);
     setError(null);
-    try {
-      const cambios: CambiosSeccion = {
-        tipoEspacioRequerido: tipo,
-        docenteId: docenteId === '' ? null : docenteId,
-        softwareRequerido: Object.entries(elegidos).map(([softwareId, comparacionVersion]) => ({
-          softwareId,
-          comparacionVersion,
-        })),
-      };
-      const resultado = await editarSeccion(seccion.id, cambios);
-      onGuardado(resultado);
-    } catch (e) {
-      setError(mensajeDeError(e));
-    } finally {
-      setGuardando(false);
-    }
+    const cambios: CambiosSeccion = {
+      tipoEspacioRequerido: tipo,
+      docenteId: docenteId === '' ? null : docenteId,
+      softwareRequerido: Object.entries(elegidos).map(([softwareId, comparacionVersion]) => ({
+        softwareId,
+        comparacionVersion,
+      })),
+    };
+    // El error se muestra en línea, dentro del formulario.
+    const resultado = await ejecutar(() => editarSeccion(seccion.id, cambios), {
+      avisarError: false,
+    });
+    setGuardando(false);
+    if (resultado?.ok) onGuardado(resultado.valor);
+    else if (resultado) setError(resultado.error);
   };
 
   return (

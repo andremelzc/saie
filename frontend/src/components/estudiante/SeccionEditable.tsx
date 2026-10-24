@@ -1,5 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import type { ErroresFormulario, ValoresFormulario } from '../../utils/perfil';
+import { mensajeDeError } from '../../services/errores';
 import { Aviso } from '../ui/Aviso';
 import { Boton } from '../ui/Boton';
 import { Icono } from './ElementosHorario';
@@ -126,10 +127,9 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
       await onGuardar(borrador);
       setConfirmacion(true);
       setModo('lectura');
-    } catch {
-      setErrorGeneral(
-        'No se pudieron guardar los cambios. Revisa tu conexión e inténtalo de nuevo.',
-      );
+    } catch (e) {
+      // Un 400 explica qué dato está mal; «Revisa tu conexión» solo si no hubo respuesta.
+      setErrorGeneral(mensajeDeError(e));
     } finally {
       setGuardando(false);
     }
