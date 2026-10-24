@@ -73,7 +73,7 @@ export const TelegramAlumnoPage: React.FC = () => {
   const fechaBaja = formatearFechaHora(estado?.fechaBaja ?? null);
 
   return (
-    <div className="min-h-screen bg-saie-canvas text-saie-text">
+    <div className="min-h-screen bg-saie-canvas pb-[var(--saie-barra-inferior)] text-saie-text">
       <CabeceraPantalla
         titulo="Avisos por Telegram"
         subtitulo="Recibe un aviso cuando cambie el aula o el laboratorio de una de tus clases."

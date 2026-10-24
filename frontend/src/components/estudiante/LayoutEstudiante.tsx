@@ -27,8 +27,8 @@ export interface LayoutEstudianteProps {
  * Marco común del área del estudiante (Issue 3.29).
  *
  * La barra de navegación es lo que permite que la portada sea un tablero: cada destino está
- * a un clic y no hay que volver al inicio para cambiar de sección. En móvil la barra va abajo,
- * como en el panel administrativo.
+ * a un clic y no hay que volver al inicio para cambiar de sección. Por debajo de `lg` la barra va
+ * fija abajo, como en el panel administrativo (Issue 3.34).
  */
 export const LayoutEstudiante: React.FC<LayoutEstudianteProps> = ({
   titulo,
@@ -42,16 +42,16 @@ export const LayoutEstudiante: React.FC<LayoutEstudianteProps> = ({
 
   return (
     <div
-      className={`flex min-h-screen flex-col bg-saie-canvas pb-6 md:pb-0 ${
+      className={`flex min-h-screen flex-col bg-saie-canvas pb-[var(--saie-barra-inferior)] ${
         dashboard ? 'lg:h-screen lg:overflow-hidden' : ''
       }`}
     >
       <EnlaceSaltar />
       <header className="bg-saie-primary text-white">
-        <Contenedor ancho="normal" className="flex h-18 items-center justify-between gap-3">
+        <Contenedor ancho="normal" className="flex min-h-18 items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-4">
             <Link to={RUTAS.inicioAlumno} className="flex shrink-0 items-center">
-              <img src={logoBlanco} alt="SAIE" className="h-9 w-auto" />
+              <img src={logoBlanco} alt="SAIE, ir al inicio" className="h-9 w-auto" />
             </Link>
             <span className="hidden rounded-full bg-white/15 px-3 py-1 text-sm font-medium sm:inline-flex">
               Estudiante
