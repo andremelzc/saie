@@ -12,7 +12,6 @@ import { Drawer } from '../../components/ui/Drawer';
 import { PLANTILLAS, descargarPlantilla } from '../../config/plantillas';
 import type { PlantillaCSV } from '../../config/plantillas';
 import { useAccion } from '../../hooks/useAccion';
-import { usePantallaAncha } from '../../hooks/usePantallaAncha';
 import { importarCsv } from '../../services/admin';
 import type { ResultadoImportacionDTO, TipoImportacion } from '../../types/admin';
 import { agruparErroresPorTipo } from '../../utils/erroresImportacion';
@@ -699,10 +698,6 @@ const GuiaCarga: React.FC = () => (
 
 /** Tarjeta de una plantilla: descarga del CSV y detalle de sus columnas. */
 const TarjetaPlantilla: React.FC<{ plantilla: PlantillaCSV }> = ({ plantilla }) => {
-  // En pantallas estrechas las columnas se apilan en una lista: una tabla de cuatro columnas no
-  // cabe a 320 px. Solo existe una de las dos versiones en el DOM.
-  const esPantallaAncha = usePantallaAncha(640);
-
   return (
     <article className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-sm">
       <header className="flex flex-col gap-1">
@@ -717,64 +712,60 @@ const TarjetaPlantilla: React.FC<{ plantilla: PlantillaCSV }> = ({ plantilla }) 
       </div>
 
       <Acordeon titulo={`Ver columnas (${plantilla.columnas.length})`}>
-        {esPantallaAncha ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-saie-canvas uppercase tracking-wide text-saie-muted">
-                <tr>
-                  <th scope="col" className="px-2 py-2">
-                    Columna
-                  </th>
-                  <th scope="col" className="px-2 py-2">
-                    Obligatoria
-                  </th>
-                  <th scope="col" className="px-2 py-2">
-                    Qué es
-                  </th>
-                  <th scope="col" className="px-2 py-2">
-                    Ejemplo
-                  </th>
+        {/* Tabla desde `sm` y lista apilada por debajo: una tabla de cuatro columnas no cabe a 320 px. */}
+        <div className="hidden overflow-x-auto sm:block">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-saie-canvas uppercase tracking-wide text-saie-muted">
+              <tr>
+                <th scope="col" className="px-2 py-2">
+                  Columna
+                </th>
+                <th scope="col" className="px-2 py-2">
+                  Obligatoria
+                </th>
+                <th scope="col" className="px-2 py-2">
+                  Qué es
+                </th>
+                <th scope="col" className="px-2 py-2">
+                  Ejemplo
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {plantilla.columnas.map((columna) => (
+                <tr key={columna.nombre} className="border-t border-saie-divider align-top">
+                  <td className="px-2 py-2 font-mono font-semibold text-saie-text">
+                    {columna.nombre}
+                  </td>
+                  <td className="px-2 py-2 text-saie-muted">{columna.obligatorio ? 'Sí' : 'No'}</td>
+                  <td className="px-2 py-2 text-saie-muted">{columna.descripcion}</td>
+                  <td className="px-2 py-2 font-mono text-saie-muted">{columna.ejemplo}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {plantilla.columnas.map((columna) => (
-                  <tr key={columna.nombre} className="border-t border-saie-divider align-top">
-                    <td className="px-2 py-2 font-mono font-semibold text-saie-text">
-                      {columna.nombre}
-                    </td>
-                    <td className="px-2 py-2 text-saie-muted">
-                      {columna.obligatorio ? 'Sí' : 'No'}
-                    </td>
-                    <td className="px-2 py-2 text-saie-muted">{columna.descripcion}</td>
-                    <td className="px-2 py-2 font-mono text-saie-muted">{columna.ejemplo}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <dl className="m-0 flex flex-col gap-3">
-            {plantilla.columnas.map((columna) => (
-              <div
-                key={columna.nombre}
-                className="rounded-lg border border-saie-divider bg-saie-canvas p-3"
-              >
-                <dt className="font-mono font-semibold text-saie-text">
-                  {columna.nombre}{' '}
-                  <span className="font-sans text-xs font-normal text-saie-muted">
-                    ({columna.obligatorio ? 'obligatoria' : 'opcional'})
-                  </span>
-                </dt>
-                <dd className="m-0 mt-1 text-sm text-saie-text">
-                  {columna.descripcion}
-                  <span className="mt-1 block font-mono text-xs text-saie-muted">
-                    Ejemplo: {columna.ejemplo}
-                  </span>
-                </dd>
-              </div>
-            ))}
-          </dl>
-        )}
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <dl className="m-0 flex flex-col gap-3 sm:hidden">
+          {plantilla.columnas.map((columna) => (
+            <div
+              key={columna.nombre}
+              className="rounded-lg border border-saie-divider bg-saie-canvas p-3"
+            >
+              <dt className="font-mono font-semibold text-saie-text">
+                {columna.nombre}{' '}
+                <span className="font-sans text-xs font-normal text-saie-muted">
+                  ({columna.obligatorio ? 'obligatoria' : 'opcional'})
+                </span>
+              </dt>
+              <dd className="m-0 mt-1 text-sm text-saie-text">
+                {columna.descripcion}
+                <span className="mt-1 block font-mono text-xs text-saie-muted">
+                  Ejemplo: {columna.ejemplo}
+                </span>
+              </dd>
+            </div>
+          ))}
+        </dl>
       </Acordeon>
     </article>
   );

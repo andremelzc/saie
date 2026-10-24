@@ -17,7 +17,6 @@ import { useAccion } from '../../hooks/useAccion';
 import { useDetalleEnUrl } from '../../hooks/useDetalleEnUrl';
 import { useCarga } from '../../hooks/useCarga';
 import { useValorDiferido } from '../../hooks/useValorDiferido';
-import { usePantallaAncha } from '../../hooks/usePantallaAncha';
 import {
   editarSeccion,
   obtenerCatalogoActivo,
@@ -354,7 +353,6 @@ export const SeccionesAdmin: React.FC = () => {
 
   /** El listado vacío es una referencia estable: si no, invalidaría los `useMemo` de abajo. */
   const secciones = useMemo(() => datos ?? [], [datos]);
-  const esPantallaAncha = usePantallaAncha();
 
   /**
    * La sección abierta se deriva del listado: así siempre muestra los datos frescos de la
@@ -401,25 +399,32 @@ export const SeccionesAdmin: React.FC = () => {
           </BotonEnlace>
         }
       />
-    ) : esPantallaAncha ? (
-      <TablaDatos etiqueta="Listado de secciones">
-        <CabeceraTabla
-          columnas={['Sección', 'Tipo', 'Aula', 'Docente', 'Alumnos', 'Estado', 'Detalle']}
-        />
-        <tbody>
-          {secciones.map((s) => (
-            <FilaSeccion key={s.id} seccion={s} onVer={abrirDetalle} />
-          ))}
-        </tbody>
-      </TablaDatos>
     ) : (
-      <ul className="m-0 flex list-none flex-col gap-3 p-0" aria-label="Listado de secciones">
-        {secciones.map((s) => (
-          <li key={s.id}>
-            <TarjetaSeccion seccion={s} onVer={abrirDetalle} />
-          </li>
-        ))}
-      </ul>
+      // Tabla desde `lg` y tarjetas por debajo, resueltas con CSS para que no haya parpadeo (Issue 3.54).
+      <>
+        <div className="hidden lg:block">
+          <TablaDatos etiqueta="Listado de secciones">
+            <CabeceraTabla
+              columnas={['Sección', 'Tipo', 'Aula', 'Docente', 'Alumnos', 'Estado', 'Detalle']}
+            />
+            <tbody>
+              {secciones.map((s) => (
+                <FilaSeccion key={s.id} seccion={s} onVer={abrirDetalle} />
+              ))}
+            </tbody>
+          </TablaDatos>
+        </div>
+        <ul
+          className="m-0 flex list-none flex-col gap-3 p-0 lg:hidden"
+          aria-label="Listado de secciones"
+        >
+          {secciones.map((s) => (
+            <li key={s.id}>
+              <TarjetaSeccion seccion={s} onVer={abrirDetalle} />
+            </li>
+          ))}
+        </ul>
+      </>
     );
 
   return (

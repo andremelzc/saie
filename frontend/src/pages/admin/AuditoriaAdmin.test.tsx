@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import AuditoriaAdmin from './AuditoriaAdmin';
 import ReporteSalones from './ReporteSalones';
@@ -197,10 +197,24 @@ describe('Informe de salones (Issue 4.33)', () => {
     montar(<ReporteSalones />);
 
     expect(await screen.findByText('Cuadro de asignación de aulas')).toBeInTheDocument();
-    expect(screen.getByText('Algoritmos')).toBeInTheDocument();
-    expect(screen.getByText('Lab 03')).toBeInTheDocument();
-    expect(screen.getByText('A · piso 2')).toBeInTheDocument();
-    expect(screen.getByText('Docker 24.0')).toBeInTheDocument();
+    // El cuadro se dibuja como tabla (desde `lg` y al imprimir) y como tarjetas (móvil); en jsdom
+    // no hay CSS, así que se consulta la tabla.
+    const tabla = within(screen.getByRole('region', { name: 'Cuadro de asignación de aulas' }));
+    expect(tabla.getByText('Algoritmos')).toBeInTheDocument();
+    expect(tabla.getByText('Lab 03')).toBeInTheDocument();
+    expect(tabla.getByText('A · piso 2')).toBeInTheDocument();
+    expect(tabla.getByText('Docker 24.0')).toBeInTheDocument();
+  });
+
+  it('ofrece tarjetas del cuadro para pantallas estrechas (Issue 3.54)', async () => {
+    montar(<ReporteSalones />);
+    await screen.findByText('Cuadro de asignación de aulas');
+
+    const tarjetas = screen
+      .getAllByRole('listitem')
+      .filter((li) => li.textContent?.includes('Algoritmos'));
+    expect(tarjetas.length).toBeGreaterThan(0);
+    expect(tarjetas[0]).toHaveTextContent('Lab 03');
   });
 
   it('avisa de las secciones que todavía no tienen aula', async () => {
