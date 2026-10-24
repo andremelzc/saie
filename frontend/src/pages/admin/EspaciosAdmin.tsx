@@ -16,6 +16,7 @@ import { CLASE_CAMPO } from '../../components/ui/campos';
 import { RUTAS } from '../../config/rutas';
 import { useAuth } from '../../context/useAuth';
 import { useCarga } from '../../hooks/useCarga';
+import { useDetalleEnUrl } from '../../hooks/useDetalleEnUrl';
 import { usePantallaAncha } from '../../hooks/usePantallaAncha';
 import { obtenerEspacios } from '../../services/admin';
 import type { EspacioAdminDTO, ResultadoEdicionEspacioDTO, TipoEspacio } from '../../types/admin';
@@ -318,7 +319,10 @@ export const EspaciosAdmin: React.FC = () => {
   const [piso, setPiso] = useState('TODOS');
   const [texto, setTexto] = useState('');
   const [soloDeshabilitados, setSoloDeshabilitados] = useState(false);
-  const [seleccionado, setSeleccionado] = useState<EspacioAdminDTO | null>(null);
+  // El detalle abierto vive en la URL (`?espacio=AULA-101`): «Atrás» lo cierra y el enlace se comparte (Issue 4.51).
+  const detalle = useDetalleEnUrl('espacio');
+  /** El espacio recién creado o editado: el listado tarda en recargarse y no debe parecer «inexistente». */
+  const [guardadoReciente, setGuardadoReciente] = useState<EspacioAdminDTO | null>(null);
   const [editando, setEditando] = useState(false);
   const [creando, setCreando] = useState(false);
   const [alertas, setAlertas] = useState<string[]>([]);
@@ -328,6 +332,13 @@ export const EspaciosAdmin: React.FC = () => {
   const esCoordinacion = sesion?.rol === 'COORDINACION_ACADEMICA';
 
   const base = datos ?? [];
+  const seleccionado =
+    detalle.valor === null
+      ? null
+      : (base.find((e) => e.identificador === detalle.valor) ??
+        (guardadoReciente?.identificador === detalle.valor ? guardadoReciente : null));
+  const detalleNoEncontrado =
+    detalle.valor !== null && datos !== null && !cargando && seleccionado === null;
   const pabellones = [...new Set(base.map((e) => e.pabellon))].sort((a, b) =>
     a.localeCompare(b, 'es'),
   );
@@ -357,21 +368,21 @@ export const EspaciosAdmin: React.FC = () => {
   }
 
   function abrirDetalle(espacio: EspacioAdminDTO) {
-    setSeleccionado(espacio);
+    detalle.abrir(espacio.identificador);
     setEditando(false);
     setCreando(false);
     setAlertas([]);
   }
 
   function cerrarDetalle() {
-    setSeleccionado(null);
+    if (detalle.valor !== null) detalle.cerrar();
     setEditando(false);
     setCreando(false);
     setAlertas([]);
   }
 
   function abrirAlta() {
-    setSeleccionado(null);
+    if (detalle.valor !== null) detalle.cerrar();
     setEditando(false);
     setCreando(true);
     setAlertas([]);
@@ -379,7 +390,8 @@ export const EspaciosAdmin: React.FC = () => {
 
   function manejarGuardado(resultado: ResultadoEdicionEspacioDTO) {
     const esNuevo = creando;
-    setSeleccionado(resultado.espacio);
+    setGuardadoReciente(resultado.espacio);
+    detalle.reemplazar(resultado.espacio.identificador);
     setEditando(false);
     setCreando(false);
     setAlertas(resultado.alertas.map((a) => a.motivo));
@@ -587,6 +599,17 @@ export const EspaciosAdmin: React.FC = () => {
       )}
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
+      {detalleNoEncontrado && (
+        <Aviso tono="advertencia" className="flex flex-wrap items-center justify-between gap-3">
+          <span>
+            No encontramos el espacio «{detalle.valor}». Puede que el enlace sea antiguo o que el
+            código haya cambiado.
+          </span>
+          <Boton variante="secundario" tamano="sm" onClick={detalle.cerrar}>
+            Quitar del enlace
+          </Boton>
+        </Aviso>
+      )}
 
       {contenidoListado}
 

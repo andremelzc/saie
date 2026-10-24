@@ -14,6 +14,7 @@ import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
 import { Campo } from '../../components/ui/Campo';
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
 import { useAccion } from '../../hooks/useAccion';
+import { useDetalleEnUrl } from '../../hooks/useDetalleEnUrl';
 import { useCarga } from '../../hooks/useCarga';
 import { useValorDiferido } from '../../hooks/useValorDiferido';
 import { usePantallaAncha } from '../../hooks/usePantallaAncha';
@@ -326,7 +327,9 @@ export const SeccionesAdmin: React.FC = () => {
   const [texto, setTexto] = useState('');
   const [tipo, setTipo] = useState<'TODOS' | TipoEspacio>('TODOS');
   const [periodo, setPeriodo] = useState('');
-  const [seleccionadaId, setSeleccionadaId] = useState<string | null>(null);
+  // El detalle abierto vive en la URL (`?seccion=<id>`): «Atrás» lo cierra y el enlace se comparte (Issue 4.51).
+  const detalle = useDetalleEnUrl('seccion');
+  const seleccionadaId = detalle.valor;
   const [editando, setEditando] = useState(false);
   const [cambiosPendientes, setCambiosPendientes] = useState(false);
   const { mostrar } = useAvisos();
@@ -363,9 +366,15 @@ export const SeccionesAdmin: React.FC = () => {
   );
 
   const abrirDetalle = (seccion: SeccionAdminDTO) => {
-    setSeleccionadaId(seccion.id);
+    detalle.abrir(seccion.id);
     setEditando(false);
   };
+
+  // Un enlace con una sección que no existe (o ya no está en el periodo) se explica, no rompe la pantalla.
+  // Con filtros activos no se avisa: la sección puede existir y solo estar fuera de la búsqueda.
+  const sinFiltros = texto === '' && tipo === 'TODOS' && periodo === '';
+  const detalleNoEncontrado =
+    seleccionadaId !== null && datos !== null && !cargando && seleccionada === null && sinFiltros;
 
   const manejarGuardado = (resultado: { alertas: { motivo: string }[] }) => {
     setEditando(false);
@@ -466,6 +475,17 @@ export const SeccionesAdmin: React.FC = () => {
       </section>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
+      {detalleNoEncontrado && (
+        <Aviso tono="advertencia" className="flex flex-wrap items-center justify-between gap-3">
+          <span>
+            No encontramos esa sección. Puede que el enlace sea antiguo o que ya no esté en el
+            periodo.
+          </span>
+          <Boton variante="secundario" tamano="sm" onClick={detalle.cerrar}>
+            Quitar del enlace
+          </Boton>
+        </Aviso>
+      )}
       <ZonaActualizable actualizando={cargando && datos !== null}>
         {cargando && !datos ? <EsqueletoCarga texto="Cargando secciones…" forma="tabla" /> : lista}
       </ZonaActualizable>
@@ -473,7 +493,7 @@ export const SeccionesAdmin: React.FC = () => {
       <Drawer
         abierto={seleccionada !== null}
         onCerrar={() => {
-          setSeleccionadaId(null);
+          detalle.cerrar();
           setEditando(false);
         }}
         titulo={

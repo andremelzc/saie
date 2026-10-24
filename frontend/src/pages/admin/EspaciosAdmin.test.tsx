@@ -42,9 +42,9 @@ const espacio = (o: Partial<EspacioAdminDTO>): EspacioAdminDTO => ({
   ...o,
 });
 
-const montar = () =>
+const montar = (ruta = '/admin/espacios') =>
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[ruta]}>
       <ProveedorAvisos>
         <EspaciosAdmin />
       </ProveedorAvisos>
@@ -65,6 +65,19 @@ describe('Gestión de espacios (Issue 4.15)', () => {
         habilitado: false,
       }),
     ]);
+  });
+
+  it('un enlace con ?espacio= abre el detalle de ese espacio (Issue 4.51)', async () => {
+    montar('/admin/espacios?espacio=LAB-301');
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getAllByText('LAB-301').length).toBeGreaterThan(0);
+  });
+
+  it('un código inexistente en la URL muestra un aviso y la lista sigue visible (Issue 4.51)', async () => {
+    montar('/admin/espacios?espacio=NO-EXISTE');
+    expect(await screen.findByText(/No encontramos el espacio «NO-EXISTE»/)).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('AULA-101')).toBeInTheDocument();
   });
 
   it('lista los espacios con tipo, ubicación, PCs y estado', async () => {
