@@ -8,6 +8,8 @@ export interface EstadoErrorProps {
   onReintentar?: () => void | Promise<void>;
   /** Fuerza el estado de carga; si no se da, se deduce de la promesa que devuelve `onReintentar`. */
   reintentando?: boolean;
+  /** Texto del botón; «Reintentar» por defecto. Tras un tiempo agotado conviene «Actualizar». */
+  etiquetaAccion?: string;
   className?: string;
 }
 
@@ -24,6 +26,7 @@ export const EstadoError: React.FC<EstadoErrorProps> = ({
   mensaje,
   onReintentar,
   reintentando = false,
+  etiquetaAccion = 'Reintentar',
   className = '',
 }) => {
   const [pendiente, setPendiente] = useState(false);
@@ -64,7 +67,7 @@ export const EstadoError: React.FC<EstadoErrorProps> = ({
           cargando={reintentando || pendiente}
           textoCargando="Reintentando…"
         >
-          Reintentar
+          {etiquetaAccion}
         </Boton>
       )}
     </div>

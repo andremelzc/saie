@@ -140,6 +140,9 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
 export const AvisoError: React.FC<{
   mensaje: string;
   onReintentar?: () => void | Promise<void>;
-}> = ({ mensaje, onReintentar }) => <EstadoError mensaje={mensaje} onReintentar={onReintentar} />;
+  etiquetaAccion?: string;
+}> = ({ mensaje, onReintentar, etiquetaAccion }) => (
+  <EstadoError mensaje={mensaje} onReintentar={onReintentar} etiquetaAccion={etiquetaAccion} />
+);
 
 export default LayoutAdmin;

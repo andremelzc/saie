@@ -93,6 +93,19 @@ function traducirCamposNoEditables(mensaje: string): string {
   return `Tu rol no puede editar ${lista}.`;
 }
 
+/**
+ * ¿La petición agotó el tiempo de espera sin respuesta? El servidor pudo terminar igualmente la
+ * operación: por eso no se debe afirmar que falló (Issue 4.56).
+ */
+export function esTiempoAgotado(error: unknown): boolean {
+  const errorHttp = comoErrorHttp(error);
+  return (
+    errorHttp !== undefined &&
+    !errorHttp.response &&
+    (errorHttp.code === 'ECONNABORTED' || errorHttp.code === 'ETIMEDOUT')
+  );
+}
+
 export function mensajeDeError(error: unknown): string {
   const errorHttp = comoErrorHttp(error);
   if (!errorHttp) return TEXTOS_ERROR.generico;

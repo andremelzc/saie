@@ -1,6 +1,6 @@
 import { useCallback, useContext, useRef, useState } from 'react';
 import { ContextoAvisos } from '../components/ui/avisosContexto';
-import { mensajeDeError } from '../services/errores';
+import { esTiempoAgotado, estadoHttp, mensajeDeError } from '../services/errores';
 
 export interface OpcionesAccion<T> {
   /** Aviso de éxito al terminar; puede calcularse a partir del resultado. */
@@ -12,7 +12,16 @@ export interface OpcionesAccion<T> {
   avisarError?: boolean;
 }
 
-export type ResultadoAccion<T> = { ok: true; valor: T } | { ok: false; error: string };
+export type ResultadoAccion<T> =
+  | { ok: true; valor: T }
+  | {
+      ok: false;
+      error: string;
+      /** Se agotó el tiempo de espera: la operación pudo completarse en el servidor. */
+      tiempoAgotado: boolean;
+      /** Estado HTTP de la respuesta, si la hubo (p. ej. 409 con una corrida en curso). */
+      estado?: number;
+    };
 
 export interface EstadoAccion {
   /** Hay una acción en curso. Un segundo `ejecutar` mientras tanto se ignora. */
@@ -62,7 +71,12 @@ export function useAccion(): EstadoAccion {
         const mensaje = mensajeDeError(e);
         setError(mensaje);
         if (opciones.avisarError !== false) mostrar?.('error', mensaje);
-        return { ok: false, error: mensaje };
+        return {
+          ok: false,
+          error: mensaje,
+          tiempoAgotado: esTiempoAgotado(e),
+          estado: estadoHttp(e),
+        };
       } finally {
         enCurso.current = false;
         setCargando(false);

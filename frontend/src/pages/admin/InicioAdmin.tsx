@@ -301,14 +301,25 @@ const InicioCoordinacion: React.FC = () => {
   const [errorAccion, setErrorAccion] = useState<{
     mensaje: string;
     reintentar: () => void;
+    etiqueta?: string;
   } | null>(null);
+  /** El servidor respondió 409: ya hay una corrida en curso (Issue 4.56). */
+  const [otraCorrida, setOtraCorrida] = useState(false);
 
   const pendientes = alertas.datos?.filter((a) => a.estado === 'PENDIENTE').length ?? 0;
   const periodo = escaladas.datos?.periodo ?? resumenCorrida?.periodo ?? '—';
   const secciones = escaladas.datos?.secciones ?? [];
 
+  /** Vuelve a pedir lo que la corrida pudo cambiar y libera el botón si ya no hay otra en curso. */
+  function comprobarCorrida() {
+    setOtraCorrida(false);
+    setErrorAccion(null);
+    escaladas.recargar();
+    alertas.recargar();
+  }
+
   async function correr() {
-    if (corriendo) return;
+    if (corriendo || otraCorrida) return;
     setConfirmandoCorrida(false);
     setResultadoSeccion(null);
     setCorrida(true);
@@ -326,7 +337,24 @@ const InicioCoordinacion: React.FC = () => {
       { avisarError: false },
     );
     if (resultado && !resultado.ok) {
-      setErrorAccion({ mensaje: resultado.error, reintentar: correr });
+      if (resultado.estado === 409) {
+        // Otra corrida sigue en curso: no se lanza una segunda hasta comprobarlo.
+        setOtraCorrida(true);
+        setErrorAccion({
+          mensaje: resultado.error,
+          reintentar: comprobarCorrida,
+          etiqueta: 'Comprobar de nuevo',
+        });
+      } else if (resultado.tiempoAgotado) {
+        // No se afirma que falló: pudo terminar. Se ofrece actualizar, no repetirla.
+        setErrorAccion({
+          mensaje: resultado.error,
+          reintentar: comprobarCorrida,
+          etiqueta: 'Actualizar',
+        });
+      } else {
+        setErrorAccion({ mensaje: resultado.error, reintentar: correr });
+      }
     }
     setCorrida(false);
   }
@@ -359,7 +387,10 @@ const InicioCoordinacion: React.FC = () => {
         título y desbordaba: `main` recorta con `lg:overflow-hidden` y la última fila quedaba
         inalcanzable, sin scroll para recuperarla.
       */}
-      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-rows-[auto_auto_1fr]">
+      <div
+        aria-busy={corriendo}
+        className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-rows-[auto_auto_1fr]"
+      >
         {/* FILA 1 — las cuatro cifras que resumen la asignación */}
         <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 lg:grid-cols-4">
           <li>
@@ -417,7 +448,8 @@ const InicioCoordinacion: React.FC = () => {
                 <Boton
                   variante="secundario"
                   onClick={() => setConfirmandoCorrida(true)}
-                  disabled={corriendo}
+                  disabled={corriendo || otraCorrida}
+                  aria-describedby="motivo-corrida"
                   cargando={corriendo}
                   textoCargando="Asignando…"
                   className="border-white! bg-white! text-saie-primary! hover:bg-saie-canvas!"
@@ -425,6 +457,13 @@ const InicioCoordinacion: React.FC = () => {
                   Asignar aulas del periodo
                 </Boton>
               </div>
+              <p id="motivo-corrida" className="m-0 text-right text-xs text-white/85">
+                {corriendo
+                  ? 'Esto puede tardar hasta 1 min. No cierres esta pantalla.'
+                  : otraCorrida
+                    ? 'Hay otra asignación en curso. Espera a que termine y pulsa «Comprobar de nuevo».'
+                    : ''}
+              </p>
             </div>
           </section>
 
@@ -486,7 +525,11 @@ const InicioCoordinacion: React.FC = () => {
               <AvisoError mensaje={escaladas.error} onReintentar={escaladas.recargar} />
             )}
             {errorAccion && (
-              <AvisoError mensaje={errorAccion.mensaje} onReintentar={errorAccion.reintentar} />
+              <AvisoError
+                mensaje={errorAccion.mensaje}
+                onReintentar={errorAccion.reintentar}
+                etiquetaAccion={errorAccion.etiqueta}
+              />
             )}
             {resultadoSeccion && (
               <Aviso tono="info" role="status">

@@ -467,6 +467,7 @@ export const ZonaCarga: React.FC<{
       id={`carga-${tipo}`}
       tabIndex={-1}
       aria-label={titulo}
+      aria-busy={enviando}
       className="flex h-full scroll-mt-24 flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-sm focus:outline-3 focus:outline-offset-2 focus:outline-saie-primary"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -492,6 +493,10 @@ export const ZonaCarga: React.FC<{
         onSeleccionar={seleccionar}
       />
 
+      {/* Región viva siempre presente: si se montara con el texto, el lector no lo anunciaría. */}
+      <p role="status" className={enviando ? 'm-0 text-sm text-saie-muted' : 'sr-only'}>
+        {enviando ? 'Importando. Esto puede tardar hasta 2 min; no cierres esta pantalla.' : ''}
+      </p>
       {errorArchivo && <Aviso tono="error">{errorArchivo}</Aviso>}
       {error && <Aviso tono="error">{error}</Aviso>}
 
