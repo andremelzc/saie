@@ -216,6 +216,7 @@ const ListaEscaladas: React.FC<{
   if (secciones.length === 0) {
     return (
       <EstadoVacio
+        compacto
         titulo="Nada por revisar"
         icono={ICONOS.escudo}
         descripcion="No hay secciones pendientes de revisión. Todas tienen un espacio asignado."
