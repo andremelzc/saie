@@ -3,6 +3,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import HorarioMisCursos from './HorarioMisCursos';
+import { AuthProvider } from '../context/AuthProvider';
+import { guardarSesion } from '../services/sesion';
+import { ahoraEnSegundos, crearToken } from '../test/helpers';
 import { CURSOS_FIXTURE, HORARIO_FIXTURE } from '../test/fixtures/horario';
 import type { CursoMatriculadoDTO } from '../types/horario';
 
@@ -12,14 +15,22 @@ const MARTES_10_30 = new Date(2026, 9, 13, 10, 30);
 type Props = Partial<React.ComponentProps<typeof HorarioMisCursos>>;
 
 function renderizar(props: Props = {}) {
+  guardarSesion({
+    token: crearToken(ahoraEnSegundos() + 3600, 'ALUMNO'),
+    rol: 'ALUMNO',
+    debeCambiarClave: false,
+    expiresIn: '8h',
+  });
   return render(
     <MemoryRouter>
-      <HorarioMisCursos
-        horario={HORARIO_FIXTURE}
-        cursos={CURSOS_FIXTURE}
-        ahora={MARTES_10_30}
-        {...props}
-      />
+      <AuthProvider>
+        <HorarioMisCursos
+          horario={HORARIO_FIXTURE}
+          cursos={CURSOS_FIXTURE}
+          ahora={MARTES_10_30}
+          {...props}
+        />
+      </AuthProvider>
     </MemoryRouter>,
   );
 }

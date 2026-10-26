@@ -40,7 +40,8 @@ export interface LayoutAdminProps {
   /**
    * Modo tablero: la pantalla ocupa exactamente el alto de la ventana y no hace scroll;
    * los paneles largos llevan su propio scroll interno. Es el modo de las pantallas que
-   * muestran todo de una vez (Issue 4.20).
+   * muestran todo de una vez (Issue 4.20). Solo se activa en escritorio y con una ventana de
+   * al menos 800 px de alto; por debajo, la página se desplaza con normalidad (Issue 4.36).
    */
   dashboard?: boolean;
   children: React.ReactNode;
@@ -67,7 +68,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
   return (
     <div
       className={`flex min-h-screen flex-col bg-saie-canvas pb-20 md:pb-0 ${
-        dashboard ? 'lg:h-screen lg:overflow-hidden' : ''
+        dashboard ? 'saie-tablero' : ''
       }`}
     >
       <EnlaceSaltar />
@@ -75,22 +76,14 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
         <Contenedor className="flex h-18 items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-4">
             <img src={logoBlanco} alt="SAIE" className="h-9 w-auto shrink-0" />
-            <span className="hidden rounded-full bg-white/15 px-3 py-1 text-sm font-medium sm:inline-flex">
+            <span className="inline-flex min-w-0 items-center truncate rounded-full bg-white/15 px-3 py-1 text-xs font-medium sm:text-sm">
               {etiquetaRol(sesion?.rol)}
             </span>
           </div>
-          <div className="flex items-center gap-4">
-            <p className="m-0 hidden text-right text-xs leading-4 text-white/80 sm:block">
-              <span>Sesión activa</span>
-              <strong className="block text-sm font-bold text-white">
-                {etiquetaRol(sesion?.rol)}
-              </strong>
-            </p>
-            <BotonCerrarSesion
-              compacto
-              className="border-white/30! bg-white/10! text-white! hover:bg-white/20!"
-            />
-          </div>
+          <BotonCerrarSesion
+            compacto
+            className="shrink-0 border-white/30! bg-white/10! text-white! hover:bg-white/20!"
+          />
         </Contenedor>
       </header>
 
@@ -118,7 +111,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
         id={ID_CONTENIDO}
         tabIndex={-1}
         className={`flex flex-1 flex-col gap-4 py-4 focus:outline-none ${
-          dashboard ? 'lg:min-h-0 lg:overflow-hidden' : ''
+          dashboard ? 'saie-tablero-main' : ''
         }`}
       >
         <div className="saie-no-imprimir flex flex-wrap items-start justify-between gap-3">

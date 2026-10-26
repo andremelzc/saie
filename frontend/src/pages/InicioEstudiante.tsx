@@ -147,7 +147,7 @@ const SemanaDeUnVistazo: React.FC<{ horario: HorarioSemanalDTO; hoy: DiaSemana }
   horario,
   hoy,
 }) => (
-  <section aria-labelledby="titulo-semana" className="flex flex-col gap-2">
+  <section aria-labelledby="titulo-semana" className="flex min-w-0 flex-col gap-2">
     <h2 id="titulo-semana" className="m-0 text-sm font-bold text-saie-text">
       Tu semana de un vistazo
     </h2>
@@ -182,7 +182,7 @@ const SemanaDeUnVistazo: React.FC<{ horario: HorarioSemanalDTO; hoy: DiaSemana }
   </section>
 );
 
-/** Las clases del día, en tarjetas horizontales con su estado. */
+/** Las clases del día, en una rejilla de tarjetas con su estado. */
 const ListaDeClases: React.FC<{
   titulo: string;
   sesiones: SesionDTO[];
@@ -200,14 +200,14 @@ const ListaDeClases: React.FC<{
       <h2 id="titulo-hoy" className="m-0 text-sm font-bold text-saie-text">
         {titulo}
       </h2>
-      <ol className="saie-stagger m-0 flex list-none gap-3 overflow-x-auto p-0 pb-1 lg:overflow-y-auto">
+      <ol className="saie-stagger m-0 grid min-h-0 list-none grid-cols-1 content-start gap-3 p-0 pb-1 md:grid-cols-2 xl:grid-cols-3 lg:overflow-y-auto">
         {sesiones.map((s) => {
           const estado = ahora === null ? null : estadoDeClase(s, ahora);
           const color = colores[s.codigoCurso] ?? PALETA_CURSOS[0];
           return (
             <li
               key={`${s.seccionId}-${s.horaInicio}`}
-              className={`flex w-56 shrink-0 flex-col gap-1 rounded-xl border border-l-4 border-saie-divider bg-white p-3 shadow-sm ${
+              className={`flex w-full flex-col gap-1 rounded-xl border border-l-4 border-saie-divider bg-white p-3 shadow-sm ${
                 estado === 'FINALIZADA' ? 'opacity-60' : ''
               }`}
               style={{ borderLeftColor: color.borde }}
@@ -356,6 +356,7 @@ export const InicioEstudiante: React.FC = () => {
   );
   const hayClases = horario ? todasLasSesiones(horario).length > 0 : false;
   const resumen = horario ? datosResumen(horario) : [];
+  const mostrarSemana = Boolean(horario && hayClases);
 
   return (
     <LayoutEstudiante
@@ -363,12 +364,21 @@ export const InicioEstudiante: React.FC = () => {
       titulo="Área del estudiante"
       subtitulo={horario?.periodo ? `Periodo lectivo ${horario.periodo}` : undefined}
     >
-      <div className="grid gap-4 lg:h-full lg:min-h-0 lg:grid-rows-[auto_1fr_auto]">
+      {/*
+        El tablero ocupa lo que queda del `main` (columna flex) tras el título. De arriba abajo:
+        la clase destacada con las cifras, la semana de un vistazo y, al final, las clases del
+        día junto a los accesos.
+      */}
+      <div
+        className={`grid grid-cols-1 gap-4 lg:min-h-0 lg:flex-1 ${
+          mostrarSemana ? 'lg:grid-rows-[auto_auto_1fr]' : 'lg:grid-rows-[auto_1fr]'
+        }`}
+      >
         {/* FILA 1 — la clase en curso o la próxima y las cifras de la semana */}
-        <div className="grid gap-4 lg:grid-cols-12">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
           <section
             aria-label="Tu próxima clase"
-            className="flex flex-col gap-3 rounded-2xl bg-gradient-to-br from-saie-primary to-saie-primary-dark p-4 text-white lg:col-span-7"
+            className="flex min-w-0 flex-col gap-3 rounded-2xl bg-gradient-to-br from-saie-primary to-saie-primary-dark p-4 text-white lg:col-span-7"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="min-w-0">
@@ -389,7 +399,7 @@ export const InicioEstudiante: React.FC = () => {
             />
           </section>
 
-          <div className="grid grid-cols-2 gap-3 lg:col-span-5 lg:grid-cols-2">
+          <div className="grid min-w-0 grid-cols-2 gap-3 lg:col-span-5">
             {cargandoHorario && !horario ? (
               [0, 1, 2, 3].map((n) => (
                 <div
@@ -419,9 +429,12 @@ export const InicioEstudiante: React.FC = () => {
           </div>
         </div>
 
-        {/* FILA 2 — las clases de hoy y el acceso rápido a cada sección */}
-        <div className="grid min-h-0 gap-4 lg:grid-cols-12">
-          <div className="flex min-h-0 flex-col gap-3 lg:col-span-8">
+        {/* FILA 2 — la semana completa, a la vista desde el principio */}
+        {horario && hayClases && <SemanaDeUnVistazo horario={horario} hoy={hoy} />}
+
+        {/* FILA 3 — las clases del día y los accesos a cada sección */}
+        <div className="grid min-h-0 grid-cols-1 gap-4 lg:grid-cols-12">
+          <div className="flex min-h-0 min-w-0 flex-col gap-3 lg:col-span-8">
             {errorHorario && (
               <EstadoError
                 mensaje={`No pudimos cargar tu horario. ${errorHorario}`}
@@ -458,32 +471,32 @@ export const InicioEstudiante: React.FC = () => {
 
           <nav
             aria-label="Secciones del portal del estudiante"
-            className="flex min-h-0 flex-col gap-2 lg:col-span-4 lg:overflow-y-auto"
+            className="flex min-h-0 min-w-0 flex-col gap-3 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-4 lg:overflow-y-auto"
           >
             <h2 className="m-0 text-sm font-bold text-saie-text">Ir a</h2>
-            {ACCESOS.map((a) => (
-              <Link
-                key={a.to}
-                to={a.to}
-                className="flex items-center gap-3 rounded-xl border border-saie-divider bg-white p-2.5 text-saie-text no-underline transition-colors hover:border-saie-primary"
-              >
-                <span
-                  aria-hidden="true"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-saie-primary/10 text-saie-primary"
-                >
-                  <Icono trazo={a.trazo} className="h-4 w-4" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-bold">{a.titulo}</span>
-                  <span className="block text-xs text-saie-muted">{a.descripcion}</span>
-                </span>
-              </Link>
-            ))}
+            <ul className="m-0 grid list-none grid-cols-2 gap-2 p-0">
+              {ACCESOS.map((a) => (
+                <li key={a.to} className="min-w-0 last:odd:col-span-2">
+                  <Link
+                    to={a.to}
+                    className="flex min-h-11 items-center gap-2.5 rounded-xl border border-saie-divider bg-white p-2 text-saie-text no-underline transition-colors hover:border-saie-primary"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-saie-primary/10 text-saie-primary"
+                    >
+                      <Icono trazo={a.trazo} className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 text-sm font-semibold leading-tight">
+                      {a.titulo}
+                      <span className="sr-only"> — {a.descripcion}</span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </nav>
         </div>
-
-        {/* FILA 3 — la semana completa en una tira */}
-        {horario && hayClases && <SemanaDeUnVistazo horario={horario} hoy={hoy} />}
       </div>
     </LayoutEstudiante>
   );
