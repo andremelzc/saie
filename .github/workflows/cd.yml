@@ -106,3 +106,30 @@ jobs:
           done
           echo "::error::El frontend no respondió al health check tras el despliegue."
           exit 1
+
+      - name: Resumen de Despliegue y Alerta de Rollback (Issue 5.26)
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            cat << 'EOF' >> $GITHUB_STEP_SUMMARY
+          ## ✅ Despliegue Continuo Exitoso (CD)
+          - **Estado:** Salud del backend y frontend verificada correctamente.
+          - **Base de Datos:** Migraciones de Prisma aplicadas en Supabase.
+          - **Backend:** `${{ secrets.BACKEND_URL }}/api/health` OK.
+          - **Frontend:** `${{ secrets.FRONTEND_URL }}` OK.
+          EOF
+          else
+            cat << 'EOF' >> $GITHUB_STEP_SUMMARY
+          ## 🚨 FALLO EN DESPLIEGUE CONTINUO — PROCEDIMIENTO DE ROLLBACK REQUERIDO
+          > **Atención:** Uno de los pasos del despliegue continuo o la verificación de salud posterior ha fallado.
+          > 
+          > Consulte de inmediato el runbook operativo:
+          > 📖 **[Runbook de Rollback del Despliegue Continuo](docs/runbook_rollback.md)**
+
+          ### Pasos inmediatos de contingencia:
+          1. **Backend (Render):** Ingresar a [Render Dashboard](https://dashboard.render.com/) → `saie-backend` → *Deploys* y ejecutar **«Rollback to this deploy»** sobre la versión previa estable.
+          2. **Frontend (Vercel):** Ingresar a [Vercel Dashboard](https://vercel.com/) → `saie` → *Deployments* y activar **«Instant Rollback»**.
+          3. **Base de Datos (Supabase):** Verificar estado de migraciones con `npx prisma migrate status` y aplicar resolución conforme a `docs/runbook_rollback.md` §3.3.
+          EOF
+          fi
+
