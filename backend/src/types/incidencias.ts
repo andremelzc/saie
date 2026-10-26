@@ -21,4 +21,6 @@ export interface FiltrosIncidencias {
   estado?: EstadoIncidencia;
   prioridad?: PrioridadIncidencia;
   espacioId?: string;
+  pagina?: number;
+  limite?: number;
 }
