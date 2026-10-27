@@ -7,9 +7,10 @@ import { EsqueletoCarga, Icono } from '../components/estudiante/ElementosHorario
 import { Boton } from '../components/ui/Boton';
 import { clasesBoton } from '../components/ui/clasesBoton';
 import { DialogoConfirmacion } from '../components/ui/DialogoConfirmacion';
+import { useAccion } from '../hooks/useAccion';
 import { useCarga } from '../hooks/useCarga';
-import { ZONA_HORARIA } from '../utils/admin';
-import { desvincularTelegram, mensajeDeError, obtenerTelegram } from '../services/estudiante';
+import { formatearFechaLarga, formatearFechaRelativa } from '../utils/fechas';
+import { desvincularTelegram, obtenerTelegram } from '../services/estudiante';
 import type { EstadoTelegramDTO } from '../types/perfil';
 
 const TRAZO_TELEGRAM = 'M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z';
@@ -18,17 +19,12 @@ const TRAZO_CANDADO =
 
 type Mensaje = { tipo: 'ok' | 'error'; texto: string } | null;
 
-/** ISO 8601 → «1 de octubre de 2026». */
-function formatearFechaHora(iso: string | null): string | null {
-  if (!iso) return null;
-  const fecha = new Date(iso);
-  if (Number.isNaN(fecha.getTime())) return null;
-  return fecha.toLocaleDateString('es-PE', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: ZONA_HORARIA,
-  });
+/** «hace 2 h» si fue hace menos de un día; si no, «1 de octubre de 2026» (hora de Lima). */
+function fechaDeEstado(iso: string | null): string | null {
+  const larga = formatearFechaLarga(iso);
+  if (!larga || !iso) return null;
+  const relativa = formatearFechaRelativa(iso);
+  return relativa.startsWith('hace ') || relativa === 'ahora mismo' ? relativa : larga;
 }
 
 /**
@@ -42,6 +38,7 @@ export const TelegramAlumnoPage: React.FC = () => {
   const [estadoLocal, setEstadoLocal] = useState<EstadoTelegramDTO | null>(null);
   const estado = estadoLocal ?? datos;
   const [confirmando, setConfirmando] = useState(false);
+  const { ejecutar } = useAccion();
   const [desvinculando, setDesvinculando] = useState(false);
   const [mensaje, setMensaje] = useState<Mensaje>(null);
 
@@ -53,24 +50,24 @@ export const TelegramAlumnoPage: React.FC = () => {
   async function ejecutarBaja() {
     setDesvinculando(true);
     setMensaje(null);
-    try {
-      const nuevo = await desvincularTelegram();
-      setEstadoLocal(nuevo);
+    // El resultado se muestra en el bloque de mensaje de la pantalla, con su «Reintentar».
+    const resultado = await ejecutar(() => desvincularTelegram(), { avisarError: false });
+    setDesvinculando(false);
+    if (resultado?.ok) {
+      setEstadoLocal(resultado.valor);
       setConfirmando(false);
       setMensaje({
         tipo: 'ok',
         texto:
           'Listo, ya no recibirás avisos por Telegram. Puedes volver a vincularte cuando quieras.',
       });
-    } catch (e) {
-      setMensaje({ tipo: 'error', texto: mensajeDeError(e) });
-    } finally {
-      setDesvinculando(false);
+    } else if (resultado) {
+      setMensaje({ tipo: 'error', texto: resultado.error });
     }
   }
 
-  const fechaVinculacion = formatearFechaHora(estado?.fechaVinculacion ?? null);
-  const fechaBaja = formatearFechaHora(estado?.fechaBaja ?? null);
+  const fechaVinculacion = fechaDeEstado(estado?.fechaVinculacion ?? null);
+  const fechaBaja = fechaDeEstado(estado?.fechaBaja ?? null);
 
   return (
     <div className="min-h-screen bg-saie-canvas text-saie-text">
@@ -218,7 +215,8 @@ export const TelegramAlumnoPage: React.FC = () => {
                       variante="peligro"
                       tamano="sm"
                       onClick={ejecutarBaja}
-                      disabled={desvinculando}
+                      cargando={desvinculando}
+                      textoCargando="Reintentando…"
                     >
                       Reintentar
                     </Boton>

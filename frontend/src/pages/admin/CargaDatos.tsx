@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import LayoutAdmin from '../../components/admin/LayoutAdmin';
 import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
 import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
+import { idPanelPestana, idPestana } from '../../components/estudiante/idsPestanas';
 import { Acordeon } from '../../components/ui/Acordeon';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
@@ -10,11 +11,11 @@ import { Boton } from '../../components/ui/Boton';
 import { Drawer } from '../../components/ui/Drawer';
 import { PLANTILLAS, descargarPlantilla } from '../../config/plantillas';
 import type { PlantillaCSV } from '../../config/plantillas';
-import { usePantallaAncha } from '../../hooks/usePantallaAncha';
+import { useAccion } from '../../hooks/useAccion';
 import { importarCsv } from '../../services/admin';
-import { mensajeDeError } from '../../services/estudiante';
 import type { ResultadoImportacionDTO, TipoImportacion } from '../../types/admin';
-import { formatearFechaCorta } from '../../utils/admin';
+import { agruparErroresPorTipo } from '../../utils/erroresImportacion';
+import { formatearFechaCorta } from '../../utils/fechas';
 
 /**
  * Issue 1.9 — cuatro flujos de carga independientes. Las zonas van primero y en orden; la guía
@@ -229,27 +230,11 @@ const PanelResultado: React.FC<{
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-saie-canvas p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <output className="m-0 block text-sm font-bold text-saie-text">
-          {resultado.exitosa
-            ? 'Carga completada sin errores'
-            : `La carga tiene ${textoFilasConProblemas(resultado.errores.length)}`}
-        </output>
-        <BadgeEstado tono={resultado.exitosa ? 'exito' : 'advertencia'}>
-          {resultado.exitosa ? 'Sin errores' : `${resultado.errores.length} con problemas`}
-        </BadgeEstado>
-      </div>
-      <p className="m-0 text-sm text-saie-muted">
-        {/*
-          Cada importador genera una entrada por fila rechazada (las varias incidencias de
-          validación de una misma fila se unen en un solo mensaje), así que la resta es
-          exacta: son las filas que sí se guardaron.
-        */}
-        {resultado.filasRecibidas} filas leídas ·{' '}
-        {resultado.filasRecibidas - resultado.errores.length} guardadas
-        {resultado.errores.length > 0 && ` · ${resultado.errores.length} con problemas`}
-      </p>
-
+      {/*
+        El resumen («N filas leídas · M guardadas») está una sola vez, en la tarjeta de la zona
+        de carga. Aquí solo va el detalle (Issue 4.53). Cada importador genera una entrada por
+        fila rechazada, así que `filasRecibidas - errores` son las filas que sí se guardaron.
+      */}
       {Object.keys(resultado.procesados).length > 0 && (
         <dl className="m-0 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
           {Object.entries(resultado.procesados).map(([clave, valor]) => (
@@ -283,27 +268,48 @@ const PanelResultado: React.FC<{
               Corregir y volver a subir
             </Boton>
           </div>
-          <Acordeon
-            titulo={`Ver ${textoFilasConProblemas(resultado.errores.length)}`}
-            abiertoInicial
-          >
-            {/*
-              Sin tope de altura ni scroll interno: la lista vive en el drawer y es el drawer
-              el que se desplaza. Un scroll dentro de la tarjeta escondía las filas y era un
-              parche para que el tablero no creciera.
-            */}
-            <ul className="m-0 list-disc pl-5 text-sm text-saie-text">
-              {resultado.errores.map((e, i) => (
-                <li key={i}>{e}</li>
-              ))}
-            </ul>
-          </Acordeon>
+          <ErroresAgrupados errores={resultado.errores} />
         </>
       )}
 
       {resultado.asignacion && (
         <p className="m-0 text-sm text-saie-text">{textoAsignacion(resultado.asignacion)}</p>
       )}
+    </div>
+  );
+};
+
+/** Cuántas filas de cada tipo de error se listan; el resto se descarga en el CSV. */
+const FILAS_POR_GRUPO = 20;
+
+/**
+ * Los errores de la importación agrupados por tipo, con su conteo (Issue 4.53). Cada grupo muestra
+ * solo sus primeras filas: un archivo de miles de filas con problemas no debe pintar miles de
+ * líneas. «Descargar errores (CSV)» trae todos.
+ */
+const ErroresAgrupados: React.FC<{ errores: string[] }> = ({ errores }) => {
+  const grupos = useMemo(() => agruparErroresPorTipo(errores), [errores]);
+  return (
+    <div className="flex flex-col gap-2">
+      {grupos.map((grupo, i) => (
+        <Acordeon
+          key={grupo.tipo}
+          titulo={`${grupo.tipo} (${textoFilasConProblemas(grupo.errores.length)})`}
+          abiertoInicial={i === 0}
+        >
+          <ul className="m-0 list-disc pl-5 text-sm text-saie-text">
+            {grupo.errores.slice(0, FILAS_POR_GRUPO).map((e, j) => (
+              <li key={j}>{e}</li>
+            ))}
+          </ul>
+          {grupo.errores.length > FILAS_POR_GRUPO && (
+            <p className="m-0 mt-2 text-xs text-saie-muted">
+              Se muestran las primeras {FILAS_POR_GRUPO} de {grupo.errores.length}. Descarga el CSV
+              para ver todas.
+            </p>
+          )}
+        </Acordeon>
+      ))}
     </div>
   );
 };
@@ -376,6 +382,7 @@ export const ZonaCarga: React.FC<{
 }) => {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
+  const { ejecutar } = useAccion();
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<ResultadoImportacionDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -426,16 +433,18 @@ export const ZonaCarga: React.FC<{
     setEnviando(true);
     setError(null);
     setResultado(null);
-    try {
-      const respuesta = await importarCsv(tipo, await leerArchivo(archivo));
-      setResultado(respuesta);
-      onEstado(tipo, respuesta.exitosa ? 'cargado' : 'con-errores', new Date().toISOString());
-    } catch (e) {
-      setError(mensajeDeError(e));
-    } finally {
-      setEnviando(false);
-      limpiarInput();
+    // El error se muestra en línea, junto a la zona de carga.
+    const salida = await ejecutar(async () => importarCsv(tipo, await leerArchivo(archivo)), {
+      avisarError: false,
+    });
+    if (salida?.ok) {
+      setResultado(salida.valor);
+      onEstado(tipo, salida.valor.exitosa ? 'cargado' : 'con-errores', new Date().toISOString());
+    } else if (salida) {
+      setError(salida.error);
     }
+    setEnviando(false);
+    limpiarInput();
   }
 
   function corregir() {
@@ -457,6 +466,7 @@ export const ZonaCarga: React.FC<{
       id={`carga-${tipo}`}
       tabIndex={-1}
       aria-label={titulo}
+      aria-busy={enviando}
       className="flex h-full scroll-mt-24 flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-sm focus:outline-3 focus:outline-offset-2 focus:outline-saie-primary"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -482,6 +492,10 @@ export const ZonaCarga: React.FC<{
         onSeleccionar={seleccionar}
       />
 
+      {/* Región viva siempre presente: si se montara con el texto, el lector no lo anunciaría. */}
+      <p role="status" className={enviando ? 'm-0 text-sm text-saie-muted' : 'sr-only'}>
+        {enviando ? 'Importando. Esto puede tardar hasta 2 min; no cierres esta pantalla.' : ''}
+      </p>
       {errorArchivo && <Aviso tono="error">{errorArchivo}</Aviso>}
       {error && <Aviso tono="error">{error}</Aviso>}
 
@@ -684,10 +698,6 @@ const GuiaCarga: React.FC = () => (
 
 /** Tarjeta de una plantilla: descarga del CSV y detalle de sus columnas. */
 const TarjetaPlantilla: React.FC<{ plantilla: PlantillaCSV }> = ({ plantilla }) => {
-  // En pantallas estrechas las columnas se apilan en una lista: una tabla de cuatro columnas no
-  // cabe a 320 px. Solo existe una de las dos versiones en el DOM.
-  const esPantallaAncha = usePantallaAncha(640);
-
   return (
     <article className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-sm">
       <header className="flex flex-col gap-1">
@@ -702,64 +712,60 @@ const TarjetaPlantilla: React.FC<{ plantilla: PlantillaCSV }> = ({ plantilla }) 
       </div>
 
       <Acordeon titulo={`Ver columnas (${plantilla.columnas.length})`}>
-        {esPantallaAncha ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-saie-canvas uppercase tracking-wide text-saie-muted">
-                <tr>
-                  <th scope="col" className="px-2 py-2">
-                    Columna
-                  </th>
-                  <th scope="col" className="px-2 py-2">
-                    Obligatoria
-                  </th>
-                  <th scope="col" className="px-2 py-2">
-                    Qué es
-                  </th>
-                  <th scope="col" className="px-2 py-2">
-                    Ejemplo
-                  </th>
+        {/* Tabla desde `sm` y lista apilada por debajo: una tabla de cuatro columnas no cabe a 320 px. */}
+        <div className="hidden overflow-x-auto sm:block">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-saie-canvas uppercase tracking-wide text-saie-muted">
+              <tr>
+                <th scope="col" className="px-2 py-2">
+                  Columna
+                </th>
+                <th scope="col" className="px-2 py-2">
+                  Obligatoria
+                </th>
+                <th scope="col" className="px-2 py-2">
+                  Qué es
+                </th>
+                <th scope="col" className="px-2 py-2">
+                  Ejemplo
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {plantilla.columnas.map((columna) => (
+                <tr key={columna.nombre} className="border-t border-saie-divider align-top">
+                  <td className="px-2 py-2 font-mono font-semibold text-saie-text">
+                    {columna.nombre}
+                  </td>
+                  <td className="px-2 py-2 text-saie-muted">{columna.obligatorio ? 'Sí' : 'No'}</td>
+                  <td className="px-2 py-2 text-saie-muted">{columna.descripcion}</td>
+                  <td className="px-2 py-2 font-mono text-saie-muted">{columna.ejemplo}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {plantilla.columnas.map((columna) => (
-                  <tr key={columna.nombre} className="border-t border-saie-divider align-top">
-                    <td className="px-2 py-2 font-mono font-semibold text-saie-text">
-                      {columna.nombre}
-                    </td>
-                    <td className="px-2 py-2 text-saie-muted">
-                      {columna.obligatorio ? 'Sí' : 'No'}
-                    </td>
-                    <td className="px-2 py-2 text-saie-muted">{columna.descripcion}</td>
-                    <td className="px-2 py-2 font-mono text-saie-muted">{columna.ejemplo}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <dl className="m-0 flex flex-col gap-3">
-            {plantilla.columnas.map((columna) => (
-              <div
-                key={columna.nombre}
-                className="rounded-lg border border-saie-divider bg-saie-canvas p-3"
-              >
-                <dt className="font-mono font-semibold text-saie-text">
-                  {columna.nombre}{' '}
-                  <span className="font-sans text-xs font-normal text-saie-muted">
-                    ({columna.obligatorio ? 'obligatoria' : 'opcional'})
-                  </span>
-                </dt>
-                <dd className="m-0 mt-1 text-sm text-saie-text">
-                  {columna.descripcion}
-                  <span className="mt-1 block font-mono text-xs text-saie-muted">
-                    Ejemplo: {columna.ejemplo}
-                  </span>
-                </dd>
-              </div>
-            ))}
-          </dl>
-        )}
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <dl className="m-0 flex flex-col gap-3 sm:hidden">
+          {plantilla.columnas.map((columna) => (
+            <div
+              key={columna.nombre}
+              className="rounded-lg border border-saie-divider bg-saie-canvas p-3"
+            >
+              <dt className="font-mono font-semibold text-saie-text">
+                {columna.nombre}{' '}
+                <span className="font-sans text-xs font-normal text-saie-muted">
+                  ({columna.obligatorio ? 'obligatoria' : 'opcional'})
+                </span>
+              </dt>
+              <dd className="m-0 mt-1 text-sm text-saie-text">
+                {columna.descripcion}
+                <span className="mt-1 block font-mono text-xs text-saie-muted">
+                  Ejemplo: {columna.ejemplo}
+                </span>
+              </dd>
+            </div>
+          ))}
+        </dl>
       </Acordeon>
     </article>
   );
@@ -878,9 +884,16 @@ export const CargaDatos: React.FC = () => {
             valor={pestanaAyuda}
             onCambiar={setPestanaAyuda}
             etiquetaGrupo="Contenido de ayuda"
+            idBase="ayuda-carga"
             className="w-full"
           />
-          {pestanaAyuda === 'guia' ? <GuiaCarga /> : <PlantillasCarga />}
+          <div
+            role="tabpanel"
+            id={idPanelPestana('ayuda-carga', pestanaAyuda)}
+            aria-labelledby={idPestana('ayuda-carga', pestanaAyuda)}
+          >
+            {pestanaAyuda === 'guia' ? <GuiaCarga /> : <PlantillasCarga />}
+          </div>
         </div>
       </Drawer>
     </LayoutAdmin>

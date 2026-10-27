@@ -3,51 +3,6 @@ import type { RolCuenta } from '../types/auth';
 import { ROL } from './diccionarios';
 import { ICONOS } from '../components/ui/iconos';
 
-/** Todas las fechas se muestran en hora de Lima, estén donde estén la persona y el servidor. */
-export const ZONA_HORARIA = 'America/Lima';
-
-export function formatearFechaAlerta(iso: string): string {
-  const fecha = new Date(iso);
-  if (Number.isNaN(fecha.getTime())) return iso;
-  return fecha.toLocaleString('es-PE', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: ZONA_HORARIA,
-  });
-}
-
-/** Fecha compacta para «Última carga: 12 oct, 10:32». */
-export function formatearFechaCorta(iso: string): string {
-  const fecha = new Date(iso);
-  if (Number.isNaN(fecha.getTime())) return iso;
-  return fecha.toLocaleString('es-PE', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: ZONA_HORARIA,
-  });
-}
-
-/**
- * «hace 5 min», «hace 3 h»; pasadas 24 horas (o si la fecha es futura) la fecha corta. Sirve para
- * lo que importa por su frescura, como la última carga o la detección de una alerta.
- */
-export function formatearFechaRelativa(iso: string, ahora: Date = new Date()): string {
-  const fecha = new Date(iso);
-  if (Number.isNaN(fecha.getTime())) return iso;
-  const minutos = Math.round((ahora.getTime() - fecha.getTime()) / 60000);
-  if (minutos < 0) return formatearFechaCorta(iso);
-  if (minutos < 1) return 'ahora mismo';
-  if (minutos < 60) return `hace ${minutos} min`;
-  const horas = Math.round(minutos / 60);
-  if (horas < 24) return `hace ${horas} h`;
-  return formatearFechaCorta(iso);
-}
-
 export interface MotivoEscalamientoInfo {
   codigo: string | null;
   etiqueta: string;

@@ -201,6 +201,50 @@ describe('Inicio del panel administrativo', () => {
       expect(alertas).toHaveBeenCalledTimes(2);
     });
 
+    it('avisa que la corrida puede tardar mientras se ejecuta (Issue 4.56)', async () => {
+      let terminar: (r: typeof resumen) => void = () => undefined;
+      corrida.mockReturnValue(new Promise((resolver) => (terminar = resolver)));
+      montar();
+      await screen.findByText(/IS101/);
+      fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
+
+      expect(await screen.findByText(/puede tardar hasta 1 min/i)).toBeInTheDocument();
+      terminar(resumen);
+      await waitFor(() => expect(screen.queryByText(/puede tardar hasta 1 min/i)).toBeNull());
+    });
+
+    it('ante un tiempo agotado no afirma que falló y ofrece actualizar (Issue 4.56)', async () => {
+      corrida.mockRejectedValue({ code: 'ECONNABORTED', response: undefined });
+      montar();
+      await screen.findByText(/IS101/);
+      fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
+
+      expect(await screen.findByText(/Puede que se haya completado/)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Actualizar' }));
+      await waitFor(() => expect(escaladas).toHaveBeenCalledTimes(2));
+      expect(corrida).toHaveBeenCalledTimes(1);
+    });
+
+    it('con una corrida en curso (409) deshabilita «Asignar aulas» y explica por qué (Issue 4.56)', async () => {
+      corrida.mockRejectedValue({
+        response: { status: 409, data: { success: false, message: 'Ya hay una corrida en curso' } },
+      });
+      montar();
+      await screen.findByText(/IS101/);
+      fireEvent.click(screen.getByRole('button', { name: 'Asignar aulas del periodo' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
+
+      expect(await screen.findByText(/Hay otra asignación en curso/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Asignar aulas del periodo' })).toBeDisabled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Comprobar de nuevo' }));
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Asignar aulas del periodo' })).toBeEnabled(),
+      );
+    });
+
     it('permite cancelar la corrida sin llamar al backend', async () => {
       montar();
       await screen.findByText(/IS101/);

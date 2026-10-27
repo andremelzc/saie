@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { AlertaDTO, TipoAlerta } from '../../types/admin';
-import { formatearFechaAlerta } from '../../utils/admin';
+import { formatearFechaAlerta } from '../../utils/fechas';
 import { etiquetaTipoAlerta } from '../../utils/diccionarios';
 import { BadgeEstado } from '../ui/BadgeEstado';
 import { Boton } from '../ui/Boton';

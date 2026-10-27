@@ -1,6 +1,7 @@
 ﻿import { describe, it, expect } from 'vitest';
 import * as adminUtils from './admin';
-import { describirMotivoEscalamiento, formatearFechaCorta } from './admin';
+import { describirMotivoEscalamiento } from './admin';
+import { formatearFechaCorta } from './fechas';
 
 describe('Utils de Administración', () => {
   it('traduce los motivos del motor sin mostrar códigos internos', () => {

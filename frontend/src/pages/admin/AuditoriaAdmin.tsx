@@ -1,16 +1,29 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { RUTAS } from '../../config/rutas';
+import { ICONOS } from '../../components/ui/iconos';
+import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
 import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
+import { idPanelPestana, idPestana } from '../../components/estudiante/idsPestanas';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
 import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
+import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
 import { Campo } from '../../components/ui/Campo';
 import { CLASE_CAMPO } from '../../components/ui/campos';
 import { useCarga } from '../../hooks/useCarga';
+import { useValorDiferido } from '../../hooks/useValorDiferido';
 import { obtenerAuditoria, obtenerHistorial } from '../../services/admin';
-import type { EstadoAsignacion, TipoEventoAuditoria } from '../../types/admin';
-import { formatearFechaAlerta } from '../../utils/admin';
+import type {
+  EstadoAsignacion,
+  HistorialAsignacionDTO,
+  TipoEventoAuditoria,
+} from '../../types/admin';
+import { describirMotivoEscalamiento } from '../../utils/admin';
+import { formatearFechaAlerta } from '../../utils/fechas';
+import { agruparPorCorrida, tituloDeCorrida, ubicacionDeEspacios } from '../../utils/historial';
+import type { GrupoCorrida } from '../../utils/historial';
 import { describirEstadoAsignacion, describirEventoAuditoria } from '../../utils/diccionarios';
 
 /** Vuelve a pedir los datos cuando cambia `version` (botón «Actualizar»), sin tocar los filtros. */
@@ -50,24 +63,120 @@ const EVENTOS_FILTRO: TipoEventoAuditoria[] = [
   'VERIFICACION',
 ];
 
+/** Motivo de una escalada en lenguaje llano; null si la asignación no está en revisión. */
+function motivoLlano(a: HistorialAsignacionDTO): { etiqueta: string; descripcion: string } | null {
+  if (a.estado !== 'ESCALADA') return null;
+  const motivo = describirMotivoEscalamiento(a.motivoEscalamiento);
+  return { etiqueta: motivo.etiqueta, descripcion: motivo.descripcion };
+}
+
+const DatosSeccion: React.FC<{ a: HistorialAsignacionDTO }> = ({ a }) => (
+  <>
+    <span className="block font-semibold">
+      {a.codigoCurso} · {a.codigoSeccion}
+    </span>
+    <span className="block text-xs text-saie-muted">{a.nombreCurso}</span>
+  </>
+);
+
+const DatosAula: React.FC<{ a: HistorialAsignacionDTO }> = ({ a }) =>
+  a.espacios.length > 0 ? (
+    <>
+      <span className="block">{a.espacios.map((e) => e.identificador).join(', ')}</span>
+      <span className="block text-xs text-saie-muted">{ubicacionDeEspacios(a.espacios)}</span>
+    </>
+  ) : (
+    <span>—</span>
+  );
+
+const DatosEstado: React.FC<{ a: HistorialAsignacionDTO }> = ({ a }) => {
+  const motivo = motivoLlano(a);
+  return (
+    <>
+      <InsigniaEstado estado={a.estado} />
+      {motivo && <span className="mt-1 block text-xs text-saie-muted">{motivo.descripcion}</span>}
+    </>
+  );
+};
+
+/** Una corrida: su resumen y sus asignaciones (tabla desde `lg`, tarjetas por debajo). */
+const GrupoHistorial: React.FC<{ grupo: GrupoCorrida; indice: number }> = ({ grupo, indice }) => {
+  const idTitulo = `corrida-${indice}`;
+  return (
+    <section aria-labelledby={idTitulo} className="flex flex-col gap-2">
+      <h3 id={idTitulo} className="m-0 text-sm font-bold text-saie-text">
+        {tituloDeCorrida(grupo)}
+      </h3>
+      <div className="hidden lg:block">
+        <TablaDatos etiqueta={`Asignaciones de la corrida ${indice + 1}`}>
+          <CabeceraTabla columnas={['Sección', 'Aula', 'Estado', 'Fecha']} />
+          <tbody>
+            {grupo.items.map((a) => (
+              <tr key={a.id} className="border-t border-saie-divider align-top">
+                <td className="px-4 py-3">
+                  <DatosSeccion a={a} />
+                </td>
+                <td className="px-4 py-3">
+                  <DatosAula a={a} />
+                </td>
+                <td className="px-4 py-3">
+                  <DatosEstado a={a} />
+                </td>
+                <td className="px-4 py-3 text-xs text-saie-muted">
+                  {formatearFechaAlerta(a.fechaAsignacion)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </TablaDatos>
+      </div>
+      <ul className="m-0 flex list-none flex-col gap-2 p-0 lg:hidden">
+        {grupo.items.map((a) => (
+          <li
+            key={a.id}
+            className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-4 text-sm"
+          >
+            <div>
+              <DatosSeccion a={a} />
+            </div>
+            <div>
+              <span className="block text-xs text-saie-muted">Aula</span>
+              <DatosAula a={a} />
+            </div>
+            <div>
+              <DatosEstado a={a} />
+            </div>
+            <p className="m-0 text-xs text-saie-muted">{formatearFechaAlerta(a.fechaAsignacion)}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+};
+
 /** `version` cambia al pulsar «Actualizar»: vuelve a pedir los datos conservando los filtros. */
 const VistaHistorial: React.FC<{ version: number }> = ({ version }) => {
   const [periodo, setPeriodo] = useState('');
   const [estado, setEstado] = useState<'TODOS' | EstadoAsignacion>('TODOS');
+  // Una sola petición tras una pausa al escribir el periodo (Issue 4.41).
+  const periodoDiferido = useValorDiferido(periodo);
 
   const cargar = useCallback(
     () =>
       obtenerHistorial({
-        periodo: periodo.trim() || undefined,
+        periodo: periodoDiferido.trim() || undefined,
         estado: estado === 'TODOS' ? undefined : estado,
         limite: 200,
       }),
-    [periodo, estado],
+    [periodoDiferido, estado],
   );
 
-  const { datos, cargando, error, recargar } = useCarga(cargar);
+  const { datos, cargando, error, recargar } = useCarga(cargar, {
+    clave: `historial:${periodoDiferido.trim()}|${estado}`,
+  });
   useRecargarAl(version, recargar);
-  const items = datos?.items ?? [];
+  const items = useMemo(() => datos?.items ?? [], [datos]);
+  const grupos = useMemo(() => agruparPorCorrida(items), [items]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -98,42 +207,28 @@ const VistaHistorial: React.FC<{ version: number }> = ({ version }) => {
       </div>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      {cargando && !datos ? (
-        <EsqueletoCarga texto="Cargando historial…" forma="tabla" />
-      ) : items.length === 0 ? (
-        <EstadoVacio
-          titulo="Sin asignaciones registradas"
-          descripcion="Cuando se asignen aulas, aquí quedará el registro de cada asignación."
-        />
-      ) : (
-        <TablaDatos etiqueta="Historial de asignaciones">
-          <CabeceraTabla columnas={['Sección', 'Aula', 'Estado', 'Fecha', 'Corrida']} />
-          <tbody>
-            {items.map((a) => (
-              <tr key={a.id} className="border-t border-saie-divider">
-                <td className="px-4 py-3">
-                  <span className="block font-semibold">
-                    {a.codigoCurso} · {a.codigoSeccion}
-                  </span>
-                  <span className="block text-xs text-saie-muted">{a.nombreCurso}</span>
-                </td>
-                <td className="px-4 py-3">
-                  {a.espacios.length > 0 ? a.espacios.map((e) => e.identificador).join(', ') : '—'}
-                </td>
-                <td className="px-4 py-3">
-                  <InsigniaEstado estado={a.estado} />
-                </td>
-                <td className="px-4 py-3 text-xs text-saie-muted">
-                  {formatearFechaAlerta(a.fechaAsignacion)}
-                </td>
-                <td className="px-4 py-3 font-mono text-xs text-saie-muted">
-                  {a.corridaId ?? '—'}
-                </td>
-              </tr>
+      <ZonaActualizable actualizando={cargando && datos !== null}>
+        {cargando && !datos ? (
+          <EsqueletoCarga texto="Cargando historial…" forma="tabla" />
+        ) : items.length === 0 ? (
+          <EstadoVacio
+            titulo="Sin asignaciones registradas"
+            icono={ICONOS.portapapeles}
+            descripcion="Cuando se asignen aulas, aquí quedará el registro de cada asignación."
+            accion={
+              <BotonEnlace to={RUTAS.inicioAdmin} variante="secundario" tamano="sm">
+                Ir a Asignar aulas
+              </BotonEnlace>
+            }
+          />
+        ) : (
+          <div className="flex flex-col gap-5">
+            {grupos.map((grupo, i) => (
+              <GrupoHistorial key={grupo.corridaId ?? 'individual'} grupo={grupo} indice={i} />
             ))}
-          </tbody>
-        </TablaDatos>
-      )}
+          </div>
+        )}
+      </ZonaActualizable>
     </div>
   );
 };
@@ -150,7 +245,7 @@ const VistaAuditoria: React.FC<{ version: number }> = ({ version }) => {
     [tipo],
   );
 
-  const { datos, cargando, error, recargar } = useCarga(cargar);
+  const { datos, cargando, error, recargar } = useCarga(cargar, { clave: `auditoria:${tipo}` });
   useRecargarAl(version, recargar);
   const items = datos?.items ?? [];
 
@@ -172,34 +267,65 @@ const VistaAuditoria: React.FC<{ version: number }> = ({ version }) => {
       </Campo>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      {cargando && !datos ? (
-        <EsqueletoCarga texto="Cargando auditoría…" forma="tabla" />
-      ) : items.length === 0 ? (
-        <EstadoVacio
-          titulo="Sin actividad registrada"
-          descripcion="Cada asignación automática de aulas deja aquí su registro."
-        />
-      ) : (
-        <TablaDatos etiqueta="Registros de auditoría">
-          <CabeceraTabla columnas={['Evento', 'Sección', 'Detalle', 'Fecha']} />
-          <tbody>
-            {items.map((r) => (
-              <tr key={r.id} className="border-t border-saie-divider align-top">
-                <td className="px-4 py-3">
-                  <InsigniaEvento tipo={r.tipoEvento} />
-                </td>
-                <td className="px-4 py-3 text-xs">
-                  {r.seccion ? `${r.seccion.codigoCurso} · ${r.seccion.codigoSeccion}` : '—'}
-                </td>
-                <td className="px-4 py-3 text-xs text-saie-text">{r.detalle}</td>
-                <td className="px-4 py-3 text-xs text-saie-muted">
-                  {formatearFechaAlerta(r.fechaHora)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </TablaDatos>
-      )}
+      <ZonaActualizable actualizando={cargando && datos !== null}>
+        {cargando && !datos ? (
+          <EsqueletoCarga texto="Cargando auditoría…" forma="tabla" />
+        ) : items.length === 0 ? (
+          <EstadoVacio
+            titulo="Sin actividad registrada"
+            icono={ICONOS.portapapeles}
+            descripcion="Cada asignación automática de aulas deja aquí su registro."
+            accion={
+              <BotonEnlace to={RUTAS.inicioAdmin} variante="secundario" tamano="sm">
+                Ir a Asignar aulas
+              </BotonEnlace>
+            }
+          />
+        ) : (
+          <>
+            <div className="hidden lg:block">
+              <TablaDatos etiqueta="Registros de auditoría">
+                <CabeceraTabla columnas={['Evento', 'Sección', 'Detalle', 'Fecha']} />
+                <tbody>
+                  {items.map((r) => (
+                    <tr key={r.id} className="border-t border-saie-divider align-top">
+                      <td className="px-4 py-3">
+                        <InsigniaEvento tipo={r.tipoEvento} />
+                      </td>
+                      <td className="px-4 py-3 text-xs">
+                        {r.seccion ? `${r.seccion.codigoCurso} · ${r.seccion.codigoSeccion}` : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-saie-text">{r.detalle}</td>
+                      <td className="px-4 py-3 text-xs text-saie-muted">
+                        {formatearFechaAlerta(r.fechaHora)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </TablaDatos>
+            </div>
+            <ul className="m-0 flex list-none flex-col gap-2 p-0 lg:hidden">
+              {items.map((r) => (
+                <li
+                  key={r.id}
+                  className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-4 text-sm"
+                >
+                  <div>
+                    <InsigniaEvento tipo={r.tipoEvento} />
+                  </div>
+                  {r.seccion && (
+                    <p className="m-0 text-xs font-semibold">
+                      {r.seccion.codigoCurso} · {r.seccion.codigoSeccion}
+                    </p>
+                  )}
+                  <p className="m-0 text-xs text-saie-text">{r.detalle}</p>
+                  <p className="m-0 text-xs text-saie-muted">{formatearFechaAlerta(r.fechaHora)}</p>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </ZonaActualizable>
     </div>
   );
 };
@@ -217,8 +343,8 @@ export const AuditoriaAdmin: React.FC = () => {
 
   return (
     <LayoutAdmin
-      titulo="Auditoría e historial"
-      subtitulo="Qué pasó con cada sección y cuándo."
+      titulo="Historial"
+      subtitulo="Qué pasó con cada sección y cuándo"
       acciones={
         <Boton variante="secundario" onClick={() => setVersion((v) => v + 1)}>
           Actualizar
@@ -230,9 +356,14 @@ export const AuditoriaAdmin: React.FC = () => {
         valor={vista}
         onCambiar={setVista}
         etiquetaGrupo="Vista de la auditoría"
+        idBase="auditoria"
         className="self-start"
       />
-      <section aria-label="Contenido de la auditoría">
+      <section
+        role="tabpanel"
+        id={idPanelPestana('auditoria', vista)}
+        aria-labelledby={idPestana('auditoria', vista)}
+      >
         {vista === 'historial' ? (
           <VistaHistorial version={version} />
         ) : (

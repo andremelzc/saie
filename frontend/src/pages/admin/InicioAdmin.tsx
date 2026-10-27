@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
-import { EsqueletoCarga } from '../../components/estudiante/ElementosHorario';
+import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
@@ -11,6 +11,7 @@ import { DialogoConfirmacion } from '../../components/ui/DialogoConfirmacion';
 import { Drawer } from '../../components/ui/Drawer';
 import { RUTAS } from '../../config/rutas';
 import { useAuth } from '../../context/useAuth';
+import { useAccion } from '../../hooks/useAccion';
 import { useCarga } from '../../hooks/useCarga';
 import {
   ejecutarCorrida,
@@ -18,13 +19,13 @@ import {
   obtenerEscaladas,
   reintentarSeccion,
 } from '../../services/admin';
-import { mensajeDeError } from '../../services/estudiante';
 import type {
   ResumenAsignacionDTO,
   ResultadoVerificacionDTO,
   SeccionEscaladaDTO,
 } from '../../types/admin';
-import { describirMotivoEscalamiento, formatearFechaCorta } from '../../utils/admin';
+import { describirMotivoEscalamiento } from '../../utils/admin';
+import { formatearFechaCorta } from '../../utils/fechas';
 import { plural } from '../../utils/texto';
 import { ICONOS } from '../../components/ui/iconos';
 
@@ -214,9 +215,12 @@ const ListaEscaladas: React.FC<{
 
   if (secciones.length === 0) {
     return (
-      <p className="m-0 rounded-xl border border-dashed border-saie-divider bg-saie-canvas p-6 text-center text-sm text-saie-muted">
-        No hay secciones pendientes de revisión. Todas tienen un espacio asignado.
-      </p>
+      <EstadoVacio
+        compacto
+        titulo="Nada por revisar"
+        icono={ICONOS.escudo}
+        descripcion="No hay secciones pendientes de revisión. Todas tienen un espacio asignado."
+      />
     );
   }
 
@@ -237,7 +241,7 @@ const ListaEscaladas: React.FC<{
 
 /** Jefatura: resumen de sus alertas y acceso al formulario de laboratorio (Issue 4.19). */
 const InicioJefatura: React.FC = () => {
-  const { datos, cargando, error, recargar } = useCarga(obtenerAlertas);
+  const { datos, cargando, error, recargar } = useCarga(obtenerAlertas, { clave: 'alertas' });
   const pendientes = datos?.filter((a) => a.estado === 'PENDIENTE').length ?? 0;
 
   return (
@@ -281,8 +285,10 @@ const InicioJefatura: React.FC = () => {
 
 /** Issue 4.20 — inicio de Coordinación Académica, en modo tablero. */
 const InicioCoordinacion: React.FC = () => {
-  const escaladas = useCarga(obtenerEscaladas);
-  const alertas = useCarga(obtenerAlertas);
+  const escaladas = useCarga(obtenerEscaladas, { clave: 'escaladas' });
+  const alertas = useCarga(obtenerAlertas, { clave: 'alertas' });
+  const accionCorrida = useAccion();
+  const accionSeccion = useAccion();
   const [corriendo, setCorrida] = useState(false);
   const [confirmandoCorrida, setConfirmandoCorrida] = useState(false);
   const [detalleAbierto, setDetalleAbierto] = useState(false);
@@ -296,47 +302,82 @@ const InicioCoordinacion: React.FC = () => {
   const [errorAccion, setErrorAccion] = useState<{
     mensaje: string;
     reintentar: () => void;
+    etiqueta?: string;
   } | null>(null);
+  /** El servidor respondió 409: ya hay una corrida en curso (Issue 4.56). */
+  const [otraCorrida, setOtraCorrida] = useState(false);
 
   const pendientes = alertas.datos?.filter((a) => a.estado === 'PENDIENTE').length ?? 0;
   const periodo = escaladas.datos?.periodo ?? resumenCorrida?.periodo ?? '—';
   const secciones = escaladas.datos?.secciones ?? [];
 
+  /** Vuelve a pedir lo que la corrida pudo cambiar y libera el botón si ya no hay otra en curso. */
+  function comprobarCorrida() {
+    setOtraCorrida(false);
+    setErrorAccion(null);
+    escaladas.recargar();
+    alertas.recargar();
+  }
+
   async function correr() {
-    if (corriendo) return;
+    if (corriendo || otraCorrida) return;
     setConfirmandoCorrida(false);
     setResultadoSeccion(null);
     setCorrida(true);
     setErrorAccion(null);
-    try {
-      const resumen = await ejecutarCorrida();
-      setResumenCorrida(resumen);
-      setUltimaCorrida(new Date().toISOString());
-      // La corrida crea y resuelve alertas: hay que volver a pedirlas, no solo las escaladas.
-      escaladas.recargar();
-      alertas.recargar();
-    } catch (e) {
-      setErrorAccion({ mensaje: mensajeDeError(e), reintentar: correr });
-    } finally {
-      setCorrida(false);
+    const resultado = await accionCorrida.ejecutar(
+      async () => {
+        const resumen = await ejecutarCorrida();
+        setResumenCorrida(resumen);
+        setUltimaCorrida(new Date().toISOString());
+        // La corrida crea y resuelve alertas: hay que volver a pedirlas, no solo las escaladas.
+        escaladas.recargar();
+        alertas.recargar();
+      },
+      // El error se muestra en línea, con su «Reintentar».
+      { avisarError: false },
+    );
+    if (resultado && !resultado.ok) {
+      if (resultado.estado === 409) {
+        // Otra corrida sigue en curso: no se lanza una segunda hasta comprobarlo.
+        setOtraCorrida(true);
+        setErrorAccion({
+          mensaje: resultado.error,
+          reintentar: comprobarCorrida,
+          etiqueta: 'Comprobar de nuevo',
+        });
+      } else if (resultado.tiempoAgotado) {
+        // No se afirma que falló: pudo terminar. Se ofrece actualizar, no repetirla.
+        setErrorAccion({
+          mensaje: resultado.error,
+          reintentar: comprobarCorrida,
+          etiqueta: 'Actualizar',
+        });
+      } else {
+        setErrorAccion({ mensaje: resultado.error, reintentar: correr });
+      }
     }
+    setCorrida(false);
   }
 
   async function reintentar(seccion: SeccionEscaladaDTO) {
     if (reintentando) return;
     setReintentando(seccion.seccion.id);
     setErrorAccion(null);
-    try {
-      // El resultado de una sección no es la corrida del periodo: se muestra aparte.
-      const resumen = await reintentarSeccion(seccion.seccion.id);
-      setResultadoSeccion({ resumen, seccion });
-      escaladas.recargar();
-      alertas.recargar();
-    } catch (e) {
-      setErrorAccion({ mensaje: mensajeDeError(e), reintentar: () => reintentar(seccion) });
-    } finally {
-      setReintentando(null);
+    const resultado = await accionSeccion.ejecutar(
+      async () => {
+        // El resultado de una sección no es la corrida del periodo: se muestra aparte.
+        const resumen = await reintentarSeccion(seccion.seccion.id);
+        setResultadoSeccion({ resumen, seccion });
+        escaladas.recargar();
+        alertas.recargar();
+      },
+      { avisarError: false },
+    );
+    if (resultado && !resultado.ok) {
+      setErrorAccion({ mensaje: resultado.error, reintentar: () => reintentar(seccion) });
     }
+    setReintentando(null);
   }
 
   return (
@@ -347,7 +388,10 @@ const InicioCoordinacion: React.FC = () => {
         título y desbordaba: `main` recorta con `lg:overflow-hidden` y la última fila quedaba
         inalcanzable, sin scroll para recuperarla.
       */}
-      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-rows-[auto_auto_1fr]">
+      <div
+        aria-busy={corriendo}
+        className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-rows-[auto_auto_1fr]"
+      >
         {/* FILA 1 — las cuatro cifras que resumen la asignación */}
         <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 lg:grid-cols-4">
           <li>
@@ -405,7 +449,8 @@ const InicioCoordinacion: React.FC = () => {
                 <Boton
                   variante="secundario"
                   onClick={() => setConfirmandoCorrida(true)}
-                  disabled={corriendo}
+                  disabled={corriendo || otraCorrida}
+                  aria-describedby="motivo-corrida"
                   cargando={corriendo}
                   textoCargando="Asignando…"
                   className="border-white! bg-white! text-saie-primary! hover:bg-saie-canvas!"
@@ -413,6 +458,13 @@ const InicioCoordinacion: React.FC = () => {
                   Asignar aulas del periodo
                 </Boton>
               </div>
+              <p id="motivo-corrida" className="m-0 text-right text-xs text-white/85">
+                {corriendo
+                  ? 'Esto puede tardar hasta 1 min. No cierres esta pantalla.'
+                  : otraCorrida
+                    ? 'Hay otra asignación en curso. Espera a que termine y pulsa «Comprobar de nuevo».'
+                    : ''}
+              </p>
             </div>
           </section>
 
@@ -474,7 +526,11 @@ const InicioCoordinacion: React.FC = () => {
               <AvisoError mensaje={escaladas.error} onReintentar={escaladas.recargar} />
             )}
             {errorAccion && (
-              <AvisoError mensaje={errorAccion.mensaje} onReintentar={errorAccion.reintentar} />
+              <AvisoError
+                mensaje={errorAccion.mensaje}
+                onReintentar={errorAccion.reintentar}
+                etiquetaAccion={errorAccion.etiqueta}
+              />
             )}
             {resultadoSeccion && (
               <Aviso tono="info" role="status">

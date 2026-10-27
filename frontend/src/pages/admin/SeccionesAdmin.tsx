@@ -1,4 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { RUTAS } from '../../config/rutas';
+import { ICONOS } from '../../components/ui/iconos';
+import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
 import { Aviso } from '../../components/ui/Aviso';
@@ -7,10 +10,13 @@ import { Boton } from '../../components/ui/Boton';
 import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
 import { CLASE_PIE_DRAWER, Drawer } from '../../components/ui/Drawer';
 import { useAvisos } from '../../components/ui/useAvisos';
+import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
 import { Campo } from '../../components/ui/Campo';
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
+import { useAccion } from '../../hooks/useAccion';
+import { useDetalleEnUrl } from '../../hooks/useDetalleEnUrl';
 import { useCarga } from '../../hooks/useCarga';
-import { usePantallaAncha } from '../../hooks/usePantallaAncha';
+import { useValorDiferido } from '../../hooks/useValorDiferido';
 import {
   editarSeccion,
   obtenerCatalogoActivo,
@@ -18,7 +24,6 @@ import {
   obtenerSecciones,
 } from '../../services/admin';
 import type { DocenteParaAsignarDTO } from '../../services/admin';
-import { mensajeDeError } from '../../services/estudiante';
 import type {
   CambiosSeccion,
   ComparacionVersion,
@@ -26,7 +31,7 @@ import type {
   SoftwareDTO,
   TipoEspacio,
 } from '../../types/admin';
-import { formatearFechaCorta } from '../../utils/admin';
+import { formatearFechaCorta } from '../../utils/fechas';
 import { ETIQUETA_DIA, formatearRango } from '../../utils/horario';
 import { describirEstadoAsignacion, etiquetaTipoEspacio } from '../../utils/diccionarios';
 import { plural } from '../../utils/texto';
@@ -153,6 +158,7 @@ const FormularioSeccion: React.FC<{
   const [elegidos, setElegidos] = useState<Record<string, ComparacionVersion>>(() =>
     Object.fromEntries(seccion.softwareRequerido.map((s) => [s.id, s.comparacionVersion])),
   );
+  const { ejecutar } = useAccion();
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -186,22 +192,21 @@ const FormularioSeccion: React.FC<{
     if (guardando) return;
     setGuardando(true);
     setError(null);
-    try {
-      const cambios: CambiosSeccion = {
-        tipoEspacioRequerido: tipo,
-        docenteId: docenteId === '' ? null : docenteId,
-        softwareRequerido: Object.entries(elegidos).map(([softwareId, comparacionVersion]) => ({
-          softwareId,
-          comparacionVersion,
-        })),
-      };
-      const resultado = await editarSeccion(seccion.id, cambios);
-      onGuardado(resultado);
-    } catch (e) {
-      setError(mensajeDeError(e));
-    } finally {
-      setGuardando(false);
-    }
+    const cambios: CambiosSeccion = {
+      tipoEspacioRequerido: tipo,
+      docenteId: docenteId === '' ? null : docenteId,
+      softwareRequerido: Object.entries(elegidos).map(([softwareId, comparacionVersion]) => ({
+        softwareId,
+        comparacionVersion,
+      })),
+    };
+    // El error se muestra en línea, dentro del formulario.
+    const resultado = await ejecutar(() => editarSeccion(seccion.id, cambios), {
+      avisarError: false,
+    });
+    setGuardando(false);
+    if (resultado?.ok) onGuardado(resultado.valor);
+    else if (resultado) setError(resultado.error);
   };
 
   return (
@@ -321,28 +326,39 @@ export const SeccionesAdmin: React.FC = () => {
   const [texto, setTexto] = useState('');
   const [tipo, setTipo] = useState<'TODOS' | TipoEspacio>('TODOS');
   const [periodo, setPeriodo] = useState('');
-  const [seleccionadaId, setSeleccionadaId] = useState<string | null>(null);
+  // El detalle abierto vive en la URL (`?seccion=<id>`): «Atrás» lo cierra y el enlace se comparte (Issue 4.51).
+  const detalle = useDetalleEnUrl('seccion');
+  const seleccionadaId = detalle.valor;
   const [editando, setEditando] = useState(false);
   const [cambiosPendientes, setCambiosPendientes] = useState(false);
   const { mostrar } = useAvisos();
 
+  // Se espera una pausa al escribir para no pedir al servidor una vez por tecla (Issue 4.41).
+  const textoDiferido = useValorDiferido(texto);
+  const periodoDiferido = useValorDiferido(periodo);
+
   const cargar = useCallback(async () => {
     const listado = await obtenerSecciones({
-      q: texto.trim() || undefined,
+      q: textoDiferido.trim() || undefined,
       tipo: tipo === 'TODOS' ? undefined : tipo,
-      periodo: periodo.trim() || undefined,
+      periodo: periodoDiferido.trim() || undefined,
       limite: 200,
     });
     return listado.items;
-  }, [texto, tipo, periodo]);
+  }, [textoDiferido, tipo, periodoDiferido]);
 
-  const { datos, cargando, error, recargar } = useCarga(cargar);
-  const docentes = useCarga(obtenerDocentes);
-  const catalogo = useCarga(obtenerCatalogoActivo);
+  const { datos, cargando, error, recargar } = useCarga(cargar, {
+    clave: `secciones:${textoDiferido.trim()}|${tipo}|${periodoDiferido.trim()}`,
+  });
+  // Docentes y catálogo solo hacen falta al editar: no se piden hasta abrir la edición (Issue 3.49).
+  const docentes = useCarga(obtenerDocentes, { clave: 'docentes', habilitado: editando });
+  const catalogo = useCarga(obtenerCatalogoActivo, {
+    clave: 'catalogo-activo',
+    habilitado: editando,
+  });
 
   /** El listado vacío es una referencia estable: si no, invalidaría los `useMemo` de abajo. */
   const secciones = useMemo(() => datos ?? [], [datos]);
-  const esPantallaAncha = usePantallaAncha();
 
   /**
    * La sección abierta se deriva del listado: así siempre muestra los datos frescos de la
@@ -354,9 +370,15 @@ export const SeccionesAdmin: React.FC = () => {
   );
 
   const abrirDetalle = (seccion: SeccionAdminDTO) => {
-    setSeleccionadaId(seccion.id);
+    detalle.abrir(seccion.id);
     setEditando(false);
   };
+
+  // Un enlace con una sección que no existe (o ya no está en el periodo) se explica, no rompe la pantalla.
+  // Con filtros activos no se avisa: la sección puede existir y solo estar fuera de la búsqueda.
+  const sinFiltros = texto === '' && tipo === 'TODOS' && periodo === '';
+  const detalleNoEncontrado =
+    seleccionadaId !== null && datos !== null && !cargando && seleccionada === null && sinFiltros;
 
   const manejarGuardado = (resultado: { alertas: { motivo: string }[] }) => {
     setEditando(false);
@@ -375,27 +397,40 @@ export const SeccionesAdmin: React.FC = () => {
     secciones.length === 0 ? (
       <EstadoVacio
         titulo="Sin secciones"
+        icono={ICONOS.libro}
         descripcion="Cuando se carguen cursos y secciones, aparecerán aquí."
+        accion={
+          <BotonEnlace to={RUTAS.cargaAdmin} variante="secundario" tamano="sm">
+            Ir a Carga de datos
+          </BotonEnlace>
+        }
       />
-    ) : esPantallaAncha ? (
-      <TablaDatos etiqueta="Listado de secciones">
-        <CabeceraTabla
-          columnas={['Sección', 'Tipo', 'Aula', 'Docente', 'Alumnos', 'Estado', 'Detalle']}
-        />
-        <tbody>
-          {secciones.map((s) => (
-            <FilaSeccion key={s.id} seccion={s} onVer={abrirDetalle} />
-          ))}
-        </tbody>
-      </TablaDatos>
     ) : (
-      <ul className="m-0 flex list-none flex-col gap-3 p-0" aria-label="Listado de secciones">
-        {secciones.map((s) => (
-          <li key={s.id}>
-            <TarjetaSeccion seccion={s} onVer={abrirDetalle} />
-          </li>
-        ))}
-      </ul>
+      // Tabla desde `lg` y tarjetas por debajo, resueltas con CSS para que no haya parpadeo (Issue 3.54).
+      <>
+        <div className="hidden lg:block">
+          <TablaDatos etiqueta="Listado de secciones">
+            <CabeceraTabla
+              columnas={['Sección', 'Tipo', 'Aula', 'Docente', 'Alumnos', 'Estado', 'Detalle']}
+            />
+            <tbody>
+              {secciones.map((s) => (
+                <FilaSeccion key={s.id} seccion={s} onVer={abrirDetalle} />
+              ))}
+            </tbody>
+          </TablaDatos>
+        </div>
+        <ul
+          className="m-0 flex list-none flex-col gap-3 p-0 lg:hidden"
+          aria-label="Listado de secciones"
+        >
+          {secciones.map((s) => (
+            <li key={s.id}>
+              <TarjetaSeccion seccion={s} onVer={abrirDetalle} />
+            </li>
+          ))}
+        </ul>
+      </>
     );
 
   return (
@@ -451,12 +486,25 @@ export const SeccionesAdmin: React.FC = () => {
       </section>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      {cargando && !datos ? <EsqueletoCarga texto="Cargando secciones…" forma="tabla" /> : lista}
+      {detalleNoEncontrado && (
+        <Aviso tono="advertencia" className="flex flex-wrap items-center justify-between gap-3">
+          <span>
+            No encontramos esa sección. Puede que el enlace sea antiguo o que ya no esté en el
+            periodo.
+          </span>
+          <Boton variante="secundario" tamano="sm" onClick={detalle.cerrar}>
+            Quitar del enlace
+          </Boton>
+        </Aviso>
+      )}
+      <ZonaActualizable actualizando={cargando && datos !== null}>
+        {cargando && !datos ? <EsqueletoCarga texto="Cargando secciones…" forma="tabla" /> : lista}
+      </ZonaActualizable>
 
       <Drawer
         abierto={seleccionada !== null}
         onCerrar={() => {
-          setSeleccionadaId(null);
+          detalle.cerrar();
           setEditando(false);
         }}
         titulo={
@@ -530,14 +578,27 @@ export const SeccionesAdmin: React.FC = () => {
             )}
 
             {editando ? (
-              <FormularioSeccion
-                seccion={seleccionada}
-                docentes={docentes.datos ?? []}
-                catalogo={catalogo.datos?.items ?? []}
-                onGuardado={manejarGuardado}
-                onCancelar={() => setEditando(false)}
-                onCambiosPendientes={setCambiosPendientes}
-              />
+              // Docentes y catálogo se piden al abrir la edición (y salen de la caché si ya se vieron).
+              docentes.datos && catalogo.datos ? (
+                <FormularioSeccion
+                  seccion={seleccionada}
+                  docentes={docentes.datos}
+                  catalogo={catalogo.datos.items}
+                  onGuardado={manejarGuardado}
+                  onCancelar={() => setEditando(false)}
+                  onCambiosPendientes={setCambiosPendientes}
+                />
+              ) : docentes.error || catalogo.error ? (
+                <AvisoError
+                  mensaje={docentes.error ?? catalogo.error ?? ''}
+                  onReintentar={() => {
+                    if (docentes.error) docentes.recargar();
+                    if (catalogo.error) catalogo.recargar();
+                  }}
+                />
+              ) : (
+                <EsqueletoCarga texto="Cargando docentes y catálogo de software…" />
+              )
             ) : (
               <div className="flex flex-col gap-2">
                 {seleccionada.camposEditables.length > 0 ? (

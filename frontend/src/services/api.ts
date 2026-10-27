@@ -30,6 +30,16 @@ export function registrarManejadorSesionExpirada(manejador: (() => void) | null)
   manejadorSesionExpirada = manejador;
 }
 
+let manejadorClaveDebeCambiarse: (() => void) | null = null;
+
+/** El AuthProvider registra aquí qué hacer cuando el servidor exige cambiar la clave inicial. */
+export function registrarManejadorClaveDebeCambiarse(manejador: (() => void) | null): void {
+  manejadorClaveDebeCambiarse = manejador;
+}
+
+/** Código con el que el backend rechaza (403) a una cuenta que debe cambiar su clave (Issue 4.45). */
+export const CODIGO_CLAVE_DEBE_CAMBIARSE = 'CLAVE_DEBE_CAMBIARSE';
+
 /**
  * Resumen legible de un fallo de red para la consola del navegador: método, ruta, código y
  * motivo. Antes se imprimía el objeto de la respuesta tal cual ("Object"), que no decía nada.
@@ -83,6 +93,16 @@ api.interceptors.response.use(
       }
 
       const eraAutenticada = Boolean(error.config?.headers?.has('Authorization'));
+      // El servidor exige cambiar la clave inicial: se marca la sesión y la ruta protegida
+      // lleva a la pantalla de cambio (Issue 4.45).
+      const cuerpo = error.response?.data as { code?: unknown } | undefined;
+      if (
+        error.response?.status === 403 &&
+        eraAutenticada &&
+        cuerpo?.code === CODIGO_CLAVE_DEBE_CAMBIARSE
+      ) {
+        manejadorClaveDebeCambiarse?.();
+      }
       // `obtenerToken()` evita procesar varios 401 simultáneos: solo el primero cierra la sesión.
       if (error.response?.status === 401 && eraAutenticada && !esLogin && obtenerToken()) {
         if (manejadorSesionExpirada) {

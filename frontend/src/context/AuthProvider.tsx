@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { registrarManejadorSesionExpirada } from '../services/api';
+import {
+  registrarManejadorClaveDebeCambiarse,
+  registrarManejadorSesionExpirada,
+} from '../services/api';
 import {
   adoptarSesion,
   anunciarSesion,
@@ -17,6 +20,7 @@ import {
   type Sesion,
 } from '../services/sesion';
 import { rutaLoginDeRol } from '../config/rutas';
+import { vaciarCacheCarga } from '../hooks/useCarga';
 import type { LoginResponseDTO } from '../types/auth';
 import { AuthContext, type AuthContextValue, type MotivoCierre } from './AuthContext';
 
@@ -35,6 +39,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [sesionVencida, setSesionVencida] = useState(estadoInicial.vencida);
 
   const iniciarSesion = useCallback((resultado: LoginResponseDTO): Sesion => {
+    // Los datos en caché son de la cuenta anterior: no deben verse con la nueva.
+    vaciarCacheCarga();
     const nueva = guardarSesion(resultado);
     setSesion(nueva);
     setSesionVencida(false);
@@ -50,6 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!actual && motivo === 'vencida') return;
 
       borrarSesion();
+      vaciarCacheCarga();
       setSesion(null);
       // RutaProtegida también redirige al quedar sin sesión; esta marca hace que conserve el aviso.
       setSesionVencida(motivo === 'vencida');
@@ -75,6 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     registrarManejadorSincronizacion((mensaje) => {
       if (mensaje.tipo === 'cerrada') {
         borrarSesion();
+        vaciarCacheCarga();
         setSesion(null);
         return;
       }
@@ -105,6 +113,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     registrarManejadorSesionExpirada(() => cerrarSesion('vencida'));
     return () => registrarManejadorSesionExpirada(null);
   }, [cerrarSesion]);
+
+  // El servidor rechazó una petición porque la cuenta debe cambiar su clave inicial: se marca la
+  // sesión y `RutaProtegida` lleva a la pantalla de cambio (Issue 4.45).
+  useEffect(() => {
+    registrarManejadorClaveDebeCambiarse(() => {
+      const actual = leerSesionAlmacenada();
+      if (!actual || actual.debeCambiarClave) return;
+      setSesion(adoptarSesion({ ...actual, debeCambiarClave: true }));
+    });
+    return () => registrarManejadorClaveDebeCambiarse(null);
+  }, []);
 
   // Cierra la sesión al llegar la hora de expiración del token, sin esperar a un 401.
   useEffect(() => {

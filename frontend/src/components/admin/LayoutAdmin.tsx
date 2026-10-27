@@ -122,7 +122,8 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
         }`}
       >
         <div className="saie-no-imprimir flex flex-wrap items-start justify-between gap-3">
-          <div>
+          {/* El título cede ancho (basis y flex-1) para que las acciones queden en su misma fila. */}
+          <div className="min-w-0 flex-1 basis-48">
             <h1 className="m-0 text-2xl font-bold text-saie-text sm:text-3xl tracking-tight">
               {titulo}
             </h1>
@@ -137,9 +138,12 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
 };
 
 /** Mensaje de error uniforme con botón de reintento (ver `EstadoError`). */
-export const AvisoError: React.FC<{ mensaje: string; onReintentar?: () => void }> = ({
-  mensaje,
-  onReintentar,
-}) => <EstadoError mensaje={mensaje} onReintentar={onReintentar} />;
+export const AvisoError: React.FC<{
+  mensaje: string;
+  onReintentar?: () => void | Promise<void>;
+  etiquetaAccion?: string;
+}> = ({ mensaje, onReintentar, etiquetaAccion }) => (
+  <EstadoError mensaje={mensaje} onReintentar={onReintentar} etiquetaAccion={etiquetaAccion} />
+);
 
 export default LayoutAdmin;
