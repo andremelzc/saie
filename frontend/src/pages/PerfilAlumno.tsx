@@ -221,7 +221,7 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-saie-canvas text-saie-text">
+    <div className="min-h-screen bg-saie-canvas pb-[var(--saie-barra-inferior)] text-saie-text">
       <CabeceraPantalla
         titulo="Mi perfil"
         subtitulo="Tus datos personales y tu ficha médica."

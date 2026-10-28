@@ -283,7 +283,7 @@ const FormularioSeccion: React.FC<{
                         [s.id]: e.target.value as ComparacionVersion,
                       }))
                     }
-                    className="rounded-lg border border-saie-divider bg-white px-2 py-1 text-xs"
+                    className="min-h-11 rounded-lg border border-saie-border bg-white px-2 py-1 text-xs"
                   >
                     {COMPARACIONES.map((c) => (
                       <option key={c.valor} value={c.valor}>
