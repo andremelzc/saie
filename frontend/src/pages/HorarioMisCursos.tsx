@@ -148,7 +148,7 @@ export const HorarioMisCursos: React.FC<HorarioMisCursosProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-saie-canvas text-saie-text">
+    <div className="min-h-screen bg-saie-canvas pb-[var(--saie-barra-inferior)] text-saie-text">
       <CabeceraPantalla
         titulo="Mi horario y mis cursos"
         subtitulo={horario.periodo ? `Periodo ${horario.periodo}` : 'Periodo académico sin definir'}

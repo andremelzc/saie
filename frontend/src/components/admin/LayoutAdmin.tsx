@@ -5,7 +5,9 @@ import logoBlanco from '../../assets/logo-blanco.svg';
 import { useAuth } from '../../context/useAuth';
 import { useTituloPagina } from '../../hooks/useTituloPagina';
 import { etiquetaRol, pestanasDeRol } from '../../utils/admin';
+
 import { Contenedor } from '../ui/Contenedor';
+import { MenuMas } from '../ui/MenuMas';
 import { EnlaceSaltar, ID_CONTENIDO } from '../ui/EnlaceSaltar';
 import { EstadoError } from '../ui/EstadoError';
 
@@ -15,6 +17,9 @@ import { EstadoError } from '../ui/EstadoError';
  * Decisión de navegación (Issue 4.20): el inicio de Coordinación SÍ lleva la misma barra de
  * pestañas que el resto del panel, por consistencia. La barra va abajo en móvil y arriba,
  * bajo la cabecera, en escritorio. Jefatura ve solo sus pestañas (Inicio, Alertas, Laboratorio).
+ *
+ * Puntos de corte (Issue 4.35): barra inferior con «Más» por debajo de `lg` (1024 px) y barra
+ * completa desde `lg`; la definición está junto a las pestañas, en `utils/admin.ts`.
  */
 
 const Icono: React.FC<{ trazo: string }> = ({ trazo }) => (
@@ -55,24 +60,25 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
 }) => {
   const { sesion } = useAuth();
   const pestanas = pestanasDeRol(sesion?.rol);
+  const secundarias = pestanas.filter((p) => p.secundaria);
   useTituloPagina(titulo);
 
   const claseLink = ({ isActive }: { isActive: boolean }) =>
-    `flex flex-1 flex-col items-center gap-0.5 px-2 py-2 text-xs transition-colors md:flex-none md:flex-row md:gap-2 md:rounded-lg md:px-4 md:text-sm ${
+    `flex flex-1 flex-col items-center gap-0.5 px-2 py-2 text-xs transition-colors lg:flex-none lg:flex-row lg:gap-2 lg:rounded-lg lg:px-4 lg:text-sm ${
       isActive
-        ? 'bg-saie-primary/10 font-bold text-saie-primary md:bg-saie-primary md:font-medium md:text-white'
+        ? 'bg-saie-primary/10 font-bold text-saie-primary lg:bg-saie-primary lg:font-medium lg:text-white'
         : 'font-medium text-saie-muted hover:text-saie-primary'
     }`;
 
   return (
     <div
-      className={`flex min-h-screen flex-col bg-saie-canvas pb-20 md:pb-0 ${
+      className={`flex min-h-screen flex-col bg-saie-canvas pb-[var(--saie-barra-inferior)] ${
         dashboard ? 'lg:h-screen lg:overflow-hidden' : ''
       }`}
     >
       <EnlaceSaltar />
       <header className="bg-saie-primary text-white saie-no-imprimir">
-        <Contenedor className="flex h-18 items-center justify-between gap-3">
+        <Contenedor className="flex min-h-18 items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-4">
             <img src={logoBlanco} alt="SAIE" className="h-9 w-auto shrink-0" />
             <span className="hidden rounded-full bg-white/15 px-3 py-1 text-sm font-medium sm:inline-flex">
@@ -96,13 +102,14 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
 
       <nav
         aria-label="Navegación del panel"
-        className="saie-no-imprimir fixed inset-x-0 bottom-0 z-30 border-t border-saie-divider bg-white md:static md:border-b md:border-t-0"
+        data-barra-inferior
+        className="saie-no-imprimir fixed inset-x-0 bottom-0 z-30 border-t border-saie-divider bg-white lg:static lg:border-b lg:border-t-0"
       >
-        <Contenedor como="ul" className="m-0 flex list-none gap-1 py-0 md:py-2">
+        <Contenedor como="ul" className="m-0 flex list-none gap-1 py-0 lg:py-2">
           {pestanas.map((p) => (
             <li
               key={p.to}
-              className={`flex flex-1 md:flex-none ${p.soloEscritorio ? 'hidden md:flex' : ''}`}
+              className={`flex flex-1 lg:flex-none ${p.secundaria ? 'hidden lg:flex' : ''}`}
             >
               <NavLink to={p.to} end className={claseLink}>
                 <Icono trazo={p.trazo} />
@@ -110,6 +117,11 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
               </NavLink>
             </li>
           ))}
+          {secundarias.length > 0 && (
+            <li className="flex flex-1 lg:hidden">
+              <MenuMas pestanas={secundarias} />
+            </li>
+          )}
         </Contenedor>
       </nav>
 
