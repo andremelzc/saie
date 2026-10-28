@@ -29,4 +29,12 @@ export interface ResultadoImportacionDTO {
   exitosa: boolean;
   /** `null` si la importación no encadena asignación (docentes) o tuvo filas rechazadas. */
   asignacion: AsignacionEncadenadaDTO | null;
+  /** Claves iniciales generadas para cuentas nuevas creadas en esta importación (se muestra una sola vez). */
+  clavesIniciales?: {
+    codigo: string;
+    nombre: string;
+    correo: string;
+    rol: string;
+    claveInicial: string;
+  }[];
 }

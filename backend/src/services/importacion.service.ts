@@ -17,6 +17,13 @@ import { obtenerPeriodoVigente } from './periodo.service';
 interface ResultadoImportador {
   procesados: Record<string, number>;
   errores: string[];
+  clavesIniciales?: {
+    codigo: string;
+    nombre: string;
+    correo: string;
+    rol: string;
+    claveInicial: string;
+  }[];
 }
 
 async function correrImportador(
@@ -34,12 +41,12 @@ async function correrImportador(
       return { procesados, errores };
     }
     case 'matriculas': {
-      const { errores, ...procesados } = await importarMatriculas(filas, prisma);
-      return { procesados, errores };
+      const { errores, clavesIniciales, ...procesados } = await importarMatriculas(filas, prisma);
+      return { procesados, errores, clavesIniciales };
     }
     case 'docentes': {
-      const { errores, ...procesados } = await importarDocentes(filas, prisma);
-      return { procesados, errores };
+      const { errores, clavesIniciales, ...procesados } = await importarDocentes(filas, prisma);
+      return { procesados, errores, clavesIniciales };
     }
   }
 }
@@ -105,11 +112,19 @@ export async function ejecutarImportacion(
   filas: unknown[],
   prisma: PrismaClient,
 ): Promise<ResultadoImportacionDTO> {
-  const { procesados, errores } = await correrImportador(tipo, filas, prisma);
+  const { procesados, errores, clavesIniciales } = await correrImportador(tipo, filas, prisma);
   const exitosa = errores.length === 0;
 
   const asignacion =
     exitosa && tipo !== 'docentes' ? await dispararAsignacionSiPeriodoCompleto(prisma) : null;
 
-  return { tipo, filasRecibidas: filas.length, procesados, errores, exitosa, asignacion };
+  return {
+    tipo,
+    filasRecibidas: filas.length,
+    procesados,
+    errores,
+    exitosa,
+    asignacion,
+    ...(clavesIniciales && clavesIniciales.length > 0 ? { clavesIniciales } : {}),
+  };
 }
