@@ -39,7 +39,7 @@ export const createApp = (): Application => {
   // Manejo de rutas no encontradas (404)
   app.use((_req: Request, res: Response) => {
     res.status(404).json({
-      error: 'Not Found',
+      success: false,
       message: 'La ruta solicitada no existe',
     });
   });
@@ -48,8 +48,8 @@ export const createApp = (): Application => {
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     console.error('Error no controlado:', err);
     res.status(500).json({
-      error: 'Internal Server Error',
-      message: process.env.NODE_ENV === 'production' ? 'Error interno del servidor' : err.message,
+      success: false,
+      message: 'Error interno del servidor',
     });
   });
 
