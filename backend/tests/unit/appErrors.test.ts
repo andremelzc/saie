@@ -69,4 +69,3 @@ describe('Manejo global de errores y rutas inexistentes (app.ts)', () => {
     });
   });
 });
-
