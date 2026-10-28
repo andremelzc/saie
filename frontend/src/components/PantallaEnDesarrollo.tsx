@@ -130,7 +130,7 @@ export const PantallaEnDesarrollo: React.FC<PantallaEnDesarrolloProps> = ({
         tabIndex={-1}
         className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-10 focus:outline-none"
       >
-        <nav aria-label="Ruta de navegación" className="text-sm">
+        <nav aria-label="Volver" className="text-sm">
           <Link
             to={volverA.to}
             className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-saie-primary px-4 font-medium text-saie-primary no-underline transition-colors hover:bg-white"
