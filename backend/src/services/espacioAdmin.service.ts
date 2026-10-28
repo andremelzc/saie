@@ -218,6 +218,9 @@ export async function listarEspacios(
   prisma: Pick<PrismaClient, 'espacio' | 'espacioContiguo'>,
 ): Promise<EspacioAdminDTO[]> {
   const esJefatura = auth.rol === RolCuenta.JEFATURA_LABORATORIOS;
+  const pagina = filtros.pagina ?? 1;
+  const limite = filtros.limite ?? 50;
+
   const espacios = await prisma.espacio.findMany({
     where: {
       ...(filtros.tipo && { tipo: filtros.tipo }),
@@ -230,6 +233,8 @@ export async function listarEspacios(
     },
     orderBy: [{ pabellon: 'asc' }, { piso: 'asc' }, { identificador: 'asc' }],
     include: ESPACIO_CON_SOFTWARE,
+    skip: (pagina - 1) * limite,
+    take: limite,
   });
   return Promise.all(espacios.map((e) => aEspacioDTO(e, auth.rol, prisma)));
 }
