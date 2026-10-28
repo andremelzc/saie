@@ -5,9 +5,11 @@ import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmenta
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
 import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
+import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
 import { Campo } from '../../components/ui/Campo';
 import { CLASE_CAMPO } from '../../components/ui/campos';
 import { useCarga } from '../../hooks/useCarga';
+import { useValorDiferido } from '../../hooks/useValorDiferido';
 import { obtenerAuditoria, obtenerHistorial } from '../../services/admin';
 import type { EstadoAsignacion, TipoEventoAuditoria } from '../../types/admin';
 import { formatearFechaAlerta } from '../../utils/admin';
@@ -54,15 +56,17 @@ const EVENTOS_FILTRO: TipoEventoAuditoria[] = [
 const VistaHistorial: React.FC<{ version: number }> = ({ version }) => {
   const [periodo, setPeriodo] = useState('');
   const [estado, setEstado] = useState<'TODOS' | EstadoAsignacion>('TODOS');
+  // Una sola petición tras una pausa al escribir el periodo (Issue 4.41).
+  const periodoDiferido = useValorDiferido(periodo);
 
   const cargar = useCallback(
     () =>
       obtenerHistorial({
-        periodo: periodo.trim() || undefined,
+        periodo: periodoDiferido.trim() || undefined,
         estado: estado === 'TODOS' ? undefined : estado,
         limite: 200,
       }),
-    [periodo, estado],
+    [periodoDiferido, estado],
   );
 
   const { datos, cargando, error, recargar } = useCarga(cargar);
@@ -98,42 +102,46 @@ const VistaHistorial: React.FC<{ version: number }> = ({ version }) => {
       </div>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      {cargando && !datos ? (
-        <EsqueletoCarga texto="Cargando historial…" forma="tabla" />
-      ) : items.length === 0 ? (
-        <EstadoVacio
-          titulo="Sin asignaciones registradas"
-          descripcion="Cuando se asignen aulas, aquí quedará el registro de cada asignación."
-        />
-      ) : (
-        <TablaDatos etiqueta="Historial de asignaciones">
-          <CabeceraTabla columnas={['Sección', 'Aula', 'Estado', 'Fecha', 'Corrida']} />
-          <tbody>
-            {items.map((a) => (
-              <tr key={a.id} className="border-t border-saie-divider">
-                <td className="px-4 py-3">
-                  <span className="block font-semibold">
-                    {a.codigoCurso} · {a.codigoSeccion}
-                  </span>
-                  <span className="block text-xs text-saie-muted">{a.nombreCurso}</span>
-                </td>
-                <td className="px-4 py-3">
-                  {a.espacios.length > 0 ? a.espacios.map((e) => e.identificador).join(', ') : '—'}
-                </td>
-                <td className="px-4 py-3">
-                  <InsigniaEstado estado={a.estado} />
-                </td>
-                <td className="px-4 py-3 text-xs text-saie-muted">
-                  {formatearFechaAlerta(a.fechaAsignacion)}
-                </td>
-                <td className="px-4 py-3 font-mono text-xs text-saie-muted">
-                  {a.corridaId ?? '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </TablaDatos>
-      )}
+      <ZonaActualizable actualizando={cargando && datos !== null}>
+        {cargando && !datos ? (
+          <EsqueletoCarga texto="Cargando historial…" forma="tabla" />
+        ) : items.length === 0 ? (
+          <EstadoVacio
+            titulo="Sin asignaciones registradas"
+            descripcion="Cuando se asignen aulas, aquí quedará el registro de cada asignación."
+          />
+        ) : (
+          <TablaDatos etiqueta="Historial de asignaciones">
+            <CabeceraTabla columnas={['Sección', 'Aula', 'Estado', 'Fecha', 'Corrida']} />
+            <tbody>
+              {items.map((a) => (
+                <tr key={a.id} className="border-t border-saie-divider">
+                  <td className="px-4 py-3">
+                    <span className="block font-semibold">
+                      {a.codigoCurso} · {a.codigoSeccion}
+                    </span>
+                    <span className="block text-xs text-saie-muted">{a.nombreCurso}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {a.espacios.length > 0
+                      ? a.espacios.map((e) => e.identificador).join(', ')
+                      : '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    <InsigniaEstado estado={a.estado} />
+                  </td>
+                  <td className="px-4 py-3 text-xs text-saie-muted">
+                    {formatearFechaAlerta(a.fechaAsignacion)}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-saie-muted">
+                    {a.corridaId ?? '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </TablaDatos>
+        )}
+      </ZonaActualizable>
     </div>
   );
 };
@@ -172,34 +180,36 @@ const VistaAuditoria: React.FC<{ version: number }> = ({ version }) => {
       </Campo>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      {cargando && !datos ? (
-        <EsqueletoCarga texto="Cargando auditoría…" forma="tabla" />
-      ) : items.length === 0 ? (
-        <EstadoVacio
-          titulo="Sin actividad registrada"
-          descripcion="Cada asignación automática de aulas deja aquí su registro."
-        />
-      ) : (
-        <TablaDatos etiqueta="Registros de auditoría">
-          <CabeceraTabla columnas={['Evento', 'Sección', 'Detalle', 'Fecha']} />
-          <tbody>
-            {items.map((r) => (
-              <tr key={r.id} className="border-t border-saie-divider align-top">
-                <td className="px-4 py-3">
-                  <InsigniaEvento tipo={r.tipoEvento} />
-                </td>
-                <td className="px-4 py-3 text-xs">
-                  {r.seccion ? `${r.seccion.codigoCurso} · ${r.seccion.codigoSeccion}` : '—'}
-                </td>
-                <td className="px-4 py-3 text-xs text-saie-text">{r.detalle}</td>
-                <td className="px-4 py-3 text-xs text-saie-muted">
-                  {formatearFechaAlerta(r.fechaHora)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </TablaDatos>
-      )}
+      <ZonaActualizable actualizando={cargando && datos !== null}>
+        {cargando && !datos ? (
+          <EsqueletoCarga texto="Cargando auditoría…" forma="tabla" />
+        ) : items.length === 0 ? (
+          <EstadoVacio
+            titulo="Sin actividad registrada"
+            descripcion="Cada asignación automática de aulas deja aquí su registro."
+          />
+        ) : (
+          <TablaDatos etiqueta="Registros de auditoría">
+            <CabeceraTabla columnas={['Evento', 'Sección', 'Detalle', 'Fecha']} />
+            <tbody>
+              {items.map((r) => (
+                <tr key={r.id} className="border-t border-saie-divider align-top">
+                  <td className="px-4 py-3">
+                    <InsigniaEvento tipo={r.tipoEvento} />
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    {r.seccion ? `${r.seccion.codigoCurso} · ${r.seccion.codigoSeccion}` : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-saie-text">{r.detalle}</td>
+                  <td className="px-4 py-3 text-xs text-saie-muted">
+                    {formatearFechaAlerta(r.fechaHora)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </TablaDatos>
+        )}
+      </ZonaActualizable>
     </div>
   );
 };
