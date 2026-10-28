@@ -111,7 +111,7 @@ export function describirMotivoEscalamiento(
   };
 }
 
-const T_INICIO = 'M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10';
+const T_INICIO = ICONOS.inicio;
 const T_ALERTA = ICONOS.alerta;
 const T_CARGA = ICONOS.subir;
 const T_ESPACIOS = ICONOS.edificio;
@@ -120,16 +120,28 @@ const T_SECCIONES = ICONOS.libro;
 const T_AUDITORIA = ICONOS.portapapeles;
 const T_REPORTE = ICONOS.documento;
 
-interface Pestana {
+/**
+ * Puntos de corte del panel (Issue 4.35): móvil < 768 px y escritorio ≥ 1024 px (`lg`), con una
+ * zona intermedia explícita de 768 a 1023 px.
+ *
+ * - Móvil y zona intermedia: barra inferior fija con las pestañas principales y, si el rol tiene
+ *   secundarias, una pestaña «Más» que abre un menú con ellas. Las listas y tablas ya usan
+ *   tarjetas por debajo de `lg` (`usePantallaAncha`), así que la navegación hace lo mismo.
+ * - Escritorio: barra completa bajo la cabecera, con todas las pestañas en una fila.
+ *
+ * Antes la barra completa aparecía desde `md` (768 px) y las siete pestañas no cabían: la
+ * página desbordaba a 826 px.
+ */
+export interface Pestana {
   to: string;
   etiqueta: string;
   trazo: string;
   /**
-   * La pestaña solo aparece desde el ancho de escritorio. A 320 px la barra inferior del
-   * panel no cabe con las siete secciones, y una barra con scroll horizontal es peor que
-   * una barra de cuatro destinos: las demas se llegan desde los accesos del inicio.
+   * Pestaña secundaria: por debajo de `lg` se llega desde el menú «Más» y no desde la barra.
+   * A 320 px la barra inferior no cabe con las siete secciones, y una barra con scroll
+   * horizontal es peor que una de cuatro destinos más «Más».
    */
-  soloEscritorio?: boolean;
+  secundaria?: boolean;
 }
 
 export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
@@ -147,7 +159,7 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
       to: RUTAS.seccionesAdmin,
       etiqueta: 'Secciones',
       trazo: T_SECCIONES,
-      soloEscritorio: true,
+      secundaria: true,
     },
     { to: RUTAS.alertasAdmin, etiqueta: 'Alertas', trazo: T_ALERTA },
     { to: RUTAS.cargaAdmin, etiqueta: 'Carga', trazo: T_CARGA },
@@ -155,13 +167,13 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
       to: RUTAS.auditoriaAdmin,
       etiqueta: 'Auditoría',
       trazo: T_AUDITORIA,
-      soloEscritorio: true,
+      secundaria: true,
     },
     {
       to: RUTAS.reporteSalonesAdmin,
       etiqueta: 'Informe',
       trazo: T_REPORTE,
-      soloEscritorio: true,
+      secundaria: true,
     },
   ];
 }

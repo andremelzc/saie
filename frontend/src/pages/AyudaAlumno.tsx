@@ -104,7 +104,7 @@ const GRUPOS: GrupoPreguntas[] = [
  * solo lectura y no necesita datos del backend. Es alcanzable desde el inicio del alumno.
  */
 export const AyudaAlumno: React.FC = () => (
-  <div className="min-h-screen bg-saie-canvas text-saie-text">
+  <div className="min-h-screen bg-saie-canvas pb-[var(--saie-barra-inferior)] text-saie-text">
     <CabeceraPantalla
       titulo="Ayuda"
       subtitulo="Respuestas a las dudas más comunes."
