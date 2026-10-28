@@ -172,7 +172,7 @@ const FilaEscalada: React.FC<{
         */}
         {motivo.codigo && (
           <details className="w-fit text-xs text-saie-muted">
-            <summary className="cursor-pointer">Código de soporte</summary>
+            <summary className="cursor-pointer py-3.5">Código de soporte</summary>
             <span className="font-mono text-xs">{motivo.codigo}</span>
           </details>
         )}
@@ -341,14 +341,14 @@ const InicioCoordinacion: React.FC = () => {
   }
 
   return (
-    <LayoutAdmin dashboard titulo="Área administrativa" subtitulo="Coordinación Académica">
+    <LayoutAdmin dashboard titulo="Área administrativa">
       {/*
         El tablero ocupa lo que queda del `main` (que es una columna flex) una vez descontados
         el título y los espacios. Antes iba con `lg:h-full`, que sumaba el 100 % de `main` al
         título y desbordaba: `main` recorta con `lg:overflow-hidden` y la última fila quedaba
         inalcanzable, sin scroll para recuperarla.
       */}
-      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-rows-[auto_auto_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:min-h-0 lg:flex-1 lg:grid-rows-[auto_auto_1fr]">
         {/* FILA 1 — las cuatro cifras que resumen la asignación */}
         <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 lg:grid-cols-4">
           <li>
@@ -374,7 +374,7 @@ const InicioCoordinacion: React.FC = () => {
         </ul>
 
         {/* FILA 2 — estado de la corrida y veredicto del verificador */}
-        <div className="grid gap-4 lg:grid-cols-12">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
           {/*
             La tarjeta guinda se estira hasta la altura de la del verificador, que es la que
             crece al abrir el detalle de las reglas. Por eso reparte su contenido con
@@ -402,7 +402,7 @@ const InicioCoordinacion: React.FC = () => {
             </div>
 
             <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="flex flex-wrap items-center justify-start gap-2">
                 <Boton
                   variante="secundario"
                   onClick={() => setConfirmandoCorrida(true)}
@@ -456,7 +456,7 @@ const InicioCoordinacion: React.FC = () => {
         </div>
 
         {/* FILA 3 — lo que hay que resolver y los accesos a las demás pantallas */}
-        <div className="grid min-h-0 gap-4 lg:grid-cols-12">
+        <div className="grid min-h-0 grid-cols-1 gap-4 lg:grid-cols-12">
           <section
             aria-labelledby="titulo-atencion"
             className="flex min-h-0 flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-8"

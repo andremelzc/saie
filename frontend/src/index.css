@@ -400,3 +400,19 @@ html.saie-sin-movimiento path.saie-trazo {
     margin: 14mm;
   }
 }
+
+/* Modo tablero (Issues 3.29 y 4.36): la pantalla ocupa exactamente el alto de la ventana y los
+   paneles largos llevan su propio scroll. Solo se activa con alto suficiente (>= 800 px) y en
+   escritorio: en ventanas más bajas (p. ej. un portátil de 1280×560 con las barras del
+   navegador) fijar el alto recorta el contenido sin forma de desplazarse (WCAG 1.4.10 y 2.1.1),
+   así que la página vuelve al flujo normal y se desplaza. */
+@media (min-width: 1024px) and (min-height: 800px) {
+  .saie-tablero {
+    height: 100vh;
+    overflow: hidden;
+  }
+  .saie-tablero-main {
+    min-height: 0;
+    overflow: hidden;
+  }
+}

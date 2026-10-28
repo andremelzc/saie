@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TelegramAlumnoPage from './TelegramAlumnoPage';
+import { AuthProvider } from '../context/AuthProvider';
+import { guardarSesion } from '../services/sesion';
+import { ahoraEnSegundos, crearToken } from '../test/helpers';
 import { desvincularTelegram, obtenerTelegram } from '../services/estudiante';
 import type { EstadoTelegramDTO } from '../types/perfil';
 
@@ -22,12 +25,21 @@ const estado = (cambios: Partial<EstadoTelegramDTO> = {}): EstadoTelegramDTO => 
   ...cambios,
 });
 
-const montar = () =>
-  render(
+const montar = () => {
+  guardarSesion({
+    token: crearToken(ahoraEnSegundos() + 3600, 'ALUMNO'),
+    rol: 'ALUMNO',
+    debeCambiarClave: false,
+    expiresIn: '8h',
+  });
+  return render(
     <MemoryRouter>
-      <TelegramAlumnoPage />
+      <AuthProvider>
+        <TelegramAlumnoPage />
+      </AuthProvider>
     </MemoryRouter>,
   );
+};
 
 describe('TelegramAlumnoPage', () => {
   beforeEach(() => {

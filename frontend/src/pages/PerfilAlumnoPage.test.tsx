@@ -2,13 +2,24 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import PerfilAlumnoPage from './PerfilAlumnoPage';
+import { AuthProvider } from '../context/AuthProvider';
+import { guardarSesion } from '../services/sesion';
+import { ahoraEnSegundos, crearToken } from '../test/helpers';
 import api from '../services/api';
 import { PERFIL_FIXTURE } from '../test/fixtures/perfil';
 
 function renderizar() {
+  guardarSesion({
+    token: crearToken(ahoraEnSegundos() + 3600, 'ALUMNO'),
+    rol: 'ALUMNO',
+    debeCambiarClave: false,
+    expiresIn: '8h',
+  });
   return render(
     <MemoryRouter>
-      <PerfilAlumnoPage />
+      <AuthProvider>
+        <PerfilAlumnoPage />
+      </AuthProvider>
     </MemoryRouter>,
   );
 }
