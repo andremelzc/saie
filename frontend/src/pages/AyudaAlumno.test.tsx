@@ -52,10 +52,10 @@ describe('AyudaAlumno (Issue 3.17)', () => {
       'href',
       '/estudiante/perfil',
     );
-    expect(screen.getByRole('link', { name: 'Configuración' })).toHaveAttribute(
-      'href',
-      '/estudiante/configuracion',
-    );
+    // La navegación del alumno también enlaza Configuración (Issue 3.34): se acota al contenido.
+    expect(
+      within(screen.getByRole('main')).getByRole('link', { name: 'Configuración' }),
+    ).toHaveAttribute('href', '/estudiante/configuracion');
     expect(screen.getByRole('link', { name: /Volver al inicio/ })).toHaveAttribute(
       'href',
       '/estudiante',

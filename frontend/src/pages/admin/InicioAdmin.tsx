@@ -152,15 +152,15 @@ const FilaEscalada: React.FC<{
   const alumnos = seccion.seccion.alumnosMatriculados;
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-3 border-b border-saie-divider py-2.5 last:border-b-0">
+    <li className="flex flex-col gap-3 border-b border-saie-divider py-2.5 last:border-b-0 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="m-0 truncate text-sm font-semibold text-saie-text">
+        <p className="m-0 text-sm font-semibold text-saie-text sm:truncate">
           {seccion.seccion.codigoCurso} · {seccion.seccion.codigoSeccion} —{' '}
           {seccion.seccion.nombreCurso}
         </p>
         <p className="m-0 flex flex-wrap items-center gap-2 text-xs text-saie-muted">
           <BadgeEstado tono="advertencia">{motivo.etiqueta}</BadgeEstado>
-          <span className="min-w-0 truncate">{motivo.descripcion}</span>
+          <span className="min-w-0 sm:truncate">{motivo.descripcion}</span>
           <span>
             {alumnos} {alumnos === 1 ? 'alumno' : 'alumnos'}
           </span>
@@ -177,9 +177,9 @@ const FilaEscalada: React.FC<{
           </details>
         )}
       </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
+      <div className="grid shrink-0 grid-cols-1 gap-2 min-[480px]:grid-cols-2 sm:flex sm:flex-wrap sm:items-center">
         {motivo.accion && (
-          <BotonEnlace to={motivo.accion.to} variante="secundario" tamano="sm">
+          <BotonEnlace to={motivo.accion.to} variante="secundario" tamano="sm" anchoCompleto>
             {motivo.accion.etiqueta}
           </BotonEnlace>
         )}
@@ -190,6 +190,7 @@ const FilaEscalada: React.FC<{
           cargando={reintentando}
           textoCargando="Reintentando…"
           disabled={deshabilitado}
+          anchoCompleto
           title={
             motivo.codigo === 'SIN_HORARIOS_DEFINIDOS'
               ? 'Vuelve a intentar después de cargar el horario'

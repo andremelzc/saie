@@ -43,6 +43,18 @@ h1 {
   font-family: var(--font-serif);
 }
 
+/* Alto de la barra de navegación fija inferior (panel y área del alumno). Vale 0 en escritorio y
+   cuando la pantalla no tiene barra; los avisos flotantes y el relleno de las pantallas lo usan
+   para no quedar tapados (Issues 4.35 y 3.34). */
+:root {
+  --saie-barra-inferior: 0px;
+}
+@media (max-width: 1023.98px) {
+  body:has([data-barra-inferior]) {
+    --saie-barra-inferior: 3.75rem;
+  }
+}
+
 body {
   margin: 0;
   background: var(--color-saie-canvas);

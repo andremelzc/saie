@@ -56,6 +56,9 @@ export async function listarIncidencias(
       ? { espacio: { responsables: { some: { cuentaId: auth.sub } } } }
       : {};
 
+  const pagina = filtros.pagina ?? 1;
+  const limite = filtros.limite ?? 50;
+
   const incidencias = await db.incidencia.findMany({
     where: {
       estado: filtros.estado ?? EstadoIncidencia.PENDIENTE,
@@ -65,6 +68,8 @@ export async function listarIncidencias(
     },
     include: INCLUIR_INCIDENCIA,
     orderBy: { fechaReporte: 'asc' },
+    skip: (pagina - 1) * limite,
+    take: limite,
   });
 
   const peso = { ALTA: 0, MEDIA: 1, BAJA: 2 } as const;

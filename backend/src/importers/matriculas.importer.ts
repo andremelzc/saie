@@ -1,6 +1,8 @@
 import { PrismaClient, RolCuenta } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
+import { generarClaveInicial } from '../lib/claves';
+import { CredencialInicialDTO } from './docentes.importer';
 
 export const MatriculaSchema = z.object({
   codigoAlumno: z.string().min(1, 'El código del alumno es requerido'),
@@ -20,6 +22,7 @@ export interface ResultadoImportacionMatriculas {
   cuentasCreadas: number;
   matriculasProcesadas: number;
   errores: string[];
+  clavesIniciales?: CredencialInicialDTO[];
 }
 
 export async function importarMatriculas(
@@ -30,6 +33,7 @@ export async function importarMatriculas(
   let cuentasCreadas = 0;
   let matriculasProcesadas = 0;
   const errores: string[] = [];
+  const clavesIniciales: CredencialInicialDTO[] = [];
 
   for (let i = 0; i < datos.length; i++) {
     const validacion = MatriculaSchema.safeParse(datos[i]);
@@ -56,20 +60,48 @@ export async function importarMatriculas(
 
       if (crearCuentaAcceso) {
         const usuarioLogin = codigoAlumno;
-        const claveInicialHash = await bcrypt.hash(codigoAlumno, 10);
+        const cuentaExistente = prisma.cuenta.findUnique
+          ? await prisma.cuenta.findUnique({ where: { usuarioLogin } })
+          : null;
 
-        const cuenta = await prisma.cuenta.upsert({
-          where: { usuarioLogin },
-          update: {},
-          create: {
+        if (!cuentaExistente) {
+          const claveInicial = generarClaveInicial();
+          const claveInicialHash = await bcrypt.hash(claveInicial, 10);
+
+          let cuenta;
+          if (prisma.cuenta.create) {
+            cuenta = await prisma.cuenta.create({
+              data: {
+                rol: RolCuenta.ALUMNO,
+                usuarioLogin,
+                claveHash: claveInicialHash,
+                debeCambiarClave: true,
+              },
+            });
+          } else {
+            cuenta = await prisma.cuenta.upsert({
+              where: { usuarioLogin },
+              update: {},
+              create: {
+                rol: RolCuenta.ALUMNO,
+                usuarioLogin,
+                claveHash: claveInicialHash,
+                debeCambiarClave: true,
+              },
+            });
+          }
+          cuentaId = cuenta.id;
+          cuentasCreadas++;
+          clavesIniciales.push({
+            codigo: codigoAlumno,
+            nombre,
+            correo,
             rol: RolCuenta.ALUMNO,
-            usuarioLogin,
-            claveHash: claveInicialHash,
-            debeCambiarClave: true,
-          },
-        });
-        cuentaId = cuenta.id;
-        cuentasCreadas++;
+            claveInicial,
+          });
+        } else {
+          cuentaId = cuentaExistente.id;
+        }
       }
 
       // 2. Crear o actualizar Alumno
@@ -138,5 +170,5 @@ export async function importarMatriculas(
     }
   }
 
-  return { alumnosProcesados, cuentasCreadas, matriculasProcesadas, errores };
+  return { alumnosProcesados, cuentasCreadas, matriculasProcesadas, errores, clavesIniciales };
 }

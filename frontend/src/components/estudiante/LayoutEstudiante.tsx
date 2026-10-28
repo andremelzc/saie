@@ -23,8 +23,8 @@ export interface LayoutEstudianteProps {
  * Marco común del área del estudiante (Issue 3.29).
  *
  * La barra de navegación es lo que permite que la portada sea un tablero: cada destino está
- * a un clic y no hay que volver al inicio para cambiar de sección. En móvil la barra va abajo,
- * como en el panel administrativo.
+ * a un clic y no hay que volver al inicio para cambiar de sección. Por debajo de `lg` la barra va
+ * fija abajo, como en el panel administrativo (Issue 3.34).
  */
 export const LayoutEstudiante: React.FC<LayoutEstudianteProps> = ({
   titulo,
