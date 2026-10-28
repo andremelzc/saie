@@ -16,3 +16,4 @@ export function generarClaveInicial(): string {
     () => ALFABETO_CLAVE[randomInt(ALFABETO_CLAVE.length)],
   ).join('');
 }
+
