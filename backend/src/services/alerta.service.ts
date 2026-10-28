@@ -177,6 +177,9 @@ export async function listarAlertasActivas(
       ? { espacio: { responsables: { some: { cuentaId: auth.sub } } } }
       : {};
 
+  const pagina = filtros.pagina ?? 1;
+  const limite = filtros.limite ?? 50;
+
   const alertas = await db.alerta.findMany({
     where: {
       estado: EstadoAlerta.PENDIENTE,
@@ -186,6 +189,8 @@ export async function listarAlertasActivas(
     },
     include: INCLUIR_ALERTA,
     orderBy: { fechaDeteccion: 'desc' },
+    skip: (pagina - 1) * limite,
+    take: limite,
   });
 
   return alertas.map(aAlertaDTO);
