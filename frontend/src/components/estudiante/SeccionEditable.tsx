@@ -182,7 +182,7 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
       value: borrador[campo.clave] ?? '',
       'aria-invalid': error ? true : undefined,
       'aria-describedby': describedBy || undefined,
-      className: `${CLASES_CAMPO} ${error ? 'border-saie-danger' : 'border-saie-divider'}`,
+      className: `${CLASES_CAMPO} ${error ? 'border-saie-danger' : 'border-saie-border'}`,
     };
 
     let control: React.ReactNode;

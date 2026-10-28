@@ -4,7 +4,11 @@ import { RUTAS } from '../../config/rutas';
 import { Contenedor } from '../ui/Contenedor';
 import type { AnchoContenedor } from '../ui/Contenedor';
 import { ICONOS } from '../ui/iconos';
+import { MenuMas } from '../ui/MenuMas';
 
+const TRAZO_INICIO = ICONOS.inicio;
+const TRAZO_AYUDA = ICONOS.ayuda;
+const TRAZO_AJUSTES = ICONOS.ajustes;
 const TRAZO_HORARIO = ICONOS.calendario;
 const TRAZO_PERFIL = ICONOS.usuario;
 const TRAZO_MAPA = ICONOS.mapa;
@@ -15,30 +19,45 @@ interface EnlaceEstudiante {
   to: string;
   etiqueta: string;
   trazo: string;
+  /** Por debajo de `lg` se llega desde la pestaña «Más», no desde la barra inferior. */
+  secundaria?: boolean;
+  /** Desde `lg`, empuja este enlace y los siguientes al extremo derecho de la barra. */
+  alFinal?: boolean;
 }
 
 /** Las secciones del portal del estudiante, en el orden en que se recorren. */
 const ENLACES_ESTUDIANTE: EnlaceEstudiante[] = [
+  { to: RUTAS.inicioAlumno, etiqueta: 'Inicio', trazo: TRAZO_INICIO },
   { to: RUTAS.horarioAlumno, etiqueta: 'Horario', trazo: TRAZO_HORARIO },
   { to: RUTAS.perfilAlumno, etiqueta: 'Perfil', trazo: TRAZO_PERFIL },
   { to: RUTAS.mapaAlumno, etiqueta: 'Mapa', trazo: TRAZO_MAPA },
   { to: RUTAS.rutaAlumno, etiqueta: 'Ruta', trazo: TRAZO_RUTA },
-  { to: RUTAS.telegramAlumno, etiqueta: 'Telegram', trazo: TRAZO_TELEGRAM },
+  { to: RUTAS.telegramAlumno, etiqueta: 'Telegram', trazo: TRAZO_TELEGRAM, secundaria: true },
+  { to: RUTAS.ayudaAlumno, etiqueta: 'Ayuda', trazo: TRAZO_AYUDA, secundaria: true, alFinal: true },
+  {
+    to: RUTAS.configuracionAlumno,
+    etiqueta: 'Configuración',
+    trazo: TRAZO_AJUSTES,
+    secundaria: true,
+  },
 ];
 
+const SECUNDARIAS = ENLACES_ESTUDIANTE.filter((e) => e.secundaria);
+
 const claseLink = ({ isActive }: { isActive: boolean }) =>
-  `flex flex-1 flex-col items-center gap-0.5 px-1 py-2 text-xs transition-colors md:flex-none md:flex-row md:gap-2 md:rounded-lg md:px-4 md:text-sm ${
+  `flex min-h-14 flex-1 flex-col items-center gap-0.5 border-t-2 px-1 py-2 text-xs transition-colors lg:min-h-0 lg:flex-none lg:flex-row lg:gap-2 lg:rounded-lg lg:border-t-0 lg:px-4 lg:text-sm ${
     isActive
-      ? 'bg-saie-primary/10 font-bold text-saie-primary md:bg-saie-primary md:font-medium md:text-white'
-      : 'font-medium text-saie-muted hover:text-saie-primary'
+      ? 'border-saie-primary bg-saie-primary/10 font-bold text-saie-primary lg:bg-saie-primary lg:font-medium lg:text-white'
+      : 'border-transparent font-medium text-saie-muted hover:text-saie-primary'
   }`;
 
 /**
  * Barra de navegación del área del estudiante (Issue 3.29).
  *
  * Es lo que permite que la portada sea un tablero: cada sección está a un clic y no hay que
- * volver al inicio para cambiar de sitio. En móvil se fija abajo; en escritorio va bajo la
- * cabecera, como en el panel administrativo.
+ * volver al inicio para cambiar de sitio. Por debajo de `lg` (1024 px) se fija abajo con las
+ * secciones principales y una pestaña «Más» (Telegram, Ayuda y Configuración); desde `lg` va bajo
+ * la cabecera con todo en una fila, como en el panel administrativo (Issue 3.34).
  */
 export interface NavegacionEstudianteProps {
   /**
@@ -51,12 +70,18 @@ export interface NavegacionEstudianteProps {
 export const NavegacionEstudiante: React.FC<NavegacionEstudianteProps> = ({ ancho = 'normal' }) => (
   <nav
     aria-label="Navegación del área del estudiante"
-    className="z-30 border-b border-saie-divider bg-white md:static"
+    data-barra-inferior
+    className="saie-no-imprimir fixed inset-x-0 bottom-0 z-30 border-t border-saie-divider bg-white lg:static lg:border-b lg:border-t-0"
   >
-    <Contenedor como="ul" ancho={ancho} className="m-0 flex list-none gap-1 py-0 md:py-2">
+    <Contenedor como="ul" ancho={ancho} className="m-0 flex list-none gap-1 py-0 lg:py-2">
       {ENLACES_ESTUDIANTE.map((enlace) => (
-        <li key={enlace.to} className="flex flex-1 md:flex-none">
-          <NavLink to={enlace.to} className={claseLink}>
+        <li
+          key={enlace.to}
+          className={`flex flex-1 lg:flex-none ${enlace.secundaria ? 'hidden lg:flex' : ''} ${
+            enlace.alFinal ? 'lg:ml-auto' : ''
+          }`}
+        >
+          <NavLink to={enlace.to} end className={claseLink}>
             <svg
               aria-hidden="true"
               className="h-5 w-5"
@@ -73,6 +98,9 @@ export const NavegacionEstudiante: React.FC<NavegacionEstudianteProps> = ({ anch
           </NavLink>
         </li>
       ))}
+      <li className="flex flex-1 lg:hidden">
+        <MenuMas pestanas={SECUNDARIAS} />
+      </li>
     </Contenedor>
   </nav>
 );

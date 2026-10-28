@@ -148,7 +148,7 @@ export const AlertasAdmin: React.FC = () => {
           <div
             role="group"
             aria-label="Filtrar por tipo"
-            className="inline-flex flex-wrap gap-1 rounded-xl border border-saie-divider bg-white p-1"
+            className="inline-flex flex-wrap gap-1 rounded-xl border border-saie-border bg-white p-1"
           >
             {(['TODAS', 'SOFTWARE', 'CAPACIDAD'] as Filtro[]).map((f) => {
               const activo = filtro === f;
