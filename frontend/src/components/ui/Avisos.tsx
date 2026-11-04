@@ -96,7 +96,7 @@ export const ProveedorAvisos: React.FC<{ children: React.ReactNode }> = ({ child
         onMouseLeave={() => (pausado.current = false)}
         onFocus={() => (pausado.current = true)}
         onBlur={() => (pausado.current = false)}
-        className="pointer-events-none fixed inset-x-4 bottom-24 z-50 flex flex-col items-end gap-2 md:bottom-6 md:left-auto md:right-6 md:w-96"
+        className="pointer-events-none fixed inset-x-4 bottom-[calc(var(--saie-barra-inferior)+1.5rem)] z-50 flex flex-col items-end gap-2 md:left-auto md:right-6 md:w-96"
       >
         <div
           aria-live="polite"

@@ -71,7 +71,7 @@ export const ConfiguracionAlumno: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-saie-canvas text-saie-text">
+    <div className="min-h-screen bg-saie-canvas pb-[var(--saie-barra-inferior)] text-saie-text">
       <CabeceraPantalla
         titulo="Configuración"
         subtitulo="Ajusta la app a tu comodidad."

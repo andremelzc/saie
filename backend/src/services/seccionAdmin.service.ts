@@ -233,10 +233,12 @@ export interface DocenteParaAsignarDTO {
  */
 export async function listarDocentesParaAsignar(
   prisma: Pick<PrismaClient, 'docente'>,
+  limite = 50,
 ): Promise<DocenteParaAsignarDTO[]> {
   const docentes = await prisma.docente.findMany({
     select: { id: true, codigoDocente: true, nombre: true, departamento: true },
     orderBy: [{ nombre: 'asc' }],
+    take: Math.min(Math.max(limite, 1), 200),
   });
   return docentes;
 }

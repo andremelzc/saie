@@ -153,15 +153,15 @@ const FilaEscalada: React.FC<{
   const alumnos = seccion.seccion.alumnosMatriculados;
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-3 border-b border-saie-divider py-2.5 last:border-b-0">
+    <li className="flex flex-col gap-3 border-b border-saie-divider py-2.5 last:border-b-0 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="m-0 truncate text-sm font-semibold text-saie-text">
+        <p className="m-0 text-sm font-semibold text-saie-text sm:truncate">
           {seccion.seccion.codigoCurso} · {seccion.seccion.codigoSeccion} —{' '}
           {seccion.seccion.nombreCurso}
         </p>
         <p className="m-0 flex flex-wrap items-center gap-2 text-xs text-saie-muted">
           <BadgeEstado tono="advertencia">{motivo.etiqueta}</BadgeEstado>
-          <span className="min-w-0 truncate">{motivo.descripcion}</span>
+          <span className="min-w-0 sm:truncate">{motivo.descripcion}</span>
           <span>
             {alumnos} {alumnos === 1 ? 'alumno' : 'alumnos'}
           </span>
@@ -173,14 +173,14 @@ const FilaEscalada: React.FC<{
         */}
         {motivo.codigo && (
           <details className="w-fit text-xs text-saie-muted">
-            <summary className="cursor-pointer">Código de soporte</summary>
+            <summary className="cursor-pointer py-3.5">Código de soporte</summary>
             <span className="font-mono text-xs">{motivo.codigo}</span>
           </details>
         )}
       </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
+      <div className="grid shrink-0 grid-cols-1 gap-2 min-[480px]:grid-cols-2 sm:flex sm:flex-wrap sm:items-center">
         {motivo.accion && (
-          <BotonEnlace to={motivo.accion.to} variante="secundario" tamano="sm">
+          <BotonEnlace to={motivo.accion.to} variante="secundario" tamano="sm" anchoCompleto>
             {motivo.accion.etiqueta}
           </BotonEnlace>
         )}
@@ -191,6 +191,7 @@ const FilaEscalada: React.FC<{
           cargando={reintentando}
           textoCargando="Reintentando…"
           disabled={deshabilitado}
+          anchoCompleto
           title={
             motivo.codigo === 'SIN_HORARIOS_DEFINIDOS'
               ? 'Vuelve a intentar después de cargar el horario'
@@ -381,7 +382,7 @@ const InicioCoordinacion: React.FC = () => {
   }
 
   return (
-    <LayoutAdmin dashboard titulo="Área administrativa" subtitulo="Coordinación Académica">
+    <LayoutAdmin dashboard titulo="Área administrativa">
       {/*
         El tablero ocupa lo que queda del `main` (que es una columna flex) una vez descontados
         el título y los espacios. Antes iba con `lg:h-full`, que sumaba el 100 % de `main` al
@@ -390,7 +391,7 @@ const InicioCoordinacion: React.FC = () => {
       */}
       <div
         aria-busy={corriendo}
-        className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-rows-[auto_auto_1fr]"
+        className="grid grid-cols-1 gap-4 lg:min-h-0 lg:flex-1 lg:grid-rows-[auto_auto_1fr]"
       >
         {/* FILA 1 — las cuatro cifras que resumen la asignación */}
         <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 lg:grid-cols-4">
@@ -417,7 +418,7 @@ const InicioCoordinacion: React.FC = () => {
         </ul>
 
         {/* FILA 2 — estado de la corrida y veredicto del verificador */}
-        <div className="grid gap-4 lg:grid-cols-12">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
           {/*
             La tarjeta guinda se estira hasta la altura de la del verificador, que es la que
             crece al abrir el detalle de las reglas. Por eso reparte su contenido con
@@ -445,7 +446,7 @@ const InicioCoordinacion: React.FC = () => {
             </div>
 
             <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="flex flex-wrap items-center justify-start gap-2">
                 <Boton
                   variante="secundario"
                   onClick={() => setConfirmandoCorrida(true)}
@@ -507,7 +508,7 @@ const InicioCoordinacion: React.FC = () => {
         </div>
 
         {/* FILA 3 — lo que hay que resolver y los accesos a las demás pantallas */}
-        <div className="grid min-h-0 gap-4 lg:grid-cols-12">
+        <div className="grid min-h-0 grid-cols-1 gap-4 lg:grid-cols-12">
           <section
             aria-labelledby="titulo-atencion"
             className="flex min-h-0 flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-8"

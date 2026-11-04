@@ -209,6 +209,7 @@ export async function listarSolicitudesDeDocente(
     where: { docenteId: docente.id },
     include: incluirSolicitud,
     orderBy: { fechaSolicitud: 'desc' },
+    take: 100,
   });
 
   return filas.map(aDTO);

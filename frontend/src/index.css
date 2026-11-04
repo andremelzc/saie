@@ -49,6 +49,18 @@ h1[tabindex='-1']:focus {
   outline: none;
 }
 
+/* Alto de la barra de navegación fija inferior (panel y área del alumno). Vale 0 en escritorio y
+   cuando la pantalla no tiene barra; los avisos flotantes y el relleno de las pantallas lo usan
+   para no quedar tapados (Issues 4.35 y 3.34). */
+:root {
+  --saie-barra-inferior: 0px;
+}
+@media (max-width: 1023.98px) {
+  body:has([data-barra-inferior]) {
+    --saie-barra-inferior: 3.75rem;
+  }
+}
+
 body {
   margin: 0;
   background: var(--color-saie-canvas);
@@ -392,5 +404,21 @@ html.saie-sin-movimiento path.saie-trazo {
   }
   @page {
     margin: 14mm;
+  }
+}
+
+/* Modo tablero (Issues 3.29 y 4.36): la pantalla ocupa exactamente el alto de la ventana y los
+   paneles largos llevan su propio scroll. Solo se activa con alto suficiente (>= 800 px) y en
+   escritorio: en ventanas más bajas (p. ej. un portátil de 1280×560 con las barras del
+   navegador) fijar el alto recorta el contenido sin forma de desplazarse (WCAG 1.4.10 y 2.1.1),
+   así que la página vuelve al flujo normal y se desplaza. */
+@media (min-width: 1024px) and (min-height: 800px) {
+  .saie-tablero {
+    height: 100vh;
+    overflow: hidden;
+  }
+  .saie-tablero-main {
+    min-height: 0;
+    overflow: hidden;
   }
 }

@@ -13,11 +13,15 @@ import { obtenerPeriodoVigente } from './periodo.service';
 export async function listarSeccionesEscaladas(
   periodoSolicitado: string | undefined,
   prisma: Pick<PrismaClient, 'asignacion' | 'seccion'>,
+  paginacion?: { pagina?: number; limite?: number },
 ): Promise<SeccionesEscaladasDTO> {
   const periodo = periodoSolicitado ?? (await obtenerPeriodoVigente(prisma));
   if (!periodo) {
     return { periodo: null, total: 0, secciones: [] };
   }
+
+  const pagina = paginacion?.pagina ?? 1;
+  const limite = paginacion?.limite ?? 50;
 
   const asignaciones = await prisma.asignacion.findMany({
     where: { estado: EstadoAsignacion.ESCALADA, seccion: { periodo } },
@@ -33,6 +37,8 @@ export async function listarSeccionesEscaladas(
       },
     },
     orderBy: { fechaAsignacion: 'asc' },
+    skip: (pagina - 1) * limite,
+    take: limite,
   });
 
   const secciones = asignaciones.map((a) => ({
