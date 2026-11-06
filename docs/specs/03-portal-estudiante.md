@@ -56,8 +56,13 @@ El **Portal del Estudiante** es la interfaz web/móvil responsiva donde los alum
   * Mapa en modo lectura: solo el estado de cada espacio del piso en la franja (sin franja, el momento actual en hora de Lima). Reutiliza `obtenerOcupacionPorPiso` (Issue 4.11, ver [Spec 04](04-panel-alertas-y-admin.md) §2.2) pero **no expone** curso, docente ni alertas.
   * `pabellon` y `piso` son obligatorios; `dia`, `horaInicio` y `horaFin` van juntos o ninguno (400 en otro caso).
   * Respuesta: `{ pabellon, piso, franja: { diaSemana, horaInicio, horaFin }, espacios: [{ id, identificador, tipo, estado: 'DISPONIBLE' | 'OCUPADO' }] }`. Un espacio con alerta se muestra según su asignación.
-* `GET /api/v1/estudiante/ruta/:asignacionId`
-  * Calcula la ruta estática de 3 tramos (Entrada Pabellón $\rightarrow$ Escalares/Elevador $\rightarrow$ Puerta del Espacio asignado).
+* `GET /api/v1/estudiante/ruta/:asignacionId` (Issues 3.14 y 3.15, rol `ALUMNO`)
+  * Expone la ruta de referencia hacia el espacio asignado de una asignación. **No reimplementa el cálculo**: `obtenerRutaAlumnoPorAsignacionId` (`alumno.service.ts`) reúne la asignación, sus espacios y el grafo de contigüidad y delega en `calcularRutaReferencia` (`rutaReferencia.service.ts`, Issue 3.14). Es la ruta estática de 3 tramos: Entrada del pabellón $\rightarrow$ Escalera o ascensor $\rightarrow$ Puerta del espacio asignado (el tramo de cambio de piso se omite si el espacio está en el piso 1).
+  * **Quién puede verla:** solo el alumno matriculado en la sección de la asignación. Una asignación inexistente responde `404` y una de una sección donde no está matriculado, `403`. Si la matrícula marca `movilidadReducida`, el tramo de cambio de piso usa el ascensor accesible en lugar de la escalera.
+  * **Respuesta `200`:** `RutaReferenciaDTO` = `{ asignacionId, estado, mensaje?, pabellon?, pisoDestino?, tiempoEstimadoTotalSegundos, tramos, movilidadReducida }`.
+    * Cada tramo es `{ orden, tipo: 'ENTRADA_PABELLON' | 'CAMBIO_PISO' | 'ESPACIO_ASIGNADO', titulo, descripcion, tiempoEstimadoSegundos, esAccesible, espacioId?, identificador?, tipoEspacio?, pabellon?, piso? }`. Un bloque de varios espacios contiguos produce un tramo `ESPACIO_ASIGNADO` por sala, en el orden del grafo.
+    * `tiempoEstimadoTotalSegundos` es la suma de los tramos, con las constantes de `TIEMPO_CAMINATA_CONFIG`: 45 s la entrada, 60 s por piso en escalera o 50 s en ascensor, 30 s hasta el primer espacio y 15 s entre espacios contiguos.
+  * **Ruta no disponible:** no es un error HTTP. Si la asignación no tiene espacios, o el espacio no tiene pabellón o piso válido, responde `200` con `estado: 'RUTA_NO_DISPONIBLE'`, un `mensaje` legible («La asignación no cuenta con espacios registrados.» o «El espacio asignado no tiene pabellón o piso válido registrado.»), `tiempoEstimadoTotalSegundos: 0` y `tramos: []`. La pantalla de ruta muestra ese `mensaje` en lugar de dibujar tramos.
 
 ### 2.4 Avisos por Telegram (#3.24, #3.25, #3.26, #3.27, #3.28)
 Canal opcional y voluntario de avisos al alumno (decisión D-06). Contexto y secretos en [`arquitectura.md`](../arquitectura.md) §5.3, §5.4, §6.3 y §8.

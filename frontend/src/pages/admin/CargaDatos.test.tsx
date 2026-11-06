@@ -218,7 +218,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     expect(within(dialogo).getByText('1. Orden de carga')).toBeInTheDocument();
     expect(within(dialogo).getByText('2. El periodo académico')).toBeInTheDocument();
 
-    fireEvent.click(within(dialogo).getByRole('button', { name: 'Plantillas' }));
+    fireEvent.click(within(dialogo).getByRole('tab', { name: 'Plantillas' }));
     expect(
       within(dialogo).getByRole('heading', { name: 'Plantillas de carga' }),
     ).toBeInTheDocument();

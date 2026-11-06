@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import CabeceraPortal from '../../components/CabeceraPortal';
+import { RUTAS } from '../../config/rutas';
 import {
   MENSAJE_EN_DESARROLLO,
   PREVISION_EN_DESARROLLO,
@@ -37,6 +38,12 @@ export const InicioDocentePage: React.FC = () => (
             className="inline-flex min-h-12 items-center justify-center rounded-xl border border-saie-primary px-5 text-base font-medium text-saie-primary no-underline hover:bg-saie-primary/5"
           >
             Consultar espacios
+          </Link>
+          <Link
+            to={RUTAS.solicitudesSoftwareDocente}
+            className="inline-flex min-h-12 items-center justify-center rounded-xl border border-saie-primary px-5 text-base font-medium text-saie-primary no-underline hover:bg-saie-primary/5"
+          >
+            Solicitar software
           </Link>
         </div>
       </section>

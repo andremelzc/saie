@@ -6,6 +6,8 @@ export const RUTAS = {
   loginAlumno: '/login/alumno',
   loginDocente: '/login/docente',
   loginAdmin: '/login/admin',
+  /** Cambio de la clave inicial, común a los cuatro roles (Issues 4.21 y 4.45). */
+  cambiarClave: '/cambiar-clave',
   inicioAlumno: '/estudiante',
   horarioAlumno: '/estudiante/horario',
   mapaAlumno: '/estudiante/mapa',
@@ -18,6 +20,7 @@ export const RUTAS = {
   horarioDocente: '/docente/horario',
   espaciosDocente: '/docente/espacios',
   incidenciasDocente: '/docente/incidencias',
+  solicitudesSoftwareDocente: '/docente/solicitudes-software',
   inicioAdmin: '/admin',
   alertasAdmin: '/admin/alertas',
   cargaAdmin: '/admin/carga',
@@ -57,7 +60,14 @@ export function rutaInicioDeRol(rol: RolCuenta): string {
   return RUTAS.inicioAlumno;
 }
 
-/** Destino tras iniciar sesión: el área del rol (las claves las administra la Facultad). */
-export function rutaDestinoTrasLogin(sesion: { rol: RolCuenta }): string {
+/**
+ * Destino tras iniciar sesión: el área del rol, o la pantalla de cambio de clave mientras la
+ * cuenta deba cambiar la inicial (Issue 4.45).
+ */
+export function rutaDestinoTrasLogin(sesion: {
+  rol: RolCuenta;
+  debeCambiarClave?: boolean;
+}): string {
+  if (sesion.debeCambiarClave) return RUTAS.cambiarClave;
   return rutaInicioDeRol(sesion.rol);
 }

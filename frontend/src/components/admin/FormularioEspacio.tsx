@@ -6,7 +6,7 @@ import { CLASE_AYUDA, CLASE_CAMPO, CLASE_ETIQUETA } from '../ui/campos';
 import { CLASE_PIE_DRAWER } from '../ui/Drawer';
 import { useCarga } from '../../hooks/useCarga';
 import { crearEspacio, editarEspacio, obtenerCatalogoActivo } from '../../services/admin';
-import { mensajeDeError } from '../../services/estudiante';
+import { useAccion } from '../../hooks/useAccion';
 import type {
   CampoEspacio,
   CambiosEspacio,
@@ -702,6 +702,7 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
   const [form, setForm] = useState<EstadoFormulario>(original);
   const [busquedaSoftware, setBusquedaSoftware] = useState('');
   const [busquedaContiguos, setBusquedaContiguos] = useState('');
+  const { ejecutar } = useAccion();
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -788,19 +789,20 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
     if (guardando || !hayCambios || hayErrores) return;
     setGuardando(true);
     setError(null);
-    try {
-      if (modo === 'crear') {
-        const creado = await crearEspacio(espacioNuevo(form));
-        onGuardado({ espacio: creado, alertas: [] });
-        return;
-      }
-      const resultado = await editarEspacio(espacio!.id, cambios);
-      onGuardado(resultado);
-    } catch (e) {
-      setError(mensajeDeError(e));
-    } finally {
-      setGuardando(false);
-    }
+    // El error se muestra en línea, dentro del formulario.
+    const salida = await ejecutar(
+      async () => {
+        if (modo === 'crear') {
+          const creado = await crearEspacio(espacioNuevo(form));
+          return { espacio: creado, alertas: [] };
+        }
+        return editarEspacio(espacio!.id, cambios);
+      },
+      { avisarError: false },
+    );
+    setGuardando(false);
+    if (salida?.ok) onGuardado(salida.valor);
+    else if (salida) setError(salida.error);
   }
 
   const motivoDeshabilitado = motivoDeGuardado(hayCambios, hayErrores);

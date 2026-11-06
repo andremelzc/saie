@@ -43,6 +43,12 @@ h1 {
   font-family: var(--font-serif);
 }
 
+/* El foco se mueve al h1 al cambiar de pantalla (Issue 3.45): es un destino, no un control, y no
+   necesita el aro de foco. */
+h1[tabindex='-1']:focus {
+  outline: none;
+}
+
 /* Alto de la barra de navegación fija inferior (panel y área del alumno). Vale 0 en escritorio y
    cuando la pantalla no tiene barra; los avisos flotantes y el relleno de las pantallas lo usan
    para no quedar tapados (Issues 4.35 y 3.34). */

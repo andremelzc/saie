@@ -19,7 +19,9 @@ async function cargarHorarioYCursos(): Promise<DatosHorario> {
  * autenticado desde la base de datos y se los pasa a la pantalla. Sin datos inventados.
  */
 export const HorarioMisCursosPage: React.FC = () => {
-  const { datos, cargando, error, recargar } = useCarga(cargarHorarioYCursos);
+  const { datos, cargando, error, recargar } = useCarga(cargarHorarioYCursos, {
+    clave: 'horario-y-cursos',
+  });
   const horario = useMemo(() => datos?.horario, [datos]);
   const cursos = useMemo(() => datos?.cursos, [datos]);
 

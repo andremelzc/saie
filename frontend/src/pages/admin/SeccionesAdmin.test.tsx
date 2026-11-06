@@ -42,6 +42,13 @@ const seccion = (o: Partial<SeccionAdminDTO>): SeccionAdminDTO => ({
   ...o,
 });
 
+/**
+ * El listado se dibuja dos veces (tabla desde `lg` y tarjetas por debajo, elegidas con CSS); en
+ * jsdom no hay CSS, así que se consulta solo la tabla.
+ */
+const enLista = () =>
+  within(screen.queryByRole('region', { name: 'Listado de secciones' }) ?? document.body);
+
 const montar = () =>
   render(
     <MemoryRouter>
@@ -100,16 +107,16 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
 
   it('lista las secciones con su aula y su estado', async () => {
     montar();
-    expect(await screen.findByText('IS101 · 1')).toBeInTheDocument();
-    expect(screen.getByText('Algoritmos')).toBeInTheDocument();
-    expect(screen.getByText('Lab 03')).toBeInTheDocument();
-    expect(screen.getByText('Aula confirmada')).toBeInTheDocument();
-    expect(screen.getByText('En revisión')).toBeInTheDocument();
+    expect((await screen.findAllByText('IS101 · 1')).length).toBeGreaterThan(0);
+    expect(enLista().getByText('Algoritmos')).toBeInTheDocument();
+    expect(enLista().getByText('Lab 03')).toBeInTheDocument();
+    expect(enLista().getByText('Aula confirmada')).toBeInTheDocument();
+    expect(enLista().getByText('En revisión')).toBeInTheDocument();
   });
 
   it('filtra por búsqueda y por tipo de espacio', async () => {
     montar();
-    await screen.findByText('IS101 · 1');
+    await screen.findAllByText('IS101 · 1');
 
     fireEvent.change(screen.getByLabelText('Buscar sección'), { target: { value: 'bases' } });
     await waitFor(() =>
@@ -136,7 +143,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
 
     // El formulario ofrece el tipo de aula, el docente y el software requerido.
-    expect(within(panel).getByLabelText('Tipo de espacio que necesita')).toBeInTheDocument();
+    expect(await within(panel).findByLabelText('Tipo de espacio que necesita')).toBeInTheDocument();
     expect(within(panel).getByLabelText('Docente')).toBeInTheDocument();
     expect(within(panel).getByText('Software que exige la sección')).toBeInTheDocument();
   });
@@ -187,7 +194,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
       limite: 200,
     });
     montar();
-    expect(await screen.findByText('Sin aula asignada')).toBeInTheDocument();
+    expect((await screen.findAllByText('Sin aula asignada')).length).toBeGreaterThan(0);
   });
 
   it('filtra el software del catálogo por su nombre', async () => {
@@ -226,7 +233,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
 
-    fireEvent.change(within(panel).getByLabelText('Tipo de espacio que necesita'), {
+    fireEvent.change(await within(panel).findByLabelText('Tipo de espacio que necesita'), {
       target: { value: 'AULA_TEORICA' },
     });
     fireEvent.change(within(panel).getByLabelText('Docente'), { target: { value: 'd1' } });
@@ -281,21 +288,12 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     expect(within(panel).getByRole('button', { name: 'Editar sección' })).toBeInTheDocument();
   });
 
-  it('en pantallas estrechas el listado pasa a tarjetas', async () => {
-    const anchoOriginal = window.innerWidth;
-    window.innerWidth = 500;
-    window.dispatchEvent(new Event('resize'));
-
-    try {
-      montar();
-      const articulo = await screen.findByRole('article', { name: /IS101/ });
-      expect(within(articulo).getByText('IS101 · 1')).toBeInTheDocument();
-      expect(within(articulo).getByText('Lab 03')).toBeInTheDocument();
-      expect(screen.queryByRole('table')).toBeNull();
-    } finally {
-      window.innerWidth = anchoOriginal;
-      window.dispatchEvent(new Event('resize'));
-    }
+  it('ofrece la tabla (escritorio) y las tarjetas (móvil) y deja la elección al CSS', async () => {
+    montar();
+    const articulo = await screen.findByRole('article', { name: /IS101/ });
+    expect(within(articulo).getByText('IS101 · 1')).toBeInTheDocument();
+    expect(within(articulo).getByText('Lab 03')).toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeInTheDocument();
   });
 
   it('cerrar el panel de detalle lo oculta', async () => {
