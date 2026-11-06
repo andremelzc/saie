@@ -1,6 +1,7 @@
 import api from './api';
 import type {
   AlertaDTO,
+  ClaveRestablecidaDTO,
   CambiosEspacio,
   CambiosSeccion,
   EspacioAdminDTO,
@@ -8,6 +9,8 @@ import type {
   ListadoHistorialDTO,
   ListadoSeccionesDTO,
   ListadoSoftwareDTO,
+  NuevoAlumnoDTO,
+  NuevoDocenteDTO,
   NuevoEspacioDTO,
   ReporteAsignacionesDTO,
   ResultadoEdicionEspacioDTO,
@@ -17,6 +20,7 @@ import type {
   SeccionesEscaladasDTO,
   TipoEspacio,
   TipoImportacion,
+  UsuarioCreadoDTO,
   TipoEventoAuditoria,
   EstadoAsignacion,
 } from '../types/admin';
@@ -257,6 +261,31 @@ export async function obtenerReporteAsignaciones(
     {
       params: periodo ? { periodo } : undefined,
     },
+  );
+  return data.data;
+}
+
+/** POST /v1/admin/alumnos (Issue 4.17, solo Coordinación). 409 si el código ya existe. */
+export async function crearAlumno(campos: NuevoAlumnoDTO): Promise<UsuarioCreadoDTO> {
+  const { data } = await api.post<Respuesta<UsuarioCreadoDTO>>('/v1/admin/alumnos', campos);
+  return data.data;
+}
+
+/** POST /v1/admin/docentes (Issue 4.18, solo Coordinación). 409 si el código ya existe. */
+export async function crearDocente(campos: NuevoDocenteDTO): Promise<UsuarioCreadoDTO> {
+  const { data } = await api.post<Respuesta<UsuarioCreadoDTO>>('/v1/admin/docentes', campos);
+  return data.data;
+}
+
+/**
+ * POST /v1/admin/usuarios/restablecer-clave (Issue 4.26, solo Coordinación). `usuario` es el
+ * código o el correo. La respuesta trae la clave inicial una sola vez: no se guarda ni se
+ * vuelve a pedir.
+ */
+export async function restablecerClave(usuario: string): Promise<ClaveRestablecidaDTO> {
+  const { data } = await api.post<Respuesta<ClaveRestablecidaDTO>>(
+    '/v1/admin/usuarios/restablecer-clave',
+    { usuario },
   );
   return data.data;
 }

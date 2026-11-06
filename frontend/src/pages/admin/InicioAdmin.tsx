@@ -277,6 +277,12 @@ const InicioJefatura: React.FC = () => {
               descripcion="Software instalado y PCs malogradas o reparadas."
               trazo={ICONOS.monitor}
             />
+            <Acceso
+              to={RUTAS.clavesAdmin}
+              titulo="Cambiar mi clave"
+              descripcion="Actualiza la clave de acceso a tu cuenta."
+              trazo={ICONOS.escudo}
+            />
           </div>
         )}
       </div>
@@ -577,6 +583,13 @@ const InicioCoordinacion: React.FC = () => {
                 titulo="Informe de salones"
                 trazo={ICONOS.documento}
               />
+              <Atajo
+                to={RUTAS.altaAlumnoAdmin}
+                titulo="Alta de alumnos"
+                trazo={ICONOS.graduacion}
+              />
+              <Atajo to={RUTAS.altaDocenteAdmin} titulo="Alta de docentes" trazo={ICONOS.pizarra} />
+              <Atajo to={RUTAS.clavesAdmin} titulo="Claves" trazo={ICONOS.escudo} />
               {/*
                 Atajo a las alertas: la tarjeta «Requieren tu atención» repetía las dos cifras
                 de la fila de métricas; queda solo el enlace a la lista completa.

@@ -8,9 +8,6 @@ import EspaciosDocentePage from './docente/EspaciosDocentePage';
 import IncidenciasDocentePage from './docente/IncidenciasDocentePage';
 import MapaAdminPage from './admin/MapaAdminPage';
 import LaboratoriosAdminPage from './admin/LaboratoriosAdminPage';
-import AltaAlumnoPage from './admin/AltaAlumnoPage';
-import AltaDocentePage from './admin/AltaDocentePage';
-import ClavesAdminPage from './admin/ClavesAdminPage';
 import SoftwareAdminPage from './admin/SoftwareAdminPage';
 import IncidenciasAdminPage from './admin/IncidenciasAdminPage';
 import ProximamenteAdminPage from './admin/ProximamenteAdminPage';
@@ -53,9 +50,6 @@ const PANTALLAS = [
     Page: LaboratoriosAdminPage,
     titulo: 'Laboratorios y equipos',
   },
-  { nombre: 'Alta de alumnos', Page: AltaAlumnoPage, titulo: 'Alta de alumnos' },
-  { nombre: 'Alta de docentes', Page: AltaDocentePage, titulo: 'Alta de docentes' },
-  { nombre: 'Claves del panel', Page: ClavesAdminPage, titulo: 'Claves y contraseñas' },
   { nombre: 'Catálogo de software', Page: SoftwareAdminPage, titulo: 'Catálogo de software' },
   {
     nombre: 'Revisión de incidencias',
@@ -103,7 +97,8 @@ describe('ProximamenteAdminPage', () => {
     expect(screen.getByRole('status')).toHaveTextContent(MENSAJE_EN_DESARROLLO);
     expect(screen.getByText(PREVISION_EN_DESARROLLO)).toBeVisible();
     expect(screen.getByText('Mapa de ocupación por piso')).toBeVisible();
-    expect(screen.getByText('Alta de alumnos y docentes')).toBeVisible();
+    expect(screen.getByText('Catálogo y solicitudes de software')).toBeVisible();
+    expect(screen.queryByText('Alta de alumnos y docentes')).toBeNull();
     expect(screen.queryByText('Revisión de incidencias')).toBeNull();
     expect(screen.queryByRole('link', { name: /Mapa de ocupación por piso/ })).toBeNull();
   });
@@ -113,7 +108,7 @@ describe('ProximamenteAdminPage', () => {
     montar(<ProximamenteAdminPage />);
 
     expect(screen.getByText('Revisión de incidencias')).toBeVisible();
-    expect(screen.getByText('Claves y contraseñas')).toBeVisible();
+    expect(screen.queryByText('Claves y contraseñas')).toBeNull();
     expect(screen.queryByText('Mapa de ocupación por piso')).toBeNull();
     expect(screen.queryByRole('link', { name: /Revisión de incidencias/ })).toBeNull();
   });
