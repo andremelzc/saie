@@ -23,14 +23,6 @@ const COORDINACION: Pendiente[] = [
     descripcion: 'Estado de las PCs, la capacidad y el software de cada laboratorio.',
   },
   {
-    titulo: 'Alta de alumnos y docentes',
-    descripcion: 'Registro individual fuera de la carga masiva.',
-  },
-  {
-    titulo: 'Claves y contraseñas',
-    descripcion: 'Cambio de tu clave y restablecimiento de claves de usuarios.',
-  },
-  {
     titulo: 'Catálogo y solicitudes de software',
     descripcion: 'Alta del software disponible y revisión de lo que solicitan los docentes.',
   },
@@ -41,10 +33,6 @@ const JEFATURA: Pendiente[] = [
   {
     titulo: 'Revisión de incidencias',
     descripcion: 'Atención de las fallas de equipos y espacios reportadas por docentes.',
-  },
-  {
-    titulo: 'Claves y contraseñas',
-    descripcion: 'Cambio de tu clave de acceso al panel.',
   },
 ];
 

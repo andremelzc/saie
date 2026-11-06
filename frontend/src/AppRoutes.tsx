@@ -14,6 +14,7 @@ import { ROLES_ADMIN, RUTAS } from './config/rutas';
  * la entrada pública. Cada pantalla es su propio paquete y Vite agrupa lo que comparten.
  */
 const Consulta = lazy(() => import('./pages/Consulta'));
+const CambiarClavePage = lazy(() => import('./pages/CambiarClavePage'));
 const InicioEstudiante = lazy(() => import('./pages/InicioEstudiante'));
 const HorarioMisCursosPage = lazy(() => import('./pages/HorarioMisCursosPage'));
 const PerfilAlumnoPage = lazy(() => import('./pages/PerfilAlumnoPage'));
@@ -71,6 +72,19 @@ export const AppRoutes: React.FC = () => {
           <Route path={RUTAS.loginAlumno} element={<LoginRoute rol="ALUMNO" />} />
           <Route path={RUTAS.loginDocente} element={<LoginRoute rol="DOCENTE" />} />
           <Route path={RUTAS.loginAdmin} element={<LoginRoute rol="ADMIN" />} />
+
+          {/* Cambio de la clave inicial, común a los cuatro roles (Issues 4.21 y 4.45) */}
+          <Route
+            path={RUTAS.cambiarClave}
+            element={
+              <RutaProtegida
+                rolesPermitidos={['ALUMNO', 'DOCENTE', ...ROLES_ADMIN]}
+                permitirClavePendiente
+              >
+                <CambiarClavePage />
+              </RutaProtegida>
+            }
+          />
 
           {/* Áreas privadas */}
           <Route
