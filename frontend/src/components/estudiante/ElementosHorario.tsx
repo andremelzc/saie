@@ -120,6 +120,11 @@ export interface EstadoVacioProps {
   descripcion: string;
   /** Acción que resuelve el vacío (p. ej. «Limpiar filtros» o «Ir a Carga de datos»). */
   accion?: React.ReactNode;
+  /**
+   * Variante en una fila, sin animación de entrada, para paneles de altura fija (los tableros del
+   * inicio): el vacío grande no cabe ahí y haría scroll dentro del panel.
+   */
+  compacto?: boolean;
 }
 
 /** Estado vacío uniforme (Guía de diseño 1.7): título breve, explicación y salida. */
@@ -128,22 +133,41 @@ export const EstadoVacio: React.FC<EstadoVacioProps> = ({
   descripcion,
   accion,
   icono = TRAZO_CALENDARIO,
-}) => (
-  <div
-    role="status"
-    className="saie-fundido flex flex-col items-center gap-2 rounded-2xl border border-dashed border-saie-divider bg-white px-6 py-10 text-center"
-  >
-    <span
-      aria-hidden="true"
-      className="flex h-16 w-16 items-center justify-center rounded-2xl bg-saie-canvas text-saie-primary"
+  compacto = false,
+}) =>
+  compacto ? (
+    <div
+      role="status"
+      className="flex items-center gap-3 rounded-xl border border-dashed border-saie-divider bg-white px-4 py-3"
     >
-      <Icono trazo={icono} className="h-8 w-8" />
-    </span>
-    <h3 className="m-0 text-xl font-bold text-saie-text">{titulo}</h3>
-    <p className="m-0 max-w-sm text-sm text-saie-muted">{descripcion}</p>
-    {accion && <div className="mt-2">{accion}</div>}
-  </div>
-);
+      <span
+        aria-hidden="true"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-saie-canvas text-saie-primary"
+      >
+        <Icono trazo={icono} className="h-5 w-5" />
+      </span>
+      <div className="min-w-0">
+        <h3 className="m-0 text-sm font-bold text-saie-text">{titulo}</h3>
+        <p className="m-0 text-sm text-saie-muted">{descripcion}</p>
+        {accion && <div className="mt-1">{accion}</div>}
+      </div>
+    </div>
+  ) : (
+    <div
+      role="status"
+      className="saie-fundido flex flex-col items-center gap-2 rounded-2xl border border-dashed border-saie-divider bg-white px-6 py-10 text-center"
+    >
+      <span
+        aria-hidden="true"
+        className="flex h-16 w-16 items-center justify-center rounded-2xl bg-saie-canvas text-saie-primary"
+      >
+        <Icono trazo={icono} className="h-8 w-8" />
+      </span>
+      <h3 className="m-0 text-xl font-bold text-saie-text">{titulo}</h3>
+      <p className="m-0 max-w-sm text-sm text-saie-muted">{descripcion}</p>
+      {accion && <div className="mt-2">{accion}</div>}
+    </div>
+  );
 
 /** Esqueleto de carga con la forma del contenido; respeta «Reducir movimiento». */
 export const EsqueletoCarga: React.FC<{ texto?: string; forma?: 'lista' | 'tabla' }> = ({

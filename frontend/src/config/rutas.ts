@@ -20,6 +20,7 @@ export const RUTAS = {
   horarioDocente: '/docente/horario',
   espaciosDocente: '/docente/espacios',
   incidenciasDocente: '/docente/incidencias',
+  solicitudesSoftwareDocente: '/docente/solicitudes-software',
   inicioAdmin: '/admin',
   alertasAdmin: '/admin/alertas',
   cargaAdmin: '/admin/carga',

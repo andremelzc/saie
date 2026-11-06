@@ -20,6 +20,7 @@ import {
   type Sesion,
 } from '../services/sesion';
 import { rutaLoginDeRol } from '../config/rutas';
+import { vaciarCacheCarga } from '../hooks/useCarga';
 import type { LoginResponseDTO } from '../types/auth';
 import { AuthContext, type AuthContextValue, type MotivoCierre } from './AuthContext';
 
@@ -38,6 +39,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [sesionVencida, setSesionVencida] = useState(estadoInicial.vencida);
 
   const iniciarSesion = useCallback((resultado: LoginResponseDTO): Sesion => {
+    // Los datos en caché son de la cuenta anterior: no deben verse con la nueva.
+    vaciarCacheCarga();
     const nueva = guardarSesion(resultado);
     setSesion(nueva);
     setSesionVencida(false);
@@ -53,6 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!actual && motivo === 'vencida') return;
 
       borrarSesion();
+      vaciarCacheCarga();
       setSesion(null);
       // RutaProtegida también redirige al quedar sin sesión; esta marca hace que conserve el aviso.
       setSesionVencida(motivo === 'vencida');
@@ -78,6 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     registrarManejadorSincronizacion((mensaje) => {
       if (mensaje.tipo === 'cerrada') {
         borrarSesion();
+        vaciarCacheCarga();
         setSesion(null);
         return;
       }

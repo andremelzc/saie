@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import AuditoriaAdmin from './AuditoriaAdmin';
 import ReporteSalones from './ReporteSalones';
@@ -79,14 +79,24 @@ describe('Auditoria e historial (Issue 4.32)', () => {
   it('muestra el historial de asignaciones con su estado', async () => {
     montar(<AuditoriaAdmin />);
 
-    expect(await screen.findByText('IS101 · 1')).toBeInTheDocument();
+    expect((await screen.findAllByText('IS101 · 1')).length).toBeGreaterThan(0);
     expect(screen.getAllByText('Anterior').length).toBeGreaterThan(0);
-    expect(screen.getByText('Lab 03')).toBeInTheDocument();
+    expect(screen.getAllByText('Lab 03').length).toBeGreaterThan(0);
+  });
+
+  it('agrupa por corrida con un resumen legible y sin mostrar el UUID', async () => {
+    montar(<AuditoriaAdmin />);
+    await screen.findAllByText('IS101 · 1');
+
+    expect(
+      screen.getByRole('heading', { level: 3, name: /^Corrida del .* · 1 asignada/ }),
+    ).toBeVisible();
+    expect(screen.queryByText('c1')).not.toBeInTheDocument();
   });
 
   it('filtra el historial por periodo y estado', async () => {
     montar(<AuditoriaAdmin />);
-    await screen.findByText('IS101 · 1');
+    await screen.findAllByText('IS101 · 1');
 
     fireEvent.change(screen.getByLabelText('Periodo'), { target: { value: '2026-1' } });
     await waitFor(() =>
@@ -110,11 +120,11 @@ describe('Auditoria e historial (Issue 4.32)', () => {
 
   it('cambia a la vista de auditoría y filtra por tipo de evento', async () => {
     montar(<AuditoriaAdmin />);
-    await screen.findByText('IS101 · 1');
+    await screen.findAllByText('IS101 · 1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Registro de actividad' }));
-    expect(await screen.findByText('Asignación automática exitosa')).toBeInTheDocument();
-    expect(screen.getByText('IS101 · 1')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Registro de actividad' }));
+    expect((await screen.findAllByText('Asignación automática exitosa')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('IS101 · 1').length).toBeGreaterThan(0);
 
     fireEvent.change(screen.getByLabelText('Tipo de evento'), {
       target: { value: 'ALERTA' },
@@ -128,7 +138,7 @@ describe('Auditoria e historial (Issue 4.32)', () => {
     auditoria.mockResolvedValue({ items: [], total: 0, pagina: 1, limite: 200 });
     montar(<AuditoriaAdmin />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Registro de actividad' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Registro de actividad' }));
     expect(await screen.findByText(/Sin actividad registrada/)).toBeInTheDocument();
   });
 
@@ -136,7 +146,7 @@ describe('Auditoria e historial (Issue 4.32)', () => {
     auditoria.mockRejectedValue(new Error('sin red'));
     montar(<AuditoriaAdmin />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Registro de actividad' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Registro de actividad' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
   });
 });
@@ -187,10 +197,24 @@ describe('Informe de salones (Issue 4.33)', () => {
     montar(<ReporteSalones />);
 
     expect(await screen.findByText('Cuadro de asignación de aulas')).toBeInTheDocument();
-    expect(screen.getByText('Algoritmos')).toBeInTheDocument();
-    expect(screen.getByText('Lab 03')).toBeInTheDocument();
-    expect(screen.getByText('A · piso 2')).toBeInTheDocument();
-    expect(screen.getByText('Docker 24.0')).toBeInTheDocument();
+    // El cuadro se dibuja como tabla (desde `lg` y al imprimir) y como tarjetas (móvil); en jsdom
+    // no hay CSS, así que se consulta la tabla.
+    const tabla = within(screen.getByRole('region', { name: 'Cuadro de asignación de aulas' }));
+    expect(tabla.getByText('Algoritmos')).toBeInTheDocument();
+    expect(tabla.getByText('Lab 03')).toBeInTheDocument();
+    expect(tabla.getByText('A · piso 2')).toBeInTheDocument();
+    expect(tabla.getByText('Docker 24.0')).toBeInTheDocument();
+  });
+
+  it('ofrece tarjetas del cuadro para pantallas estrechas (Issue 3.54)', async () => {
+    montar(<ReporteSalones />);
+    await screen.findByText('Cuadro de asignación de aulas');
+
+    const tarjetas = screen
+      .getAllByRole('listitem')
+      .filter((li) => li.textContent?.includes('Algoritmos'));
+    expect(tarjetas.length).toBeGreaterThan(0);
+    expect(tarjetas[0]).toHaveTextContent('Lab 03');
   });
 
   it('avisa de las secciones que todavía no tienen aula', async () => {

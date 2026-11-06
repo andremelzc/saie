@@ -12,7 +12,6 @@ import AltaAlumnoPage from './admin/AltaAlumnoPage';
 import AltaDocentePage from './admin/AltaDocentePage';
 import ClavesAdminPage from './admin/ClavesAdminPage';
 import SoftwareAdminPage from './admin/SoftwareAdminPage';
-import SolicitudesSoftwareAdminPage from './admin/SolicitudesSoftwareAdminPage';
 import IncidenciasAdminPage from './admin/IncidenciasAdminPage';
 import ProximamenteAdminPage from './admin/ProximamenteAdminPage';
 
@@ -58,11 +57,6 @@ const PANTALLAS = [
   { nombre: 'Alta de docentes', Page: AltaDocentePage, titulo: 'Alta de docentes' },
   { nombre: 'Claves del panel', Page: ClavesAdminPage, titulo: 'Claves y contraseñas' },
   { nombre: 'Catálogo de software', Page: SoftwareAdminPage, titulo: 'Catálogo de software' },
-  {
-    nombre: 'Solicitudes de software',
-    Page: SolicitudesSoftwareAdminPage,
-    titulo: 'Solicitudes de software',
-  },
   {
     nombre: 'Revisión de incidencias',
     Page: IncidenciasAdminPage,

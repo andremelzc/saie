@@ -8,6 +8,7 @@ import GridHorarioSemanal from '../components/estudiante/GridHorarioSemanal';
 import HorarioDia from '../components/estudiante/HorarioDia';
 import ListaMisCursos from '../components/estudiante/ListaMisCursos';
 import SelectorSegmentado from '../components/estudiante/SelectorSegmentado';
+import { idPanelPestana, idPestana } from '../components/estudiante/idsPestanas';
 import type { OpcionSegmentada } from '../components/estudiante/SelectorSegmentado';
 import type { DiaSemana } from '../types/consulta';
 import type { CursoMatriculadoDTO, HorarioSemanalDTO, VistaHorario } from '../types/horario';
@@ -167,9 +168,14 @@ export const HorarioMisCursos: React.FC<HorarioMisCursosProps> = ({
           valor={seccion}
           onCambiar={setSeccion}
           etiquetaGrupo="Secciones de la pantalla"
+          idBase="mis-cursos"
           className="self-start"
         />
-        <section aria-labelledby="titulo-seccion">
+        <section
+          role="tabpanel"
+          id={idPanelPestana('mis-cursos', seccion)}
+          aria-labelledby={idPestana('mis-cursos', seccion)}
+        >
           <h2 id="titulo-seccion" className="sr-only">
             {seccion === 'horario' ? 'Mi horario' : 'Mis cursos matriculados'}
           </h2>

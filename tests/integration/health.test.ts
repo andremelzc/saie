@@ -27,10 +27,13 @@ describe("Integracion API - Health Check", () => {
     expect(response.body).toHaveProperty("timestamp");
   });
 
-  it("GET /api/ruta-inexistente debe responder 404", async () => {
+  it("GET /api/ruta-inexistente debe responder 404 con formato unificado", async () => {
     const response = await request(app).get("/api/ruta-inexistente");
 
     expect(response.status).toBe(404);
-    expect(response.body).toHaveProperty("error", "Not Found");
+    expect(response.body).toEqual({
+      success: false,
+      message: "La ruta solicitada no existe",
+    });
   });
 });

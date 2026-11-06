@@ -30,7 +30,8 @@ const PortalCard: React.FC<{ portal: Portal; indice: number }> = ({ portal: p, i
       <Link
         to={p.loginPath}
         data-testid={`portal-${p.id}`}
-        aria-label={`Ingresar al ${p.titulo}`}
+        aria-labelledby={`portal-${p.id}-ingresar`}
+        aria-describedby={`portal-${p.id}-descripcion`}
         onMouseMove={seguirCursor}
         className="group relative overflow-hidden h-full flex flex-col bg-white rounded-xl p-5 shadow-sm hover:shadow-lg hover:-translate-y-1 active:translate-y-0 active:bg-saie-canvas transition-all duration-300 no-underline text-saie-text"
       >
@@ -62,8 +63,10 @@ const PortalCard: React.FC<{ portal: Portal; indice: number }> = ({ portal: p, i
           {p.etiqueta}
         </span>
 
-        <h4 className="relative mt-2 text-lg font-bold">{p.titulo}</h4>
-        <p className="relative mt-1 text-sm text-saie-muted">{p.descripcion}</p>
+        <h3 className="relative mt-2 text-lg font-bold">{p.titulo}</h3>
+        <p id={`portal-${p.id}-descripcion`} className="relative mt-1 text-sm text-saie-muted">
+          {p.descripcion}
+        </p>
 
         {/* La lista de funciones se muestra siempre: en pantallas bajas la página crece
             hacia abajo en lugar de ocultar contenido. */}
@@ -80,7 +83,10 @@ const PortalCard: React.FC<{ portal: Portal; indice: number }> = ({ portal: p, i
         </ul>
 
         <span className="relative mt-auto pt-4">
-          <span className="inline-flex items-center justify-center w-full h-11 rounded-xl bg-saie-primary group-hover:bg-saie-primary-dark text-white font-medium transition-colors">
+          <span
+            id={`portal-${p.id}-ingresar`}
+            className="inline-flex items-center justify-center w-full h-11 rounded-xl bg-saie-primary group-hover:bg-saie-primary-dark text-white font-medium transition-colors"
+          >
             Ingresar
             <span className="sr-only">&nbsp;al {p.titulo}</span>
             <span
@@ -109,9 +115,7 @@ export const Home: React.FC = () => {
       {/* Barra superior */}
       <header className="sticky top-0 z-10 shrink-0 bg-saie-primary text-white shadow-sm">
         <div className="max-w-6xl mx-auto px-4 md:px-6 h-18 flex items-center">
-          <h1 className="m-0 flex items-center">
-            <img src={logoBlanco} alt="SAIE" className="h-10 w-auto" />
-          </h1>
+          <img src={logoBlanco} alt="SAIE" className="h-10 w-auto" />
           <span className="ml-4 hidden sm:inline text-sm text-white/80 border-l border-white/25 pl-4">
             Sistema de Asignación Inteligente de Espacios
           </span>
@@ -131,7 +135,7 @@ export const Home: React.FC = () => {
             </div>
 
             <div className="relative max-w-xl">
-              <h2 className="m-0 font-serif text-2xl md:text-3xl font-bold">Bienvenido a SAIE</h2>
+              <h1 className="m-0 font-serif text-2xl md:text-3xl font-bold">Bienvenido a SAIE</h1>
               <p className="mt-2 text-white/90">
                 Consulta, asigna y supervisa aulas y laboratorios de la Facultad de Ingeniería de
                 Sistemas e Informática. Elige tu portal para iniciar sesión.
@@ -160,9 +164,9 @@ export const Home: React.FC = () => {
 
           {/* Portales */}
           <section aria-labelledby="portales-titulo" className="mt-6 md:mt-8">
-            <h3 id="portales-titulo" className="text-lg font-bold">
+            <h2 id="portales-titulo" className="text-lg font-bold">
               Elige tu portal
-            </h3>
+            </h2>
             <ul className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4 list-none p-0">
               {PORTALES.map((p, i) => (
                 <PortalCard key={p.id} portal={p} indice={i} />

@@ -142,6 +142,7 @@ export async function explorarEspacios(
       ...(filtros.piso !== undefined && { piso: filtros.piso }),
     },
     orderBy: [{ pabellon: 'asc' }, { piso: 'asc' }, { identificador: 'asc' }],
+    take: 200,
   });
 
   const vigentes = await prisma.asignacion.findMany({

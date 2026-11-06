@@ -3,11 +3,22 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 
 import { MemoryRouter } from 'react-router-dom';
 import AyudaAlumno from './AyudaAlumno';
+import { AuthProvider } from '../context/AuthProvider';
+import { guardarSesion } from '../services/sesion';
+import { ahoraEnSegundos, crearToken } from '../test/helpers';
 
 function renderizar() {
+  guardarSesion({
+    token: crearToken(ahoraEnSegundos() + 3600, 'ALUMNO'),
+    rol: 'ALUMNO',
+    debeCambiarClave: false,
+    expiresIn: '8h',
+  });
   return render(
     <MemoryRouter>
-      <AyudaAlumno />
+      <AuthProvider>
+        <AyudaAlumno />
+      </AuthProvider>
     </MemoryRouter>,
   );
 }

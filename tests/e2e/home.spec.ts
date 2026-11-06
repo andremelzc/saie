@@ -4,7 +4,7 @@ test.describe('Portal SAIE - Pruebas E2E', () => {
   test('debe cargar la página principal y verificar estructura de inicio', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('heading', { name: 'SAIE', exact: true })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'SAIE', exact: true })).toBeVisible();
     await expect(page.getByText('Sistema de Asignación Inteligente de Espacios')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Bienvenido a SAIE' })).toBeVisible();
   });

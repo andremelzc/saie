@@ -255,6 +255,7 @@ El despliegue está 100% automatizado y blindado mediante GitHub Actions, con do
    * Dispara el webhook seguro de Render (`RENDER_DEPLOY_HOOK_URL`) para compilar y desplegar la nueva versión del backend.
    * Construye y despliega el frontend en Vercel con la CLI (`vercel pull`, `vercel build` y `vercel deploy --prebuilt`), autenticada con los secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` y `VERCEL_PROJECT_ID`.
    * **Verifica la salud posterior al despliegue (Issue 5.24):** consulta `GET /api/health` del backend y la URL del frontend con reintentos (para tolerar el arranque en frío de Render); el job `deploy` falla si alguno no responde dentro de la ventana de espera.
+4. **Procedimiento de Rollback (Issue 5.26):** Ante cualquier fallo en la verificación de salud o alerta crítica post-despliegue, se ejecuta el [Runbook de Rollback](docs/runbook_rollback.md) para revertir Render, Vercel y migraciones de Prisma.
 
 ### 9.3. Limitaciones y Notas Operativas (Capa Gratuita)
 
