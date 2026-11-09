@@ -52,7 +52,7 @@ export function tituloDeCorrida(grupo: GrupoCorrida): string {
 
 /** «Pabellón C · piso 3» a partir de los espacios de una asignación (sin repetir ubicaciones). */
 export function ubicacionDeEspacios(espacios: HistorialAsignacionDTO['espacios']): string {
-  const pabellon = (nombre: string) => (/^pabell/i.test(nombre) ? nombre : `Pabellón ${nombre}`);
+  const pabellon = (nombre: string) => (/pabell/i.test(nombre) ? nombre : `Pabellón ${nombre}`);
   const ubicaciones = [...new Set(espacios.map((e) => `${pabellon(e.pabellon)} · piso ${e.piso}`))];
   return ubicaciones.join(', ');
 }
