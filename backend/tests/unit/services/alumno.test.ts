@@ -175,6 +175,24 @@ describe('Cursos matriculados del alumno (Issue 3.11)', () => {
     expect(res.cursos[1].docenteNombre).toBeNull();
   });
 
+  it('cada curso trae el asignacionId de su asignación vigente, con el que se pide la ruta', async () => {
+    const res = await listarCursosAlumno('cuenta-1', prismaMock(secciones));
+
+    expect(res.cursos.map((c) => [c.codigoCurso, c.asignacionId])).toEqual([
+      ['C1', 'asig-C1'],
+      ['C2', 'asig-C2'],
+    ]);
+  });
+
+  it('un curso sin aula asignada trae asignacionId null', async () => {
+    const res = await listarCursosAlumno(
+      'cuenta-1',
+      prismaMock([seccion('C3', [['LUNES', '08:00', '10:00']], { asignada: false })]),
+    );
+
+    expect(res.cursos[0]).toMatchObject({ asignacionId: null, estadoAsignacion: 'PENDIENTE' });
+  });
+
   it('sin periodo vigente devuelve lista vacía', async () => {
     const prisma = prismaMock(secciones);
     prisma.seccion.findFirst.mockResolvedValue(null);
