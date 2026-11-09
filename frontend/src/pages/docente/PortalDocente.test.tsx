@@ -57,16 +57,27 @@ describe('Inicio del docente (Issue 7.8)', () => {
     expect(within(tarjeta).getByText('Termina en 30 min')).toBeInTheDocument();
   });
 
-  it('ofrece accesos rápidos a las pantallas del portal', async () => {
+  it('muestra las cifras del periodo y la barra de navegación del portal', async () => {
     montar(<InicioDocentePage ahora={LUNES_930} />);
-    const accesos = screen.getByRole('navigation', { name: 'Accesos rápidos' });
-    expect(
-      within(accesos).getByRole('link', { name: /Mi horario y asignaciones/ }),
-    ).toHaveAttribute('href', '/docente/horario');
-    expect(await within(accesos).findByText('2 secciones activas')).toBeInTheDocument();
-    expect(
-      within(accesos).getByRole('link', { name: /Reportar una incidencia/ }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('secciones activas')).toBeInTheDocument();
+    expect(screen.getByText('alumnos a cargo')).toBeInTheDocument();
+    expect(screen.getByText('33')).toBeInTheDocument(); // 32 + 1 alumnos
+    const nav = screen.getByRole('navigation', { name: 'Navegación del portal docente' });
+    expect(within(nav).getByRole('link', { name: 'Horario' })).toHaveAttribute(
+      'href',
+      '/docente/horario',
+    );
+    expect(within(nav).getByRole('link', { name: 'Incidencias' })).toHaveAttribute(
+      'href',
+      '/docente/incidencias',
+    );
+  });
+
+  it('lista las clases de hoy y la semana de un vistazo', async () => {
+    montar(<InicioDocentePage ahora={LUNES_930} />);
+    const hoy = await screen.findByRole('region', { name: 'Tus clases de hoy' });
+    expect(within(hoy).getByText('Bases de datos')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Lunes, hoy, 2 clases' })).toBeInTheDocument();
   });
 
   it('si el horario falla muestra el error con «Reintentar»', async () => {

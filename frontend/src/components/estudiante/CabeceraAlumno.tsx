@@ -11,6 +11,8 @@ import type { AnchoContenedor } from '../ui/Contenedor';
 export interface CabeceraAlumnoProps {
   /** Ancho máximo: debe ser el mismo de la barra de pestañas y del contenido de la pantalla. */
   ancho?: AnchoContenedor;
+  /** Destino del logo: la portada del área (el portal docente reutiliza esta cabecera). */
+  inicio?: string;
 }
 
 /**
@@ -22,14 +24,17 @@ export interface CabeceraAlumnoProps {
  * navegar entre pestañas. El título de cada pantalla va como encabezado de página dentro del
  * contenido, no en la cabecera.
  */
-export const CabeceraAlumno: React.FC<CabeceraAlumnoProps> = ({ ancho = 'normal' }) => {
+export const CabeceraAlumno: React.FC<CabeceraAlumnoProps> = ({
+  ancho = 'normal',
+  inicio = RUTAS.inicioAlumno,
+}) => {
   const { sesion } = useAuth();
 
   return (
     <header className="bg-saie-primary text-white">
       <Contenedor ancho={ancho} className="flex h-18 items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-          <Link to={RUTAS.inicioAlumno} className="flex min-h-11 shrink-0 items-center">
+          <Link to={inicio} className="flex min-h-11 shrink-0 items-center">
             <img src={logoBlanco} alt="SAIE" className="h-9 w-auto" />
           </Link>
           <span className="inline-flex min-w-0 items-center truncate rounded-full bg-white/15 px-3 py-1 text-xs font-medium sm:text-sm">

@@ -181,7 +181,6 @@ export const HorarioDocentePage: React.FC<{ ahora?: Date }> = ({ ahora }) => {
     <PaginaDocente
       titulo="Mi horario y asignaciones"
       descripcion={datos?.periodo ? `Periodo ${datos.periodo}` : undefined}
-      ancho="ancho"
     >
       <SelectorSegmentado
         opciones={OPCIONES_SECCION}
