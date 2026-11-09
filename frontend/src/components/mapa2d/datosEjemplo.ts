@@ -18,11 +18,12 @@ const CICLO_SIN_ALERTAS: EstadoOcupacion[] = ['DISPONIBLE', 'OCUPADO', 'OCUPADO'
  */
 export function espaciosDeEjemplo(
   planos: Record<number, string>,
-  opciones: { conAlertas?: boolean } = {},
+  opciones: { conAlertas?: boolean; semilla?: number } = {},
 ): EspacioMapa2D[] {
   const ciclo = opciones.conAlertas === false ? CICLO_SIN_ALERTAS : CICLO;
   const salida: EspacioMapa2D[] = [];
-  let n = 0;
+  // La semilla (p. ej. la franja elegida) desplaza el reparto: otra franja, otro mapa de ejemplo.
+  let n = opciones.semilla ?? 0;
   for (const [piso, texto] of Object.entries(planos)) {
     for (const f of leerPlano2D(texto).figuras) {
       if (f.clase !== 'aula' && f.clase !== 'laboratorio') continue;

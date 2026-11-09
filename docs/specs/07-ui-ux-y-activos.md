@@ -68,6 +68,16 @@ Especifica el sistema de diseño visual (UI/UX), la paleta de colores acorde a l
   * Se vuelve a dibujar solo cuando algo cambia (`frameloop="demand"`) y limita la resolución del dispositivo.
 * **Casos borde:** sin WebGL o si falla al iniciarlo se muestra el `fallback`; una figura reservable sin espacio, o un espacio sin figura, se avisa por `onAviso` y no se rompe; un piso sin espacios se muestra vacío.
 * **Mapa 2D y ventana ampliada** (`frontend/src/components/mapa2d/`, Issues 4.13 y 3.18): `Mapa2D` dibuja los mismos SVG como elementos de React (estado por color y patrón, laboratorio con borde turquesa, botones operables con teclado, contorno de la selección por encima de todo). `VistaMapa` ofrece el plano 2D (por defecto) y la maqueta 3D, y «Ampliar mapa» lo abre en una ventana modal que cubre casi toda la página y deja solo el mapa. Las puertas del dibujo (naranja) se ven como abertura blanca en el plano y no se extruyen en la maqueta.
+* **Interacción del mapa** (`VistaMapa`, común al plano 2D y a la maqueta 3D):
+  * **Zoom y desplazamiento en el plano 2D:** rueda (con Ctrl o ⌘ en la página; sin él dentro de la ventana ampliada), pellizco y arrastre táctil, botones Acercar / Alejar / Ver todo el piso, y las teclas `+`, `-` y `0`. Un arrastre no cuenta como clic. Las etiquetas de escala y el norte se redibujan con el zoom.
+  * **Buscador** de aulas y laboratorios por código, nombre, tipo o pabellón (combobox con flechas, Enter y Escape): lleva al piso, selecciona el espacio y acerca el plano 2D o vuela la cámara en la maqueta.
+  * **Tooltip** con nombre, estado, tipo y aforo al pasar el cursor o enfocar con el teclado. Con el teclado, las flechas pasan al espacio vecino.
+  * **Filtros** por estado y tipo: lo que no cumple se atenúa y deja de ser interactivo (en la maqueta se quita de los espacios).
+  * **Marcas:** entrada de cada pabellón (puertas `entrada-1` = antiguo y `entrada-2` = nuevo en `entradas.ts`), íconos de escalera y ascensor, flecha del norte y barra de escala. **La escala (`METROS_POR_UNIDAD = 0,2`) y el norte (`NORTE_GRADOS = 0`, arriba) son estimaciones**: se ajustan en `entradas.ts` cuando se midan los pabellones; la barra dice «≈».
+  * **Día y hora:** si se pasa `onFranjaCambiada`, aparece el selector (`dia`, `horaInicio`, `horaFin`, los mismos nombres del endpoint 3.13); «Ahora» es `null`.
+  * **URL:** `useMapaEnUrl` guarda `vista`, `piso`, `espacio`, `dia`, `desde` y `hasta` (reemplaza la entrada del historial); lo que vale por defecto no se escribe.
+  * **Móvil:** el detalle del espacio se fija sobre el borde inferior (`PanelEspacio hojaMovil`) y el plano responde a gestos.
+  * **Cámara 3D:** vuelo suave hasta el espacio buscado, «Reiniciar vista» y «Vista desde arriba».
 * **Fuera de alcance:** mobiliario, texturas y puertas en 3D, recorrido animado y accesibilidad por teclado de la escena (Issue 4.24).
 * **Demostración:** `npm run dev` en `frontend` y abrir `/demo-mapa3d.html`; usa el plano borrador y datos de ejemplo (`?pisos=3` repite el plano para probar la vista de edificio).
 

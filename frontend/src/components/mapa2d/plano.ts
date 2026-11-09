@@ -101,3 +101,46 @@ export function leerPlano2D(svgTexto: string): Plano2D {
 
   return { caja: { x, y, ancho, alto }, figuras, muros };
 }
+
+export interface Punto {
+  x: number;
+  y: number;
+}
+
+/** Centro de la caja de una figura. */
+export function centroDe(f: FiguraPlano2D): Punto {
+  return { x: f.caja.x + f.caja.ancho / 2, y: f.caja.y + f.caja.alto / 2 };
+}
+
+export type Direccion = 'arriba' | 'abajo' | 'izquierda' | 'derecha';
+
+/**
+ * Figura más cercana a `desde` en la dirección dada (para moverse con las flechas del teclado).
+ * Solo cuenta las que están realmente hacia ese lado; el desvío lateral pesa el doble.
+ */
+export function vecinoEnDireccion(
+  figuras: FiguraPlano2D[],
+  desde: string,
+  direccion: Direccion,
+): FiguraPlano2D | null {
+  const origen = figuras.find((f) => f.id === desde);
+  if (!origen) return null;
+  const o = centroDe(origen);
+  let mejor: FiguraPlano2D | null = null;
+  let mejorPuntaje = Infinity;
+  for (const f of figuras) {
+    if (f.id === desde) continue;
+    const c = centroDe(f);
+    const dx = c.x - o.x;
+    const dy = c.y - o.y;
+    const eje = direccion === 'derecha' ? dx : direccion === 'izquierda' ? -dx : direccion === 'abajo' ? dy : -dy;
+    const lateral = direccion === 'derecha' || direccion === 'izquierda' ? Math.abs(dy) : Math.abs(dx);
+    if (eje <= 0.5 || lateral > eje * 2.5) continue;
+    const puntaje = eje + lateral * 2;
+    if (puntaje < mejorPuntaje) {
+      mejorPuntaje = puntaje;
+      mejor = f;
+    }
+  }
+  return mejor;
+}

@@ -88,7 +88,7 @@ Canal opcional y voluntario de avisos al alumno (decisión D-06). Contexto y sec
 * `FormularioBusqueda`: Campo de código de alumno o curso con autocompletado y validación rápida.
 * `TarjetaResultado`: Card interactivo que muestra el aula/laboratorio asignado, tipo de espacio y badge de horario.
 * `GridHorarioSemanal`: Vista de calendario interactivo con colores por curso.
-* `VistaMapaRuta`: Renderizado del plano SVG con el trazado resaltado hacia el aula/laboratorio asignado.
+* `VistaMapaRuta` (`frontend/src/components/ruta/`, Issue 3.19): plano del piso con el recorrido encima (línea discontinua y puntos numerados), la entrada del pabellón como inicio, el destino resaltado, el tiempo total y los pasos escritos, cada uno con «Ver en el plano» (cambia de piso y acerca la vista). Con movilidad reducida usa el ascensor. Si el estado es `RUTA_NO_DISPONIBLE` muestra el `mensaje` y no dibuja el plano. Todavía usa datos de ejemplo con la forma de `RutaReferenciaDTO` (`rutaEjemplo.ts` replica las constantes de tiempo del backend); el recorrido es esquemático (une entrada, escalera o ascensor más cercano y aula), porque el backend no entrega coordenadas. Se conecta con el endpoint en el Issue 3.20.
 * `LoginEstudiante`: Formulario de autenticación con código de alumno y clave inicial.
 
 ### 3.2 Pantallas en modo tablero (Issue 3.29)

@@ -1,13 +1,20 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { SelectorSegmentado } from '../estudiante/SelectorSegmentado';
 import Mapa3DLazy from '../mapa3d/Mapa3DLazy';
 import type { EstadoOcupacion } from '../mapa3d/tipos';
+import BuscadorEspacios from './BuscadorEspacios';
+import FiltrosMapa from './FiltrosMapa';
+import FranjaMapa from './FranjaMapa';
 import Mapa2D, { LeyendaMapa } from './Mapa2D';
 import VentanaMapa from './VentanaMapa';
 import { ESTADO_TEXTO, type EspacioMapa2D } from './etiquetas';
+import { FILTRO_TODO, pasaFiltro, type FiltroMapa } from './filtros';
+import type { Franja } from './franja';
+import { indiceFiguras } from './indice';
 import { PLANOS_SVG, PLANOS_URL } from './planos';
 
-type Vista = '2d' | '3d';
+export type VistaDelMapa = '2d' | '3d';
+type Vista = VistaDelMapa;
 type Piso = number | 'todos';
 
 const OPCIONES: { valor: Vista; etiqueta: string }[] = [
@@ -24,6 +31,15 @@ export interface VistaMapaProps {
   resaltados?: string[];
   /** Estados que muestra la leyenda del plano 2D. */
   estadosLeyenda?: EstadoOcupacion[];
+  /** Vista elegida (modo controlado, p. ej. desde la URL). */
+  vista?: Vista;
+  onVistaCambiada?: (v: Vista) => void;
+  /** Piso mostrado (modo controlado). `todos` es el edificio cerrado de la maqueta. */
+  piso?: Piso;
+  onPisoCambiado?: (p: Piso) => void;
+  /** Si se da `onFranjaCambiada`, aparece el selector de día y hora. `null` es «ahora». */
+  franja?: Franja | null;
+  onFranjaCambiada?: (f: Franja | null) => void;
 }
 
 /**
@@ -38,11 +54,56 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
   onSeleccionar,
   resaltados,
   estadosLeyenda,
+  vista: vistaControlada,
+  onVistaCambiada,
+  piso: pisoControlado,
+  onPisoCambiado,
+  franja = null,
+  onFranjaCambiada,
 }) => {
-  const [vista, setVista] = useState<Vista>('2d');
-  const [piso, setPiso] = useState<Piso | undefined>(undefined);
+  const [vistaInterna, setVistaInterna] = useState<Vista>('2d');
+  const [pisoInterno, setPisoInterno] = useState<Piso | undefined>(undefined);
   const [ampliado, setAmpliado] = useState(false);
+  const [filtro, setFiltro] = useState<FiltroMapa>(FILTRO_TODO);
+  const [enfoque, setEnfoque] = useState<{ id: string; n: number } | null>(null);
+  const vista = vistaControlada ?? vistaInterna;
+  const piso = pisoControlado ?? pisoInterno;
+  const setVista = (v: Vista) => {
+    setVistaInterna(v);
+    onVistaCambiada?.(v);
+  };
+  const setPiso = (p: Piso) => {
+    setPisoInterno(p);
+    onPisoCambiado?.(p);
+  };
   const elegido = espacios.find((e) => e.id === seleccionado);
+
+  const figuras = useMemo(() => indiceFiguras(PLANOS_SVG), []);
+  const visibles = useMemo(
+    () => espacios.filter((e) => pasaFiltro(e, filtro)),
+    [espacios, filtro],
+  );
+
+  // Elegir en el buscador lleva al piso del espacio, lo selecciona y acerca la vista (2D o 3D).
+  const irAEspacio = (id: string) => {
+    const destino = figuras.get(id)?.piso;
+    if (destino !== undefined) setPiso(destino);
+    onSeleccionar(id);
+    setEnfoque({ id, n: Date.now() });
+  };
+
+  const herramientas = (
+    <>
+      <BuscadorEspacios
+        espacios={espacios}
+        pisoDe={(id) => figuras.get(id)?.piso}
+        onElegir={irAEspacio}
+        className="w-full sm:w-72"
+      />
+      {onFranjaCambiada && <FranjaMapa franja={franja} onCambiar={onFranjaCambiada} />}
+      <FiltrosMapa filtro={filtro} onCambiar={setFiltro} estados={estadosLeyenda} />
+    </>
+  );
 
   const selector = (orientacion: 'horizontal' | 'vertical') => (
     <SelectorSegmentado
@@ -72,9 +133,19 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
         onSeleccionar={onSeleccionar}
         estadosLeyenda={estadosLeyenda}
         pisoInicial={typeof piso === 'number' ? piso : undefined}
+        piso={typeof piso === 'number' ? piso : undefined}
         onPisoCambiado={setPiso}
+        filtro={filtro}
+        enfocar={enfoque}
         disposicion={enVentana ? 'lateral' : 'arriba'}
-        barraLateral={enVentana ? selector('vertical') : undefined}
+        barraLateral={
+          enVentana ? (
+            <>
+              {selector('vertical')}
+              {herramientas}
+            </>
+          ) : undefined
+        }
         pieLateral={enVentana ? descripcion : undefined}
       />
     ) : (
@@ -85,12 +156,13 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
       >
         <Mapa3DLazy
           planos={PLANOS_URL}
-          espacios={espacios}
+          espacios={visibles}
           seleccionado={seleccionado}
           resaltados={resaltados}
           onSeleccionar={onSeleccionar}
           pisoInicial={piso ?? 'todos'}
           onPisoCambiado={setPiso}
+          ordenCamara={enfoque ? { tipo: 'enfocar', id: enfoque.id, n: enfoque.n } : null}
           fallback={
             <Mapa2D
               planos={PLANOS_SVG}
@@ -100,7 +172,10 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
               onSeleccionar={onSeleccionar}
               estadosLeyenda={estadosLeyenda}
               pisoInicial={typeof piso === 'number' ? piso : undefined}
+              piso={typeof piso === 'number' ? piso : undefined}
               onPisoCambiado={setPiso}
+              filtro={filtro}
+              enfocar={enfoque}
             />
           }
         />
@@ -132,6 +207,10 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
         </button>
       </div>
 
+      {!ampliado && (
+        <div className="flex flex-wrap items-start gap-x-6 gap-y-3">{herramientas}</div>
+      )}
+
       {ampliado ? (
         <>
           <p className="m-0 rounded-xl border border-dashed border-saie-divider p-6 text-center text-sm text-saie-muted">
@@ -149,6 +228,7 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
                   className="order-1 flex flex-col gap-4 lg:order-2 lg:w-60 lg:shrink-0"
                 >
                   {selector('vertical')}
+                  {herramientas}
                   <LeyendaMapa estados={estadosLeyenda} vertical />
                   {descripcion}
                 </aside>

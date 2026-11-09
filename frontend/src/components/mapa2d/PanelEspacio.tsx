@@ -17,6 +17,11 @@ export interface PanelEspacioProps {
   vacio?: string;
   /** Si se da, aparece el botón «Cerrar detalle». */
   onCerrar?: () => void;
+  /**
+   * En pantallas pequeñas, con un espacio elegido, el detalle se fija sobre el borde inferior (como
+   * una hoja) en vez de quedar bajo el mapa. La posición vertical se da en `className`.
+   */
+  hojaMovil?: boolean;
   className?: string;
 }
 
@@ -25,6 +30,7 @@ export const PanelEspacio: React.FC<PanelEspacioProps> = ({
   espacio,
   vacio = 'Elige un aula o laboratorio del plano para ver su detalle.',
   onCerrar,
+  hojaMovil = false,
   className = '',
 }) => {
   const pabellon = espacio ? pabellonDe(espacio.id) : null;
@@ -32,7 +38,11 @@ export const PanelEspacio: React.FC<PanelEspacioProps> = ({
     <aside
       aria-label="Detalle del espacio"
       aria-live="polite"
-      className={`rounded-xl border border-saie-divider bg-white p-5 shadow-sm ${className}`}
+      className={`rounded-xl border border-saie-divider bg-white p-5 shadow-sm ${
+        hojaMovil && espacio
+          ? 'max-lg:fixed max-lg:inset-x-3 max-lg:z-40 max-lg:max-h-[45vh] max-lg:overflow-auto max-lg:shadow-lg'
+          : ''
+      } ${className}`}
     >
       {!espacio ? (
         <p className="text-sm text-saie-muted">{vacio}</p>

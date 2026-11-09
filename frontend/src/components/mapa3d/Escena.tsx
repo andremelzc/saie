@@ -703,15 +703,29 @@ function Piso({
 // Cámara, luces y composición
 // ---------------------------------------------------------------------------
 
+/** Orden a la cámara: volver al encuadre inicial, mirar desde arriba o volar hasta un espacio. */
+export interface OrdenCamara {
+  tipo: 'reiniciar' | 'cenital' | 'enfocar';
+  /** Id del espacio, para `enfocar`. */
+  id?: string;
+  /** Distingue una orden de la anterior igual. */
+  n: number;
+}
+
 interface ControlesProps {
   centro: [number, number, number];
   tamano: number;
   /** Cambia cuando hay que volver a encuadrar (otro piso o planos nuevos). */
   encuadre: string;
+  orden?: OrdenCamara | null;
+  /** Punto al que mirar para un espacio, o `null` si no está en los pisos visibles. */
+  puntoDe: (id: string) => [number, number, number] | null;
 }
 
+const DURACION_VUELO_MS = 650;
+
 /** Cámara orbital con límites, apta para `frameloop="demand"` (sin amortiguación). */
-function Controles({ centro, tamano, encuadre }: ControlesProps) {
+function Controles({ centro, tamano, encuadre, orden, puntoDe }: ControlesProps) {
   const camara = useThree((s) => s.camera);
   const dom = useThree((s) => s.gl.domElement);
   const invalidar = useThree((s) => s.invalidate);
@@ -747,6 +761,62 @@ function Controles({ centro, tamano, encuadre }: ControlesProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [camara, dom, invalidar, encuadre]);
 
+  // Vuelo suave de la cámara (sin amortiguación: cada fotograma se pide a mano).
+  const vuelo = useRef<number | null>(null);
+  const ultimaOrden = useRef<number | undefined>(orden?.n);
+  useEffect(() => {
+    if (!orden || orden.n === ultimaOrden.current) return;
+    ultimaOrden.current = orden.n;
+    const controles = controlesRef.current;
+    if (!controles) return;
+
+    const objetivo = new Vector3(...centro);
+    const posicion = new Vector3();
+    if (orden.tipo === 'reiniciar') {
+      posicion.set(
+        centro[0] + tamano * 0.45,
+        centro[1] + tamano * 0.85,
+        centro[2] + tamano * 0.95,
+      );
+    } else if (orden.tipo === 'cenital') {
+      const polar = CAMARA.anguloMinimo + 0.01;
+      posicion.set(
+        centro[0],
+        centro[1] + tamano * 1.25 * Math.cos(polar),
+        centro[2] + tamano * 1.25 * Math.sin(polar),
+      );
+    } else {
+      const punto = orden.id ? puntoDe(orden.id) : null;
+      if (!punto) return;
+      objetivo.set(...punto);
+      // Se conserva la dirección desde la que se mira; solo cambia la distancia.
+      const direccion = camara.position.clone().sub(controles.target).normalize();
+      posicion.copy(objetivo).addScaledVector(direccion, Math.max(tamano * 0.5, controles.minDistance));
+    }
+
+    const desdePosicion = camara.position.clone();
+    const desdeObjetivo = controles.target.clone();
+    const inicio = performance.now();
+    if (vuelo.current !== null) cancelAnimationFrame(vuelo.current);
+    const paso = (ahora: number) => {
+      const t = Math.min(1, (ahora - inicio) / DURACION_VUELO_MS);
+      const suave = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      camara.position.lerpVectors(desdePosicion, posicion, suave);
+      controles.target.lerpVectors(desdeObjetivo, objetivo, suave);
+      controles.update();
+      invalidar();
+      vuelo.current = t < 1 ? requestAnimationFrame(paso) : null;
+    };
+    vuelo.current = requestAnimationFrame(paso);
+  }, [orden, camara, centro, tamano, invalidar, puntoDe]);
+
+  useEffect(
+    () => () => {
+      if (vuelo.current !== null) cancelAnimationFrame(vuelo.current);
+    },
+    [],
+  );
+
   // Al cambiar de piso la vista sube o baja con él, sin perder el ángulo que ya se eligió.
   useEffect(() => {
     const controles = controlesRef.current;
@@ -778,6 +848,8 @@ export interface EscenaProps {
   onConector: (id: string) => void;
   /** Se pulsa un piso del edificio cerrado: se abre ese piso. */
   onPiso: (numero: number) => void;
+  /** Orden para la cámara (botones «Reiniciar vista» y «Vista desde arriba», o el buscador). */
+  orden?: OrdenCamara | null;
 }
 
 /** Columna translúcida que atraviesa los pisos visibles por donde pasa una escalera o ascensor. */
@@ -820,6 +892,7 @@ export default function Escena({
   onSeleccionar,
   onConector,
   onPiso,
+  orden,
 }: EscenaProps) {
   const base = planos[pisos[0]];
   const { x, y: z, ancho, alto } = base.caja;
@@ -837,6 +910,24 @@ export default function Escena({
     [x, ancho, yCentro, z, alto],
   );
   const mitad = Math.max(ancho, alto) * 0.75 + altoTotal;
+  // Punto (centro del suelo) de un espacio, para que la cámara vuele hasta él.
+  const puntoDe = useMemo(
+    () =>
+      (id: string): [number, number, number] | null => {
+        for (let i = 0; i < pisos.length; i++) {
+          const figura = planos[pisos[i]].figuras.find((f) => f.id === id);
+          if (!figura) continue;
+          const c = cajaDe(figura.shapes);
+          return [
+            c.x + c.ancho / 2,
+            i * EDIFICIO.alturaPiso + EDIFICIO.losa + EDIFICIO.muroInterior / 2,
+            c.y + c.alto / 2,
+          ];
+        }
+        return null;
+      },
+    [planos, pisos],
+  );
 
   return (
     <>
@@ -896,7 +987,13 @@ export default function Escena({
 
       {/* Cambiar de piso con una escalera conserva el ángulo de cámara: solo se reencuadra al
           pasar entre un piso y el edificio cerrado. */}
-      <Controles centro={centro} tamano={tamano} encuadre={cerrado ? 'edificio' : 'piso'} />
+      <Controles
+        centro={centro}
+        tamano={tamano}
+        encuadre={cerrado ? 'edificio' : 'piso'}
+        orden={orden}
+        puntoDe={puntoDe}
+      />
     </>
   );
 }

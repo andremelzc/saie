@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { CLASES_CONEXION, CLASES_RESERVABLES } from './config';
 import Escena from './Escena';
+import type { OrdenCamara } from './Escena';
 import { leerPlano } from './geometria';
 import type { PlanoGeometria } from './geometria';
 import type { Mapa3DProps } from './tipos';
@@ -89,6 +90,7 @@ export default function Mapa3D({
   pisoInicial,
   onSeleccionar,
   onPisoCambiado,
+  ordenCamara,
   onAviso = (mensaje) => console.warn(`[Mapa3D] ${mensaje}`),
   fallback = null,
   className = '',
@@ -96,6 +98,16 @@ export default function Mapa3D({
   const webgl = useMemo(() => hayWebGL(), []);
   const { cargando, estado } = usePlanos(urls);
   const [pisoElegido, setPisoElegido] = useState<number | 'todos' | undefined>(pisoInicial);
+  // El piso puede venir de fuera (buscador, URL): si `pisoInicial` cambia, se sigue.
+  const [pisoPrevio, setPisoPrevio] = useState(pisoInicial);
+  if (pisoInicial !== pisoPrevio) {
+    setPisoPrevio(pisoInicial);
+    setPisoElegido(pisoInicial);
+  }
+  const [ordenInterna, setOrdenInterna] = useState<OrdenCamara | null>(null);
+  const orden =
+    ordenCamara && (!ordenInterna || ordenCamara.n > ordenInterna.n) ? ordenCamara : ordenInterna;
+  const ordenar = (tipo: OrdenCamara['tipo']) => setOrdenInterna({ tipo, n: Date.now() });
   const [seleccionInterna, setSeleccionInterna] = useState<string | null>(null);
   const [conector, setConector] = useState<string | null>(null);
   const avisados = useRef(new Set<string>());
@@ -217,6 +229,7 @@ export default function Mapa3D({
                 onSeleccionar={alSeleccionar}
                 onConector={setConector}
                 onPiso={elegirPiso}
+                orden={orden}
               />
             </Canvas>
           </LimiteError>
@@ -250,6 +263,27 @@ export default function Mapa3D({
               )}
             </div>
           )}
+
+          <div
+            role="group"
+            aria-label="Cámara"
+            className="absolute right-3 top-3 flex flex-col gap-1 rounded-lg bg-white/90 p-1 shadow"
+          >
+            <button
+              type="button"
+              onClick={() => ordenar('reiniciar')}
+              className="rounded-md px-3 py-1 text-left text-sm text-slate-700 hover:bg-slate-100"
+            >
+              Reiniciar vista
+            </button>
+            <button
+              type="button"
+              onClick={() => ordenar('cenital')}
+              className="rounded-md px-3 py-1 text-left text-sm text-slate-700 hover:bg-slate-100"
+            >
+              Vista desde arriba
+            </button>
+          </div>
 
           {conector && infoConector && (
             <section

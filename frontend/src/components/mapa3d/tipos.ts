@@ -26,6 +26,8 @@ export interface Mapa3DProps {
   pisoInicial?: number | 'todos';
   /** Se emite al cambiar de piso (o a `todos` para el edificio completo). */
   onPisoCambiado?: (piso: number | 'todos') => void;
+  /** Orden a la cámara (p. ej. volar hasta el espacio elegido en el buscador). */
+  ordenCamara?: { tipo: 'reiniciar' | 'cenital' | 'enfocar'; id?: string; n: number } | null;
   /** Se emite con el id del espacio al hacer clic, o `null` al hacer clic en vacío. */
   onSeleccionar?: (id: string | null) => void;
   /** Avisos de datos: figuras sin espacio o espacios sin figura. Por defecto, `console.warn`. */
