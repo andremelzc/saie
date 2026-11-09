@@ -100,6 +100,7 @@ export async function listarCursosAlumno(
       const proxima = proximaSesion(horarios, ahora);
 
       return {
+        asignacionId: seccion.asignaciones[0]?.id ?? null,
         codigoCurso: seccion.curso.codigo,
         nombreCurso: seccion.curso.nombre,
         codigoSeccion: seccion.codigoSeccion,
