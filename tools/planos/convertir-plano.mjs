@@ -277,6 +277,10 @@ function resolverAmbiguos(figuras) {
       f.clase = 'ascensor';
       continue;
     }
+    if (f.codigoFuente) {
+      f.clase = 'laboratorio';
+      continue;
+    }
     f.clase = areaSalon && f.w * f.h < areaSalon * FRACCION_ASCENSOR ? 'ascensor' : 'laboratorio';
   }
 }

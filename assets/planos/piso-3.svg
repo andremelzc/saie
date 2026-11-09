@@ -18,10 +18,11 @@
 
   </g>
   <g id="espacios">
-    <rect id="NUE-sin-nombre-3a" class="sala" data-clase="sala" x="0" y="8.8" width="86" height="66.1"/>
+    <rect id="NUE-301" class="espacio aula" data-clase="aula" data-nombre="Aula 301" x="0" y="8.8" width="86" height="33.05"/>
     <rect id="NUE-303" class="espacio laboratorio" data-clase="laboratorio" data-nombre="Aula 303 - Laboratorio 04" x="128.7" y="8.8" width="43" height="26.5"/>
     <rect id="NUE-305" class="espacio laboratorio" data-clase="laboratorio" data-nombre="Aula 305 - Laboratorio 06" x="171.4" y="8.8" width="43" height="26.5"/>
     <rect id="NUE-307" class="espacio laboratorio" data-clase="laboratorio" data-nombre="Aula 307 - Laboratorio 08" x="214" y="8.8" width="43" height="26.5"/>
+    <rect id="NUE-302" class="espacio aula" data-clase="aula" data-nombre="Aula 302" x="0" y="41.85" width="86" height="33.05"/>
     <rect id="NUE-bano-1" class="bano" data-clase="bano" data-nombre="Baño" x="131.1" y="48.4" width="40" height="26.5"/>
     <rect id="NUE-304" class="espacio laboratorio" data-clase="laboratorio" data-nombre="Aula 304 - Laboratorio 05" x="171" y="48.4" width="43" height="26.5"/>
     <rect id="NUE-306" class="espacio laboratorio" data-clase="laboratorio" data-nombre="Aula 306 - Laboratorio 07" x="214" y="48.4" width="43" height="26.5"/>

@@ -25,7 +25,8 @@
     <rect x="0" y="124.5" width="86" height="49.6" fill="#ffbd59" stroke="#222" stroke-width="0.5" data-codigo="ANT-comedor-3" data-nombre="Comedor"/>
     <rect x="13.4" y="329.2" width="32.9" height="39.7" fill="#3a7ebf" stroke="#222" stroke-width="0.5" data-codigo="ANT-administrativo-5" data-nombre="Administrativo"/>
     <rect x="46.3" y="349.3" width="40.4" height="19.8" fill="#efe7cb" stroke="#222" stroke-width="0.5" data-codigo="ANT-administrativo-6" data-nombre="Administrativo"/>
-    <rect x="0" y="8.8" width="86" height="66.1" fill="#dbe4ee" stroke="#222" stroke-width="0.5" data-codigo="NUE-sin-nombre-3a"/>
+    <rect x="0" y="8.8" width="86" height="33.05" fill="#b2d9ff" stroke="#222" stroke-width="0.5" data-codigo="NUE-301" data-nombre="Aula 301"/>
+    <rect x="0" y="41.85" width="86" height="33.05" fill="#b2d9ff" stroke="#222" stroke-width="0.5" data-codigo="NUE-302" data-nombre="Aula 302"/>
     <rect x="128.7" y="8.8" width="43" height="26.5" fill="#d3c8ff" stroke="#222" stroke-width="0.5" data-codigo="NUE-303" data-nombre="Aula 303 - Laboratorio 04"/>
     <rect x="171.4" y="8.8" width="43" height="26.5" fill="#d3c8ff" stroke="#222" stroke-width="0.5" data-codigo="NUE-305" data-nombre="Aula 305 - Laboratorio 06"/>
     <rect x="214" y="8.8" width="43" height="26.5" fill="#d3c8ff" stroke="#222" stroke-width="0.5" data-codigo="NUE-307" data-nombre="Aula 307 - Laboratorio 08"/>
