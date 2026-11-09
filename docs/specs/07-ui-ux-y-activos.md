@@ -83,7 +83,8 @@ Especifica el sistema de diseño visual (UI/UX), la paleta de colores acorde a l
   * Dos aulas o laboratorios son **contiguos si comparten pared** (los separados por un pasillo, una escalera o un baño no lo son). El motor solo empareja espacios del mismo tipo, y el seed lo exige.
   * `distancia_ascensor` es la distancia caminando al ascensor del mismo pabellón y piso, **en unidades del plano**: no hay escala en metros y solo se usa para ordenar y para saber si el piso tiene ascensor.
   * `tools/planos/calcular-espacios.ts` calcula contiguos y distancias desde los SVG, con los nombres de la BD, para las hojas «Contiguos» y la columna `distancia_ascensor` del seed. Hay que volver a ejecutarlo si cambia el dibujo.
-* **Fuera de alcance:** mobiliario, texturas y puertas en 3D, recorrido animado y accesibilidad por teclado de la escena (Issue 4.24).
+* **Lista de espacios en la vista 3D** (`ListaEspacios`): el lienzo 3D no se recorre con Tab ni lo lee un lector de pantalla, así que bajo la maqueta hay una lista de aulas y laboratorios agrupada por piso (solo el piso mostrado, o todos con la vista de edificio), con el mismo estado y tipo que el plano. Cada espacio es un botón: elegirlo lo selecciona (el detalle es el mismo panel HTML del plano 2D) y manda la cámara hasta él. Respeta los filtros del mapa. En la ventana ampliada va en la columna de controles.
+* **Fuera de alcance:** mobiliario, texturas y puertas en 3D, recorrido animado y mover la cámara 3D con el teclado (Issue 4.24).
 * **Demostración:** `npm run dev` en `frontend` y abrir `/demo-mapa3d.html`; usa el plano borrador y datos de ejemplo (`?pisos=3` repite el plano para probar la vista de edificio).
 
 ---

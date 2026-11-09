@@ -5,6 +5,7 @@ import type { EstadoOcupacion } from '../mapa3d/tipos';
 import BuscadorEspacios from './BuscadorEspacios';
 import FiltrosMapa from './FiltrosMapa';
 import FranjaMapa from './FranjaMapa';
+import ListaEspacios from './ListaEspacios';
 import Mapa2D, { LeyendaMapa } from './Mapa2D';
 import VentanaMapa from './VentanaMapa';
 import { ESTADO_TEXTO, type EspacioMapa2D } from './etiquetas';
@@ -79,10 +80,7 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
   const elegido = espacios.find((e) => e.id === seleccionado);
 
   const figuras = useMemo(() => indiceFiguras(PLANOS_SVG), []);
-  const visibles = useMemo(
-    () => espacios.filter((e) => pasaFiltro(e, filtro)),
-    [espacios, filtro],
-  );
+  const visibles = useMemo(() => espacios.filter((e) => pasaFiltro(e, filtro)), [espacios, filtro]);
 
   // Elegir en el buscador lleva al piso del espacio, lo selecciona y acerca la vista (2D o 3D).
   const irAEspacio = (id: string) => {
@@ -123,6 +121,16 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
     </p>
   );
 
+  const lista = (
+    <ListaEspacios
+      espacios={visibles}
+      pisoDe={(id) => figuras.get(id)?.piso}
+      piso={piso}
+      seleccionado={seleccionado}
+      onElegir={irAEspacio}
+    />
+  );
+
   const mapa = (enVentana: boolean) =>
     vista === '2d' ? (
       <Mapa2D
@@ -149,37 +157,40 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
         pieLateral={enVentana ? descripcion : undefined}
       />
     ) : (
-      <div
-        className={`overflow-hidden rounded-xl border border-saie-divider bg-white ${
-          enVentana ? 'h-[calc(100vh-8rem)] min-h-96' : 'h-[70vh] min-h-96'
-        }`}
-      >
-        <Mapa3DLazy
-          planos={PLANOS_URL}
-          espacios={visibles}
-          seleccionado={seleccionado}
-          resaltados={resaltados}
-          onSeleccionar={onSeleccionar}
-          pisoInicial={piso ?? 'todos'}
-          onPisoCambiado={setPiso}
-          ordenCamara={enfoque ? { tipo: 'enfocar', id: enfoque.id, n: enfoque.n } : null}
-          fallback={
-            <Mapa2D
-              planos={PLANOS_SVG}
-              espacios={espacios}
-              seleccionado={seleccionado}
-              resaltados={resaltados}
-              onSeleccionar={onSeleccionar}
-              estadosLeyenda={estadosLeyenda}
-              pisoInicial={typeof piso === 'number' ? piso : undefined}
-              piso={typeof piso === 'number' ? piso : undefined}
-              onPisoCambiado={setPiso}
-              filtro={filtro}
-              enfocar={enfoque}
-            />
-          }
-        />
-      </div>
+      <>
+        <div
+          className={`overflow-hidden rounded-xl border border-saie-divider bg-white ${
+            enVentana ? 'h-[calc(100vh-8rem)] min-h-96' : 'h-[70vh] min-h-96'
+          }`}
+        >
+          <Mapa3DLazy
+            planos={PLANOS_URL}
+            espacios={visibles}
+            seleccionado={seleccionado}
+            resaltados={resaltados}
+            onSeleccionar={onSeleccionar}
+            pisoInicial={piso ?? 'todos'}
+            onPisoCambiado={setPiso}
+            ordenCamara={enfoque ? { tipo: 'enfocar', id: enfoque.id, n: enfoque.n } : null}
+            fallback={
+              <Mapa2D
+                planos={PLANOS_SVG}
+                espacios={espacios}
+                seleccionado={seleccionado}
+                resaltados={resaltados}
+                onSeleccionar={onSeleccionar}
+                estadosLeyenda={estadosLeyenda}
+                pisoInicial={typeof piso === 'number' ? piso : undefined}
+                piso={typeof piso === 'number' ? piso : undefined}
+                onPisoCambiado={setPiso}
+                filtro={filtro}
+                enfocar={enfoque}
+              />
+            }
+          />
+        </div>
+        {!enVentana && <div className="mt-3">{lista}</div>}
+      </>
     );
 
   return (
@@ -231,6 +242,7 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
                   {herramientas}
                   <LeyendaMapa estados={estadosLeyenda} vertical />
                   {descripcion}
+                  {lista}
                 </aside>
               </div>
             )}

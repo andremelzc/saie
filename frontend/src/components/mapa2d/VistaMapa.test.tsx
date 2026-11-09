@@ -54,6 +54,20 @@ describe('VistaMapa', () => {
     expect(screen.getByRole('group', { name: /Plano del piso 1/ })).toBeInTheDocument();
   });
 
+  it('la maqueta 3D trae una lista de espacios para el teclado; elegir uno lo selecciona', () => {
+    const onSeleccionar = vi.fn();
+    montar(null, onSeleccionar);
+    expect(screen.queryByRole('region', { name: 'Lista de espacios' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Maqueta 3D' }));
+    const lista = screen.getByRole('region', { name: 'Lista de espacios' });
+    fireEvent.click(within(lista).getByRole('button', { name: /Aula 101/ }));
+
+    expect(onSeleccionar).toHaveBeenCalledWith('NUE-101');
+    // Y la cámara recibe la orden de volar hasta ese espacio.
+    expect(mapa3d.props?.ordenCamara).toMatchObject({ tipo: 'enfocar', id: 'NUE-101' });
+  });
+
   it('el piso elegido se conserva al cambiar de vista', () => {
     montar();
 
