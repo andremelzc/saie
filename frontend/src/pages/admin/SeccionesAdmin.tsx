@@ -8,6 +8,8 @@ import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { EstadoAsignacion } from '../../components/ui/EstadoAsignacion';
 import { Paginador } from '../../components/ui/Paginador';
+import { FiltrosActivos } from '../../components/ui/FiltrosActivos';
+import type { FiltroActivo } from '../../components/ui/FiltrosActivos';
 import { Boton } from '../../components/ui/Boton';
 import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
 import { CLASE_PIE_DRAWER, Drawer } from '../../components/ui/Drawer';
@@ -414,6 +416,37 @@ export const SeccionesAdmin: React.FC = () => {
     setPeriodo(valor);
     setPagina(1);
   };
+  const limpiarFiltros = () => {
+    setTexto('');
+    setTipo('TODOS');
+    setPeriodo('');
+    setPagina(1);
+  };
+  const filtrosActivos: FiltroActivo[] = [
+    ...(texto.trim()
+      ? [{ id: 'q', etiqueta: 'Búsqueda', valor: texto.trim(), onQuitar: () => cambiarTexto('') }]
+      : []),
+    ...(tipo !== 'TODOS'
+      ? [
+          {
+            id: 'tipo',
+            etiqueta: 'Tipo de espacio',
+            valor: etiquetaTipoEspacio(tipo),
+            onQuitar: () => cambiarTipo('TODOS'),
+          },
+        ]
+      : []),
+    ...(periodo.trim()
+      ? [
+          {
+            id: 'periodo',
+            etiqueta: 'Periodo',
+            valor: periodo.trim(),
+            onQuitar: () => cambiarPeriodo(''),
+          },
+        ]
+      : []),
+  ];
   const cambiarTamanoPagina = (tamano: number) => {
     setTamanoPagina(tamano);
     guardarTamanoPagina(tamano);
@@ -547,6 +580,7 @@ export const SeccionesAdmin: React.FC = () => {
             />
           </Campo>
         </div>
+        <FiltrosActivos filtros={filtrosActivos} onLimpiar={limpiarFiltros} />
         <p className="m-0 text-sm text-saie-muted" aria-live="polite">
           {total} {total === 1 ? 'sección' : 'secciones'}
         </p>

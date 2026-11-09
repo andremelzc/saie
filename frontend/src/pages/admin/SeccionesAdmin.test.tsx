@@ -340,6 +340,19 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
+  it('muestra los filtros activos como chips y los limpia (Issue 4.40)', async () => {
+    montar();
+    await screen.findAllByText('IS101 · 1');
+    fireEvent.change(screen.getByLabelText('Tipo de espacio'), {
+      target: { value: 'LABORATORIO' },
+    });
+    const chips = screen.getByRole('group', { name: 'Filtros activos' });
+    expect(within(chips).getByText('Laboratorio')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+    expect(screen.queryByRole('group', { name: 'Filtros activos' })).toBeNull();
+    expect(screen.getByLabelText('Tipo de espacio')).toHaveValue('TODOS');
+  });
+
   describe('Paginación (Issue 4.38)', () => {
     beforeEach(() => {
       window.localStorage.clear();
