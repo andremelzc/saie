@@ -1,8 +1,9 @@
 import React from 'react';
 import type { ItemConsultaAsignacion, TipoEspacio } from '../../types/consulta';
-import { describirEstadoAsignacion, etiquetaTipoEspacio } from '../../utils/diccionarios';
+import { etiquetaTipoEspacio } from '../../utils/diccionarios';
 import { ETIQUETA_DIA, estadoAMostrar } from '../../utils/horario';
 import { ICONOS } from '../ui/iconos';
+import { EstadoAsignacion } from '../ui/EstadoAsignacion';
 
 export interface TarjetaResultadoProps {
   asignacion?: ItemConsultaAsignacion | null;
@@ -61,71 +62,6 @@ const BadgeTipoEspacio: React.FC<{ tipo: TipoEspacio }> = ({ tipo }) => {
         />
       </svg>
       <span>{etiquetaTipoEspacio('AULA_TEORICA')}</span>
-    </span>
-  );
-};
-
-/**
- * Renderiza el badge de estado de la asignación (VIGENTE, ESCALADA, PENDIENTE)
- */
-const BadgeEstadoAsignacion: React.FC<{
-  estado: 'VIGENTE' | 'ESCALADA' | 'PENDIENTE';
-}> = ({ estado }) => {
-  if (estado === 'VIGENTE') {
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300">
-        <svg
-          className="w-3.5 h-3.5 text-emerald-600"
-          fill="currentColor"
-          viewBox="0 0 20 20"
-          aria-hidden="true"
-        >
-          <path fillRule="evenodd" d={ICONOS.checkCirculo} clipRule="evenodd" />
-        </svg>
-        <span>{describirEstadoAsignacion('VIGENTE').etiqueta}</span>
-      </span>
-    );
-  }
-
-  if (estado === 'ESCALADA') {
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-amber-50 text-amber-900 border border-amber-300">
-        <svg
-          className="w-3.5 h-3.5 text-amber-600"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-          />
-        </svg>
-        <span>{describirEstadoAsignacion('ESCALADA').etiqueta}</span>
-      </span>
-    );
-  }
-
-  return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold bg-rose-50 text-rose-800 border border-rose-300">
-      <svg
-        className="w-3.5 h-3.5 text-rose-600"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
-      <span>{describirEstadoAsignacion('PENDIENTE').etiqueta}</span>
     </span>
   );
 };
@@ -270,7 +206,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
         </div>
 
         <div className="self-start sm:self-auto shrink-0">
-          <BadgeEstadoAsignacion estado={estadoVisible} />
+          <EstadoAsignacion estado={estadoVisible} tamano="md" />
         </div>
       </header>
 
