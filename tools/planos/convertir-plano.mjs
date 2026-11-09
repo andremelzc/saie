@@ -2,7 +2,11 @@
 // Convierte la exportación SVG de Canva de un plano en un SVG limpio, con un id por espacio.
 //
 // Uso:
-//   node tools/planos/convertir-plano.mjs <exportacion.svg> --piso 1 [--out <carpeta>]
+//   node tools/planos/convertir-plano.mjs <exportacion.svg> --piso 1 [--out <carpeta>] [--marco-fijo]
+//
+// Con --marco-fijo las coordenadas del dibujo se conservan y el viewBox es el del archivo de
+// entrada. Es lo que se usa con los planos de tools/planos/fuentes/, para que los tres pisos
+// compartan el mismo marco y una escalera quede en la misma posición en todos.
 //
 // Genera en la carpeta de salida (por defecto tools/planos/salida/piso-N/):
 //   piso-N.svg            plano limpio: una figura por espacio, con id, clase y data-*
@@ -10,7 +14,8 @@
 //   piso-N.codigos.json   tabla figura -> código de espacio (se completa a mano y se reutiliza)
 //
 // Sin dependencias. Detecta las figuras por color de relleno y descarta el título, la nota
-// y las etiquetas (que Canva exporta como trazos, no como texto).
+// y las etiquetas (que Canva exporta como trazos, no como texto). Si una figura trae
+// data-codigo y data-nombre (como los planos de tools/planos/fuentes/), se usan tal cual.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -30,6 +35,12 @@ const COLOR_A_CLASE = {
   '#d0ffaf': 'patio',
   '#802323': 'auditorio',
   '#faff93': 'biblioteca',
+  '#ffbd59': 'comedor',
+  '#3a7ebf': 'administrativo',
+  '#ff751f': 'puerta',
+  '#dbe4ee': 'sala',
+  '#e5e7eb': 'losa',
+  '#d6d3d1': 'techo',
 };
 
 /** Colores que se descartan: la nota adhesiva y el fondo. */
@@ -46,7 +57,7 @@ const TOLERANCIA_POSICION = 4;
  * escaleras y ascensores, que deben tener el MISMO código en cada piso para que el mapa 3D
  * sepa que son la misma y permita subir y bajar entre pisos.
  */
-const CLASES_CON_CODIGO = new Set(['aula', 'laboratorio', 'auditorio', 'escalera', 'ascensor']);
+const CLASES_CON_CODIGO = new Set(['aula', 'laboratorio', 'escalera', 'ascensor']);
 
 // ---------------------------------------------------------------------------
 // Geometría
@@ -187,6 +198,15 @@ function aPuntosAbsolutos(el) {
   return locales ? locales.map((p) => aplicar(el.matriz, p)) : null;
 }
 
+/** Anillos de un path con varios subtrazados («M … Z M … Z»): el primero es el contorno y el resto, huecos. */
+function anillosAbsolutos(el) {
+  if (el.etiqueta !== 'path') return null;
+  const partes = (el.attrs.d ?? '').split(/(?=[Mm])/).filter((p) => p.trim());
+  if (partes.length < 2) return null;
+  const anillos = partes.map((d) => puntosDePath(d)?.map((p) => aplicar(el.matriz, p)));
+  return anillos.every((a) => a && a.length >= 3) ? anillos : null;
+}
+
 // ---------------------------------------------------------------------------
 // Extracción de figuras
 // ---------------------------------------------------------------------------
@@ -206,7 +226,10 @@ function extraerFiguras(elementos) {
     // de 4 vértices y se descartan; quedan el perímetro y los muros interiores.
     if (fill === 'none' && el.attrs.stroke) {
       const simples = simplificar(puntos);
-      if (simples.length > 4) muros.push(simples);
+      // Un trazo cerrado (vuelve al punto de partida) conserva su último lado.
+      const cerrado =
+        Math.hypot(puntos[0][0] - puntos[puntos.length - 1][0], puntos[0][1] - puntos[puntos.length - 1][1]) < 0.01;
+      if (simples.length > 4) muros.push(cerrado ? [...simples, simples[0]] : simples);
       continue;
     }
 
@@ -218,13 +241,22 @@ function extraerFiguras(elementos) {
       continue;
     }
 
-    const poligono = simplificar(puntos);
+    const anillos = anillosAbsolutos(el)?.map(simplificar);
+    const poligono = anillos ? anillos[0] : simplificar(puntos);
     const c = caja(poligono);
     const clave = `${fill}|${redondear(c.x)}|${redondear(c.y)}|${redondear(c.w)}|${redondear(c.h)}`;
     if (vistos.has(clave)) continue;
     vistos.add(clave);
 
-    figuras.push({ fill, clase, poligono, ...c });
+    figuras.push({
+      fill,
+      clase,
+      poligono,
+      anillos,
+      ...c,
+      codigoFuente: el.attrs['data-codigo'] ?? '',
+      nombre: el.attrs['data-nombre'] ?? '',
+    });
   }
 
   return { figuras, muros, advertencias };
@@ -240,6 +272,11 @@ function resolverAmbiguos(figuras) {
 
   for (const f of figuras) {
     if (f.clase !== 'laboratorio-o-ascensor') continue;
+    // Si la fuente ya nombra la figura (data-codigo), el código manda sobre el tamaño.
+    if (/ascensor/i.test(f.codigoFuente ?? '')) {
+      f.clase = 'ascensor';
+      continue;
+    }
     f.clase = areaSalon && f.w * f.h < areaSalon * FRACCION_ASCENSOR ? 'ascensor' : 'laboratorio';
   }
 }
@@ -260,19 +297,30 @@ function ordenarLectura(figuras) {
 // Normalización, tabla de códigos y salida
 // ---------------------------------------------------------------------------
 
-function normalizar(figuras, muros, margen = 20) {
+function normalizar(figuras, muros, margen = 20, marcoFijo = null) {
+  if (marcoFijo) {
+    for (const f of figuras) {
+      f.poligono = f.poligono.map(([x, y]) => [redondear(x), redondear(y)]);
+      if (f.anillos) f.anillos = f.anillos.map((a) => a.map(([x, y]) => [redondear(x), redondear(y)]));
+      Object.assign(f, caja(f.poligono));
+    }
+    return {
+      muros: muros.map((m) => m.map(([x, y]) => [redondear(x), redondear(y)])),
+      viewBox: marcoFijo,
+    };
+  }
   const todos = [...figuras.flatMap((f) => f.poligono), ...muros.flat()];
   const c = caja(todos);
   const mover = ([x, y]) => [redondear(x - c.x + margen), redondear(y - c.y + margen)];
 
   for (const f of figuras) {
     f.poligono = f.poligono.map(mover);
+    if (f.anillos) f.anillos = f.anillos.map((a) => a.map(mover));
     Object.assign(f, caja(f.poligono));
   }
   return {
     muros: muros.map((m) => m.map(mover)),
-    ancho: Math.ceil(c.w + margen * 2),
-    alto: Math.ceil(c.h + margen * 2),
+    viewBox: `0 0 ${Math.ceil(c.w + margen * 2)} ${Math.ceil(c.h + margen * 2)}`,
   };
 }
 
@@ -307,9 +355,9 @@ function asignarCodigos(figuras, tablaPrevia, piso) {
 
     n += 1;
     f.figura = `FIG-${String(n).padStart(2, '0')}`;
-    f.codigo = previa?.codigo ?? '';
+    f.codigo = f.codigoFuente || (previa?.codigo ?? '');
     f.id = f.codigo || f.figura;
-    if (!previa && CLASES_CON_CODIGO.has(f.clase)) {
+    if (!f.codigo && CLASES_CON_CODIGO.has(f.clase)) {
       avisos.push(`${f.figura} (${f.clase}) no tiene código asignado: usa el id provisional`);
     }
   }
@@ -346,7 +394,12 @@ function esRectangulo(f) {
 }
 
 function figuraSvg(f) {
-  const atributosComunes = `id="${esc(f.id)}" class="${f.clase === 'aula' || f.clase === 'laboratorio' ? `espacio ${f.clase}` : f.clase}" data-clase="${f.clase}"`;
+  const nombre = f.nombre ? ` data-nombre="${esc(f.nombre)}"` : '';
+  const atributosComunes = `id="${esc(f.id)}" class="${f.clase === 'aula' || f.clase === 'laboratorio' ? `espacio ${f.clase}` : f.clase}" data-clase="${f.clase}"${nombre}`;
+  if (f.anillos) {
+    const d = f.anillos.map((a) => `M ${a.map((p) => p.join(' ')).join(' L ')} Z`).join(' ');
+    return `<path ${atributosComunes} fill-rule="evenodd" d="${d}"/>`;
+  }
   if (esRectangulo(f)) {
     return `<rect ${atributosComunes} x="${redondear(f.x)}" y="${redondear(f.y)}" width="${redondear(f.w)}" height="${redondear(f.h)}"/>`;
   }
@@ -355,8 +408,10 @@ function figuraSvg(f) {
 }
 
 const GRUPOS = [
+  ['losas', ['losa', 'techo']],
   ['patios', ['patio']],
-  ['espacios', ['aula', 'laboratorio', 'auditorio', 'administrativo', 'biblioteca', 'bano']],
+  ['espacios', ['aula', 'laboratorio', 'auditorio', 'administrativo', 'biblioteca', 'bano', 'comedor', 'sala']],
+  ['puertas', ['puerta']],
   ['escaleras', ['escalera']],
   ['ascensores', ['ascensor']],
 ];
@@ -375,10 +430,12 @@ function generarSvgLimpio(figuras, geometria, piso) {
   const muros = lineas ? `  <g id="muros">\n${lineas}\n  </g>\n` : '';
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${geometria.ancho} ${geometria.alto}" role="img" data-piso="${piso}">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="${geometria.viewBox}" role="img" data-piso="${piso}">
   <title>Plano del piso ${piso}</title>
   <style>
-    .espacio, .administrativo, .biblioteca, .auditorio, .bano, .escalera, .ascensor { stroke: #222; stroke-width: 1; }
+    .espacio, .administrativo, .biblioteca, .auditorio, .bano, .escalera, .ascensor, .comedor, .sala, .puerta { stroke: #222; stroke-width: 1; }
+    .comedor { fill: #ffbd59; } .sala { fill: #dbe4ee; } .puerta { fill: #ffffff; }
+    .losa { fill: #e5e7eb; stroke: none; } .techo { fill: #d6d3d1; stroke: none; }
     .aula { fill: #b2d9ff; } .laboratorio { fill: #d3c8ff; } .auditorio { fill: #802323; }
     .administrativo { fill: #efe7cb; } .biblioteca { fill: #faff93; } .bano { fill: #ff86e4; }
     .escalera { fill: #ffbdbd; } .ascensor { fill: #d3c8ff; } .patio { fill: #d0ffaf; stroke: none; }
@@ -392,10 +449,10 @@ ${muros}</svg>
 function generarPreview(figuras, geometria, piso) {
   const base = generarSvgLimpio(figuras, geometria, piso).replace('</svg>\n', '');
   const etiquetas = figuras
-    .filter((f) => f.clase !== 'patio')
+    .filter((f) => f.clase !== 'patio' && f.clase !== 'losa' && f.clase !== 'techo')
     .map(
       (f) =>
-        `<text x="${redondear(f.x + f.w / 2)}" y="${redondear(f.y + f.h / 2)}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="7" fill="#000">${esc(f.codigo || f.figura)}</text>`,
+        `<text x="${redondear(f.x + f.w / 2)}" y="${redondear(f.y + f.h / 2)}" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="7" fill="#000">${esc(f.nombre || f.codigo || f.figura)}</text>`,
     )
     .join('\n    ');
   return `${base}  <g id="rotulos">\n    ${etiquetas}\n  </g>\n</svg>\n`;
@@ -428,7 +485,14 @@ function main() {
     leerElementos(readFileSync(entrada, 'utf-8')),
   );
   resolverAmbiguos(figuras);
-  const geometria = normalizar(figuras, muros);
+  const textoEntrada = readFileSync(entrada, 'utf-8');
+  const marcoEntrada = textoEntrada.match(/<svg[^>]*\sviewBox="([^"]+)"/)?.[1];
+  const marcoFijo = args.includes('--marco-fijo') ? (marcoEntrada ?? null) : null;
+  if (args.includes('--marco-fijo') && !marcoFijo) {
+    console.error('--marco-fijo necesita que el archivo de entrada tenga viewBox');
+    process.exit(1);
+  }
+  const geometria = normalizar(figuras, muros, 20, marcoFijo);
   const ordenadas = ordenarLectura(figuras);
   const previa = cargarTabla(rutaTabla);
   const asignacion = asignarCodigos(ordenadas, previa.figuras, piso);
@@ -460,6 +524,7 @@ function main() {
           figura: f.figura,
           clase: f.clase,
           codigo: f.codigo,
+          nombre: f.nombre,
           cx: redondear(f.x + f.w / 2),
           cy: redondear(f.y + f.h / 2),
           ancho: redondear(f.w),
@@ -484,4 +549,6 @@ function main() {
   for (const a of avisos) console.warn(`AVISO: ${a}`);
 }
 
-main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+
+export { leerElementos, extraerFiguras, resolverAmbiguos };
