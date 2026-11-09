@@ -13,7 +13,7 @@ export interface EspacioSeedData {
   habilitado?: boolean;
   /** Rótulo visual opcional (ej. "Sala de investigación"). */
   descripcionUso?: string | null;
-  /** Distancia en metros hasta el ascensor; base de la priorización por accesibilidad (R-07). */
+  /** Distancia caminando hasta el ascensor, en unidades del plano (sin escala en metros); base de la priorización por accesibilidad (R-07). */
   distanciaAscensor?: number | null;
 }
 

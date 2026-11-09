@@ -124,7 +124,8 @@ model Espacio {
   pcsMalogradas     Int?        @map("pcs_malogradas") // Solo LABORATORIO
   habilitado        Boolean     @default(true) // false = fuera de servicio: el motor no lo asigna
   descripcionUso    String?     @map("descripcion_uso") // Rótulo visual (ej. "Sala de investigación")
-  // Distancia en metros hasta el ascensor del pabellón; base de la accesibilidad (HU-04, R-07).
+  // Distancia caminando hasta el ascensor del pabellón, en unidades del plano (no hay escala en
+  // metros: solo sirve para comparar); base de la accesibilidad (HU-04, R-07).
   distanciaAscensor Int?        @map("distancia_ascensor")
 
   // Relaciones

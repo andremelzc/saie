@@ -51,7 +51,7 @@ estado actual y de base para preparar el siguiente periodo.
 | `pcsMalogradas` | Solo laboratorios |
 | `habilitado` | `sí` / `no`. Un espacio deshabilitado no se asigna (aparece como «no asignable» en el panel) |
 | `descripcionUso` | Rótulo opcional (ej. «Sala de investigación») |
-| `distanciaAscensor` | Metros hasta el ascensor: base de la regla de accesibilidad |
+| `distanciaAscensor` | Distancia caminando hasta el ascensor, en unidades del plano (no hay escala en metros): base de la regla de accesibilidad. La calcula `tools/planos/calcular-espacios.ts` |
 | `softwareInstalado` | Software del catálogo, separado por ` \| ` |
 | `contiguos` | Códigos de los espacios contiguos, separados por ` \| ` |
 

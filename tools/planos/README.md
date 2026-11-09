@@ -51,6 +51,7 @@ done
 - Lugares que no están en la base de datos (auditorio, biblioteca, capilla, baños, administrativos,
   comedor, etc.) llevan id y nombre pero no son reservables. Las figuras sin nombre usan el color
   `sala`.
+- `Aula 301` y `302` del pabellón nuevo son un solo bloque en la esquina del piso 3 que no se usa para clases; se dibujan como dos aulas (mitad superior e inferior) porque la BD las tiene como espacios no habilitados.
 - Cada piso lleva además dos figuras de estructura para la maqueta 3D: `losa` (el suelo; en la planta baja incluye el patio) y `techo` (la parte construida). Salen del contorno del edificio y no se dibujan en el plano 2D.
 - La Capilla (piso 1), el Tercio (piso 2) y el Soporte técnico (piso 3) ocupan la misma columna.
 
@@ -92,3 +93,22 @@ El mapa 3D permite subir y bajar entre pisos desde una escalera o un ascensor. P
 escalera del piso 1 es la misma que la del piso 2, **su figura debe llevar el mismo código en
 cada plano** (por ejemplo `NUE-escalera-1` en `piso-1.svg`, `piso-2.svg` y `piso-3.svg`). Si el
 código difiere entre pisos, el mapa los trata como escaleras distintas y no ofrece subir.
+
+## Contiguos y distancia al ascensor
+
+Los planos no tienen escala en metros, pero sí permiten saber qué aulas comparten pared y cuánto
+se camina hasta el ascensor (el pasillo es el espacio entre las aulas; ver la spec 07, §2.4):
+
+```bash
+npx tsx tools/planos/calcular-espacios.ts          # resumen
+npx tsx tools/planos/calcular-espacios.ts --json   # para volcarlo al seed
+```
+
+Trae los nombres de la base de datos, listos para la hoja «Contiguos» (solo pares del mismo tipo,
+como exige el seed) y la columna `distancia_ascensor` (unidades del plano, solo para comparar) de
+la hoja «Espacios» de `backend/prisma/data/seed-plantilla.xlsx`. Hay que volver a ejecutarlo si
+cambia el dibujo. Al correr el seed, los pares de contigüidad que ya no estén en la hoja se quitan
+de la base.
+
+El conversor decide si un lila es laboratorio o ascensor por el código de la figura cuando lo trae
+(`...ascensor...` es ascensor; cualquier otro código, laboratorio); solo usa el tamaño si no hay código.
