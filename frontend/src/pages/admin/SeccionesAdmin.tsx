@@ -34,7 +34,7 @@ import type {
   TipoEspacio,
 } from '../../types/admin';
 import { formatearFechaCorta } from '../../utils/fechas';
-import { ETIQUETA_DIA, formatearRango } from '../../utils/horario';
+import { formatearBloqueHorario } from '../../utils/etiquetas';
 import { etiquetaTipoEspacio } from '../../utils/diccionarios';
 import { plural } from '../../utils/texto';
 
@@ -148,6 +148,16 @@ const TarjetaSeccion: React.FC<{
       <div>
         <dt className="text-xs text-saie-muted">Alumnos</dt>
         <dd className="m-0 font-medium text-saie-text">{seccion.alumnosMatriculados}</dd>
+      </div>
+      <div>
+        <dt className="text-xs text-saie-muted">Docente</dt>
+        <dd className="m-0 font-medium text-saie-text">{seccion.docente?.nombre ?? '—'}</dd>
+      </div>
+      <div>
+        <dt className="text-xs text-saie-muted">Tipo</dt>
+        <dd className="m-0 font-medium text-saie-text">
+          {etiquetaTipoEspacio(seccion.tipoEspacioRequerido)}
+        </dd>
       </div>
     </dl>
     <div className="flex justify-end">
@@ -615,14 +625,21 @@ export const SeccionesAdmin: React.FC = () => {
                   Horarios
                 </dt>
                 <dd className="m-0 text-saie-text">
-                  {seleccionada.horarios.length === 0
-                    ? 'Sin horarios registrados.'
-                    : seleccionada.horarios
-                        .map(
-                          (h) =>
-                            `${ETIQUETA_DIA[h.diaSemana]} ${formatearRango(h.horaInicio, h.horaFin)}`,
-                        )
-                        .join(' · ')}
+                  {seleccionada.horarios.length === 0 ? (
+                    'Sin horarios registrados.'
+                  ) : (
+                    // Un bloque por línea: con tres o más bloques una sola cadena no se lee (Issue 4.44).
+                    <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+                      {seleccionada.horarios.map((h) => (
+                        <li
+                          key={`${h.diaSemana}-${h.horaInicio}-${h.horaFin}`}
+                          className="tabular-nums"
+                        >
+                          {formatearBloqueHorario(h, false)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </dd>
               </div>
               <div className="py-2">

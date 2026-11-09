@@ -133,6 +133,41 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     );
   });
 
+  it('muestra cada bloque horario en su propia línea (Issue 4.44)', async () => {
+    listar.mockResolvedValue({
+      items: [
+        seccion({
+          horarios: [
+            { diaSemana: 'LUNES', horaInicio: '08:00', horaFin: '10:00' },
+            { diaSemana: 'MIERCOLES', horaInicio: '14:00', horaFin: '16:00' },
+            { diaSemana: 'VIERNES', horaInicio: '10:00', horaFin: '12:00' },
+          ],
+        }),
+      ],
+      total: 1,
+      pagina: 1,
+      limite: 50,
+    });
+    montar();
+    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    const panel = await screen.findByRole('dialog');
+    const bloques = within(panel).getAllByRole('listitem');
+    expect(bloques.map((b) => b.textContent)).toEqual(
+      expect.arrayContaining([
+        'Lunes 08:00 – 10:00',
+        'Miércoles 14:00 – 16:00',
+        'Viernes 10:00 – 12:00',
+      ]),
+    );
+  });
+
+  it('la tarjeta móvil muestra docente y tipo (Issue 4.44)', async () => {
+    montar();
+    const tarjeta = (await screen.findAllByRole('article', { name: 'IS101 · 1' }))[0];
+    expect(within(tarjeta).getByText('Dra. García')).toBeInTheDocument();
+    expect(within(tarjeta).getByText('Laboratorio')).toBeInTheDocument();
+  });
+
   it('abre el detalle de una sección y permite editarla', async () => {
     montar();
     fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
