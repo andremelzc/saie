@@ -7,6 +7,7 @@ import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/Element
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { EstadoAsignacion } from '../../components/ui/EstadoAsignacion';
+import { Paginador } from '../../components/ui/Paginador';
 import { Boton } from '../../components/ui/Boton';
 import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
 import { CLASE_PIE_DRAWER, Drawer } from '../../components/ui/Drawer';
@@ -42,6 +43,28 @@ const COMPARACIONES: { valor: ComparacionVersion; etiqueta: string }[] = [
   { valor: 'MINIMA', etiqueta: 'Versión mínima o superior' },
   { valor: 'EXACTA', etiqueta: 'Versión exacta' },
 ];
+
+/** Tamaño de página recordado entre visitas (Issue 4.38). */
+const CLAVE_TAMANO_PAGINA = 'saie:secciones:tamanoPagina';
+const TAMANOS_PAGINA = [25, 50, 100, 200];
+const TAMANO_POR_DEFECTO = 50;
+
+function leerTamanoPagina(): number {
+  try {
+    const valor = Number(window.localStorage.getItem(CLAVE_TAMANO_PAGINA));
+    return TAMANOS_PAGINA.includes(valor) ? valor : TAMANO_POR_DEFECTO;
+  } catch {
+    return TAMANO_POR_DEFECTO;
+  }
+}
+
+function guardarTamanoPagina(tamano: number): void {
+  try {
+    window.localStorage.setItem(CLAVE_TAMANO_PAGINA, String(tamano));
+  } catch {
+    // Sin almacenamiento (modo privado, bloqueado): se usa el tamaño solo en esta visita.
+  }
+}
 
 /** El estado de la asignación en lenguaje llano: lo que le importa a quien coordina. */
 function EtiquetaEstado({ seccion }: { seccion: SeccionAdminDTO }): React.ReactNode {
@@ -330,6 +353,8 @@ export const SeccionesAdmin: React.FC = () => {
   const [texto, setTexto] = useState('');
   const [tipo, setTipo] = useState<'TODOS' | TipoEspacio>('TODOS');
   const [periodo, setPeriodo] = useState('');
+  const [pagina, setPagina] = useState(1);
+  const [tamanoPagina, setTamanoPagina] = useState(leerTamanoPagina);
   // El detalle abierto vive en la URL (`?seccion=<id>`): «Atrás» lo cierra y el enlace se comparte (Issue 4.51).
   const detalle = useDetalleEnUrl('seccion');
   const seleccionadaId = detalle.valor;
@@ -342,17 +367,17 @@ export const SeccionesAdmin: React.FC = () => {
   const periodoDiferido = useValorDiferido(periodo);
 
   const cargar = useCallback(async () => {
-    const listado = await obtenerSecciones({
+    return obtenerSecciones({
       q: textoDiferido.trim() || undefined,
       tipo: tipo === 'TODOS' ? undefined : tipo,
       periodo: periodoDiferido.trim() || undefined,
-      limite: 200,
+      pagina,
+      limite: tamanoPagina,
     });
-    return listado.items;
-  }, [textoDiferido, tipo, periodoDiferido]);
+  }, [textoDiferido, tipo, periodoDiferido, pagina, tamanoPagina]);
 
   const { datos, cargando, error, recargar } = useCarga(cargar, {
-    clave: `secciones:${textoDiferido.trim()}|${tipo}|${periodoDiferido.trim()}`,
+    clave: `secciones:${textoDiferido.trim()}|${tipo}|${periodoDiferido.trim()}|${pagina}|${tamanoPagina}`,
   });
   // Docentes y catálogo solo hacen falta al editar: no se piden hasta abrir la edición (Issue 3.49).
   const docentes = useCarga(obtenerDocentes, { clave: 'docentes', habilitado: editando });
@@ -362,7 +387,28 @@ export const SeccionesAdmin: React.FC = () => {
   });
 
   /** El listado vacío es una referencia estable: si no, invalidaría los `useMemo` de abajo. */
-  const secciones = useMemo(() => datos ?? [], [datos]);
+  const secciones = useMemo(() => datos?.items ?? [], [datos]);
+  /** Total real de la consulta (no solo de la página): lo devuelve el backend. */
+  const total = datos?.total ?? 0;
+
+  // Al filtrar se vuelve a la página 1: la página anterior puede no existir con el filtro nuevo.
+  const cambiarTexto = (valor: string) => {
+    setTexto(valor);
+    setPagina(1);
+  };
+  const cambiarTipo = (valor: 'TODOS' | TipoEspacio) => {
+    setTipo(valor);
+    setPagina(1);
+  };
+  const cambiarPeriodo = (valor: string) => {
+    setPeriodo(valor);
+    setPagina(1);
+  };
+  const cambiarTamanoPagina = (tamano: number) => {
+    setTamanoPagina(tamano);
+    guardarTamanoPagina(tamano);
+    setPagina(1);
+  };
 
   /**
    * La sección abierta se deriva del listado: así siempre muestra los datos frescos de la
@@ -381,8 +427,15 @@ export const SeccionesAdmin: React.FC = () => {
   // Un enlace con una sección que no existe (o ya no está en el periodo) se explica, no rompe la pantalla.
   // Con filtros activos no se avisa: la sección puede existir y solo estar fuera de la búsqueda.
   const sinFiltros = texto === '' && tipo === 'TODOS' && periodo === '';
+  // Solo se afirma que no existe si el listado completo cabe en la página cargada: si hay más
+  // páginas, la sección puede estar en otra.
   const detalleNoEncontrado =
-    seleccionadaId !== null && datos !== null && !cargando && seleccionada === null && sinFiltros;
+    seleccionadaId !== null &&
+    datos !== null &&
+    !cargando &&
+    seleccionada === null &&
+    sinFiltros &&
+    total <= secciones.length;
 
   const manejarGuardado = (resultado: { alertas: { motivo: string }[] }) => {
     setEditando(false);
@@ -459,14 +512,14 @@ export const SeccionesAdmin: React.FC = () => {
               type="search"
               placeholder="Ej. 2020101 o Cálculo"
               value={texto}
-              onChange={(e) => setTexto(e.target.value)}
+              onChange={(e) => cambiarTexto(e.target.value)}
               className={CLASE_CAMPO}
             />
           </Campo>
           <Campo etiqueta="Tipo de espacio">
             <select
               value={tipo}
-              onChange={(e) => setTipo(e.target.value as 'TODOS' | TipoEspacio)}
+              onChange={(e) => cambiarTipo(e.target.value as 'TODOS' | TipoEspacio)}
               className={CLASE_CAMPO}
             >
               <option value="TODOS">Todos</option>
@@ -479,13 +532,13 @@ export const SeccionesAdmin: React.FC = () => {
               type="text"
               placeholder="Ej. 2026-2"
               value={periodo}
-              onChange={(e) => setPeriodo(e.target.value)}
+              onChange={(e) => cambiarPeriodo(e.target.value)}
               className={CLASE_CAMPO}
             />
           </Campo>
         </div>
         <p className="m-0 text-sm text-saie-muted" aria-live="polite">
-          {secciones.length} {secciones.length === 1 ? 'sección' : 'secciones'}
+          {total} {total === 1 ? 'sección' : 'secciones'}
         </p>
       </section>
 
@@ -504,6 +557,17 @@ export const SeccionesAdmin: React.FC = () => {
       <ZonaActualizable actualizando={cargando && datos !== null}>
         {cargando && !datos ? <EsqueletoCarga texto="Cargando secciones…" forma="tabla" /> : lista}
       </ZonaActualizable>
+
+      <Paginador
+        pagina={pagina}
+        tamano={tamanoPagina}
+        total={total}
+        onCambiarPagina={setPagina}
+        onCambiarTamano={cambiarTamanoPagina}
+        opcionesTamano={TAMANOS_PAGINA}
+        etiqueta="Paginación de secciones"
+        nombreRegistros="secciones"
+      />
 
       <Drawer
         abierto={seleccionada !== null}

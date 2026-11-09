@@ -304,4 +304,49 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
+
+  describe('Paginación (Issue 4.38)', () => {
+    beforeEach(() => {
+      window.localStorage.clear();
+      listar.mockImplementation(async (filtros = {}) => ({
+        items: [seccion({ id: `s-${filtros.pagina}`, codigoCurso: `P${filtros.pagina}` })],
+        total: 312,
+        pagina: filtros.pagina ?? 1,
+        limite: filtros.limite ?? 50,
+      }));
+    });
+
+    it('pide 50 por página y muestra el total real', async () => {
+      montar();
+      const nav = await screen.findByRole('navigation', { name: 'Paginación de secciones' });
+      expect(listar).toHaveBeenCalledWith(expect.objectContaining({ pagina: 1, limite: 50 }));
+      expect(nav).toHaveTextContent('Mostrando 1–50 de 312 secciones');
+      expect(screen.getByText('312 secciones')).toBeInTheDocument();
+    });
+
+    it('navega de página y vuelve a la 1 al filtrar', async () => {
+      montar();
+      fireEvent.click(await screen.findByRole('button', { name: 'Página siguiente' }));
+      await waitFor(() =>
+        expect(listar).toHaveBeenLastCalledWith(expect.objectContaining({ pagina: 2 })),
+      );
+      fireEvent.change(screen.getByLabelText('Tipo de espacio'), {
+        target: { value: 'LABORATORIO' },
+      });
+      await waitFor(() =>
+        expect(listar).toHaveBeenLastCalledWith(
+          expect.objectContaining({ pagina: 1, tipo: 'LABORATORIO' }),
+        ),
+      );
+    });
+
+    it('recuerda el tamaño de página elegido', async () => {
+      montar();
+      fireEvent.change(await screen.findByLabelText('Por página'), { target: { value: '100' } });
+      await waitFor(() =>
+        expect(listar).toHaveBeenLastCalledWith(expect.objectContaining({ limite: 100 })),
+      );
+      expect(window.localStorage.getItem('saie:secciones:tamanoPagina')).toBe('100');
+    });
+  });
 });
