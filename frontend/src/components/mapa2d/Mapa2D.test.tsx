@@ -170,7 +170,7 @@ describe('Mapa2D', () => {
     const svg = screen.getByRole('group', { name: /Plano del piso 1/ });
     const hijos = Array.from(svg.children);
     const muro = hijos.findIndex((h) => h.tagName === 'polyline');
-    // Tras los muros vienen los dos contornos; después, las marcas de entrada y la escala.
+    // Tras los muros vienen los dos contornos; después, las marcas de entrada y el norte.
     const contornos = hijos
       .filter((h, i) => i > muro && h.tagName === 'g' && h.getAttribute('aria-hidden') === 'true')
       .slice(0, 2);

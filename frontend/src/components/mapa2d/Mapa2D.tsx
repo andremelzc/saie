@@ -14,7 +14,7 @@ import {
 } from '../mapa3d/config';
 import type { EstadoOcupacion } from '../mapa3d/tipos';
 import type { TrazoPiso } from './capaRuta';
-import { ENTRADA_PABELLON, IDS_ENTRADAS, METROS_POR_UNIDAD, NORTE_GRADOS } from './entradas';
+import { ENTRADA_PABELLON, IDS_ENTRADAS, NORTE_GRADOS } from './entradas';
 import {
   ESTADO_TEXTO,
   PABELLON_TEXTO,
@@ -394,15 +394,9 @@ const RutaSobrePlano: React.FC<{ trazo: TrazoPiso }> = ({ trazo }) => {
   );
 };
 
-/** Flecha del norte y barra de escala, dibujadas en la esquina de la vista actual. */
-const NorteYEscala: React.FC<{ vista: CajaPlano }> = ({ vista }) => {
+/** Flecha del norte, dibujada en la esquina de la vista actual. No hay escala: el plano no la tiene. */
+const Norte: React.FC<{ vista: CajaPlano }> = ({ vista }) => {
   const u = vista.ancho / 150; // tamaño en pantalla constante: crece y se encoge con el zoom
-  // Barra de escala con una longitud «redonda» en metros que ocupe como mucho el 22 % del ancho.
-  const opciones = [1, 2, 5, 10, 20, 50];
-  const metros = [...opciones].reverse().find((m) => m / METROS_POR_UNIDAD <= vista.ancho * 0.22) ?? 1;
-  const largo = metros / METROS_POR_UNIDAD;
-  const x0 = vista.x + vista.ancho - 3 * u - largo;
-  const y0 = vista.y + vista.alto - 3 * u;
   const texto = { fontSize: 2.4 * u, fontFamily: 'sans-serif', fill: '#0f172a', stroke: '#ffffff', strokeWidth: 0.7 * u, paintOrder: 'stroke' as const };
   const cx = vista.x + vista.ancho - 6 * u;
   const cy = vista.y + 9 * u;
@@ -414,13 +408,6 @@ const NorteYEscala: React.FC<{ vista: CajaPlano }> = ({ vista }) => {
           N
         </text>
       </g>
-      <line x1={x0} y1={y0} x2={x0 + largo} y2={y0} stroke="#ffffff" strokeWidth={1.8 * u} strokeLinecap="round" />
-      <line x1={x0} y1={y0} x2={x0 + largo} y2={y0} stroke="#0f172a" strokeWidth={0.8 * u} />
-      <line x1={x0} y1={y0 - 1 * u} x2={x0} y2={y0 + 1 * u} stroke="#0f172a" strokeWidth={0.6 * u} />
-      <line x1={x0 + largo} y1={y0 - 1 * u} x2={x0 + largo} y2={y0 + 1 * u} stroke="#0f172a" strokeWidth={0.6 * u} />
-      <text x={x0} y={y0 - 2 * u} {...texto}>
-        {`≈ ${metros} m`}
-      </text>
     </g>
   );
 };
@@ -890,7 +877,7 @@ export const Mapa2D: React.FC<Mapa2DProps> = ({
                 />
               ))}
             {trazo && <RutaSobrePlano trazo={trazo} />}
-            <NorteYEscala vista={vista} />
+            <Norte vista={vista} />
           </svg>
         )}
 

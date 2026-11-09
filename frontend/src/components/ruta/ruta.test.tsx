@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import VistaMapaRuta from './VistaMapaRuta';
 import { ASIGNACIONES_EJEMPLO, rutaDeEjemplo, TIEMPOS } from './rutaEjemplo';
 import { calcularTrazado, formatearDuracion } from './trazado';
+import { centroDe, leerPlano2D } from '../mapa2d/plano';
 import { PLANOS_SVG } from '../mapa2d/planos';
 
 const [AULA_PISO_2, LAB_PISO_1, BLOQUE_PISO_3, SIN_AULA] = ASIGNACIONES_EJEMPLO;
@@ -45,7 +46,10 @@ describe('calcularTrazado', () => {
       [1, 'inicio'],
       [2, 'destino'],
     ]);
-    expect(t.capa[1].puntos).toHaveLength(2);
+    // Del centro de la entrada al centro del laboratorio, con quiebres por el pasillo en medio.
+    const lab = leerPlano2D(PLANOS_SVG[1]).figuras.find((f) => f.id === 'ANT-104')!;
+    expect(t.capa[1].puntos.length).toBeGreaterThan(2);
+    expect(t.capa[1].puntos.at(-1)).toEqual(centroDe(lab));
     expect(t.destinos).toEqual(['ANT-104']);
     expect(t.conector).toBeNull();
   });
@@ -63,6 +67,40 @@ describe('calcularTrazado', () => {
     expect(t.conector).toMatch(/^ANT-ascensor-/);
     expect(t.destinos).toEqual(['ANT-301', 'ANT-302']);
     expect(t.capa[3].marcas.filter((m) => m.tipo === 'destino')).toHaveLength(2);
+  });
+
+  it('el recorrido sigue los pasillos: ningún tramo atraviesa un aula, laboratorio ni baño', () => {
+    const ocupado = new Set(['aula', 'laboratorio', 'bano', 'administrativo', 'escalera', 'ascensor']);
+    for (const [a, esperado] of [
+      [AULA_PISO_2, 'NUE-204'],
+      [LAB_PISO_1, 'ANT-104'],
+      [BLOQUE_PISO_3, 'ANT-301'],
+    ] as const) {
+      const t = calcularTrazado(rutaDeEjemplo(a, false), PLANOS_SVG);
+      expect(t.destinos[0]).toBe(esperado);
+      for (const [piso, trazo] of Object.entries(t.capa)) {
+        const figuras = leerPlano2D(PLANOS_SVG[Number(piso)]).figuras.filter((f) => ocupado.has(f.clase) && f.rect);
+        // Los centros (entrada, conector, aulas) están dentro de una figura: esos tramos se saltan.
+        const centros = [...t.destinos, t.conector ?? '', 'entrada-1', 'entrada-2'].flatMap((id) => {
+          const f = leerPlano2D(PLANOS_SVG[Number(piso)]).figuras.find((q) => q.id === id);
+          return f ? [centroDe(f)] : [];
+        });
+        const esCentro = (q: { x: number; y: number }) => centros.some((c) => c.x === q.x && c.y === q.y);
+        const pts = trazo.puntos;
+        for (let k = 0; k < pts.length - 1; k++) {
+          if (esCentro(pts[k]) || esCentro(pts[k + 1])) continue;
+          for (let s = 0; s <= 20; s++) {
+            const x = pts[k].x + ((pts[k + 1].x - pts[k].x) * s) / 20;
+            const y = pts[k].y + ((pts[k + 1].y - pts[k].y) * s) / 20;
+            const dentro = figuras.find(
+              (f) => x > f.rect!.x + 0.5 && x < f.rect!.x + f.rect!.ancho - 0.5 && y > f.rect!.y + 0.5 && y < f.rect!.y + f.rect!.alto - 0.5,
+            );
+            // Salvo el conector elegido y el destino, que se tocan en su borde.
+            expect(dentro?.id, `piso ${piso}, tramo ${k}: pasa por ${dentro?.id}`).toBeUndefined();
+          }
+        }
+      }
+    }
   });
 
   it('una ruta no disponible o con un espacio que no está en el plano no dibuja nada', () => {

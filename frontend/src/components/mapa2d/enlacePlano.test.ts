@@ -63,7 +63,7 @@ describe('enlace con los planos reales', () => {
   });
 
   it('devuelve null si el plano no dibuja el espacio o el pabellón no existe', () => {
-    expect(enlace.idDeEspacio(NUEVO, 'Aula 301')).toBeNull();
+    expect(enlace.idDeEspacio(NUEVO, 'Aula 999')).toBeNull();
     expect(enlace.idDeEspacio('Pabellón C', 'Aula 101')).toBeNull();
   });
 
@@ -73,9 +73,8 @@ describe('enlace con los planos reales', () => {
 });
 
 describe('cruce entre la BD y el plano', () => {
-  it('todos los espacios de la BD tienen figura, salvo 301 y 302 del pabellón nuevo', () => {
-    const cruce = avisosDeCruce(ESPACIOS_BD, enlace);
-    expect(cruce.espaciosSinFigura).toEqual([`${NUEVO} · Aula 301`, `${NUEVO} · Aula 302`]);
+  it('todos los espacios de la BD tienen figura (301 y 302 del pabellón nuevo incluidos)', () => {
+    expect(avisosDeCruce(ESPACIOS_BD, enlace).espaciosSinFigura).toEqual([]);
   });
 
   it('todas las figuras de aula y laboratorio tienen su espacio en la BD', () => {
@@ -162,7 +161,7 @@ describe('rutaConIdsDePlano', () => {
   it('quita el espacioId si el plano no dibuja el espacio', () => {
     const sinFigura: RutaReferencia = {
       ...base,
-      tramos: [{ ...base.tramos[1], pabellon: NUEVO, identificador: 'Aula 301' }],
+      tramos: [{ ...base.tramos[1], pabellon: NUEVO, identificador: 'Aula 999' }],
     };
     expect(rutaConIdsDePlano(sinFigura, enlace, PLANOS_SVG).tramos[0].espacioId).toBeUndefined();
   });

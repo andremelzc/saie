@@ -100,9 +100,9 @@ describe('Mapa2D interactivo', () => {
     expect(screen.getByText('Entrada del pabellón')).toBeInTheDocument();
   });
 
-  it('dibuja la escala aproximada y el norte', () => {
+  it('dibuja el norte y no inventa una escala en metros', () => {
     montar();
-    expect(screen.getByText(/^≈ \d+ m$/)).toBeInTheDocument();
+    expect(screen.queryByText(/≈/)).toBeNull();
     expect(screen.getByText('N')).toBeInTheDocument();
   });
 
