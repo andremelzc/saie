@@ -6,6 +6,7 @@ import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
+import { EstadoAsignacion } from '../../components/ui/EstadoAsignacion';
 import { Boton } from '../../components/ui/Boton';
 import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
 import { CLASE_PIE_DRAWER, Drawer } from '../../components/ui/Drawer';
@@ -33,7 +34,7 @@ import type {
 } from '../../types/admin';
 import { formatearFechaCorta } from '../../utils/fechas';
 import { ETIQUETA_DIA, formatearRango } from '../../utils/horario';
-import { describirEstadoAsignacion, etiquetaTipoEspacio } from '../../utils/diccionarios';
+import { etiquetaTipoEspacio } from '../../utils/diccionarios';
 import { plural } from '../../utils/texto';
 
 const COMPARACIONES: { valor: ComparacionVersion; etiqueta: string }[] = [
@@ -44,9 +45,12 @@ const COMPARACIONES: { valor: ComparacionVersion; etiqueta: string }[] = [
 
 /** El estado de la asignación en lenguaje llano: lo que le importa a quien coordina. */
 function EtiquetaEstado({ seccion }: { seccion: SeccionAdminDTO }): React.ReactNode {
-  const codigo = seccion.asignacion ? seccion.asignacion.estado : 'PENDIENTE';
-  const estado = describirEstadoAsignacion(codigo);
-  return <BadgeEstado tono={estado.tono}>{estado.etiqueta}</BadgeEstado>;
+  return (
+    <EstadoAsignacion
+      estado={seccion.asignacion?.estado}
+      cantidadEspacios={seccion.asignacion?.espacios.length ?? 0}
+    />
+  );
 }
 
 /** La fila de una sección en la tabla de escritorio. */
