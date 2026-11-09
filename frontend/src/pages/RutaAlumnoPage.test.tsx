@@ -1,7 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import RutaAlumnoPage from './RutaAlumnoPage';
+import { vaciarCacheCarga } from '../hooks/useCarga';
+import { obtenerCursos, obtenerRuta } from '../services/estudiante';
 
 vi.mock('../context/useAuth', () => ({
   useAuth: () => ({ sesion: { rol: 'ALUMNO' } }),
@@ -11,6 +13,77 @@ vi.mock('../components/auth/BotonCerrarSesion', () => ({
   default: () => <button type="button">Cerrar sesión</button>,
 }));
 
+vi.mock('../services/estudiante', async (importar) => ({
+  ...(await importar<typeof import('../services/estudiante')>()),
+  obtenerCursos: vi.fn(),
+  obtenerRuta: vi.fn(),
+}));
+
+interface EspacioBd {
+  id: string;
+  identificador: string;
+  tipo: string;
+  pabellon: string;
+  piso: number;
+}
+
+const espacio = (
+  identificador: string,
+  pabellon: string,
+  piso: number,
+  tipo = 'AULA_TEORICA',
+): EspacioBd => ({ id: `uuid-${pabellon}-${identificador}`, identificador, tipo, pabellon, piso });
+
+const curso = (asignacionId: string | null, nombre: string, espacios: EspacioBd[]) => ({
+  asignacionId,
+  codigoCurso: 'X',
+  nombreCurso: nombre,
+  codigoSeccion: '1',
+  periodo: '2026-2',
+  docenteNombre: null,
+  horarios: [],
+  estadoAsignacion: 'VIGENTE',
+  espacios,
+  proximaSesion: null,
+});
+
+/** Ruta como la entrega el backend: el espacio se identifica por UUID, pabellón e identificador. */
+const rutaDe = (esp: EspacioBd, asignacionId: string) => ({
+  asignacionId,
+  estado: 'DISPONIBLE',
+  pabellon: esp.pabellon,
+  pisoDestino: esp.piso,
+  tiempoEstimadoTotalSegundos: 135,
+  movilidadReducida: false,
+  tramos: [
+    {
+      orden: 1,
+      tipo: 'ENTRADA_PABELLON',
+      titulo: 'Acceso Principal',
+      descripcion: 'Entra.',
+      tiempoEstimadoSegundos: 45,
+      esAccesible: true,
+      pabellon: esp.pabellon,
+      piso: 1,
+    },
+    {
+      orden: 2,
+      tipo: 'ESPACIO_ASIGNADO',
+      titulo: `Aula: ${esp.identificador}`,
+      descripcion: 'Camina.',
+      tiempoEstimadoSegundos: 30,
+      esAccesible: true,
+      espacioId: esp.id,
+      identificador: esp.identificador,
+      pabellon: esp.pabellon,
+      piso: esp.piso,
+    },
+  ],
+});
+
+const LAB = espacio('Aula 104 - Laboratorio 08', 'Antiguo Pabellón', 1, 'LABORATORIO');
+const AULA = espacio('Aula 204', 'Nuevo Pabellón', 2);
+
 const montar = () =>
   render(
     <MemoryRouter>
@@ -19,32 +92,78 @@ const montar = () =>
   );
 
 describe('RutaAlumnoPage', () => {
-  it('muestra el recorrido, el tiempo y los pasos de la clase de ejemplo', () => {
-    montar();
-
-    expect(screen.getByRole('heading', { name: 'Ruta hacia mi aula' })).toBeVisible();
-    expect(screen.getByText(/datos de ejemplo/)).toBeVisible();
-    expect(screen.getByText('Tiempo estimado de caminata')).toBeVisible();
-    expect(screen.getByRole('group', { name: /Plano del piso 1/ })).toBeVisible();
+  beforeEach(() => {
+    vaciarCacheCarga();
+    vi.mocked(obtenerCursos).mockReset();
+    vi.mocked(obtenerRuta).mockReset();
+    vi.mocked(obtenerRuta).mockImplementation((async (id: string) =>
+      rutaDe(id === 'asig-lab' ? LAB : AULA, id)) as never);
   });
 
-  it('la ruta accesible cambia el tiempo y el medio de subida', () => {
-    montar();
-    expect(screen.getByText('2 min 15 s')).toBeVisible();
-
-    fireEvent.click(screen.getByRole('checkbox', { name: /ruta accesible/ }));
-
-    expect(screen.getByText('2 min 5 s')).toBeVisible();
-    expect(screen.getAllByText(/ascensor accesible/).length).toBeGreaterThan(0);
-  });
-
-  it('una clase sin aula muestra el estado «ruta no disponible»', () => {
-    montar();
-
-    fireEvent.change(screen.getByLabelText('Clase de ejemplo'), {
-      target: { value: 'ej-sin-aula' },
+  it('pide la ruta de la primera clase con aula y la dibuja sobre el plano', async () => {
+    vi.mocked(obtenerCursos).mockResolvedValue({
+      periodo: '2026-2',
+      cursos: [curso(null, 'Sin aula', []), curso('asig-lab', 'Redes', [LAB])] as never,
     });
+    montar();
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Ruta no disponible');
+    expect(await screen.findByText('Tiempo estimado de caminata')).toBeVisible();
+    expect(vi.mocked(obtenerRuta)).toHaveBeenCalledWith('asig-lab');
+    expect(screen.getByRole('heading', { name: 'Ruta hacia mi aula' })).toBeVisible();
+    // El espacio vino como UUID: el enlace lo traduce y el recorrido sí se dibuja.
+    expect(screen.queryByText('Ruta no disponible')).toBeNull();
+    expect(screen.getByRole('group', { name: /Plano del piso 1/ })).toBeVisible();
+    expect(screen.queryByText(/datos de ejemplo/i)).toBeNull();
+    expect(screen.queryByRole('option', { name: /Sin aula/ })).toBeNull();
+  });
+
+  it('al cambiar de clase pide la ruta de esa asignación', async () => {
+    vi.mocked(obtenerCursos).mockResolvedValue({
+      periodo: '2026-2',
+      cursos: [curso('asig-lab', 'Redes', [LAB]), curso('asig-aula', 'Cálculo', [AULA])] as never,
+    });
+    montar();
+    await screen.findByText('Tiempo estimado de caminata');
+
+    fireEvent.change(screen.getByLabelText('Clase'), { target: { value: 'asig-aula' } });
+
+    expect(await screen.findByRole('group', { name: /Plano del piso 1/ })).toBeVisible();
+    expect(vi.mocked(obtenerRuta)).toHaveBeenLastCalledWith('asig-aula');
+  });
+
+  it('sin ninguna clase con aula lo dice y no pide ruta', async () => {
+    vi.mocked(obtenerCursos).mockResolvedValue({
+      periodo: '2026-2',
+      cursos: [curso(null, 'Sin aula', [])] as never,
+    });
+    montar();
+
+    expect(await screen.findByText(/Todavía no tienes una clase con aula asignada/)).toBeVisible();
+    expect(vi.mocked(obtenerRuta)).not.toHaveBeenCalled();
+  });
+
+  it('si el backend dice que la ruta no está disponible, muestra su mensaje', async () => {
+    vi.mocked(obtenerCursos).mockResolvedValue({
+      periodo: '2026-2',
+      cursos: [curso('asig-lab', 'Redes', [LAB])] as never,
+    });
+    vi.mocked(obtenerRuta).mockResolvedValue({
+      asignacionId: 'asig-lab',
+      estado: 'RUTA_NO_DISPONIBLE',
+      mensaje: 'La asignación no cuenta con espacios registrados.',
+      tiempoEstimadoTotalSegundos: 0,
+      tramos: [],
+      movilidadReducida: false,
+    } as never);
+    montar();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ruta no disponible');
+  });
+
+  it('si falla la carga de las clases muestra el error', async () => {
+    vi.mocked(obtenerCursos).mockRejectedValue(new Error('sin red'));
+    montar();
+
+    expect(await screen.findByRole('button', { name: 'Reintentar' })).toBeVisible();
   });
 });

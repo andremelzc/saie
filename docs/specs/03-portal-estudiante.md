@@ -25,7 +25,7 @@ El **Portal del Estudiante** es la interfaz web/móvil responsiva donde los alum
 * `GET /api/v1/estudiante/horario` (Autenticado JWT)
   * Devuelve la grilla semanal completa de asignaciones (Lunes a Sábado, 08:00 a 22:00).
 * `GET /api/v1/estudiante/cursos`
-  * Lista de cursos matriculados del ciclo actual.
+  * Lista de cursos matriculados del ciclo actual. Cada curso trae `asignacionId` (la asignación vigente de su sección, o `null` si aún no tiene aula): con él se pide la ruta de referencia.
 * `GET /api/v1/estudiante/perfil`
   * Datos personales, código, carrera y ficha médica (flag de movilidad reducida).
 * **Condición de accesibilidad declarada por el alumno (Issue 3.30):** la ficha médica tiene un
@@ -88,7 +88,7 @@ Canal opcional y voluntario de avisos al alumno (decisión D-06). Contexto y sec
 * `FormularioBusqueda`: Campo de código de alumno o curso con autocompletado y validación rápida.
 * `TarjetaResultado`: Card interactivo que muestra el aula/laboratorio asignado, tipo de espacio y badge de horario.
 * `GridHorarioSemanal`: Vista de calendario interactivo con colores por curso.
-* `VistaMapaRuta` (`frontend/src/components/ruta/`, Issue 3.19): plano del piso con el recorrido encima (línea discontinua y puntos numerados), la entrada del pabellón como inicio, el destino resaltado, el tiempo total y los pasos escritos, cada uno con «Ver en el plano» (cambia de piso y acerca la vista). Con movilidad reducida usa el ascensor. Si el estado es `RUTA_NO_DISPONIBLE` muestra el `mensaje` y no dibuja el plano. Todavía usa datos de ejemplo con la forma de `RutaReferenciaDTO` (`rutaEjemplo.ts` replica las constantes de tiempo del backend); el recorrido es esquemático (une entrada, escalera o ascensor más cercano y aula), porque el backend no entrega coordenadas. Se conecta con el endpoint en el Issue 3.20.
+* `VistaMapaRuta` (`frontend/src/components/ruta/`, Issue 3.19): plano del piso con el recorrido encima (línea discontinua y puntos numerados), la entrada del pabellón como inicio, el destino resaltado, el tiempo total y los pasos escritos, cada uno con «Ver en el plano» (cambia de piso y acerca la vista). Con movilidad reducida usa el ascensor. Si el estado es `RUTA_NO_DISPONIBLE` muestra el `mensaje` y no dibuja el plano. Con el Issue 3.20 `RutaAlumnoPage` usa la respuesta real: lista las clases del alumno que tienen `asignacionId` (lo trae `GET /api/v1/estudiante/cursos`), pide `GET /api/v1/estudiante/ruta/:asignacionId` y traduce el `espacioId` (UUID) al id de la figura con `rutaConIdsDePlano` (ver [Spec 07](07-ui-ux-y-activos.md) §2.3). `rutaEjemplo.ts` queda solo como datos de demostración y de pruebas. El recorrido es esquemático (une entrada, escalera o ascensor más cercano y aula), porque el backend no entrega coordenadas. 
 * `LoginEstudiante`: Formulario de autenticación con código de alumno y clave inicial.
 
 ### 3.2 Pantallas en modo tablero (Issue 3.29)

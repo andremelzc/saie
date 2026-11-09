@@ -1,4 +1,6 @@
 import api from './api';
+import type { MapaOcupacionEntrada } from '../components/mapa2d/enlacePlano';
+import type { Franja } from '../components/mapa2d/franja';
 import type {
   AlertaDTO,
   CambiosEspacio,
@@ -29,6 +31,18 @@ import type {
 interface Respuesta<T> {
   success: boolean;
   data: T;
+}
+
+/** GET /v1/admin/mapa-ocupacion — estado completo de cada espacio de un piso de un pabellón (Issue 4.12). */
+export async function obtenerMapaOcupacionAdmin(
+  pabellon: string,
+  piso: number,
+  franja: Franja | null,
+): Promise<MapaOcupacionEntrada> {
+  const { data } = await api.get<Respuesta<MapaOcupacionEntrada>>('/v1/admin/mapa-ocupacion', {
+    params: { pabellon, piso, ...(franja ?? {}) },
+  });
+  return data.data;
 }
 
 /** GET /v1/admin/alertas — ordenadas de la más reciente a la más antigua (Issue 4.10). */

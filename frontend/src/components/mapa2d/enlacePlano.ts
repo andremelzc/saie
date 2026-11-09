@@ -19,6 +19,9 @@ const PREFIJO_DE_PABELLON: Record<string, Pabellon> = {
   'antiguo pabellon': 'ANT',
 };
 
+/** Nombres de los pabellones en la BD, en el orden en que se consultan. */
+export const PABELLONES_BD = ['Nuevo Pabellón', 'Antiguo Pabellón'] as const;
+
 /** Prefijo del plano para un pabellón de la BD, o `null` si no es uno de los dos conocidos. */
 export function prefijoDePabellon(nombre: string): Pabellon | null {
   return PREFIJO_DE_PABELLON[normalizar(nombre)] ?? null;
@@ -81,6 +84,20 @@ export interface EspacioOcupacionEntrada {
   estado: EspacioMapa2D['estado'] | 'DESHABILITADO';
   aforoNominal?: number;
   descripcionUso?: string | null;
+  /** Solo en la vista del panel: qué sección ocupa el espacio. El alumno no la recibe. */
+  asignacion?: { nombreCurso: string; codigoSeccion: string; docenteNombre: string | null } | null;
+  /** Solo en la vista del panel. */
+  alertas?: { motivo: string }[];
+}
+
+/** Texto de contexto del espacio: la alerta, la sección que lo ocupa o su rótulo de uso. */
+function detalleDe(e: EspacioOcupacionEntrada): string | undefined {
+  if (e.alertas && e.alertas.length > 0) return e.alertas.map((a) => a.motivo).join(' · ');
+  if (e.asignacion) {
+    const { nombreCurso, codigoSeccion, docenteNombre } = e.asignacion;
+    return [`${nombreCurso} (sección ${codigoSeccion})`, docenteNombre].filter(Boolean).join(' · ');
+  }
+  return e.descripcionUso ?? undefined;
 }
 
 export interface MapaOcupacionEntrada {
@@ -121,7 +138,7 @@ export function espaciosDesdeOcupacion(
       estado: e.estado,
       piso: dto.piso,
       aforo: e.aforoNominal,
-      detalle: e.descripcionUso ?? undefined,
+      detalle: detalleDe(e),
     });
   }
   return salida;
