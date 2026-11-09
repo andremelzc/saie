@@ -6,7 +6,6 @@ import InicioDocentePage from './docente/InicioDocentePage';
 import HorarioDocentePage from './docente/HorarioDocentePage';
 import EspaciosDocentePage from './docente/EspaciosDocentePage';
 import IncidenciasDocentePage from './docente/IncidenciasDocentePage';
-import MapaAdminPage from './admin/MapaAdminPage';
 import LaboratoriosAdminPage from './admin/LaboratoriosAdminPage';
 import AltaAlumnoPage from './admin/AltaAlumnoPage';
 import AltaDocentePage from './admin/AltaDocentePage';
@@ -47,7 +46,6 @@ const PANTALLAS = [
     Page: IncidenciasDocentePage,
     titulo: 'Reportar una incidencia',
   },
-  { nombre: 'Mapa del panel', Page: MapaAdminPage, titulo: 'Mapa de ocupación por piso' },
   {
     nombre: 'Laboratorios del panel',
     Page: LaboratoriosAdminPage,

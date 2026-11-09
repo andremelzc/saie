@@ -1,8 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import MapaOcupacionPage from './MapaOcupacionPage';
-import { MENSAJE_EN_DESARROLLO } from '../components/PantallaEnDesarrollo';
 
 vi.mock('../context/useAuth', () => ({
   useAuth: () => ({ sesion: { rol: 'ALUMNO' } }),
@@ -12,19 +11,47 @@ vi.mock('../components/auth/BotonCerrarSesion', () => ({
   default: () => <button type="button">Cerrar sesión</button>,
 }));
 
-describe('MapaOcupacionPage', () => {
-  it('anuncia que el mapa de ocupación está en desarrollo', () => {
-    render(
-      <MemoryRouter>
-        <MapaOcupacionPage />
-      </MemoryRouter>,
-    );
+const montar = () =>
+  render(
+    <MemoryRouter>
+      <MapaOcupacionPage />
+    </MemoryRouter>,
+  );
 
-    expect(screen.getByRole('heading', { name: 'Mapa de ocupación' })).toBeVisible();
-    expect(screen.getByRole('status')).toHaveTextContent(MENSAJE_EN_DESARROLLO);
-    expect(screen.getByRole('link', { name: /Volver al inicio/ })).toHaveAttribute(
-      'href',
-      '/estudiante',
-    );
+describe('MapaOcupacionPage', () => {
+  it('muestra el mapa por piso, sin selector de pabellón, con los estados disponible y ocupado', () => {
+    montar();
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Mapa de ocupación' })).toBeVisible();
+    expect(screen.getByRole('tab', { name: 'Piso 1' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('button', { name: 'Antiguo' })).toBeNull();
+    const leyenda = screen.getByRole('list', { name: 'Leyenda del mapa' });
+    expect(within(leyenda).getByText('Disponible')).toBeInTheDocument();
+    expect(within(leyenda).queryByText('Con alerta')).toBeNull();
+    expect(screen.getByText(/datos de ejemplo/i)).toBeInTheDocument();
+  });
+
+  it('al elegir un espacio muestra su detalle y se puede cerrar', () => {
+    montar();
+    const plano = screen.getByRole('group', { name: /Plano del piso 1/ });
+
+    expect(screen.getByText(/Elige un aula o laboratorio/)).toBeInTheDocument();
+    fireEvent.click(within(plano).getByRole('button', { name: /^Aula 101, pabellón nuevo/ }));
+
+    const detalle = screen.getByRole('complementary', { name: 'Detalle del espacio' });
+    expect(within(detalle).getByRole('heading', { name: 'Aula 101' })).toBeVisible();
+    expect(within(detalle).getByText('NUE-101')).toBeVisible();
+    expect(within(detalle).getByText('Pabellón nuevo')).toBeVisible();
+
+    fireEvent.click(within(detalle).getByRole('button', { name: 'Cerrar detalle' }));
+    expect(screen.getByText(/Elige un aula o laboratorio/)).toBeInTheDocument();
+  });
+
+  it('cambia de piso', () => {
+    montar();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Piso 2' }));
+
+    expect(screen.getByRole('group', { name: /Plano del piso 2/ })).toBeInTheDocument();
   });
 });

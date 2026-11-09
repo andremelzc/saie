@@ -107,7 +107,6 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
       ['DOCENTE', '/docente/espacios', 'Explorar espacios y equipos'],
       ['DOCENTE', '/docente/incidencias', 'Reportar una incidencia'],
       ['COORDINACION_ACADEMICA', '/admin/proximamente', 'Hoja de ruta'],
-      ['COORDINACION_ACADEMICA', '/admin/mapa', 'Mapa de ocupación por piso'],
       ['COORDINACION_ACADEMICA', '/admin/laboratorios', 'Laboratorios y equipos'],
       ['COORDINACION_ACADEMICA', '/admin/alumnos/nuevo', 'Alta de alumnos'],
       ['COORDINACION_ACADEMICA', '/admin/docentes/nuevo', 'Alta de docentes'],
@@ -121,6 +120,15 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
 
       expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument();
       expect(screen.getByRole('status')).toHaveTextContent(/próximamente/i);
+    });
+
+    it('Coordinación entra al mapa de ocupación por piso', async () => {
+      iniciarSesionDePrueba('COORDINACION_ACADEMICA');
+      renderizar('/admin/mapa');
+      expect(
+        await screen.findByRole('heading', { name: 'Mapa de ocupación por piso' }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: /Plano del piso 1/ })).toBeInTheDocument();
     });
 
     // Estas dos pantallas ya no están «en desarrollo» (Issue 4.29): se comprueba el acceso por rol.
