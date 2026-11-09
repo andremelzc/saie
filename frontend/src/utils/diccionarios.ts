@@ -130,3 +130,41 @@ export function etiquetaReglaVerificacion(regla: string | null | undefined): str
     TEXTO_NO_DISPONIBLE,
   );
 }
+
+/** Tipo de incidencia que reporta un docente (Issue 7.5). */
+export const TIPO_INCIDENCIA: Record<string, string> = {
+  EQUIPO_NO_OPERATIVO: 'Equipo que no funciona',
+  SOFTWARE_FALTANTE: 'Falta software',
+  OTRO: 'Otro problema',
+};
+
+export function etiquetaTipoIncidencia(tipo: string | null | undefined): string {
+  return buscarEnDiccionario('tipo de incidencia', TIPO_INCIDENCIA, tipo, TEXTO_NO_DISPONIBLE);
+}
+
+/** Prioridad de una incidencia. */
+export const PRIORIDAD_INCIDENCIA: Record<string, EntradaEstado> = {
+  ALTA: { etiqueta: 'Prioridad alta', tono: 'peligro' },
+  MEDIA: { etiqueta: 'Prioridad media', tono: 'advertencia' },
+  BAJA: { etiqueta: 'Prioridad baja', tono: 'neutro' },
+};
+
+export function describirPrioridadIncidencia(prioridad: string | null | undefined): EntradaEstado {
+  return buscarEnDiccionario(
+    'prioridad de incidencia',
+    PRIORIDAD_INCIDENCIA,
+    prioridad,
+    DESCONOCIDO,
+  );
+}
+
+/** Estado de una incidencia (Issue 7.6). */
+export const ESTADO_INCIDENCIA: Record<string, EntradaEstado> = {
+  PENDIENTE: { etiqueta: 'Pendiente', tono: 'advertencia' },
+  RESUELTA: { etiqueta: 'Resuelta', tono: 'exito' },
+  DESCARTADA: { etiqueta: 'Descartada', tono: 'neutro' },
+};
+
+export function describirEstadoIncidencia(estado: string | null | undefined): EntradaEstado {
+  return buscarEnDiccionario('estado de incidencia', ESTADO_INCIDENCIA, estado, DESCONOCIDO);
+}

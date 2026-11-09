@@ -39,10 +39,6 @@ const COORDINACION: Pendiente[] = [
 /** Capacidades de Jefatura de Laboratorios que se construyen en la siguiente entrega. */
 const JEFATURA: Pendiente[] = [
   {
-    titulo: 'Revisión de incidencias',
-    descripcion: 'Atención de las fallas de equipos y espacios reportadas por docentes.',
-  },
-  {
     titulo: 'Claves y contraseñas',
     descripcion: 'Cambio de tu clave de acceso al panel.',
   },
