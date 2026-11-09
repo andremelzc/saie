@@ -31,35 +31,35 @@ export class ContiguedadInvalidaError extends Error {
 }
 
 /**
- * Catálogo base de espacios físicos del edificio de 3 pisos (Pabellón A)
+ * Catálogo base de espacios físicos del edificio de 3 pisos (catálogo de ejemplo para pruebas)
  */
 export const ESPACIOS_EDIFICIO_SEED: EspacioSeedData[] = [
   // Piso 1: 3 Aulas Teóricas contiguas y 2 Laboratorios contiguos
   {
     identificador: 'Aula 101',
     tipo: TipoEspacio.AULA_TEORICA,
-    pabellon: 'Pabellon A',
+    pabellon: 'Nuevo Pabellón',
     piso: 1,
     aforoNominal: 40,
   },
   {
     identificador: 'Aula 102',
     tipo: TipoEspacio.AULA_TEORICA,
-    pabellon: 'Pabellon A',
+    pabellon: 'Nuevo Pabellón',
     piso: 1,
     aforoNominal: 40,
   },
   {
     identificador: 'Aula 103',
     tipo: TipoEspacio.AULA_TEORICA,
-    pabellon: 'Pabellon A',
+    pabellon: 'Nuevo Pabellón',
     piso: 1,
     aforoNominal: 35,
   },
   {
     identificador: 'Lab 101',
     tipo: TipoEspacio.LABORATORIO,
-    pabellon: 'Pabellon A',
+    pabellon: 'Nuevo Pabellón',
     piso: 1,
     aforoNominal: 30,
     pcsMalogradas: 2,
@@ -68,7 +68,7 @@ export const ESPACIOS_EDIFICIO_SEED: EspacioSeedData[] = [
   {
     identificador: 'Lab 102',
     tipo: TipoEspacio.LABORATORIO,
-    pabellon: 'Pabellon A',
+    pabellon: 'Nuevo Pabellón',
     piso: 1,
     aforoNominal: 30,
     pcsMalogradas: 0,
@@ -79,35 +79,35 @@ export const ESPACIOS_EDIFICIO_SEED: EspacioSeedData[] = [
   {
     identificador: 'Aula 201',
     tipo: TipoEspacio.AULA_TEORICA,
-    pabellon: 'Pabellon A',
+    pabellon: 'Nuevo Pabellón',
     piso: 2,
     aforoNominal: 45,
   },
   {
     identificador: 'Aula 202',
     tipo: TipoEspacio.AULA_TEORICA,
-    pabellon: 'Pabellon A',
+    pabellon: 'Nuevo Pabellón',
     piso: 2,
     aforoNominal: 45,
   },
   {
     identificador: 'Aula 203',
     tipo: TipoEspacio.AULA_TEORICA,
-    pabellon: 'Pabellon A',
+    pabellon: 'Nuevo Pabellón',
     piso: 2,
     aforoNominal: 40,
   },
   {
     identificador: 'Aula 204',
     tipo: TipoEspacio.AULA_TEORICA,
-    pabellon: 'Pabellon A',
+    pabellon: 'Nuevo Pabellón',
     piso: 2,
     aforoNominal: 40,
   },
   {
     identificador: 'Lab 201',
     tipo: TipoEspacio.LABORATORIO,
-    pabellon: 'Pabellon A',
+    pabellon: 'Nuevo Pabellón',
     piso: 2,
     aforoNominal: 35,
     pcsMalogradas: 3,
@@ -116,7 +116,7 @@ export const ESPACIOS_EDIFICIO_SEED: EspacioSeedData[] = [
   {
     identificador: 'Lab 202',
     tipo: TipoEspacio.LABORATORIO,
-    pabellon: 'Pabellon A',
+    pabellon: 'Nuevo Pabellón',
     piso: 2,
     aforoNominal: 35,
     pcsMalogradas: 1,
@@ -127,28 +127,28 @@ export const ESPACIOS_EDIFICIO_SEED: EspacioSeedData[] = [
   {
     identificador: 'Aula 301',
     tipo: TipoEspacio.AULA_TEORICA,
-    pabellon: 'Pabellon A',
+    pabellon: 'Nuevo Pabellón',
     piso: 3,
     aforoNominal: 50,
   },
   {
     identificador: 'Aula 302',
     tipo: TipoEspacio.AULA_TEORICA,
-    pabellon: 'Pabellon A',
+    pabellon: 'Nuevo Pabellón',
     piso: 3,
     aforoNominal: 50,
   },
   {
     identificador: 'Aula 303',
     tipo: TipoEspacio.AULA_TEORICA,
-    pabellon: 'Pabellon A',
+    pabellon: 'Nuevo Pabellón',
     piso: 3,
     aforoNominal: 45,
   },
   {
     identificador: 'Aula 304 (Aislada)',
     tipo: TipoEspacio.AULA_TEORICA,
-    pabellon: 'Pabellon A',
+    pabellon: 'Nuevo Pabellón',
     piso: 3,
     aforoNominal: 30,
   },
@@ -202,7 +202,7 @@ export function validarYConstruirContiguedadesSimetricas(
   const relacionesMap = new Map<string, RelacionSimetrica>();
 
   for (const par of pares) {
-    const pabellon = par.pabellon ?? 'Pabellon A';
+    const pabellon = par.pabellon ?? 'Nuevo Pabellón';
     const espA = mapaEspacios.get(`${pabellon}::${par.identificadorA}`);
     const espB = mapaEspacios.get(`${pabellon}::${par.identificadorB}`);
 

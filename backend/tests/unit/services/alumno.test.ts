@@ -470,7 +470,7 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
                 espacio: {
                   id: 'lab-201',
                   identificador: 'Lab 201',
-                  pabellon: 'Pabellon A',
+                  pabellon: 'Nuevo Pabellón',
                   piso: 2,
                   tipo: 'LABORATORIO',
                 },
@@ -486,7 +486,7 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
 
       expect(ruta.estado).toBe('DISPONIBLE');
       expect(ruta.movilidadReducida).toBe(true);
-      expect(ruta.pabellon).toBe('Pabellon A');
+      expect(ruta.pabellon).toBe('Nuevo Pabellón');
       expect(ruta.pisoDestino).toBe(2);
       expect(ruta.tramos.length).toBe(3);
     });
