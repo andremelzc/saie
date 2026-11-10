@@ -109,6 +109,8 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
       ['JEFATURA_LABORATORIOS', '/admin/incidencias', 'Revisión de incidencias'],
       ['COORDINACION_ACADEMICA', '/admin/laboratorios', 'Laboratorios y equipos'],
       ['JEFATURA_LABORATORIOS', '/admin/laboratorios', 'Laboratorios y equipos'],
+      ['COORDINACION_ACADEMICA', '/admin/software', 'Catálogo de software'],
+      ['JEFATURA_LABORATORIOS', '/admin/software', 'Catálogo de software'],
     ] as const)('%s autorizado ve "%s"', async (rol, ruta, titulo) => {
       iniciarSesionDePrueba(rol);
       renderizar(ruta);
@@ -126,7 +128,6 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
       ['COORDINACION_ACADEMICA', '/admin/alumnos/nuevo', 'Alta de alumnos'],
       ['COORDINACION_ACADEMICA', '/admin/docentes/nuevo', 'Alta de docentes'],
       ['COORDINACION_ACADEMICA', '/admin/claves', 'Claves y contraseñas'],
-      ['COORDINACION_ACADEMICA', '/admin/software', 'Catálogo de software'],
       ['JEFATURA_LABORATORIOS', '/admin/claves', 'Claves y contraseñas'],
     ] as const)('%s autorizado ve "%s"', async (rol, ruta, titulo) => {
       iniciarSesionDePrueba(rol);

@@ -5,7 +5,6 @@ import { MENSAJE_EN_DESARROLLO, PREVISION_EN_DESARROLLO } from '../components/Pa
 import AltaAlumnoPage from './admin/AltaAlumnoPage';
 import AltaDocentePage from './admin/AltaDocentePage';
 import ClavesAdminPage from './admin/ClavesAdminPage';
-import SoftwareAdminPage from './admin/SoftwareAdminPage';
 import ProximamenteAdminPage from './admin/ProximamenteAdminPage';
 
 const auth = vi.hoisted(() => ({
@@ -28,7 +27,6 @@ const PANTALLAS = [
   { nombre: 'Alta de alumnos', Page: AltaAlumnoPage, titulo: 'Alta de alumnos' },
   { nombre: 'Alta de docentes', Page: AltaDocentePage, titulo: 'Alta de docentes' },
   { nombre: 'Claves del panel', Page: ClavesAdminPage, titulo: 'Claves y contraseñas' },
-  { nombre: 'Catálogo de software', Page: SoftwareAdminPage, titulo: 'Catálogo de software' },
 ];
 
 describe('pantallas en desarrollo', () => {
