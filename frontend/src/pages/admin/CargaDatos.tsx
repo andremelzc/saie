@@ -204,7 +204,6 @@ const ZonaArchivo: React.FC<{
           <span className="font-semibold text-saie-primary">
             Arrastra tu CSV o elige un archivo
           </span>
-          <span className="text-xs text-saie-muted">Máx. 10 MB · solo archivos .csv</span>
         </>
       )}
       <input
@@ -518,6 +517,9 @@ export const ZonaCarga: React.FC<{
 
       <div className="mt-auto flex flex-col gap-2">
         <Boton
+          // Solo la zona con archivo elegido tiene el botón principal: las cuatro cargas son
+          // independientes y la vista no debe tener cuatro primarios a la vez.
+          variante={archivo ? 'primario' : 'secundario'}
           onClick={enviar}
           disabled={!archivo || enviando}
           cargando={enviando}

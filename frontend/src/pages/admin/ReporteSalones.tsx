@@ -63,7 +63,12 @@ export const ReporteSalones: React.FC = () => {
       subtitulo="Las secciones del periodo con el aula que tienen asignada, listo para presentar."
       acciones={
         <div className="flex flex-wrap gap-2 saie-no-imprimir">
-          <Boton variante="secundario" onClick={recargar} cargando={cargando}>
+          <Boton
+            variante="secundario"
+            onClick={recargar}
+            cargando={cargando}
+            textoCargando="Actualizando…"
+          >
             Actualizar datos
           </Boton>
           <Boton variante="primario" onClick={imprimir} disabled={!datos || sinSecciones}>
