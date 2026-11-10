@@ -80,13 +80,37 @@ function textoSecciones(cantidad: number): string {
   return cantidad === 1 ? '1 sección' : `${cantidad} secciones`;
 }
 
-function leerUltimaCarga(tipo: TipoImportacion): string | null {
+/** Última carga de un tipo registrada en este navegador: fecha y resultado. */
+interface UltimaCarga {
+  fecha: string;
+  estado: Exclude<EstadoFlujo, 'sin-cargar'>;
+}
+
+/**
+ * Issue 4.55 — la última carga se recuerda junto con su resultado, así el distintivo y la fecha
+ * no se contradicen («Sin cargar» con una fecha de última carga). Mientras el servidor no exponga
+ * la última carga (Issue 4.54) el dato es de este navegador y la pantalla lo dice. Las entradas
+ * antiguas (solo la fecha) se leen como una carga correcta.
+ */
+function leerUltimaCarga(tipo: TipoImportacion): UltimaCarga | null {
   try {
-    return localStorage.getItem(`${CLAVE_ALMACEN}${tipo}`);
+    const crudo = localStorage.getItem(`${CLAVE_ALMACEN}${tipo}`);
+    if (!crudo) return null;
+    if (crudo.startsWith('{')) {
+      const valor = JSON.parse(crudo) as Partial<UltimaCarga>;
+      if (typeof valor.fecha !== 'string') return null;
+      return {
+        fecha: valor.fecha,
+        estado: valor.estado === 'con-errores' ? 'con-errores' : 'cargado',
+      };
+    }
+    return Number.isNaN(Date.parse(crudo)) ? null : { fecha: crudo, estado: 'cargado' };
   } catch {
     return null;
   }
 }
+
+const TIPOS_CARGA: TipoImportacion[] = ['cursos-secciones', 'horarios', 'matriculas', 'docentes'];
 
 function leerArchivo(archivo: File): Promise<string> {
   if (typeof archivo.text === 'function') return archivo.text();
@@ -113,13 +137,6 @@ function descargarErrores(tipo: TipoImportacion, errores: string[]) {
   // Revocar en el siguiente ciclo: algunos navegadores cancelan la descarga si se revoca antes.
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
-
-const ESTADOS_INICIALES: Record<TipoImportacion, EstadoFlujo> = {
-  'cursos-secciones': 'sin-cargar',
-  horarios: 'sin-cargar',
-  matriculas: 'sin-cargar',
-  docentes: 'sin-cargar',
-};
 
 /** Distintivo del estado de una zona de carga. */
 function insigniaDeEstado(
@@ -366,7 +383,7 @@ export const ZonaCarga: React.FC<{
   titulo: string;
   descripcion: string;
   estado: EstadoFlujo;
-  ultimaCarga: string | null;
+  ultimaCarga: UltimaCarga | null;
   onEstado: (tipo: TipoImportacion, estado: EstadoFlujo, fecha: string) => void;
   onSiguiente?: () => void;
   etiquetaSiguiente?: string;
@@ -477,8 +494,8 @@ export const ZonaCarga: React.FC<{
         <BadgeEstado tono={insignia.tono}>{insignia.texto}</BadgeEstado>
       </div>
       {ultimaCarga && (
-        <p className="m-0 text-xs text-saie-muted">
-          Última carga: {formatearFechaCorta(ultimaCarga)}
+        <p className="m-0 text-sm text-saie-muted">
+          Última carga en este navegador: {formatearFechaCorta(ultimaCarga.fecha)}
         </p>
       )}
 
@@ -801,19 +818,21 @@ export const CargaDatos: React.FC = () => {
   const { hash } = useLocation();
   const [guiaAbierta, setGuiaAbierta] = useState(false);
   const [pestanaAyuda, setPestanaAyuda] = useState<Ayuda>('guia');
-  const [estados, setEstados] = useState<Record<TipoImportacion, EstadoFlujo>>(ESTADOS_INICIALES);
-  const [ultimas, setUltimas] = useState<Record<TipoImportacion, string | null>>(() => ({
-    'cursos-secciones': leerUltimaCarga('cursos-secciones'),
-    horarios: leerUltimaCarga('horarios'),
-    matriculas: leerUltimaCarga('matriculas'),
-    docentes: leerUltimaCarga('docentes'),
-  }));
+  // El estado de cada zona sale de la misma fuente que su fecha: nunca «Sin cargar» con fecha.
+  const [ultimas, setUltimas] = useState<Record<TipoImportacion, UltimaCarga | null>>(
+    () =>
+      Object.fromEntries(TIPOS_CARGA.map((t) => [t, leerUltimaCarga(t)])) as Record<
+        TipoImportacion,
+        UltimaCarga | null
+      >,
+  );
 
   function marcarEstado(tipo: TipoImportacion, estado: EstadoFlujo, fecha: string) {
-    setEstados((prev) => ({ ...prev, [tipo]: estado }));
-    setUltimas((prev) => ({ ...prev, [tipo]: fecha }));
+    if (estado === 'sin-cargar') return;
+    const ultima: UltimaCarga = { fecha, estado };
+    setUltimas((prev) => ({ ...prev, [tipo]: ultima }));
     try {
-      localStorage.setItem(`${CLAVE_ALMACEN}${tipo}`, fecha);
+      localStorage.setItem(`${CLAVE_ALMACEN}${tipo}`, JSON.stringify(ultima));
     } catch {
       // El almacenamiento puede estar deshabilitado; la pantalla sigue funcionando.
     }
@@ -859,7 +878,7 @@ export const CargaDatos: React.FC = () => {
               <ZonaCarga
                 key={flujo.tipo}
                 {...flujo}
-                estado={estados[flujo.tipo]}
+                estado={ultimas[flujo.tipo]?.estado ?? 'sin-cargar'}
                 ultimaCarga={ultimas[flujo.tipo]}
                 onEstado={marcarEstado}
                 onSiguiente={siguiente ? () => irAZona(siguiente.tipo) : undefined}

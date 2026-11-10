@@ -14,10 +14,11 @@ import { Campo } from '../../components/ui/Campo';
 import { CLASE_CAMPO } from '../../components/ui/campos';
 import { useCarga } from '../../hooks/useCarga';
 import { useValorDiferido } from '../../hooks/useValorDiferido';
-import { obtenerAuditoria, obtenerHistorial } from '../../services/admin';
+import { obtenerAuditoria, obtenerEspacios, obtenerHistorial } from '../../services/admin';
 import type {
   EstadoAsignacion,
   HistorialAsignacionDTO,
+  RegistroAuditoriaDTO,
   TipoEventoAuditoria,
 } from '../../types/admin';
 import { describirMotivoEscalamiento } from '../../utils/admin';
@@ -26,6 +27,14 @@ import { agruparPorCorrida, tituloDeCorrida, ubicacionDeEspacios } from '../../u
 import type { GrupoCorrida } from '../../utils/historial';
 import { describirEstadoAsignacion, describirEventoAuditoria } from '../../utils/diccionarios';
 import { FiltrosActivos } from '../../components/ui/FiltrosActivos';
+import type { FiltroActivo } from '../../components/ui/FiltrosActivos';
+import { BuscadorSeccion } from '../../components/admin/BuscadorSeccion';
+import type { SeccionElegida } from '../../components/admin/BuscadorSeccion';
+import { LineaTiempoSeccion } from '../../components/admin/LineaTiempoSeccion';
+import { DetalleTecnico } from '../../components/ui/DetalleTecnico';
+import { Drawer } from '../../components/ui/Drawer';
+import { fraseDeRegistro, indexarEspacios, tieneDetalleTecnico } from '../../utils/textoMotor';
+import type { EspaciosPorId } from '../../utils/textoMotor';
 
 /** Vuelve a pedir los datos cuando cambia `version` (botón «Actualizar»), sin tocar los filtros. */
 function useRecargarAl(version: number, recargar: () => void): void {
@@ -71,12 +80,53 @@ function motivoLlano(a: HistorialAsignacionDTO): { etiqueta: string; descripcion
   return { etiqueta: motivo.etiqueta, descripcion: motivo.descripcion };
 }
 
-const DatosSeccion: React.FC<{ a: HistorialAsignacionDTO }> = ({ a }) => (
+/** Filtros comunes a las dos vistas: sección elegida y rango de fechas (Issue 4.46). */
+interface FiltrosComunes {
+  seccion: SeccionElegida | null;
+  /** Fechas `AAAA-MM-DD` del campo `date`; vacías = sin límite. */
+  desde: string;
+  hasta: string;
+}
+
+/** Límites del rango en ISO (todo el día de `hasta`), o `null` si el rango no es válido. */
+function rangoIso(f: FiltrosComunes): { desde?: string; hasta?: string } | null {
+  if (f.desde && f.hasta && f.desde > f.hasta) return null;
+  return {
+    ...(f.desde && { desde: new Date(`${f.desde}T00:00:00`).toISOString() }),
+    ...(f.hasta && { hasta: new Date(`${f.hasta}T23:59:59.999`).toISOString() }),
+  };
+}
+
+function dentroDelRango(fecha: string, rango: { desde?: string; hasta?: string }): boolean {
+  const t = Date.parse(fecha);
+  if (rango.desde && t < Date.parse(rango.desde)) return false;
+  if (rango.hasta && t > Date.parse(rango.hasta)) return false;
+  return true;
+}
+
+/** «12 oct 2026» para el chip del filtro de fechas. */
+function fechaChip(valor: string): string {
+  return new Date(`${valor}T12:00:00`).toLocaleDateString('es-PE', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+const DatosSeccion: React.FC<{ a: HistorialAsignacionDTO; onAbrir: () => void }> = ({
+  a,
+  onAbrir,
+}) => (
   <>
-    <span className="block font-semibold">
+    <button
+      type="button"
+      onClick={onAbrir}
+      className="block min-h-6 text-left font-semibold text-saie-primary underline-offset-2 hover:underline"
+    >
       {a.codigoCurso} · {a.codigoSeccion}
-    </span>
-    <span className="block text-xs text-saie-muted">{a.nombreCurso}</span>
+      <span className="sr-only">: ver su línea de tiempo</span>
+    </button>
+    <span className="block text-sm text-saie-muted">{a.nombreCurso}</span>
   </>
 );
 
@@ -84,7 +134,7 @@ const DatosAula: React.FC<{ a: HistorialAsignacionDTO }> = ({ a }) =>
   a.espacios.length > 0 ? (
     <>
       <span className="block">{a.espacios.map((e) => e.identificador).join(', ')}</span>
-      <span className="block text-xs text-saie-muted">{ubicacionDeEspacios(a.espacios)}</span>
+      <span className="block text-sm text-saie-muted">{ubicacionDeEspacios(a.espacios)}</span>
     </>
   ) : (
     <span>—</span>
@@ -95,13 +145,17 @@ const DatosEstado: React.FC<{ a: HistorialAsignacionDTO }> = ({ a }) => {
   return (
     <>
       <InsigniaEstado estado={a.estado} />
-      {motivo && <span className="mt-1 block text-xs text-saie-muted">{motivo.descripcion}</span>}
+      {motivo && <span className="mt-1 block text-sm text-saie-muted">{motivo.descripcion}</span>}
     </>
   );
 };
 
 /** Una corrida: su resumen y sus asignaciones (tabla desde `lg`, tarjetas por debajo). */
-const GrupoHistorial: React.FC<{ grupo: GrupoCorrida; indice: number }> = ({ grupo, indice }) => {
+const GrupoHistorial: React.FC<{
+  grupo: GrupoCorrida;
+  indice: number;
+  onAbrir: (a: HistorialAsignacionDTO) => void;
+}> = ({ grupo, indice, onAbrir }) => {
   const idTitulo = `corrida-${indice}`;
   return (
     <section aria-labelledby={idTitulo} className="flex flex-col gap-2">
@@ -113,9 +167,17 @@ const GrupoHistorial: React.FC<{ grupo: GrupoCorrida; indice: number }> = ({ gru
           <CabeceraTabla columnas={['Sección', 'Aula', 'Estado', 'Fecha']} />
           <tbody>
             {grupo.items.map((a) => (
-              <tr key={a.id} className="border-t border-saie-divider align-top">
+              <tr
+                key={a.id}
+                onClick={(e) => {
+                  // La fila entera abre la línea de tiempo; el botón de la sección es la vía del teclado.
+                  if ((e.target as Element).closest('button, a, summary')) return;
+                  onAbrir(a);
+                }}
+                className="cursor-pointer border-t border-saie-divider align-top hover:bg-saie-canvas"
+              >
                 <td className="px-4 py-3">
-                  <DatosSeccion a={a} />
+                  <DatosSeccion a={a} onAbrir={() => onAbrir(a)} />
                 </td>
                 <td className="px-4 py-3">
                   <DatosAula a={a} />
@@ -123,7 +185,7 @@ const GrupoHistorial: React.FC<{ grupo: GrupoCorrida; indice: number }> = ({ gru
                 <td className="px-4 py-3">
                   <DatosEstado a={a} />
                 </td>
-                <td className="px-4 py-3 text-xs text-saie-muted">
+                <td className="px-4 py-3 text-sm text-saie-muted">
                   {formatearFechaAlerta(a.fechaAsignacion)}
                 </td>
               </tr>
@@ -138,16 +200,16 @@ const GrupoHistorial: React.FC<{ grupo: GrupoCorrida; indice: number }> = ({ gru
             className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-4 text-sm"
           >
             <div>
-              <DatosSeccion a={a} />
+              <DatosSeccion a={a} onAbrir={() => onAbrir(a)} />
             </div>
             <div>
-              <span className="block text-xs text-saie-muted">Aula</span>
+              <span className="block text-sm text-saie-muted">Aula</span>
               <DatosAula a={a} />
             </div>
             <div>
               <DatosEstado a={a} />
             </div>
-            <p className="m-0 text-xs text-saie-muted">{formatearFechaAlerta(a.fechaAsignacion)}</p>
+            <p className="m-0 text-sm text-saie-muted">{formatearFechaAlerta(a.fechaAsignacion)}</p>
           </li>
         ))}
       </ul>
@@ -155,29 +217,56 @@ const GrupoHistorial: React.FC<{ grupo: GrupoCorrida; indice: number }> = ({ gru
   );
 };
 
-/** `version` cambia al pulsar «Actualizar»: vuelve a pedir los datos conservando los filtros. */
-const VistaHistorial: React.FC<{ version: number }> = ({ version }) => {
+interface PropsVista {
+  /** Cambia al pulsar «Actualizar»: vuelve a pedir los datos conservando los filtros. */
+  version: number;
+  comunes: FiltrosComunes;
+  /** Chips de los filtros comunes, para mostrarlos junto a los de la vista. */
+  chipsComunes: FiltroActivo[];
+  limpiarComunes: () => void;
+}
+
+const VistaHistorial: React.FC<PropsVista & { onAbrir: (a: HistorialAsignacionDTO) => void }> = ({
+  version,
+  comunes,
+  chipsComunes,
+  limpiarComunes,
+  onAbrir,
+}) => {
   const [periodo, setPeriodo] = useState('');
   const [estado, setEstado] = useState<'TODOS' | EstadoAsignacion>('TODOS');
   // Una sola petición tras una pausa al escribir el periodo (Issue 4.41).
   const periodoDiferido = useValorDiferido(periodo);
+  const seccionId = comunes.seccion?.id;
 
   const cargar = useCallback(
     () =>
       obtenerHistorial({
         periodo: periodoDiferido.trim() || undefined,
         estado: estado === 'TODOS' ? undefined : estado,
+        seccionId,
         limite: 200,
       }),
-    [periodoDiferido, estado],
+    [periodoDiferido, estado, seccionId],
   );
 
   const { datos, cargando, error, recargar } = useCarga(cargar, {
-    clave: `historial:${periodoDiferido.trim()}|${estado}`,
+    clave: `historial:${periodoDiferido.trim()}|${estado}|${seccionId ?? ''}`,
   });
   useRecargarAl(version, recargar);
-  const items = useMemo(() => datos?.items ?? [], [datos]);
+  const rango = rangoIso(comunes);
+  // El historial no filtra por fecha en el servidor: el rango se aplica a lo recibido.
+  const items = useMemo(
+    () => (datos?.items ?? []).filter((a) => !rango || dentroDelRango(a.fechaAsignacion, rango)),
+    [datos, rango],
+  );
   const grupos = useMemo(() => agruparPorCorrida(items), [items]);
+  const hayFiltros = chipsComunes.length > 0 || periodo.trim() !== '' || estado !== 'TODOS';
+  const limpiar = () => {
+    setPeriodo('');
+    setEstado('TODOS');
+    limpiarComunes();
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -208,6 +297,7 @@ const VistaHistorial: React.FC<{ version: number }> = ({ version }) => {
       </div>
       <FiltrosActivos
         filtros={[
+          ...chipsComunes,
           ...(periodo.trim()
             ? [
                 {
@@ -229,10 +319,7 @@ const VistaHistorial: React.FC<{ version: number }> = ({ version }) => {
               ]
             : []),
         ]}
-        onLimpiar={() => {
-          setPeriodo('');
-          setEstado('TODOS');
-        }}
+        onLimpiar={limpiar}
       />
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
@@ -240,20 +327,41 @@ const VistaHistorial: React.FC<{ version: number }> = ({ version }) => {
         {cargando && !datos ? (
           <EsqueletoCarga texto="Cargando historial…" forma="tabla" />
         ) : items.length === 0 ? (
-          <EstadoVacio
-            titulo="Sin asignaciones registradas"
-            icono={ICONOS.portapapeles}
-            descripcion="Cuando se asignen aulas, aquí quedará el registro de cada asignación."
-            accion={
-              <BotonEnlace to={RUTAS.inicioAdmin} variante="secundario" tamano="sm">
-                Ir a Asignar aulas
-              </BotonEnlace>
-            }
-          />
+          hayFiltros ? (
+            <EstadoVacio
+              titulo="Sin coincidencias"
+              icono={ICONOS.portapapeles}
+              descripcion="Ninguna asignación coincide con los filtros. Prueba con otra sección o fechas."
+              accion={
+                <Boton variante="secundario" tamano="sm" onClick={limpiar}>
+                  Limpiar filtros
+                </Boton>
+              }
+            />
+          ) : (
+            <EstadoVacio
+              titulo="Sin asignaciones registradas"
+              icono={ICONOS.portapapeles}
+              descripcion="Cuando se asignen aulas, aquí quedará el registro de cada asignación."
+              accion={
+                <BotonEnlace to={RUTAS.inicioAdmin} variante="secundario" tamano="sm">
+                  Ir a Asignar aulas
+                </BotonEnlace>
+              }
+            />
+          )
         ) : (
           <div className="flex flex-col gap-5">
+            <p className="m-0 text-sm text-saie-muted">
+              Pulsa una sección para ver todo lo que pasó con ella.
+            </p>
             {grupos.map((grupo, i) => (
-              <GrupoHistorial key={grupo.corridaId ?? 'individual'} grupo={grupo} indice={i} />
+              <GrupoHistorial
+                key={grupo.corridaId ?? 'individual'}
+                grupo={grupo}
+                indice={i}
+                onAbrir={onAbrir}
+              />
             ))}
           </div>
         )}
@@ -262,21 +370,56 @@ const VistaHistorial: React.FC<{ version: number }> = ({ version }) => {
   );
 };
 
-const VistaAuditoria: React.FC<{ version: number }> = ({ version }) => {
+/** Frase del registro con su contexto y, si difiere del texto del motor, el detalle técnico. */
+const DetalleRegistro: React.FC<{ r: RegistroAuditoriaDTO; espacios: EspaciosPorId }> = ({
+  r,
+  espacios,
+}) => {
+  const { frase, contexto, tecnico } = fraseDeRegistro(r, espacios);
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-sm text-saie-text">{frase}</span>
+      {contexto && <span className="text-sm text-saie-muted">{contexto}</span>}
+      {tieneDetalleTecnico(frase, tecnico) && <DetalleTecnico texto={tecnico} />}
+    </div>
+  );
+};
+
+const VistaAuditoria: React.FC<PropsVista & { espacios: EspaciosPorId }> = ({
+  version,
+  comunes,
+  chipsComunes,
+  limpiarComunes,
+  espacios,
+}) => {
   const [tipo, setTipo] = useState<'TODOS' | TipoEventoAuditoria>('TODOS');
+  const rango = rangoIso(comunes);
+  const desde = rango?.desde;
+  const hasta = rango?.hasta;
 
   const cargar = useCallback(
     () =>
       obtenerAuditoria({
         tipo: tipo === 'TODOS' ? undefined : tipo,
+        desde,
+        hasta,
         limite: 200,
       }),
-    [tipo],
+    [tipo, desde, hasta],
   );
 
-  const { datos, cargando, error, recargar } = useCarga(cargar, { clave: `auditoria:${tipo}` });
+  const { datos, cargando, error, recargar } = useCarga(cargar, {
+    clave: `auditoria:${tipo}|${desde ?? ''}|${hasta ?? ''}`,
+  });
   useRecargarAl(version, recargar);
-  const items = datos?.items ?? [];
+  const seccionId = comunes.seccion?.id;
+  // La auditoría no filtra por sección en el servidor: se filtra lo recibido.
+  const items = (datos?.items ?? []).filter((r) => !seccionId || r.seccion?.id === seccionId);
+  const hayFiltros = chipsComunes.length > 0 || tipo !== 'TODOS';
+  const limpiar = () => {
+    setTipo('TODOS');
+    limpiarComunes();
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -295,8 +438,9 @@ const VistaAuditoria: React.FC<{ version: number }> = ({ version }) => {
         </select>
       </Campo>
       <FiltrosActivos
-        filtros={
-          tipo !== 'TODOS'
+        filtros={[
+          ...chipsComunes,
+          ...(tipo !== 'TODOS'
             ? [
                 {
                   id: 'tipo',
@@ -305,9 +449,9 @@ const VistaAuditoria: React.FC<{ version: number }> = ({ version }) => {
                   onQuitar: () => setTipo('TODOS'),
                 },
               ]
-            : []
-        }
-        onLimpiar={() => setTipo('TODOS')}
+            : []),
+        ]}
+        onLimpiar={limpiar}
       />
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
@@ -315,32 +459,47 @@ const VistaAuditoria: React.FC<{ version: number }> = ({ version }) => {
         {cargando && !datos ? (
           <EsqueletoCarga texto="Cargando auditoría…" forma="tabla" />
         ) : items.length === 0 ? (
-          <EstadoVacio
-            titulo="Sin actividad registrada"
-            icono={ICONOS.portapapeles}
-            descripcion="Cada asignación automática de aulas deja aquí su registro."
-            accion={
-              <BotonEnlace to={RUTAS.inicioAdmin} variante="secundario" tamano="sm">
-                Ir a Asignar aulas
-              </BotonEnlace>
-            }
-          />
+          hayFiltros ? (
+            <EstadoVacio
+              titulo="Sin coincidencias"
+              icono={ICONOS.portapapeles}
+              descripcion="Ningún registro coincide con los filtros. Prueba con otra sección o fechas."
+              accion={
+                <Boton variante="secundario" tamano="sm" onClick={limpiar}>
+                  Limpiar filtros
+                </Boton>
+              }
+            />
+          ) : (
+            <EstadoVacio
+              titulo="Sin actividad registrada"
+              icono={ICONOS.portapapeles}
+              descripcion="Cada asignación automática de aulas deja aquí su registro."
+              accion={
+                <BotonEnlace to={RUTAS.inicioAdmin} variante="secundario" tamano="sm">
+                  Ir a Asignar aulas
+                </BotonEnlace>
+              }
+            />
+          )
         ) : (
           <>
             <div className="hidden lg:block">
               <TablaDatos etiqueta="Registros de auditoría">
-                <CabeceraTabla columnas={['Evento', 'Sección', 'Detalle', 'Fecha']} />
+                <CabeceraTabla columnas={['Evento', 'Sección', 'Qué pasó', 'Fecha']} />
                 <tbody>
                   {items.map((r) => (
                     <tr key={r.id} className="border-t border-saie-divider align-top">
                       <td className="px-4 py-3">
                         <InsigniaEvento tipo={r.tipoEvento} />
                       </td>
-                      <td className="px-4 py-3 text-xs">
+                      <td className="px-4 py-3 text-sm">
                         {r.seccion ? `${r.seccion.codigoCurso} · ${r.seccion.codigoSeccion}` : '—'}
                       </td>
-                      <td className="px-4 py-3 text-xs text-saie-text">{r.detalle}</td>
-                      <td className="px-4 py-3 text-xs text-saie-muted">
+                      <td className="px-4 py-3">
+                        <DetalleRegistro r={r} espacios={espacios} />
+                      </td>
+                      <td className="px-4 py-3 text-sm text-saie-muted">
                         {formatearFechaAlerta(r.fechaHora)}
                       </td>
                     </tr>
@@ -358,12 +517,12 @@ const VistaAuditoria: React.FC<{ version: number }> = ({ version }) => {
                     <InsigniaEvento tipo={r.tipoEvento} />
                   </div>
                   {r.seccion && (
-                    <p className="m-0 text-xs font-semibold">
+                    <p className="m-0 text-sm font-semibold">
                       {r.seccion.codigoCurso} · {r.seccion.codigoSeccion}
                     </p>
                   )}
-                  <p className="m-0 text-xs text-saie-text">{r.detalle}</p>
-                  <p className="m-0 text-xs text-saie-muted">{formatearFechaAlerta(r.fechaHora)}</p>
+                  <DetalleRegistro r={r} espacios={espacios} />
+                  <p className="m-0 text-sm text-saie-muted">{formatearFechaAlerta(r.fechaHora)}</p>
                 </li>
               ))}
             </ul>
@@ -374,16 +533,53 @@ const VistaAuditoria: React.FC<{ version: number }> = ({ version }) => {
   );
 };
 
+const cargarEspacios = () => obtenerEspacios();
+
 /**
  * Issue 4.32 — auditoría e historial de asignaciones.
  *
- * Los datos ya estaban en la base (`RegistroAuditoria` y el estado `HISTORICA` de las
- * asignaciones); faltaba una pantalla donde Coordination pudiera verlos.
+ * Issue 4.46: buscador de sección o curso y rango de fechas comunes a las dos vistas; pulsar una
+ * fila del historial abre la línea de tiempo de esa sección en un drawer.
+ * Issue 4.49: los registros se leen como frases con el aula y su ubicación, sin UUID; el texto
+ * del motor queda bajo «Detalle técnico».
  */
 export const AuditoriaAdmin: React.FC = () => {
   const [vista, setVista] = useState<Vista>('historial');
   // Antes «Actualizar» recargaba toda la página y se perdían la pestaña, los filtros y el scroll.
   const [version, setVersion] = useState(0);
+  const [comunes, setComunes] = useState<FiltrosComunes>({ seccion: null, desde: '', hasta: '' });
+  const [abierta, setAbierta] = useState<HistorialAsignacionDTO | null>(null);
+  // Para nombrar las aulas que el motor guarda como UUID (Issue 4.49).
+  const { datos: listaEspacios } = useCarga(cargarEspacios, { clave: 'espacios:nombres' });
+  const espacios = useMemo(() => indexarEspacios(listaEspacios), [listaEspacios]);
+
+  const rangoInvalido = rangoIso(comunes) === null;
+  const chipsComunes: FiltroActivo[] = [
+    ...(comunes.seccion
+      ? [
+          {
+            id: 'seccion',
+            etiqueta: 'Sección',
+            valor: comunes.seccion.nombre,
+            onQuitar: () => setComunes((c) => ({ ...c, seccion: null })),
+          },
+        ]
+      : []),
+    ...(comunes.desde || comunes.hasta
+      ? [
+          {
+            id: 'fechas',
+            etiqueta: 'Fechas',
+            valor: `${comunes.desde ? fechaChip(comunes.desde) : 'inicio'} – ${
+              comunes.hasta ? fechaChip(comunes.hasta) : 'hoy'
+            }`,
+            onQuitar: () => setComunes((c) => ({ ...c, desde: '', hasta: '' })),
+          },
+        ]
+      : []),
+  ];
+  const limpiarComunes = () => setComunes({ seccion: null, desde: '', hasta: '' });
+  const propsVista = { version, comunes, chipsComunes, limpiarComunes };
 
   return (
     <LayoutAdmin
@@ -395,6 +591,46 @@ export const AuditoriaAdmin: React.FC = () => {
         </Boton>
       }
     >
+      <section
+        aria-label="Buscar en el historial"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr]"
+      >
+        <BuscadorSeccion
+          onElegir={(seccion) => setComunes((c) => ({ ...c, seccion }))}
+          className="sm:col-span-2 lg:col-span-1"
+        />
+        <Campo etiqueta="Desde">
+          <input
+            type="date"
+            value={comunes.desde}
+            max={comunes.hasta || undefined}
+            onChange={(e) => setComunes((c) => ({ ...c, desde: e.target.value }))}
+            aria-invalid={rangoInvalido || undefined}
+            aria-describedby={rangoInvalido ? 'error-rango-fechas' : undefined}
+            className={CLASE_CAMPO}
+          />
+        </Campo>
+        <Campo etiqueta="Hasta">
+          <input
+            type="date"
+            value={comunes.hasta}
+            min={comunes.desde || undefined}
+            onChange={(e) => setComunes((c) => ({ ...c, hasta: e.target.value }))}
+            aria-invalid={rangoInvalido || undefined}
+            aria-describedby={rangoInvalido ? 'error-rango-fechas' : undefined}
+            className={CLASE_CAMPO}
+          />
+        </Campo>
+        {rangoInvalido && (
+          <p
+            id="error-rango-fechas"
+            role="alert"
+            className="m-0 text-sm text-saie-danger-strong sm:col-span-2 lg:col-span-3"
+          >
+            La fecha «Desde» es posterior a «Hasta»: corrígela para aplicar el rango.
+          </p>
+        )}
+      </section>
       <SelectorSegmentado
         opciones={OPCIONES_VISTA}
         valor={vista}
@@ -409,11 +645,20 @@ export const AuditoriaAdmin: React.FC = () => {
         aria-labelledby={idPestana('auditoria', vista)}
       >
         {vista === 'historial' ? (
-          <VistaHistorial version={version} />
+          <VistaHistorial {...propsVista} onAbrir={setAbierta} />
         ) : (
-          <VistaAuditoria version={version} />
+          <VistaAuditoria {...propsVista} espacios={espacios} />
         )}
       </section>
+
+      <Drawer
+        abierto={abierta !== null}
+        onCerrar={() => setAbierta(null)}
+        titulo={abierta ? `${abierta.codigoCurso} · ${abierta.codigoSeccion}` : ''}
+        subtitulo={abierta ? `${abierta.nombreCurso} · periodo ${abierta.periodo}` : undefined}
+      >
+        {abierta && <LineaTiempoSeccion seccionId={abierta.seccionId} />}
+      </Drawer>
     </LayoutAdmin>
   );
 };

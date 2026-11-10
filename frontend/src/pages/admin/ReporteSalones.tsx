@@ -1,6 +1,10 @@
 import React, { useCallback, useState } from 'react';
+import { isAxiosError } from 'axios';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
-import { EsqueletoCarga } from '../../components/estudiante/ElementosHorario';
+import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import { BotonEnlace } from '../../components/ui/BotonEnlace';
+import { ICONOS } from '../../components/ui/iconos';
+import { RUTAS } from '../../config/rutas';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
 import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
@@ -26,14 +30,21 @@ export const ReporteSalones: React.FC = () => {
   // Una sola petición tras una pausa al escribir el periodo (Issue 4.41).
   const periodoDiferido = useValorDiferido(periodo);
 
-  const cargar = useCallback(
-    () => obtenerReporteAsignaciones(periodoDiferido.trim() || undefined),
-    [periodoDiferido],
-  );
+  const cargar = useCallback(async () => {
+    try {
+      return await obtenerReporteAsignaciones(periodoDiferido.trim() || undefined);
+    } catch (error) {
+      // 404: no hay ningún periodo con secciones. No es un fallo: es el estado vacío (Issue 4.57).
+      if (isAxiosError(error) && error.response?.status === 404) return null;
+      throw error;
+    }
+  }, [periodoDiferido]);
 
   const { datos, cargando, error, recargar } = useCarga(cargar, {
     clave: `reporte:${periodoDiferido.trim()}`,
   });
+  // `datos` es `null` mientras carga y también si no hay periodo: lo distingue `cargando`.
+  const sinSecciones = !cargando && !error && (datos === null || datos.secciones.length === 0);
 
   const imprimir = () => {
     window.print();
@@ -48,7 +59,7 @@ export const ReporteSalones: React.FC = () => {
           <Boton variante="secundario" onClick={recargar} cargando={cargando}>
             Actualizar
           </Boton>
-          <Boton variante="primario" onClick={imprimir} disabled={!datos}>
+          <Boton variante="primario" onClick={imprimir} disabled={!datos || sinSecciones}>
             Imprimir o guardar como PDF
           </Boton>
         </div>
@@ -89,6 +100,21 @@ export const ReporteSalones: React.FC = () => {
         <ZonaActualizable actualizando={cargando && datos !== null}>
           {cargando && !datos ? (
             <EsqueletoCarga texto="Preparando el informe…" forma="tabla" />
+          ) : sinSecciones ? (
+            <EstadoVacio
+              titulo="No hay secciones en este periodo"
+              icono={ICONOS.documento}
+              descripcion={
+                periodo.trim()
+                  ? `El periodo ${periodo.trim()} no tiene secciones cargadas. Revisa el periodo o carga los cursos y secciones.`
+                  : 'Todavía no hay secciones cargadas. Carga los cursos y secciones para armar el informe.'
+              }
+              accion={
+                <BotonEnlace to={RUTAS.cargaAdmin} variante="secundario" tamano="sm">
+                  Ir a Carga de datos
+                </BotonEnlace>
+              }
+            />
           ) : datos ? (
             <article className="flex flex-col gap-5">
               <header className="flex flex-wrap items-end justify-between gap-3 border-b border-saie-divider pb-4">

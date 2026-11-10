@@ -24,6 +24,7 @@ vi.mock('../../context/useAuth', () => ({
   useAuth: () => ({ sesion: { rol }, cerrarSesion: vi.fn() }),
 }));
 vi.mock('../../services/admin', () => ({
+  obtenerEspacios: vi.fn().mockResolvedValue([]),
   CLAVE_LABORATORIOS_ESTADO: 'laboratorios-estado',
   obtenerLaboratoriosConEstado: vi.fn(),
   obtenerMapaOcupacionAdmin: vi.fn(),
@@ -32,6 +33,9 @@ vi.mock('../../services/admin', () => ({
   ejecutarCorrida: vi.fn(),
   reintentarSeccion: vi.fn(),
 }));
+
+/** Valor de una métrica: la `dd` que sigue a su `dt` (Issue 4.52). */
+const valorMetrica = (etiqueta: string) => screen.getByText(etiqueta).nextElementSibling;
 
 const alertas = vi.mocked(obtenerAlertas);
 const laboratorios = vi.mocked(obtenerLaboratoriosConEstado);
@@ -178,10 +182,18 @@ describe('Inicio del panel administrativo', () => {
         '/admin/carga#carga-horarios',
       );
       expect(screen.getByText('Sin motivo registrado.')).toBeInTheDocument();
-      // La tarjeta «Requieren tu atención» repetía las cifras de la fila de métricas; lo que
-      // queda es el atajo a la lista completa de alertas, con su número dentro del enlace.
-      expect(screen.getAllByText('Alertas pendientes').length).toBeGreaterThan(0);
-      expect(screen.getByRole('link', { name: /Alertas pendientes/ })).toBeInTheDocument();
+      // Issue 4.52: cada métrica enlaza a su lista y la cifra de revisiones aparece una sola vez.
+      expect(valorMetrica('Alertas pendientes')).toHaveTextContent('2');
+      expect(screen.getByRole('link', { name: 'Ver alertas' })).toHaveAttribute(
+        'href',
+        '/admin/alertas',
+      );
+      expect(valorMetrica('Esperan revisión')).toHaveTextContent('2');
+      expect(screen.getByRole('link', { name: 'Ver secciones en revisión' })).toHaveAttribute(
+        'href',
+        '#titulo-atencion',
+      );
+      expect(screen.queryByText(/secciones esperan revisión/)).toBeNull();
     });
 
     it('muestra el estado vacío cuando no hay escaladas', async () => {
@@ -201,10 +213,12 @@ describe('Inicio del panel administrativo', () => {
       expect(corrida).not.toHaveBeenCalled();
 
       fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
-      const estado = await screen.findByRole('status');
-      expect(estado).toHaveTextContent(
-        /6\s*con aula nueva · 2\s*conservan la suya · 2\s*de 10\s*esperan revisión/,
-      );
+      expect(
+        await screen.findByText('Asignación terminada: se revisaron 10 secciones del periodo.'),
+      ).toBeInTheDocument();
+      expect(valorMetrica('Con aula nueva')).toHaveTextContent('6');
+      expect(valorMetrica('Conservan la suya')).toHaveTextContent('2');
+      expect(valorMetrica('Esperan revisión')).toHaveTextContent('2');
       await waitFor(() => expect(escaladas).toHaveBeenCalledTimes(2));
       expect(alertas).toHaveBeenCalledTimes(2);
     });
@@ -340,8 +354,7 @@ describe('Inicio del panel administrativo', () => {
       const aviso = await screen.findByRole('alert');
       fireEvent.click(within(aviso).getByRole('button', { name: 'Reintentar' }));
       await waitFor(() => expect(corrida).toHaveBeenCalledTimes(2));
-      const estado = await screen.findByRole('status');
-      expect(estado).toHaveTextContent(/6\s*con aula nueva/);
+      await waitFor(() => expect(valorMetrica('Con aula nueva')).toHaveTextContent('6'));
     });
 
     it('reintenta una sección escalada', async () => {
@@ -410,9 +423,9 @@ describe('Inicio del panel administrativo', () => {
       expect(within(accesos).getByRole('link', { name: 'Secciones' })).toBeInTheDocument();
       expect(within(accesos).getByRole('link', { name: 'Auditoría' })).toBeInTheDocument();
       expect(within(accesos).getByRole('link', { name: 'Informe de salones' })).toBeInTheDocument();
-      // El atajo a las alertas lleva la cifra en el propio enlace.
-      const enlaceAlertas = within(accesos).getByRole('link', { name: /Ver alertas/ });
-      expect(enlaceAlertas).toHaveTextContent('2');
+      // La cifra de alertas ya está en su métrica: el atajo no la repite.
+      const enlaceAlertas = within(accesos).getByRole('link', { name: 'Alertas' });
+      expect(enlaceAlertas).not.toHaveTextContent(/\d/);
       expect(enlaceAlertas).toHaveAttribute('href', '/admin/alertas');
     });
   });
@@ -462,10 +475,10 @@ describe('Inicio del panel administrativo', () => {
       alertas.mockResolvedValue([]);
       montar();
       expect(await screen.findByText('Laboratorios activos')).toBeInTheDocument();
-      expect(screen.getByText('Laboratorios activos').previousSibling).toHaveTextContent('2/3');
+      expect(valorMetrica('Laboratorios activos')).toHaveTextContent('2/3');
       // Solo cuentan los laboratorios habilitados: 27 + 25 operativas, 3 + 0 inoperativas.
-      expect(screen.getByText('PCs operativas').previousSibling).toHaveTextContent('52');
-      expect(screen.getByText('PCs inoperativas').previousSibling).toHaveTextContent('3');
+      expect(valorMetrica('PCs operativas')).toHaveTextContent('52');
+      expect(valorMetrica('PCs inoperativas')).toHaveTextContent('3');
       expect(escaladas).not.toHaveBeenCalled();
     });
 
@@ -482,7 +495,7 @@ describe('Inicio del panel administrativo', () => {
       montar();
       const seccion = await screen.findByRole('region', { name: 'Alerta más reciente' });
       expect(within(seccion).getByText('Falta Docker')).toBeInTheDocument();
-      expect(screen.getByText('Alertas pendientes').previousSibling).toHaveTextContent('2');
+      expect(valorMetrica('Alertas pendientes')).toHaveTextContent('2');
     });
 
     it('ofrece el listado de laboratorios, las alertas y el cambio de laboratorio', async () => {

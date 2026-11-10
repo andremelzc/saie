@@ -1,7 +1,13 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useCarga } from '../../hooks/useCarga';
+import { obtenerEspacios } from '../../services/admin';
 import type { ResultadoVerificacionDTO } from '../../types/admin';
 import { etiquetaReglaVerificacion } from '../../utils/diccionarios';
+import { fraseDeViolacion, indexarEspacios, tieneDetalleTecnico } from '../../utils/textoMotor';
 import { plural } from '../../utils/texto';
+import { DetalleTecnico } from '../ui/DetalleTecnico';
+
+const cargarEspacios = () => obtenerEspacios();
 
 const TRAZO_CHECK = 'M4.5 12.75l6 6 9-13.5';
 const TRAZO_X = 'M6 18L18 6M6 6l12 12';
@@ -42,6 +48,14 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
   verificacion,
   ocultarTitulo = false,
 }) => {
+  // Las violaciones nombran los espacios por su UUID: se cruzan con el listado (Issue 4.49).
+  const hayViolaciones = (verificacion?.totalViolaciones ?? 0) > 0;
+  const { datos: listaEspacios } = useCarga(cargarEspacios, {
+    clave: 'espacios:nombres',
+    habilitado: hayViolaciones,
+  });
+  const espacios = useMemo(() => indexarEspacios(listaEspacios), [listaEspacios]);
+
   if (!verificacion) {
     return (
       <section
@@ -142,16 +156,26 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
                   <summary className="cursor-pointer py-3.5 text-xs font-semibold text-saie-danger">
                     Ver {plural(regla.violaciones.length, 'incumplimiento', 'incumplimientos')}
                   </summary>
-                  <ul className="m-0 mt-2 flex list-none flex-col gap-1.5 p-0 text-xs text-saie-text">
-                    {regla.violaciones.map((violacion, indice) => (
-                      <li
-                        key={`${violacion.asignacionId}-${indice}`}
-                        className="rounded-lg bg-saie-danger-soft px-2.5 py-1.5"
-                      >
-                        <strong className="font-semibold">{violacion.codigoSeccion}</strong>:{' '}
-                        {violacion.detalle}
-                      </li>
-                    ))}
+                  <ul className="m-0 mt-2 flex list-none flex-col gap-1.5 p-0 text-sm text-saie-text">
+                    {regla.violaciones.map((violacion, indice) => {
+                      const frase = fraseDeViolacion(violacion.detalle, espacios);
+                      return (
+                        <li
+                          key={`${violacion.asignacionId}-${indice}`}
+                          className="flex flex-col gap-1 rounded-lg bg-saie-danger-soft px-2.5 py-1.5"
+                        >
+                          <span>
+                            <strong className="font-semibold">
+                              Sección {violacion.codigoSeccion}
+                            </strong>
+                            : {frase}
+                          </span>
+                          {tieneDetalleTecnico(frase, violacion.detalle) && (
+                            <DetalleTecnico texto={violacion.detalle} />
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </details>
               )}

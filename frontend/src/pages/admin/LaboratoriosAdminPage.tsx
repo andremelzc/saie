@@ -18,6 +18,7 @@ import type { LaboratorioConEstadoDTO } from '../../services/admin';
 import type { EstadoOcupacionEspacio } from '../../types/mapa';
 import { formatearRango } from '../../utils/horario';
 import { plural } from '../../utils/texto';
+import { fraseDeMotivoAlerta } from '../../utils/textoMotor';
 
 type FiltroEstado = 'TODOS' | 'ALERTA_ACTIVA' | 'DISPONIBLE' | 'OCUPADO' | 'DESHABILITADO';
 
@@ -121,7 +122,7 @@ const TarjetaLaboratorio: React.FC<{ lab: LaboratorioConEstadoDTO; esJefatura: b
       {lab.alertas.length > 0 && (
         <p className="m-0 text-sm text-saie-warning-strong">
           {plural(lab.alertas.length, 'alerta pendiente', 'alertas pendientes')}:{' '}
-          {lab.alertas[0].motivo}
+          {fraseDeMotivoAlerta(lab.alertas[0].motivo)}
         </p>
       )}
 

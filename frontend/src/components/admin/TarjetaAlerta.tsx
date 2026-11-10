@@ -6,6 +6,8 @@ import { BadgeEstado } from '../ui/BadgeEstado';
 import { Boton } from '../ui/Boton';
 import { DialogoConfirmacion } from '../ui/DialogoConfirmacion';
 import { ICONOS } from '../ui/iconos';
+import { DetalleTecnico } from '../ui/DetalleTecnico';
+import { fraseDeMotivoAlerta, tieneDetalleTecnico } from '../../utils/textoMotor';
 
 /** Issue 4.9 — fila/tarjeta de alerta. Cada tipo tiene color, ícono y etiqueta propios. */
 
@@ -56,6 +58,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
   const [confirmando, setConfirmando] = useState(false);
   const [mostrarTodos, setMostrarTodos] = useState(false);
 
+  const motivo = fraseDeMotivoAlerta(alerta.motivo);
   const cursos = alerta.asignacionesAfectadas;
   const visibles = mostrarTodos ? cursos : cursos.slice(0, MAX_CURSOS_VISIBLES);
   const ocultos = cursos.length - visibles.length;
@@ -103,7 +106,10 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
         </div>
       </header>
 
-      <p className="m-0 text-sm text-saie-text">{alerta.motivo}</p>
+      <div className="flex flex-col gap-1">
+        <p className="m-0 text-sm text-saie-text">{motivo}</p>
+        {tieneDetalleTecnico(motivo, alerta.motivo) && <DetalleTecnico texto={alerta.motivo} />}
+      </div>
 
       <div>
         <p className="m-0 mb-1 text-xs font-semibold uppercase tracking-wide text-saie-muted">
