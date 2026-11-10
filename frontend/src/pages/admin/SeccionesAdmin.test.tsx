@@ -206,6 +206,23 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     );
   });
 
+  it('no guarda software para un aula teórica y lo resume (Issue 3.41)', async () => {
+    montar();
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
+    const panel = await screen.findByRole('dialog');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
+
+    fireEvent.change(await within(panel).findByLabelText('Tipo de espacio que necesita'), {
+      target: { value: 'AULA_TEORICA' },
+    });
+    fireEvent.click(await within(panel).findByRole('checkbox', { name: /Docker/ }));
+    fireEvent.click(within(panel).getByRole('button', { name: 'Guardar cambios' }));
+
+    expect(within(panel).getByRole('alert')).toHaveTextContent('Un aula teórica no tiene software');
+    expect(within(panel).getByLabelText('Tipo de espacio que necesita')).toHaveFocus();
+    expect(editar).not.toHaveBeenCalled();
+  });
+
   it('avisa cuando el cambio genera alertas en el panel', async () => {
     editar.mockResolvedValue({
       seccion: seccion({}),

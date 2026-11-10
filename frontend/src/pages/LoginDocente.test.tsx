@@ -34,7 +34,7 @@ describe('LoginDocente (Issue #204 / 7.7)', () => {
 
     const botonSubmit = screen.getByRole('button', { name: /Iniciar sesión/i });
     expect(botonSubmit).toBeInTheDocument();
-    expect(botonSubmit).toBeDisabled();
+    expect(botonSubmit).toBeEnabled();
 
     // Verificación crítica: NO debe existir opción para crear cuenta o registrarse
     expect(screen.queryByText(/crear cuenta/i)).not.toBeInTheDocument();
@@ -65,23 +65,24 @@ describe('LoginDocente (Issue #204 / 7.7)', () => {
     expect(inputClave).toHaveAttribute('type', 'password');
   });
 
-  it('habilita el botón solo cuando ambos campos están completos', () => {
+  it('valida al salir del campo y al enviar muestra un resumen con foco en el primer error (Issue 3.41)', () => {
     renderizar(<LoginDocente />);
 
     const inputCodigo = screen.getByLabelText(/Código de docente/i);
     const inputClave = screen.getByLabelText(/^Contraseña/i, { selector: 'input' });
-    const botonSubmit = screen.getByRole('button', { name: /Iniciar sesión/i });
 
-    expect(botonSubmit).toBeDisabled();
+    fireEvent.blur(inputCodigo);
+    expect(inputCodigo).toHaveAttribute('aria-invalid', 'true');
+    expect(inputCodigo).toHaveAccessibleDescription(/Ingresa tu/);
 
     fireEvent.change(inputCodigo, { target: { value: 'D001' } });
-    expect(botonSubmit).toBeDisabled();
+    expect(inputCodigo).not.toHaveAttribute('aria-invalid');
 
-    fireEvent.change(inputClave, { target: { value: 'password123' } });
-    expect(botonSubmit).not.toBeDisabled();
-
-    fireEvent.change(inputCodigo, { target: { value: '   ' } });
-    expect(botonSubmit).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /Iniciar sesión/i }));
+    const resumen = screen.getByRole('alert');
+    expect(resumen).toHaveTextContent('Corrige 1 dato para continuar');
+    expect(resumen).toHaveTextContent('Ingresa tu contraseña.');
+    expect(inputClave).toHaveFocus();
   });
 
   it('envía "codigo" (no correo) a /v1/auth/docente/login y ejecuta onLoginExitoso al autenticar con éxito', async () => {

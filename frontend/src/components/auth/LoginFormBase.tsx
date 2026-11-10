@@ -5,6 +5,8 @@ import { PORTALES } from '../../config/portales';
 import type { PortalId } from '../../config/portales';
 import { useTituloPagina } from '../../hooks/useTituloPagina';
 import { Boton } from '../ui/Boton';
+import { ResumenErrores } from '../ui/ResumenErrores';
+import { requerido, validarCampo } from '../../utils/validacion';
 import { estadoHttp, mensajeDeError, mensajeSeguroDelServidor } from '../../services/errores';
 import type { LoginResponseDTO } from '../../types/auth';
 import IconoPortal from './IconoPortal';
@@ -72,14 +74,36 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
   const [cargando, setCargando] = useState(false);
   const [errorLogin, setErrorLogin] = useState<string | null>(null);
 
-  const esValido = identificador.trim().length > 0 && clave.length > 0;
+  /** Errores por campo (Issue 3.41): se calculan al salir de cada campo y al enviar. */
+  const [errores, setErrores] = useState<{ identificador?: string; clave?: string }>({});
+  const [resumenVisible, setResumenVisible] = useState(false);
+
+  const reglas = {
+    identificador: [requerido(`Ingresa tu ${labelIdentificador.toLowerCase()}.`)],
+    clave: [requerido('Ingresa tu contraseña.')],
+  };
+  const errorDe = (campo: 'identificador' | 'clave', valor: string) =>
+    validarCampo(valor, reglas[campo]) ?? undefined;
+  const validarAlSalir = (campo: 'identificador' | 'clave', valor: string) =>
+    setErrores((actuales) => ({ ...actuales, [campo]: errorDe(campo, valor) }));
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (cargando) return;
 
-    if (!esValido || cargando) {
+    const encontrados = {
+      identificador: errorDe('identificador', identificador),
+      clave: errorDe('clave', clave),
+    };
+    setErrores(encontrados);
+    if (encontrados.identificador || encontrados.clave) {
+      setResumenVisible(true);
+      document
+        .getElementById(encontrados.identificador ? 'login-identificador' : 'login-clave')
+        ?.focus();
       return;
     }
+    setResumenVisible(false);
 
     setCargando(true);
     setErrorLogin(null);
@@ -214,17 +238,32 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
               onChange={(e) => {
                 setIdentificador(e.target.value);
                 if (errorLogin) setErrorLogin(null);
+                if (errores.identificador) validarAlSalir('identificador', e.target.value);
               }}
+              onBlur={(e) => validarAlSalir('identificador', e.target.value)}
+              aria-invalid={errores.identificador ? true : undefined}
               placeholder={placeholderIdentificador}
               disabled={cargando}
               aria-required="true"
-              aria-describedby={ayudaIdentificador ? 'login-identificador-ayuda' : undefined}
+              aria-describedby={
+                [
+                  ayudaIdentificador ? 'login-identificador-ayuda' : null,
+                  errores.identificador ? 'login-identificador-error' : null,
+                ]
+                  .filter(Boolean)
+                  .join(' ') || undefined
+              }
               className={`${CLASES_CAMPO} pl-11 pr-4`}
             />
           </div>
           {ayudaIdentificador && (
             <p id="login-identificador-ayuda" className="m-0 text-sm text-saie-muted">
               {ayudaIdentificador}
+            </p>
+          )}
+          {errores.identificador && (
+            <p id="login-identificador-error" className="m-0 text-sm font-medium text-saie-danger">
+              {errores.identificador}
             </p>
           )}
         </div>
@@ -263,7 +302,11 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
               onChange={(e) => {
                 setClave(e.target.value);
                 if (errorLogin) setErrorLogin(null);
+                if (errores.clave) validarAlSalir('clave', e.target.value);
               }}
+              onBlur={(e) => validarAlSalir('clave', e.target.value)}
+              aria-invalid={errores.clave ? true : undefined}
+              aria-describedby={errores.clave ? 'login-clave-error' : undefined}
               placeholder="Ingresa tu contraseña"
               disabled={cargando}
               aria-required="true"
@@ -319,10 +362,34 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
           </div>
         </div>
 
+        {errores.clave && (
+          <p id="login-clave-error" className="-mt-3 m-0 text-sm font-medium text-saie-danger">
+            {errores.clave}
+          </p>
+        )}
+
+        {resumenVisible && (
+          <ResumenErrores
+            errores={[
+              ...(errores.identificador
+                ? [
+                    {
+                      idCampo: 'login-identificador',
+                      etiqueta: labelIdentificador,
+                      mensaje: errores.identificador,
+                    },
+                  ]
+                : []),
+              ...(errores.clave
+                ? [{ idCampo: 'login-clave', etiqueta: 'Contraseña', mensaje: errores.clave }]
+                : []),
+            ]}
+          />
+        )}
+
         {/* Botón de envío */}
         <Boton
           type="submit"
-          disabled={!esValido}
           cargando={cargando}
           textoCargando="Iniciando sesión..."
           claseContenedor="w-full"
