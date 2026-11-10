@@ -338,6 +338,8 @@ interface FiguraProps {
   conRotulo: boolean;
   onSeleccionar: (id: string) => void;
   onConector: (id: string) => void;
+  /** El cursor entra, se mueve sobre o sale de un espacio (`null`): posición dentro del lienzo. */
+  onHover?: (id: string | null, x: number, y: number) => void;
 }
 
 /** Hace que el cursor sea una mano sobre lo que se puede pulsar. */
@@ -501,6 +503,7 @@ function Figura({
   conRotulo,
   onSeleccionar,
   onConector,
+  onHover,
 }: FiguraProps) {
   const reservable = CLASES_RESERVABLES.has(figura.clase);
   const esConexion = CLASES_CONEXION.has(figura.clase);
@@ -550,8 +553,19 @@ function Figura({
         userData={{ id: figura.id }}
         position={[0, 0, z]}
         onClick={alHacerClic}
-        onPointerOver={(e) => interactiva && cursorSobre(e, true)}
-        onPointerOut={(e) => interactiva && cursorSobre(e, false)}
+        onPointerOver={(e) => {
+          if (!interactiva) return;
+          cursorSobre(e, true);
+          onHover?.(figura.id, e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+        }}
+        onPointerMove={(e) => {
+          if (interactiva) onHover?.(figura.id, e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+        }}
+        onPointerOut={(e) => {
+          if (!interactiva) return;
+          cursorSobre(e, false);
+          onHover?.(null, 0, 0);
+        }}
         receiveShadow
       >
         <meshStandardMaterial
@@ -617,6 +631,8 @@ interface PisoProps {
   seleccionado: string | null;
   onSeleccionar: (id: string) => void;
   onConector: (id: string) => void;
+  /** El cursor entra, se mueve sobre o sale de un espacio (`null`): posición dentro del lienzo. */
+  onHover?: (id: string | null, x: number, y: number) => void;
   onPiso: (numero: number) => void;
 }
 
@@ -632,6 +648,7 @@ function Piso({
   seleccionado,
   onSeleccionar,
   onConector,
+  onHover,
   onPiso,
 }: PisoProps) {
   const yBase = nivel * EDIFICIO.alturaPiso;
@@ -783,6 +800,7 @@ function Piso({
                 conRotulo={false}
                 onSeleccionar={onSeleccionar}
                 onConector={onConector}
+                onHover={onHover}
               />
             ))}
         </group>
@@ -802,6 +820,7 @@ function Piso({
                 conRotulo={conRotulos}
                 onSeleccionar={onSeleccionar}
                 onConector={onConector}
+                onHover={onHover}
               />
             ))}
           </group>
@@ -977,6 +996,8 @@ export interface EscenaProps {
   conector: string | null;
   onSeleccionar: (id: string) => void;
   onConector: (id: string) => void;
+  /** El cursor entra, se mueve sobre o sale de un espacio (`null`): posición dentro del lienzo. */
+  onHover?: (id: string | null, x: number, y: number) => void;
   /** Se pulsa un piso del edificio cerrado: se abre ese piso. */
   onPiso: (numero: number) => void;
   /** Orden para la cámara (botones «Reiniciar vista» y «Vista desde arriba», o el buscador). */
@@ -1022,6 +1043,7 @@ export default function Escena({
   conector,
   onSeleccionar,
   onConector,
+  onHover,
   onPiso,
   orden,
 }: EscenaProps) {
@@ -1110,6 +1132,7 @@ export default function Escena({
           seleccionado={seleccionado}
           onSeleccionar={onSeleccionar}
           onConector={onConector}
+          onHover={onHover}
           onPiso={onPiso}
         />
       ))}

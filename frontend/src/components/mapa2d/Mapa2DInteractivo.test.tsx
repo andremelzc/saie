@@ -97,7 +97,7 @@ describe('Mapa2D interactivo', () => {
   it('marca la entrada principal y las puertas al patio y las lleva a la leyenda', () => {
     montar();
     expect(screen.getByText('Entrada principal')).toBeInTheDocument();
-    expect(screen.getByText('Entrada principal o puerta al patio')).toBeInTheDocument();
+    expect(screen.getByText('Entrada o puerta')).toBeInTheDocument();
   });
 
   it('dibuja el norte y no inventa una escala en metros', () => {

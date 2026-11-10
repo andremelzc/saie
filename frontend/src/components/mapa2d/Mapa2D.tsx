@@ -96,6 +96,9 @@ const COLOR_DESTINO = '#222222';
 const COLOR_PUERTA = '#1f5fa8';
 const ABREVIATURAS: Record<string, string> = { escalera: 'Esc.', ascensor: 'Asc.' };
 const UMBRAL_ARRASTRE = 5;
+/** Si el espacio está a menos de esto (px) del borde de arriba, la tarjeta va debajo. */
+const TIP_ALTO_MINIMO = 84;
+const TIP_SEPARACION_ABAJO = 30;
 const ZOOM_AL_ENFOCAR = 3;
 const DIRECCION_TECLA: Record<string, Direccion> = {
   ArrowUp: 'arriba',
@@ -535,18 +538,18 @@ export const LeyendaMapa: React.FC<{
       </li>
       <li className="flex items-center gap-2">
         <Muestra fill={COLOR_CONTEXTO.administrativo} />
-        No reservable (baños, oficinas…)
+        No reservable
       </li>
       <li className="flex items-center gap-2">
         <Muestra fill="#ffffff" stroke={COLOR_ACENTO_LABORATORIO} grosor={2} />
-        Laboratorio (borde azul y «LAB»)
+        Laboratorio
       </li>
       {entradas && (
         <li className="flex items-center gap-2">
           <svg width="22" height="14" viewBox="0 0 22 14" aria-hidden="true" className="shrink-0">
             <circle cx="11" cy="7" r="6" fill={COLOR_PUERTA} />
           </svg>
-          Entrada principal o puerta al patio
+          Entrada o puerta
         </li>
       )}
     </ul>
@@ -998,8 +1001,15 @@ export const Mapa2D: React.FC<Mapa2DProps> = ({
         {tip && espacioTip && (
           <div
             role="tooltip"
-            style={{ left: tip.x, top: tip.y }}
-            className="pointer-events-none absolute z-20 max-w-56 -translate-x-1/2 -translate-y-full rounded-lg bg-saie-text px-3 py-2 text-xs text-white shadow-lg"
+            // Se queda dentro del plano: el centro no baja de media tarjeta (14 rem) del borde y,
+            // si no cabe encima del espacio, pasa a ponerse debajo.
+            style={{
+              left: `clamp(7.25rem, ${tip.x}px, calc(100% - 7.25rem))`,
+              top: tip.y < TIP_ALTO_MINIMO ? tip.y + TIP_SEPARACION_ABAJO : tip.y,
+            }}
+            className={`pointer-events-none absolute z-20 w-max max-w-56 -translate-x-1/2 rounded-lg bg-saie-text px-3 py-2 text-xs text-white shadow-lg ${
+              tip.y < TIP_ALTO_MINIMO ? '' : '-translate-y-full'
+            }`}
           >
             <strong className="block text-sm">{espacioTip.nombre ?? espacioTip.id}</strong>
             {ESTADO_TEXTO[espacioTip.estado]} · {TIPO_TEXTO[espacioTip.tipo]}

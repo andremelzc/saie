@@ -11,7 +11,7 @@ import Mapa2D, { LeyendaMapa } from './Mapa2D';
 import VentanaMapa from './VentanaMapa';
 import { ESTADO_TEXTO, type EspacioMapa2D } from './etiquetas';
 import { FILTRO_TODO, hayFiltro, pasaFiltro, type FiltroMapa } from './filtros';
-import { DIAS, type Franja } from './franja';
+import type { Franja } from './franja';
 import { indiceFiguras } from './indice';
 import { PLANOS_SVG, PLANOS_URL } from './planos';
 
@@ -26,34 +26,25 @@ const OPCIONES: { valor: Vista; etiqueta: string }[] = [
 
 const TRAZO_AMPLIAR = 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5';
 
-/** «Lun 07:00–09:00» o «Ahora»: lo que dice el botón de día y hora cuando está cerrado. */
-function resumenDeFranja(franja: Franja | null): string {
-  if (!franja) return 'Día y hora';
-  const dia = DIAS.find((d) => d.valor === franja.dia)?.etiqueta ?? '';
-  return `${dia.slice(0, 3)} ${franja.horaInicio}–${franja.horaFin}`;
-}
-
 /**
- * Botón que abre o cierra un panel de la barra de herramientas. Solo se ve en pantallas
- * estrechas: ahí día y hora y filtros se pliegan para que el mapa no quede lejos; desde `md`
- * los paneles están siempre a la vista.
+ * Botón que abre o cierra el panel de filtros (día y hora, estado y tipo). Lleva el número de
+ * filtros que se apartan de lo normal, para que se sepa que hay algo activo sin abrirlo.
  */
-const BotonPlegable: React.FC<{
+const BotonFiltros: React.FC<{
   abierto: boolean;
   idPanel: string;
+  activos: number;
   onAlternar: () => void;
-  children: React.ReactNode;
-}> = ({ abierto, idPanel, onAlternar, children }) => (
+}> = ({ abierto, idPanel, activos, onAlternar }) => (
   <button
     type="button"
     aria-expanded={abierto}
     aria-controls={idPanel}
     onClick={onAlternar}
-    className={`${claseBotonMapa(abierto)} min-w-0 justify-between`}
+    className={`${claseBotonMapa(abierto)} shrink-0`}
   >
-    <span className="truncate">{children}</span>
     <svg
-      className={`h-4 w-4 shrink-0 transition-transform ${abierto ? 'rotate-180' : ''}`}
+      className="h-4 w-4"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -62,8 +53,9 @@ const BotonPlegable: React.FC<{
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M6 9l6 6 6-6" />
+      <path d="M4 6h16M7 12h10M10 18h4" />
     </svg>
+    {activos > 0 ? `Filtros (${activos})` : 'Filtros'}
   </button>
 );
 
@@ -108,8 +100,8 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
   const [pisoInterno, setPisoInterno] = useState<Piso | undefined>(undefined);
   const [ampliado, setAmpliado] = useState(false);
   const [filtro, setFiltro] = useState<FiltroMapa>(FILTRO_TODO);
-  // En pantallas estrechas, qué panel de la barra de herramientas está abierto.
-  const [panel, setPanel] = useState<'franja' | 'filtros' | null>(null);
+  // Panel de filtros (día y hora, estado y tipo): cerrado hasta que se pide.
+  const [abiertoFiltros, setAbiertoFiltros] = useState(false);
   const idBase = useId();
   const [enfoque, setEnfoque] = useState<{ id: string; n: number } | null>(null);
   const vista = vistaControlada ?? vistaInterna;
@@ -144,22 +136,41 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
     setEnfoque({ id, n: Date.now() });
   };
 
-  const herramientas = (
-    <>
-      <BuscadorEspacios
-        espacios={espacios}
-        pisoDe={(id) => figuras.get(id)?.piso}
-        onElegir={irAEspacio}
-        className="w-full"
-      />
-      {onFranjaCambiada && <FranjaMapa franja={franja} onCambiar={onFranjaCambiada} />}
-      <FiltrosMapa
-        filtro={filtro}
-        onCambiar={setFiltro}
-        estados={estadosLeyenda}
-        className="sm:col-span-2"
-      />
-    </>
+  const filtrosActivos = (franja ? 1 : 0) + (hayFiltro(filtro, estadosLeyenda) ? 1 : 0);
+  const idFiltros = `${idBase}-filtros`;
+
+  /** Día y hora, estado y tipo: lo que se abre con «Filtros». */
+  const panelDeFiltros = (enColumna: boolean) => (
+    <div
+      id={idFiltros}
+      className={`rounded-xl border border-saie-divider bg-white p-4 ${abiertoFiltros ? '' : 'hidden'}`}
+    >
+      <div className={`flex flex-col gap-4 ${enColumna ? '' : 'md:flex-row md:gap-8'}`}>
+        {onFranjaCambiada && <FranjaMapa franja={franja} onCambiar={onFranjaCambiada} />}
+        <FiltrosMapa filtro={filtro} onCambiar={setFiltro} estados={estadosLeyenda} />
+      </div>
+    </div>
+  );
+
+  /** El buscador y, al lado, el botón de filtros: una sola fila para todo lo que acota el mapa. */
+  const busqueda = (enColumna: boolean) => (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-end gap-2">
+        <BuscadorEspacios
+          espacios={espacios}
+          pisoDe={(id) => figuras.get(id)?.piso}
+          onElegir={irAEspacio}
+          className="min-w-0 flex-1"
+        />
+        <BotonFiltros
+          abierto={abiertoFiltros}
+          idPanel={idFiltros}
+          activos={filtrosActivos}
+          onAlternar={() => setAbiertoFiltros((a) => !a)}
+        />
+      </div>
+      {panelDeFiltros(enColumna)}
+    </div>
   );
 
   const selector = (orientacion: 'horizontal' | 'vertical') => (
@@ -180,14 +191,26 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
     </p>
   );
 
+  /**
+   * La lista de espacios es la alternativa para quien no puede apuntar a la maqueta (teclado y
+   * lectores de pantalla). Va plegada: no compite con el mapa ni con el buscador.
+   */
   const lista = (
-    <ListaEspacios
-      espacios={visibles}
-      pisoDe={(id) => figuras.get(id)?.piso}
-      piso={piso}
-      seleccionado={seleccionado}
-      onElegir={irAEspacio}
-    />
+    <details className="rounded-xl border border-saie-divider bg-white">
+      <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-sm font-medium text-saie-text">
+        Lista de espacios
+        <span className="font-normal text-saie-muted">(para teclado y lectores de pantalla)</span>
+      </summary>
+      <div className="p-3 pt-0">
+        <ListaEspacios
+          espacios={visibles}
+          pisoDe={(id) => figuras.get(id)?.piso}
+          piso={piso}
+          seleccionado={seleccionado}
+          onElegir={irAEspacio}
+        />
+      </div>
+    </details>
   );
 
   const mapa = (enVentana: boolean) =>
@@ -209,8 +232,8 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
         barraLateral={
           enVentana ? (
             <>
-              {selector('vertical')}
-              <div className="flex flex-col gap-3">{herramientas}</div>
+              {selector('horizontal')}
+              {busqueda(true)}
             </>
           ) : undefined
         }
@@ -249,13 +272,18 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
             }
           />
         </div>
-        {!enVentana && <div className="mt-3">{lista}</div>}
+        {!enVentana && (
+          <div className="mt-3 flex flex-col gap-3">
+            <LeyendaMapa estados={estadosLeyenda} />
+            {lista}
+          </div>
+        )}
       </>
     );
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Una sola barra: la vista (2D o 3D), el piso del plano 2D y «Ampliar mapa». */}
+      {/* Una sola barra: la vista (2D o 3D), el piso del plano 2D y, en pantallas anchas, «Ampliar». */}
       <div className="flex flex-wrap items-center gap-3">
         {selector('horizontal')}
         {vista === '2d' && !ampliado && (
@@ -267,68 +295,31 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
             onCambiar={(v) => setPiso(Number(v))}
           />
         )}
-        <button
-          type="button"
-          onClick={() => setAmpliado(true)}
-          className={`${claseBotonMapa('accion')} ml-auto`}
-        >
-          <svg
-            className="h-5 w-5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
+        {/* En el celular el mapa ya ocupa la pantalla: ampliarlo no aporta y sí estorba. */}
+        <div className="ml-auto hidden lg:block">
+          <button
+            type="button"
+            onClick={() => setAmpliado(true)}
+            className={claseBotonMapa('accion')}
           >
-            <path d={TRAZO_AMPLIAR} />
-          </svg>
-          Ampliar mapa
-        </button>
+            <svg
+              className="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d={TRAZO_AMPLIAR} />
+            </svg>
+            Ampliar mapa
+          </button>
+        </div>
       </div>
 
-      {!ampliado && (
-        // Desde `md`: buscador y día/hora comparten fila y los filtros ocupan la de abajo. Por
-        // debajo, el buscador va solo y día/hora y filtros son dos botones en una misma fila.
-        <div className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4 md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:items-start md:gap-x-6">
-          <BuscadorEspacios
-            espacios={espacios}
-            pisoDe={(id) => figuras.get(id)?.piso}
-            onElegir={irAEspacio}
-            className="w-full"
-          />
-          <div className={`grid gap-2 md:hidden ${onFranjaCambiada ? 'grid-cols-2' : ''}`}>
-            {onFranjaCambiada && (
-              <BotonPlegable
-                abierto={panel === 'franja'}
-                idPanel={`${idBase}-franja`}
-                onAlternar={() => setPanel(panel === 'franja' ? null : 'franja')}
-              >
-                {resumenDeFranja(franja)}
-              </BotonPlegable>
-            )}
-            <BotonPlegable
-              abierto={panel === 'filtros'}
-              idPanel={`${idBase}-filtros`}
-              onAlternar={() => setPanel(panel === 'filtros' ? null : 'filtros')}
-            >
-              {hayFiltro(filtro, estadosLeyenda) ? 'Filtros activos' : 'Filtros'}
-            </BotonPlegable>
-          </div>
-          {onFranjaCambiada && (
-            <div id={`${idBase}-franja`} className={panel === 'franja' ? '' : 'hidden md:block'}>
-              <FranjaMapa franja={franja} onCambiar={onFranjaCambiada} />
-            </div>
-          )}
-          <div
-            id={`${idBase}-filtros`}
-            className={`md:col-span-2 ${panel === 'filtros' ? '' : 'hidden md:block'}`}
-          >
-            <FiltrosMapa filtro={filtro} onCambiar={setFiltro} estados={estadosLeyenda} />
-          </div>
-        </div>
-      )}
+      {!ampliado && busqueda(false)}
 
       {ampliado ? (
         <>
@@ -339,17 +330,18 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
             {vista === '2d' ? (
               mapa(true)
             ) : (
-              // La maqueta ocupa la altura de la ventana y los controles quedan a un lado.
+              // La maqueta ocupa la altura de la ventana. A un lado, en este orden: la vista, el
+              // buscador y los filtros, el espacio elegido, la leyenda y, plegada, la lista.
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-                <div className="order-2 min-w-0 flex-1 lg:order-1">{mapa(true)}</div>
+                <div className="min-w-0 flex-1">{mapa(true)}</div>
                 <aside
                   aria-label="Controles del mapa"
-                  className="order-1 flex flex-col gap-4 lg:order-2 lg:w-60 lg:shrink-0"
+                  className="flex flex-col gap-4 lg:w-72 lg:shrink-0"
                 >
-                  {selector('vertical')}
-                  <div className="flex flex-col gap-3">{herramientas}</div>
-                  <LeyendaMapa estados={estadosLeyenda} vertical />
+                  {selector('horizontal')}
+                  {busqueda(true)}
                   {descripcion}
+                  <LeyendaMapa estados={estadosLeyenda} vertical />
                   {lista}
                 </aside>
               </div>

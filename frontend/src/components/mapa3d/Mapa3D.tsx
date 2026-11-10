@@ -7,10 +7,25 @@ import Escena from './Escena';
 import type { OrdenCamara } from './Escena';
 import { leerPlano } from './geometria';
 import type { PlanoGeometria } from './geometria';
-import type { Mapa3DProps } from './tipos';
+import type { EspacioMapa, Mapa3DProps } from './tipos';
+import { ESTADO_TEXTO, TIPO_TEXTO } from '../mapa2d/etiquetas';
 
 /** Botón de los controles flotantes del 3D: mismo tamaño y colores que el resto de la interfaz. */
 const claseControl3D = (activo: boolean) => clasesBoton(activo ? 'primario' : 'fantasma', 'sm');
+
+/** Botón de solo icono de los controles flotantes: 44 px, el mínimo táctil. */
+const claseIcono3D =
+  'flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-saie-text hover:bg-saie-primary/5 focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-saie-text';
+const ICONO_SVG = {
+  className: 'h-5 w-5',
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+  'aria-hidden': true as const,
+};
 
 function hayWebGL(): boolean {
   try {
@@ -113,6 +128,8 @@ export default function Mapa3D({
     ordenCamara && (!ordenInterna || ordenCamara.n > ordenInterna.n) ? ordenCamara : ordenInterna;
   const ordenar = (tipo: OrdenCamara['tipo']) => setOrdenInterna({ tipo, n: Date.now() });
   const [seleccionInterna, setSeleccionInterna] = useState<string | null>(null);
+  // El espacio bajo el cursor y dónde está, para el cuadro que lo describe.
+  const [apuntado, setApuntado] = useState<{ id: string; x: number; y: number } | null>(null);
   const [conector, setConector] = useState<string | null>(null);
   const avisados = useRef(new Set<string>());
 
@@ -235,6 +252,7 @@ export default function Mapa3D({
                 conector={conector}
                 onSeleccionar={alSeleccionar}
                 onConector={setConector}
+                onHover={(id, x, y) => setApuntado(id ? { id, x, y } : null)}
                 onPiso={elegirPiso}
                 orden={orden}
               />
@@ -245,7 +263,7 @@ export default function Mapa3D({
             <div
               role="group"
               aria-label="Piso a mostrar"
-              className="absolute left-3 top-3 flex flex-wrap gap-1 rounded-lg bg-white/90 p-1 shadow"
+              className="absolute left-3 top-3 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-1 rounded-xl bg-white/90 p-1 shadow"
             >
               {pisos.map((p) => (
                 <button
@@ -274,62 +292,108 @@ export default function Mapa3D({
           <div
             role="group"
             aria-label="Cámara"
-            className="absolute right-3 top-3 flex flex-col gap-1 rounded-lg bg-white/90 p-1 shadow"
+            className="absolute bottom-3 right-3 flex flex-col gap-1 rounded-xl bg-white/90 p-1 shadow"
           >
             <button
               type="button"
               onClick={() => ordenar('reiniciar')}
-              className={`${claseControl3D(false)} justify-start text-left`}
+              aria-label="Reiniciar vista"
+              title="Reiniciar vista"
+              className={claseIcono3D}
             >
-              Reiniciar vista
+              <svg {...ICONO_SVG}>
+                <path d="M4 4v6h6M20 20v-6h-6M20 10a8 8 0 00-14-3M4 14a8 8 0 0014 3" />
+              </svg>
             </button>
             <button
               type="button"
               onClick={() => ordenar('cenital')}
-              className={`${claseControl3D(false)} justify-start text-left`}
+              aria-label="Vista desde arriba"
+              title="Vista desde arriba"
+              className={claseIcono3D}
             >
-              Vista desde arriba
+              <svg {...ICONO_SVG}>
+                <path d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14" />
+              </svg>
             </button>
           </div>
 
-          {conector && infoConector && (
-            <section
-              aria-label={`${infoConector.clase === 'ascensor' ? 'Ascensor' : 'Escalera'} ${conector}`}
-              className="absolute bottom-3 left-3 flex max-w-xs flex-col gap-2 rounded-lg bg-white/95 p-3 text-sm shadow"
-            >
-              <p className="m-0 font-medium text-saie-text">
-                {infoConector.clase === 'ascensor' ? 'Ascensor' : 'Escalera'} {conector}
-              </p>
-              {destinos.length === 0 ? (
-                <p className="m-0 text-saie-muted">
-                  No conecta con otros pisos en los planos cargados.
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-1">
-                  {destinos.map((destino) => (
-                    <button
-                      key={destino}
-                      type="button"
-                      onClick={() => elegirPiso(destino)}
-                      className={`${claseControl3D(true)} hover:bg-saie-primary-dark`}
-                    >
-                      {typeof piso !== 'number'
-                        ? `Ir al piso ${destino}`
-                        : destino > piso
-                          ? `Subir al piso ${destino}`
-                          : `Bajar al piso ${destino}`}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => setConector(null)}
-                className="min-h-11 self-start px-2 text-saie-muted underline"
+          <div className="pointer-events-none absolute inset-x-3 bottom-3 flex flex-col items-start gap-2 pr-14">
+            {seleccionado && mapaEspacios.get(seleccionado) && !conector && (
+              <p
+                role="status"
+                className="pointer-events-auto m-0 max-w-xs rounded-xl bg-white/95 px-3 py-2 text-sm shadow"
               >
-                Cerrar
-              </button>
-            </section>
+                <strong className="block text-saie-text">
+                  {mapaEspacios.get(seleccionado)?.nombre ?? seleccionado}
+                </strong>
+                <span className="text-saie-muted">
+                  {ESTADO_TEXTO[(mapaEspacios.get(seleccionado) as EspacioMapa).estado]} ·{' '}
+                  {TIPO_TEXTO[(mapaEspacios.get(seleccionado) as EspacioMapa).tipo]}
+                </span>
+              </p>
+            )}
+            {conector && infoConector && (
+              <section
+                aria-label={`${infoConector.clase === 'ascensor' ? 'Ascensor' : 'Escalera'} ${conector}`}
+                className="pointer-events-auto flex max-w-xs flex-col gap-2 rounded-xl bg-white/95 p-3 text-sm shadow"
+              >
+                <p className="m-0 font-medium text-saie-text">
+                  {infoConector.clase === 'ascensor' ? 'Ascensor' : 'Escalera'} {conector}
+                </p>
+                {destinos.length === 0 ? (
+                  <p className="m-0 text-saie-muted">
+                    No conecta con otros pisos en los planos cargados.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {destinos.map((destino) => (
+                      <button
+                        key={destino}
+                        type="button"
+                        onClick={() => elegirPiso(destino)}
+                        className={`${claseControl3D(true)} hover:bg-saie-primary-dark`}
+                      >
+                        {typeof piso !== 'number'
+                          ? `Ir al piso ${destino}`
+                          : destino > piso
+                            ? `Subir al piso ${destino}`
+                            : `Bajar al piso ${destino}`}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setConector(null)}
+                  className="min-h-11 self-start px-2 text-saie-muted underline"
+                >
+                  Cerrar
+                </button>
+              </section>
+            )}
+          </div>
+
+          {apuntado && apuntado.id !== seleccionado && mapaEspacios.get(apuntado.id) && (
+            <div
+              role="tooltip"
+              // Dentro del lienzo: centrado sobre el cursor sin pasar de media tarjeta del borde.
+              style={{
+                left: `clamp(7.25rem, ${apuntado.x}px, calc(100% - 7.25rem))`,
+                top: apuntado.y < 84 ? apuntado.y + 24 : apuntado.y - 12,
+              }}
+              className={`pointer-events-none absolute z-20 w-max max-w-56 -translate-x-1/2 rounded-lg bg-saie-text px-3 py-2 text-xs text-white shadow-lg ${
+                apuntado.y < 84 ? '' : '-translate-y-full'
+              }`}
+            >
+              <strong className="block text-sm">
+                {mapaEspacios.get(apuntado.id)?.nombre ?? apuntado.id}
+              </strong>
+              {ESTADO_TEXTO[(mapaEspacios.get(apuntado.id) as EspacioMapa).estado]} ·{' '}
+              {TIPO_TEXTO[(mapaEspacios.get(apuntado.id) as EspacioMapa).tipo]}
+              {(mapaEspacios.get(apuntado.id) as EspacioMapa).aforo !== undefined &&
+                ` · ${(mapaEspacios.get(apuntado.id) as EspacioMapa).aforo} personas`}
+            </div>
           )}
         </>
       )}
