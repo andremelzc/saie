@@ -29,7 +29,6 @@ import {
   diaDeFecha,
   estadoDeClase,
   fechaActual,
-  formatearMinutos,
   formatearRango,
   minutosDeFecha,
   ordenarSesiones,
@@ -124,23 +123,23 @@ interface DatoResumen {
   etiqueta: string;
 }
 
-/** Las cuatro cifras de la semana, en una rejilla de 2×2. */
-function datosResumen(horario: HorarioSemanalDTO): DatoResumen[] {
+/**
+ * Issue 3.38: solo las cifras que mueven una decisión. Antes eran cuatro (clases, cursos, días y
+ * minutos por semana) con el mismo peso; ahora, lo que te queda hoy y la carga de la semana.
+ */
+function datosResumen(horario: HorarioSemanalDTO, quedanHoy: number): DatoResumen[] {
   const r = resumenSemana(horario);
   return [
     {
+      valor: String(quedanHoy),
+      etiqueta: quedanHoy === 1 ? 'clase te queda hoy' : 'clases te quedan hoy',
+    },
+    {
       valor: String(r.clases),
-      etiqueta: r.clases === 1 ? 'clase por semana' : 'clases por semana',
+      etiqueta: `${r.clases === 1 ? 'clase' : 'clases'} esta semana, en ${
+        r.diasConClase === 1 ? '1 día' : `${r.diasConClase} días`
+      }`,
     },
-    {
-      valor: String(r.cursos),
-      etiqueta: r.cursos === 1 ? 'curso matriculado' : 'cursos matriculados',
-    },
-    {
-      valor: String(r.diasConClase),
-      etiqueta: r.diasConClase === 1 ? 'día con clases' : 'días con clases',
-    },
-    { valor: formatearMinutos(r.minutos), etiqueta: 'de clase a la semana' },
   ];
 }
 
@@ -164,17 +163,25 @@ const SemanaDeUnVistazo: React.FC<{ horario: HorarioSemanalDTO; hoy: DiaSemana }
               aria-label={`${ETIQUETA_DIA[d]}${esHoy ? ', hoy' : ''}, ${
                 cantidad === 1 ? '1 clase' : `${cantidad} clases`
               }`}
-              className={`flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-center no-underline transition-all duration-200 hover:-translate-y-0.5 ${
+              className={`flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-center no-underline transition-colors duration-200 ${
                 esHoy
                   ? 'border-saie-primary bg-saie-primary text-white'
-                  : 'border-saie-divider bg-white text-saie-text'
+                  : cantidad === 0
+                    ? 'border-dashed border-saie-divider bg-transparent text-saie-muted'
+                    : 'border-saie-divider bg-white text-saie-text hover:border-saie-primary'
               }`}
             >
               <span aria-hidden="true" className="text-xs font-bold">
                 {ABREVIATURA_DIA[d]}
               </span>
-              <span aria-hidden="true" className="text-xl font-bold leading-none tabular-nums">
-                {cantidad}
+              {/* Un día sin clases no compite con los que sí tienen (Issue 3.38). */}
+              <span
+                aria-hidden="true"
+                className={`leading-none tabular-nums ${
+                  cantidad === 0 ? 'text-base font-medium' : 'text-xl font-bold'
+                }`}
+              >
+                {cantidad === 0 ? '—' : cantidad}
               </span>
             </Link>
           </li>
@@ -184,7 +191,10 @@ const SemanaDeUnVistazo: React.FC<{ horario: HorarioSemanalDTO; hoy: DiaSemana }
   </section>
 );
 
-/** Las clases del día, en una rejilla de tarjetas con su estado. */
+/** Cuántas clases se listan antes de indicar que hay más (el resto está en «Mi horario»). */
+const MAX_CLASES_VISIBLES = 4;
+
+/** Las clases del día, en una lista vertical con su estado (Issue 3.38). */
 const ListaDeClases: React.FC<{
   titulo: string;
   sesiones: SesionDTO[];
@@ -192,6 +202,8 @@ const ListaDeClases: React.FC<{
   /** Minutos desde las 00:00; si es null las clases son de otro día y no llevan estado. */
   ahora: number | null;
 }> = ({ titulo, sesiones, horario, ahora }) => {
+  const visibles = sesiones.slice(0, MAX_CLASES_VISIBLES);
+  const ocultas = sesiones.length - visibles.length;
   const colores = useMemo(
     () => asignarColoresCursos(todasLasSesiones(horario).map((s) => s.codigoCurso)),
     [horario],
@@ -202,25 +214,27 @@ const ListaDeClases: React.FC<{
       <h2 id="titulo-hoy" className="m-0 text-sm font-bold text-saie-text">
         {titulo}
       </h2>
-      <ol className="saie-stagger m-0 grid min-h-0 list-none grid-cols-1 content-start gap-3 p-0 pb-1 md:grid-cols-2 xl:grid-cols-3 lg:overflow-y-auto">
-        {sesiones.map((s) => {
+      <ol className="saie-stagger m-0 flex min-h-0 list-none flex-col gap-2 p-0 pb-1">
+        {visibles.map((s) => {
           const estado = ahora === null ? null : estadoDeClase(s, ahora);
           const color = colores[s.codigoCurso] ?? PALETA_CURSOS[0];
           return (
             <li
               key={`${s.seccionId}-${s.horaInicio}`}
-              className={`flex w-full flex-col gap-1 rounded-xl border border-l-4 border-saie-divider bg-white p-3 shadow-sm ${
+              className={`flex w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-l-4 border-saie-divider bg-white px-3 py-2 shadow-sm ${
                 estado === 'FINALIZADA' ? 'opacity-60' : ''
               }`}
               style={{ borderLeftColor: color.borde }}
             >
-              <span className="text-sm font-bold text-saie-muted">
+              <span className="w-28 shrink-0 text-sm font-bold tabular-nums text-saie-muted">
                 {formatearRango(s.horaInicio, s.horaFin)}
               </span>
-              <span className="text-sm font-bold leading-5">{s.nombreCurso}</span>
-              <span className="text-sm text-saie-muted">{resumenUbicacion(s.espacios)}</span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-sm font-bold leading-5">{s.nombreCurso}</span>
+                <span className="text-sm text-saie-muted">{resumenUbicacion(s.espacios)}</span>
+              </span>
               {estado && (
-                <span className="mt-1 flex flex-col gap-1.5">
+                <span className="flex flex-col gap-1.5">
                   <BadgeEstadoClase estado={estado} />
                   {estado === 'EN_CURSO' && ahora !== null && (
                     <BarraProgresoClase valor={progresoClase(s, ahora)} />
@@ -231,6 +245,11 @@ const ListaDeClases: React.FC<{
           );
         })}
       </ol>
+      {ocultas > 0 && (
+        <Link to={RUTAS.horarioAlumno} className="text-sm font-semibold text-saie-primary">
+          {ocultas === 1 ? 'Hay 1 clase más' : `Hay ${ocultas} clases más`}: ver mi horario
+        </Link>
+      )}
     </section>
   );
 };
@@ -352,12 +371,15 @@ export const InicioEstudiante: React.FC = () => {
     [horario, hoy],
   );
   const destacada = claseDestacada(sesionesHoy, minutos);
-  const proximoDia = useMemo(
-    () => (horario && !destacada ? proximoDiaConClases(horario, hoy) : null),
-    [horario, hoy, destacada],
-  );
+  const proximoDia = horario && !destacada ? proximoDiaConClases(horario, hoy) : null;
   const hayClases = horario ? todasLasSesiones(horario).length > 0 : false;
-  const resumen = horario ? datosResumen(horario) : [];
+  // La clase destacada ya está en la tarjeta guinda: la lista muestra solo las siguientes.
+  const claveDestacada = destacada ? `${destacada.seccionId}-${destacada.horaInicio}` : null;
+  const siguientesHoy = sesionesHoy.filter(
+    (s) => `${s.seccionId}-${s.horaInicio}` !== claveDestacada,
+  );
+  const quedanHoy = sesionesHoy.filter((s) => estadoDeClase(s, minutos) !== 'FINALIZADA').length;
+  const resumen = horario ? datosResumen(horario, quedanHoy) : [];
   const mostrarSemana = Boolean(horario && hayClases);
 
   return (
@@ -401,9 +423,9 @@ export const InicioEstudiante: React.FC = () => {
             />
           </section>
 
-          <div className="grid min-w-0 grid-cols-2 gap-3 lg:col-span-5">
+          <div className="grid min-w-0 grid-cols-2 content-start gap-3 lg:col-span-5">
             {cargandoHorario && !horario ? (
-              [0, 1, 2, 3].map((n) => (
+              [0, 1].map((n) => (
                 <div
                   key={n}
                   aria-hidden="true"
@@ -446,12 +468,18 @@ export const InicioEstudiante: React.FC = () => {
 
             {horario && hayClases ? (
               sesionesHoy.length > 0 ? (
-                <ListaDeClases
-                  titulo="Tu día de hoy"
-                  sesiones={sesionesHoy}
-                  horario={horario}
-                  ahora={minutos}
-                />
+                siguientesHoy.length > 0 ? (
+                  <ListaDeClases
+                    titulo={destacada ? 'El resto de tu día' : 'Tu día de hoy'}
+                    sesiones={siguientesHoy}
+                    horario={horario}
+                    ahora={minutos}
+                  />
+                ) : (
+                  <p className="m-0 rounded-xl border border-dashed border-saie-divider bg-white p-3 text-sm text-saie-muted">
+                    Después de esta, no tienes más clases hoy.
+                  </p>
+                )
               ) : (
                 proximoDia && (
                   <ListaDeClases

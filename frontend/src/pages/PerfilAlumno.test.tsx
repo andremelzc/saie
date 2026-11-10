@@ -111,6 +111,24 @@ describe('PerfilAlumno (Issue 3.17)', () => {
       expect(screen.queryByText('El DNI debe tener 8 dígitos.')).not.toBeInTheDocument();
     });
 
+    it('valida al salir del campo y al guardar resume los errores (Issue 3.41)', () => {
+      const onGuardar = vi.fn();
+      renderizar({ onGuardar });
+      fireEvent.click(screen.getByRole('button', { name: /Editar datos personales/i }));
+
+      const dni = screen.getByLabelText('DNI');
+      fireEvent.change(dni, { target: { value: '12' } });
+      fireEvent.blur(dni);
+      expect(dni).toHaveAttribute('aria-invalid', 'true');
+      expect(dni).toHaveAccessibleDescription(/8 dígitos/);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+      const resumen = screen.getByRole('alert');
+      expect(resumen).toHaveTextContent('Corrige 1 dato para continuar');
+      expect(within(resumen).getByRole('link', { name: 'DNI' })).toBeInTheDocument();
+      expect(dni).toHaveFocus();
+    });
+
     it('cancelar descarta lo escrito y devuelve el foco al botón de editar', () => {
       renderizar();
       fireEvent.click(screen.getByRole('button', { name: /Editar datos personales/i }));

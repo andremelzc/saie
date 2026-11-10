@@ -11,6 +11,7 @@ import { Paginador } from '../../components/ui/Paginador';
 import { FiltrosActivos } from '../../components/ui/FiltrosActivos';
 import type { FiltroActivo } from '../../components/ui/FiltrosActivos';
 import { Boton } from '../../components/ui/Boton';
+import { ResumenErrores } from '../../components/ui/ResumenErrores';
 import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
 import { CLASE_PIE_DRAWER, Drawer } from '../../components/ui/Drawer';
 import { useAvisos } from '../../components/ui/useAvisos';
@@ -197,6 +198,13 @@ const FormularioSeccion: React.FC<{
   const { ejecutar } = useAccion();
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Issue 3.41: error del tipo de espacio y resumen al intentar guardar. */
+  const [errorTipo, setErrorTipo] = useState<string | null>(null);
+  const [resumenVisible, setResumenVisible] = useState(false);
+  const validarTipo = (t: TipoEspacio, software: Record<string, ComparacionVersion>) =>
+    t === 'AULA_TEORICA' && Object.keys(software).length > 0
+      ? 'Un aula teórica no tiene software: elige «Laboratorio» o quita el software marcado.'
+      : null;
 
   const hayCambios =
     tipo !== seccion.tipoEspacioRequerido ||
@@ -226,6 +234,14 @@ const FormularioSeccion: React.FC<{
   const guardar = async (evento: React.FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
     if (guardando) return;
+    const errorEncontrado = validarTipo(tipo, elegidos);
+    setErrorTipo(errorEncontrado);
+    if (errorEncontrado) {
+      setResumenVisible(true);
+      document.getElementById(`tipo-seccion-${seccion.id}`)?.focus();
+      return;
+    }
+    setResumenVisible(false);
     setGuardando(true);
     setError(null);
     const cambios: CambiosSeccion = {
@@ -248,16 +264,34 @@ const FormularioSeccion: React.FC<{
   return (
     <form onSubmit={guardar} noValidate className="flex flex-col gap-5">
       <div className="flex flex-col gap-4">
-        <Campo etiqueta="Tipo de espacio que necesita">
-          <select
-            value={tipo}
-            onChange={(e) => setTipo(e.target.value as TipoEspacio)}
-            className={CLASE_CAMPO}
-          >
-            <option value="AULA_TEORICA">Aula teórica</option>
-            <option value="LABORATORIO">Laboratorio</option>
-          </select>
-        </Campo>
+        <div className="flex flex-col gap-1">
+          <Campo etiqueta="Tipo de espacio que necesita">
+            <select
+              id={`tipo-seccion-${seccion.id}`}
+              value={tipo}
+              onChange={(e) => {
+                const nuevo = e.target.value as TipoEspacio;
+                setTipo(nuevo);
+                if (errorTipo) setErrorTipo(validarTipo(nuevo, elegidos));
+              }}
+              onBlur={() => setErrorTipo(validarTipo(tipo, elegidos))}
+              aria-invalid={errorTipo ? true : undefined}
+              aria-describedby={errorTipo ? `tipo-seccion-${seccion.id}-error` : undefined}
+              className={CLASE_CAMPO}
+            >
+              <option value="AULA_TEORICA">Aula teórica</option>
+              <option value="LABORATORIO">Laboratorio</option>
+            </select>
+          </Campo>
+          {errorTipo && (
+            <p
+              id={`tipo-seccion-${seccion.id}-error`}
+              className="m-0 text-sm font-medium text-saie-danger"
+            >
+              {errorTipo}
+            </p>
+          )}
+        </div>
 
         <Campo etiqueta="Docente">
           <select
@@ -337,6 +371,17 @@ const FormularioSeccion: React.FC<{
         </ul>
       </fieldset>
 
+      {resumenVisible && errorTipo && (
+        <ResumenErrores
+          errores={[
+            {
+              idCampo: `tipo-seccion-${seccion.id}`,
+              etiqueta: 'Tipo de espacio que necesita',
+              mensaje: errorTipo,
+            },
+          ]}
+        />
+      )}
       {error && <Aviso tono="error">{error}</Aviso>}
 
       <div className={`${CLASE_PIE_DRAWER} flex flex-wrap items-center gap-3`}>

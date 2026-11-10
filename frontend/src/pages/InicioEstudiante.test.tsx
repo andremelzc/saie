@@ -169,14 +169,16 @@ describe('InicioEstudiante', () => {
   });
 
   describe('con clases hoy (lunes)', () => {
-    it('clase en curso: la destaca, la lista en «Tu día de hoy» y marca hoy en la semana', async () => {
+    it('clase en curso: la destaca una sola vez y marca hoy en la semana (Issue 3.38)', async () => {
       vi.setSystemTime(lunesA(10));
       responder(horarioCon({ [LUNES]: [sesion('MAT101', 'Matemática I', '09:00', '11:00')] }));
       montar();
 
       expect(await screen.findByText('Clase en curso')).toBeVisible();
       expect(screen.getByRole('region', { name: 'Tu próxima clase' })).toBeVisible();
-      expect(screen.getByRole('heading', { name: 'Tu día de hoy' })).toBeVisible();
+      // La clase destacada no se repite en la lista del día.
+      expect(screen.getAllByText('Matemática I')).toHaveLength(1);
+      expect(screen.getByText('Después de esta, no tienes más clases hoy.')).toBeVisible();
       expect(screen.getByText('Tu semana de un vistazo')).toBeVisible();
       expect(
         screen.getByRole('link', { name: `${ETIQUETA_DIA[LUNES]}, hoy, 1 clase` }),
@@ -194,14 +196,14 @@ describe('InicioEstudiante', () => {
       expect(screen.queryByText('Clase en curso')).toBeNull();
     });
 
-    it('resumen en singular con una clase, un curso y un día', async () => {
+    it('resumen en singular: solo las cifras que mueven una decisión (Issue 3.38)', async () => {
+      vi.setSystemTime(lunesA(8));
       responder(horarioCon({ [LUNES]: [sesion('MAT101', 'Matemática I', '09:00', '11:00')] }));
       montar();
 
-      expect(await screen.findByText('clase por semana')).toBeVisible();
-      expect(screen.getByText('curso matriculado')).toBeVisible();
-      expect(screen.getByText('día con clases')).toBeVisible();
-      expect(screen.getByText('de clase a la semana')).toBeVisible();
+      expect(await screen.findByText('clase te queda hoy')).toBeVisible();
+      expect(screen.getByText('clase esta semana, en 1 día')).toBeVisible();
+      expect(screen.queryByText('de clase a la semana')).toBeNull();
     });
 
     it('resumen en plural con varios cursos y días', async () => {
@@ -213,9 +215,7 @@ describe('InicioEstudiante', () => {
       );
       montar();
 
-      expect(await screen.findByText('clases por semana')).toBeVisible();
-      expect(screen.getByText('cursos matriculados')).toBeVisible();
-      expect(screen.getByText('días con clases')).toBeVisible();
+      expect(await screen.findByText('clases esta semana, en 2 días')).toBeVisible();
     });
 
     it('con varias clases en el día cuenta «N clases» en la tira semanal', async () => {
@@ -232,6 +232,24 @@ describe('InicioEstudiante', () => {
       expect(
         await screen.findByRole('link', { name: `${ETIQUETA_DIA[LUNES]}, hoy, 2 clases` }),
       ).toBeVisible();
+    });
+
+    it('con muchas clases indica cuántas más hay y enlaza al horario (Issue 3.38)', async () => {
+      vi.setSystemTime(lunesA(7));
+      responder(
+        horarioCon({
+          [LUNES]: ['08', '09', '10', '11', '12', '13'].map((h, i) =>
+            sesion(`C${i}`, `Curso ${i}`, `${h}:00`, `${h}:50`),
+          ),
+        }),
+      );
+      montar();
+
+      expect(await screen.findByRole('heading', { name: 'El resto de tu día' })).toBeVisible();
+      expect(screen.getByRole('link', { name: /Hay 1 clase más/ })).toHaveAttribute(
+        'href',
+        '/estudiante/horario',
+      );
     });
 
     it('al pasar el minuto actualiza la hora y la clase pasa a «en curso»', async () => {

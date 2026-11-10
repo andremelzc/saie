@@ -38,7 +38,7 @@ describe('LoginAdmin (Issue #217 / 4.25)', () => {
     expect(screen.getByRole('heading', { name: /Panel Administrativo/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/Usuario/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^Contraseña/i, { selector: 'input' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Iniciar sesión/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Iniciar sesión/i })).toBeEnabled();
 
     expect(screen.queryByText(/crear cuenta/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/registrarse/i)).not.toBeInTheDocument();
