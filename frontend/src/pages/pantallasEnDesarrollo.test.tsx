@@ -58,7 +58,8 @@ describe('ProximamenteAdminPage', () => {
     expect(screen.getByRole('heading', { name: 'Hoja de ruta' })).toBeVisible();
     expect(screen.getByRole('status')).toHaveTextContent(MENSAJE_EN_DESARROLLO);
     expect(screen.getByText(PREVISION_EN_DESARROLLO)).toBeVisible();
-    expect(screen.getByText('Mapa de ocupación por piso')).toBeVisible();
+    // El mapa de ocupación ya funciona con datos reales (Issue 4.14): sale de la hoja de ruta.
+    expect(screen.queryByText('Mapa de ocupación por piso')).toBeNull();
     expect(screen.getByText('Alta de alumnos y docentes')).toBeVisible();
     expect(screen.queryByText('Revisión de incidencias')).toBeNull();
     expect(screen.queryByRole('link', { name: /Mapa de ocupación por piso/ })).toBeNull();
