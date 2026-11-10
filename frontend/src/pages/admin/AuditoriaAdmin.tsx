@@ -264,6 +264,7 @@ const VistaHistorial: React.FC<PropsVista & { onAbrir: (a: HistorialAsignacionDT
     cargando: cargandoDatos,
     error,
     recargar,
+    deOtraConsulta,
   } = useCarga(cargar, {
     clave: `historial:${periodo}|${estado}|${seccionId ?? ''}|${pagina}|${tamano}`,
     // Se espera a saber cuál es el vigente para no pedir el historial dos veces.
@@ -338,7 +339,7 @@ const VistaHistorial: React.FC<PropsVista & { onAbrir: (a: HistorialAsignacionDT
           Cambia de página para ver las demás.
         </Aviso>
       )}
-      <ZonaActualizable actualizando={cargando && datos !== null}>
+      <ZonaActualizable actualizando={cargando && datos !== null} inerte={deOtraConsulta}>
         {cargando && !datos ? (
           <EsqueletoCarga texto="Cargando historial…" forma="tabla" />
         ) : items.length === 0 ? (
@@ -437,7 +438,7 @@ const VistaAuditoria: React.FC<PropsVista & { espacios: EspaciosPorId }> = ({
     [tipo, desde, hasta, pagina, tamano],
   );
 
-  const { datos, cargando, error, recargar } = useCarga(cargar, {
+  const { datos, cargando, error, recargar, deOtraConsulta } = useCarga(cargar, {
     clave: `auditoria:${tipo}|${desde ?? ''}|${hasta ?? ''}|${pagina}|${tamano}`,
   });
   useRecargarAl(version, recargar);
@@ -492,7 +493,7 @@ const VistaAuditoria: React.FC<PropsVista & { espacios: EspaciosPorId }> = ({
           Cambia de página para ver los demás.
         </Aviso>
       )}
-      <ZonaActualizable actualizando={cargando && datos !== null}>
+      <ZonaActualizable actualizando={cargando && datos !== null} inerte={deOtraConsulta}>
         {cargando && !datos ? (
           <EsqueletoCarga texto="Cargando auditoría…" forma="tabla" />
         ) : items.length === 0 ? (

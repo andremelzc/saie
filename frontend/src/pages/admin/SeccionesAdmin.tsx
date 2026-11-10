@@ -446,6 +446,7 @@ export const SeccionesAdmin: React.FC = () => {
     cargando: cargandoDatos,
     error,
     recargar,
+    deOtraConsulta,
   } = useCarga(cargar, {
     clave: `secciones:${textoDiferido.trim()}|${tipo}|${periodo}|${pagina}|${tamanoPagina}`,
     // Se espera a saber cuál es el vigente para no pedir el listado dos veces.
@@ -660,7 +661,7 @@ export const SeccionesAdmin: React.FC = () => {
           </Boton>
         </Aviso>
       )}
-      <ZonaActualizable actualizando={cargando && datos !== null}>
+      <ZonaActualizable actualizando={cargando && datos !== null} inerte={deOtraConsulta}>
         {cargando && !datos ? <EsqueletoCarga texto="Cargando secciones…" forma="tabla" /> : lista}
       </ZonaActualizable>
 

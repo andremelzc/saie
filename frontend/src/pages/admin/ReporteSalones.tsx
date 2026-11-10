@@ -43,6 +43,7 @@ export const ReporteSalones: React.FC = () => {
     cargando: cargandoDatos,
     error,
     recargar,
+    deOtraConsulta,
   } = useCarga(cargar, {
     clave: `reporte:${periodo}`,
     // Se espera a saber cuál es el vigente para no pedir el informe dos veces.
@@ -71,7 +72,11 @@ export const ReporteSalones: React.FC = () => {
           >
             Actualizar datos
           </Boton>
-          <Boton variante="primario" onClick={imprimir} disabled={!datos || sinSecciones}>
+          <Boton
+            variante="primario"
+            onClick={imprimir}
+            disabled={!datos || sinSecciones || (cargando && deOtraConsulta)}
+          >
             Imprimir o guardar como PDF
           </Boton>
         </div>
@@ -101,8 +106,8 @@ export const ReporteSalones: React.FC = () => {
           </div>
         )}
 
-        <ZonaActualizable actualizando={cargando && datos !== null}>
-          {cargando && !datos ? (
+        <ZonaActualizable actualizando={cargando && datos !== null && !deOtraConsulta}>
+          {cargando && (!datos || deOtraConsulta) ? (
             <EsqueletoCarga texto="Preparando el informe…" forma="tabla" />
           ) : sinSecciones ? (
             <EstadoVacio

@@ -366,6 +366,12 @@ const InicioJefatura: React.FC = () => {
                 trazo={ICONOS.ajustes}
               />
               <Acceso
+                to={RUTAS.softwareAdmin}
+                titulo="Catálogo de software"
+                descripcion="Consulta qué software pueden tener los laboratorios."
+                trazo={ICONOS.libro}
+              />
+              <Acceso
                 to={RUTAS.clavesAdmin}
                 titulo="Cambiar mi clave"
                 descripcion="Actualiza la clave de acceso a tu cuenta."

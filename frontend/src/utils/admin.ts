@@ -101,7 +101,12 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
       { to: RUTAS.incidenciasAdmin, etiqueta: 'Incidencias', trazo: T_AUDITORIA },
       { to: RUTAS.laboratoriosAdmin, etiqueta: 'Laboratorios', trazo: T_LAB },
       // El reporte de cambios también sale de cada tarjeta de «Laboratorios».
-      { to: RUTAS.cambioLaboratorio, etiqueta: 'Cambio', trazo: T_CARGA, secundaria: true },
+      {
+        to: RUTAS.cambioLaboratorio,
+        etiqueta: 'Cambio de laboratorio',
+        trazo: ICONOS.ajustes,
+        secundaria: true,
+      },
     ];
   }
   return [

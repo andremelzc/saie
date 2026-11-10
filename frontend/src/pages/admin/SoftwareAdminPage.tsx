@@ -256,7 +256,7 @@ export const SoftwareAdminPage: React.FC = () => {
       }),
     [textoDiferido, categoria, estado, pagina, tamano],
   );
-  const { datos, cargando, error, recargar } = useCarga(cargar, {
+  const { datos, cargando, error, recargar, deOtraConsulta } = useCarga(cargar, {
     clave: `${CLAVE_CATALOGO}:${textoDiferido}|${categoria}|${estado}|${pagina}|${tamano}`,
   });
   const items = datos?.items ?? [];
@@ -402,7 +402,9 @@ export const SoftwareAdminPage: React.FC = () => {
       </section>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      <ZonaActualizable actualizando={cargando && datos !== null}>{contenido()}</ZonaActualizable>
+      <ZonaActualizable actualizando={cargando && datos !== null} inerte={deOtraConsulta}>
+        {contenido()}
+      </ZonaActualizable>
 
       <Drawer
         abierto={editando !== null}
