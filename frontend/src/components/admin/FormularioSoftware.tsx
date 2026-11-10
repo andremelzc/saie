@@ -90,7 +90,7 @@ export const FormularioSoftware: React.FC<FormularioSoftwareProps> = ({
   };
   const alSalir = (clave: Clave) => setErrores((e) => ({ ...e, [clave]: errorDe(clave, valores) }));
 
-  const guardar = async (evento: React.FormEvent<HTMLFormElement>) => {
+  const guardar = async (evento: { preventDefault: () => void }) => {
     evento.preventDefault();
     if (cargando) return;
     const encontrados = Object.fromEntries(CLAVES.map((c) => [c, errorDe(c, valores)])) as Partial<

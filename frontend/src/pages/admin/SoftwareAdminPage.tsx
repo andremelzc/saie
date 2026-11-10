@@ -58,6 +58,177 @@ const Acciones: React.FC<{
   </div>
 );
 
+/** Chips de los filtros que no están en su valor por defecto (Issue 4.40). */
+function chipsDeFiltros(
+  f: { texto: string; categoria: 'TODAS' | CategoriaSoftware; estado: FiltroEstado },
+  quitar: { quitarTexto: () => void; quitarCategoria: () => void; quitarEstado: () => void },
+): FiltroActivo[] {
+  const chips: FiltroActivo[] = [];
+  if (f.texto.trim()) {
+    chips.push({
+      id: 'q',
+      etiqueta: 'Nombre',
+      valor: f.texto.trim(),
+      onQuitar: quitar.quitarTexto,
+    });
+  }
+  if (f.categoria !== 'TODAS') {
+    chips.push({
+      id: 'categoria',
+      etiqueta: 'Categoría',
+      valor: etiquetaCategoria(f.categoria),
+      onQuitar: quitar.quitarCategoria,
+    });
+  }
+  if (f.estado !== 'ACTIVOS') {
+    const opcion = OPCIONES_ESTADO.find((o) => o.valor === f.estado);
+    chips.push({
+      id: 'estado',
+      etiqueta: 'Estado',
+      valor: opcion?.etiqueta ?? '',
+      onQuitar: quitar.quitarEstado,
+    });
+  }
+  return chips;
+}
+
+/** Filtro de estado → parámetro `activo` del backend (`undefined` = todos). */
+function activoDeFiltro(estado: FiltroEstado): boolean | undefined {
+  if (estado === 'TODOS') return undefined;
+  return estado === 'ACTIVOS';
+}
+
+/** Título del vacío: sin filtros es el catálogo vacío; con filtros, sin coincidencias. */
+const VacioCatalogo: React.FC<{
+  conFiltros: boolean;
+  puedeEditar: boolean;
+  onLimpiar: () => void;
+  onAgregar: () => void;
+}> = ({ conFiltros, puedeEditar, onLimpiar, onAgregar }) => {
+  if (conFiltros) {
+    return (
+      <EstadoVacio
+        titulo="Sin coincidencias"
+        icono={ICONOS.monitor}
+        descripcion="Ningún software coincide con los filtros."
+        accion={
+          <Boton variante="secundario" tamano="sm" onClick={onLimpiar}>
+            Limpiar filtros
+          </Boton>
+        }
+      />
+    );
+  }
+  return (
+    <EstadoVacio
+      titulo="El catálogo está vacío"
+      icono={ICONOS.monitor}
+      descripcion="Agrega el software que se instala en los laboratorios."
+      accion={
+        puedeEditar ? (
+          <Boton variante="secundario" tamano="sm" onClick={onAgregar}>
+            Agregar software
+          </Boton>
+        ) : undefined
+      }
+    />
+  );
+};
+
+/** Textos de la confirmación de baja o reactivación (la baja avisa del uso, Spec 08 §2.4). */
+function textosCambioEstado(s: SoftwareCatalogoDTO) {
+  const nombre = nombreSoftware(s);
+  if (s.activo) {
+    return {
+      titulo: `¿Dar de baja ${nombre}?`,
+      descripcion: (
+        <>
+          Lo usan <strong>{textoUso(s.uso).toLowerCase()}</strong>. Seguirá registrado donde ya
+          está, pero no se podrá elegir en laboratorios ni secciones nuevos.
+        </>
+      ),
+      confirmar: 'Sí, dar de baja',
+      exito: `${nombre} quedó dado de baja.`,
+      variante: 'peligro' as const,
+    };
+  }
+  return {
+    titulo: `¿Reactivar ${nombre}?`,
+    descripcion: 'Se podrá volver a elegir en laboratorios y secciones.',
+    confirmar: 'Sí, reactivar',
+    exito: `${nombre} está activo otra vez.`,
+    variante: 'primario' as const,
+  };
+}
+
+/** Tabla (desde `lg`) y tarjetas (por debajo) del catálogo. */
+const ListaCatalogo: React.FC<{
+  items: SoftwareCatalogoDTO[];
+  puedeEditar: boolean;
+  onEditar: (s: SoftwareCatalogoDTO) => void;
+  onEstado: (s: SoftwareCatalogoDTO) => void;
+}> = ({ items, puedeEditar, onEditar, onEstado }) => (
+  <>
+    <div className="hidden lg:block">
+      <TablaDatos etiqueta="Software del catálogo">
+        <CabeceraTabla
+          columnas={[
+            'Software',
+            'Categoría',
+            'Licencia',
+            'En uso',
+            'Estado',
+            ...(puedeEditar ? ['Acciones'] : []),
+          ]}
+        />
+        <tbody>
+          {items.map((s) => (
+            <tr key={s.id} className="border-t border-saie-divider align-top">
+              <td className="px-4 py-3">
+                <span className="block font-semibold">{nombreSoftware(s)}</span>
+                {s.fabricante && (
+                  <span className="block text-sm text-saie-muted">{s.fabricante}</span>
+                )}
+              </td>
+              <td className="px-4 py-3 text-sm">{etiquetaCategoria(s.categoria)}</td>
+              <td className="px-4 py-3 text-sm">{etiquetaLicencia(s.tipoLicencia)}</td>
+              <td className="px-4 py-3 text-sm">{textoUso(s.uso)}</td>
+              <td className="px-4 py-3">
+                <InsigniaEstado activo={s.activo} />
+              </td>
+              {puedeEditar && (
+                <td className="px-4 py-3">
+                  <Acciones s={s} onEditar={onEditar} onEstado={onEstado} />
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </TablaDatos>
+    </div>
+    <ul className="m-0 flex list-none flex-col gap-2 p-0 lg:hidden">
+      {items.map((s) => (
+        <li
+          key={s.id}
+          className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-4"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="m-0 font-semibold">{nombreSoftware(s)}</p>
+              <p className="m-0 text-sm text-saie-muted">
+                {etiquetaCategoria(s.categoria)} · {etiquetaLicencia(s.tipoLicencia)}
+              </p>
+            </div>
+            <InsigniaEstado activo={s.activo} />
+          </div>
+          <p className="m-0 text-sm">En uso: {textoUso(s.uso)}</p>
+          {puedeEditar && <Acciones s={s} onEditar={onEditar} onEstado={onEstado} />}
+        </li>
+      ))}
+    </ul>
+  </>
+);
+
 /**
  * Issue 4.30 — catálogo de software. Lista filtrable por nombre, categoría y estado, con
  * cuántos laboratorios y secciones usan cada software. Coordinación da de alta, edita y da de
@@ -83,7 +254,7 @@ export const SoftwareAdminPage: React.FC = () => {
       listarCatalogo({
         q: textoDiferido || undefined,
         categoria: categoria === 'TODAS' ? undefined : categoria,
-        activo: estado === 'TODOS' ? undefined : estado === 'ACTIVOS',
+        activo: activoDeFiltro(estado),
         page: pagina,
         limit: tamano,
       }),
@@ -111,49 +282,63 @@ export const SoftwareAdminPage: React.FC = () => {
     setEstado('ACTIVOS');
     setPagina(1);
   };
-  const chips: FiltroActivo[] = [
-    ...(texto.trim()
-      ? [
-          {
-            id: 'q',
-            etiqueta: 'Nombre',
-            valor: texto.trim(),
-            onQuitar: () => filtrar(setTexto)(''),
-          },
-        ]
-      : []),
-    ...(categoria !== 'TODAS'
-      ? [
-          {
-            id: 'categoria',
-            etiqueta: 'Categoría',
-            valor: etiquetaCategoria(categoria),
-            onQuitar: () => filtrar(setCategoria)('TODAS'),
-          },
-        ]
-      : []),
-    ...(estado !== 'ACTIVOS'
-      ? [
-          {
-            id: 'estado',
-            etiqueta: 'Estado',
-            valor: OPCIONES_ESTADO.find((o) => o.valor === estado)!.etiqueta,
-            onQuitar: () => filtrar(setEstado)('ACTIVOS'),
-          },
-        ]
-      : []),
-  ];
+  const chips = chipsDeFiltros(
+    { texto, categoria, estado },
+    {
+      quitarTexto: () => filtrar(setTexto)(''),
+      quitarCategoria: () => filtrar(setCategoria)('TODAS'),
+      quitarEstado: () => filtrar(setEstado)('ACTIVOS'),
+    },
+  );
+
+  const textosEstado = cambiandoEstado ? textosCambioEstado(cambiandoEstado) : null;
+  const esNuevo = editando === 'nuevo';
+  const softwareEditado = editando === null || esNuevo ? null : editando;
+
+  const contenido = () => {
+    if (cargando && !datos) {
+      return <EsqueletoCarga texto="Cargando el catálogo…" forma="tabla" />;
+    }
+    if (items.length === 0) {
+      return (
+        <VacioCatalogo
+          conFiltros={chips.length > 0}
+          puedeEditar={puedeEditar}
+          onLimpiar={limpiar}
+          onAgregar={() => setEditando('nuevo')}
+        />
+      );
+    }
+    return (
+      <div className="flex flex-col gap-3">
+        <ListaCatalogo
+          items={items}
+          puedeEditar={puedeEditar}
+          onEditar={setEditando}
+          onEstado={setCambiandoEstado}
+        />
+        <Paginador
+          pagina={pagina}
+          tamano={tamano}
+          total={datos?.total ?? 0}
+          onCambiarPagina={setPagina}
+          onCambiarTamano={(t) => {
+            setTamano(t);
+            setPagina(1);
+          }}
+          opcionesTamano={[25, 50, 100]}
+          nombreRegistros="programas"
+        />
+      </div>
+    );
+  };
 
   const confirmarEstado = async () => {
     if (!cambiandoEstado) return;
     const s = cambiandoEstado;
     const resultado = await accionEstado.ejecutar(
       () => cambiarEstadoSoftwareCatalogo(s.id, !s.activo),
-      {
-        exito: s.activo
-          ? `${nombreSoftware(s)} quedó dado de baja.`
-          : `${nombreSoftware(s)} está activo otra vez.`,
-      },
+      { exito: textosCambioEstado(s).exito },
     );
     setCambiandoEstado(null);
     if (resultado?.ok) refrescar();
@@ -225,106 +410,7 @@ export const SoftwareAdminPage: React.FC = () => {
       </section>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      <ZonaActualizable actualizando={cargando && datos !== null}>
-        {cargando && !datos ? (
-          <EsqueletoCarga texto="Cargando el catálogo…" forma="tabla" />
-        ) : items.length === 0 ? (
-          <EstadoVacio
-            titulo={chips.length > 0 ? 'Sin coincidencias' : 'El catálogo está vacío'}
-            icono={ICONOS.monitor}
-            descripcion={
-              chips.length > 0
-                ? 'Ningún software coincide con los filtros.'
-                : 'Agrega el software que se instala en los laboratorios.'
-            }
-            accion={
-              chips.length > 0 ? (
-                <Boton variante="secundario" tamano="sm" onClick={limpiar}>
-                  Limpiar filtros
-                </Boton>
-              ) : puedeEditar ? (
-                <Boton variante="secundario" tamano="sm" onClick={() => setEditando('nuevo')}>
-                  Agregar software
-                </Boton>
-              ) : undefined
-            }
-          />
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="hidden lg:block">
-              <TablaDatos etiqueta="Software del catálogo">
-                <CabeceraTabla
-                  columnas={[
-                    'Software',
-                    'Categoría',
-                    'Licencia',
-                    'En uso',
-                    'Estado',
-                    ...(puedeEditar ? ['Acciones'] : []),
-                  ]}
-                />
-                <tbody>
-                  {items.map((s) => (
-                    <tr key={s.id} className="border-t border-saie-divider align-top">
-                      <td className="px-4 py-3">
-                        <span className="block font-semibold">{nombreSoftware(s)}</span>
-                        {s.fabricante && (
-                          <span className="block text-sm text-saie-muted">{s.fabricante}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm">{etiquetaCategoria(s.categoria)}</td>
-                      <td className="px-4 py-3 text-sm">{etiquetaLicencia(s.tipoLicencia)}</td>
-                      <td className="px-4 py-3 text-sm">{textoUso(s.uso)}</td>
-                      <td className="px-4 py-3">
-                        <InsigniaEstado activo={s.activo} />
-                      </td>
-                      {puedeEditar && (
-                        <td className="px-4 py-3">
-                          <Acciones s={s} onEditar={setEditando} onEstado={setCambiandoEstado} />
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </TablaDatos>
-            </div>
-            <ul className="m-0 flex list-none flex-col gap-2 p-0 lg:hidden">
-              {items.map((s) => (
-                <li
-                  key={s.id}
-                  className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="m-0 font-semibold">{nombreSoftware(s)}</p>
-                      <p className="m-0 text-sm text-saie-muted">
-                        {etiquetaCategoria(s.categoria)} · {etiquetaLicencia(s.tipoLicencia)}
-                      </p>
-                    </div>
-                    <InsigniaEstado activo={s.activo} />
-                  </div>
-                  <p className="m-0 text-sm">En uso: {textoUso(s.uso)}</p>
-                  {puedeEditar && (
-                    <Acciones s={s} onEditar={setEditando} onEstado={setCambiandoEstado} />
-                  )}
-                </li>
-              ))}
-            </ul>
-            <Paginador
-              pagina={pagina}
-              tamano={tamano}
-              total={datos?.total ?? 0}
-              onCambiarPagina={setPagina}
-              onCambiarTamano={(t) => {
-                setTamano(t);
-                setPagina(1);
-              }}
-              opcionesTamano={[25, 50, 100]}
-              nombreRegistros="programas"
-            />
-          </div>
-        )}
-      </ZonaActualizable>
+      <ZonaActualizable actualizando={cargando && datos !== null}>{contenido()}</ZonaActualizable>
 
       <Drawer
         abierto={editando !== null}
@@ -332,13 +418,13 @@ export const SoftwareAdminPage: React.FC = () => {
           setEditando(null);
           setHayCambios(false);
         }}
-        titulo={editando === 'nuevo' ? 'Agregar software' : 'Editar software'}
-        subtitulo={editando && editando !== 'nuevo' ? nombreSoftware(editando) : undefined}
+        titulo={esNuevo ? 'Agregar software' : 'Editar software'}
+        subtitulo={softwareEditado ? nombreSoftware(softwareEditado) : undefined}
         hayCambios={hayCambios}
       >
         {editando !== null && (
           <FormularioSoftware
-            software={editando === 'nuevo' ? null : editando}
+            software={softwareEditado}
             onCambiosPendientes={setHayCambios}
             onCancelar={() => {
               setEditando(null);
@@ -354,24 +440,11 @@ export const SoftwareAdminPage: React.FC = () => {
       </Drawer>
 
       <DialogoConfirmacion
-        abierto={cambiandoEstado !== null}
-        titulo={
-          cambiandoEstado?.activo
-            ? `¿Dar de baja ${cambiandoEstado ? nombreSoftware(cambiandoEstado) : ''}?`
-            : `¿Reactivar ${cambiandoEstado ? nombreSoftware(cambiandoEstado) : ''}?`
-        }
-        descripcion={
-          cambiandoEstado?.activo ? (
-            <>
-              Lo usan <strong>{textoUso(cambiandoEstado.uso).toLowerCase()}</strong>. Seguirá
-              registrado donde ya está, pero no se podrá elegir en laboratorios ni secciones nuevos.
-            </>
-          ) : (
-            'Se podrá volver a elegir en laboratorios y secciones.'
-          )
-        }
-        textoConfirmar={cambiandoEstado?.activo ? 'Sí, dar de baja' : 'Sí, reactivar'}
-        variante={cambiandoEstado?.activo ? 'peligro' : 'primario'}
+        abierto={textosEstado !== null}
+        titulo={textosEstado?.titulo ?? ''}
+        descripcion={textosEstado?.descripcion ?? ''}
+        textoConfirmar={textosEstado?.confirmar ?? ''}
+        variante={textosEstado?.variante}
         cargando={accionEstado.cargando}
         textoCargando="Guardando…"
         onConfirmar={confirmarEstado}

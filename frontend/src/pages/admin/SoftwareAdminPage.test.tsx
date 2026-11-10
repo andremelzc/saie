@@ -7,6 +7,7 @@ import { vaciarCacheCarga } from '../../hooks/useCarga';
 import {
   cambiarEstadoSoftwareCatalogo,
   crearSoftwareCatalogo,
+  editarSoftwareCatalogo,
   listarCatalogo,
 } from '../../services/catalogoSoftware';
 import type { SoftwareCatalogoDTO } from '../../types/catalogoSoftware';
@@ -27,6 +28,7 @@ vi.mock('../../services/catalogoSoftware', () => ({
 const listar = vi.mocked(listarCatalogo);
 const crear = vi.mocked(crearSoftwareCatalogo);
 const cambiarEstado = vi.mocked(cambiarEstadoSoftwareCatalogo);
+const editar = vi.mocked(editarSoftwareCatalogo);
 
 const sw = (o: Partial<SoftwareCatalogoDTO> = {}): SoftwareCatalogoDTO => ({
   id: 'sw1',
@@ -121,6 +123,107 @@ describe('Catálogo de software (Issue 4.30)', () => {
     fireEvent.click((await screen.findAllByRole('button', { name: /Editar Python 3.12/ }))[0]);
     const panel = await screen.findByRole('dialog', { name: /Editar software/ });
     expect(within(panel).getByLabelText('Versión')).toBeDisabled();
+  });
+
+  it('edita los datos y envía el fabricante vacío como null', async () => {
+    editar.mockResolvedValue(sw({ nombre: 'Python 3' }));
+    montar();
+    fireEvent.click((await screen.findAllByRole('button', { name: /Editar Python 3.12/ }))[0]);
+    const panel = await screen.findByRole('dialog', { name: /Editar software/ });
+
+    fireEvent.change(within(panel).getByLabelText(/^Fabricante/), { target: { value: '' } });
+    fireEvent.change(within(panel).getByLabelText(/^Descripción/), {
+      target: { value: 'Intérprete' },
+    });
+    fireEvent.change(within(panel).getByLabelText(/^Licencia/), {
+      target: { value: 'EDUCATIVA' },
+    });
+    fireEvent.click(within(panel).getByRole('button', { name: 'Guardar cambios' }));
+
+    await waitFor(() =>
+      expect(editar).toHaveBeenCalledWith('sw1', {
+        nombre: 'Python',
+        categoria: 'LENGUAJE',
+        tipoLicencia: 'EDUCATIVA',
+        fabricante: null,
+        descripcion: 'Intérprete',
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('valida al salir del campo y muestra el error del servidor (409) sin cerrar', async () => {
+    crear.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 409, data: { success: false, message: 'Ese software ya existe' } },
+    });
+    montar();
+    fireEvent.click(await screen.findByRole('button', { name: 'Agregar software' }));
+    const panel = await screen.findByRole('dialog', { name: 'Agregar software' });
+
+    const nombre = within(panel).getByLabelText(/^Nombre/);
+    fireEvent.blur(nombre);
+    expect(nombre).toHaveAttribute('aria-invalid', 'true');
+    fireEvent.change(nombre, { target: { value: 'Python' } });
+    expect(nombre).not.toHaveAttribute('aria-invalid');
+
+    fireEvent.change(within(panel).getByLabelText(/^Versión/), { target: { value: '3.12' } });
+    fireEvent.change(within(panel).getByLabelText(/^Categoría/), { target: { value: 'LENGUAJE' } });
+    fireEvent.change(within(panel).getByLabelText(/^Fabricante/), { target: { value: 'PSF' } });
+    fireEvent.change(within(panel).getByLabelText(/^Descripción/), {
+      target: { value: 'Lenguaje' },
+    });
+    fireEvent.click(within(panel).getByRole('button', { name: 'Agregar al catálogo' }));
+
+    expect(await within(panel).findByText(/ya existe/)).toBeInTheDocument();
+    expect(crear).toHaveBeenCalledWith({
+      nombre: 'Python',
+      version: '3.12',
+      categoria: 'LENGUAJE',
+      tipoLicencia: 'LIBRE',
+      fabricante: 'PSF',
+      descripcion: 'Lenguaje',
+    });
+    fireEvent.click(within(panel).getByRole('button', { name: 'Cancelar' }));
+  });
+
+  it('reactiva un software dado de baja', async () => {
+    listar.mockResolvedValue({ items: [sw({ activo: false })], total: 1, page: 1, limit: 50 });
+    cambiarEstado.mockResolvedValue(sw());
+    montar();
+    fireEvent.click((await screen.findAllByRole('button', { name: /Reactivar Python 3.12/ }))[0]);
+    const dialogo = screen.getByRole('alertdialog');
+    expect(dialogo).toHaveTextContent('Se podrá volver a elegir');
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Sí, reactivar' }));
+    await waitFor(() => expect(cambiarEstado).toHaveBeenCalledWith('sw1', true));
+  });
+
+  it('muestra los chips de filtros, el vacío sin coincidencias y los limpia', async () => {
+    montar();
+    await screen.findAllByText('Python 3.12');
+    listar.mockResolvedValue({ items: [], total: 0, page: 1, limit: 50 });
+    fireEvent.change(screen.getByLabelText('Buscar por nombre'), { target: { value: 'zzz' } });
+    fireEvent.change(screen.getByLabelText('Estado'), { target: { value: 'TODOS' } });
+    fireEvent.change(screen.getByLabelText('Categoría'), { target: { value: 'REDES' } });
+
+    expect(await screen.findByText('Sin coincidencias')).toBeInTheDocument();
+    expect(listar).toHaveBeenLastCalledWith(
+      expect.objectContaining({ activo: undefined, categoria: 'REDES' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Quitar filtro Estado/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Quitar filtro Categoría/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Quitar filtro Nombre/ }));
+    await waitFor(() =>
+      expect(screen.queryByRole('group', { name: 'Filtros activos' })).toBeNull(),
+    );
+  });
+
+  it('con el catálogo vacío invita a agregar software', async () => {
+    listar.mockResolvedValue({ items: [], total: 0, page: 1, limit: 50 });
+    montar();
+    expect(await screen.findByText('El catálogo está vacío')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Agregar software' })[1]);
+    expect(await screen.findByRole('dialog', { name: 'Agregar software' })).toBeInTheDocument();
   });
 
   it('Jefatura consulta el catálogo sin controles de alta, edición ni baja', async () => {
