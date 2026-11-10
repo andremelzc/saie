@@ -100,13 +100,15 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
     });
   });
 
-  describe('portal docente y revisión de incidencias (Issues 7.8 a 7.12)', () => {
+  describe('portal docente, incidencias y laboratorios (Issues 7.8 a 7.12 y 4.16)', () => {
     it.each([
       ['DOCENTE', '/docente', 'Portal del docente'],
       ['DOCENTE', '/docente/horario', 'Mi horario y asignaciones'],
       ['DOCENTE', '/docente/espacios', 'Explorar espacios y equipos'],
       ['DOCENTE', '/docente/incidencias', 'Reportar una incidencia'],
       ['JEFATURA_LABORATORIOS', '/admin/incidencias', 'Revisión de incidencias'],
+      ['COORDINACION_ACADEMICA', '/admin/laboratorios', 'Laboratorios y equipos'],
+      ['JEFATURA_LABORATORIOS', '/admin/laboratorios', 'Laboratorios y equipos'],
     ] as const)('%s autorizado ve "%s"', async (rol, ruta, titulo) => {
       iniciarSesionDePrueba(rol);
       renderizar(ruta);
@@ -121,7 +123,6 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
   describe('pantallas en desarrollo', () => {
     it.each([
       ['COORDINACION_ACADEMICA', '/admin/proximamente', 'Hoja de ruta'],
-      ['COORDINACION_ACADEMICA', '/admin/laboratorios', 'Laboratorios y equipos'],
       ['COORDINACION_ACADEMICA', '/admin/alumnos/nuevo', 'Alta de alumnos'],
       ['COORDINACION_ACADEMICA', '/admin/docentes/nuevo', 'Alta de docentes'],
       ['COORDINACION_ACADEMICA', '/admin/claves', 'Claves y contraseñas'],

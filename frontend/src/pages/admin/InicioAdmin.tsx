@@ -15,10 +15,17 @@ import { useAccion } from '../../hooks/useAccion';
 import { useCarga } from '../../hooks/useCarga';
 import {
   ejecutarCorrida,
+  CLAVE_LABORATORIOS_ESTADO,
   obtenerAlertas,
   obtenerEscaladas,
+  obtenerLaboratoriosConEstado,
+  obtenerMapaOcupacionAdmin,
   reintentarSeccion,
 } from '../../services/admin';
+import VistaMapa from '../../components/mapa2d/VistaMapa';
+import { ENLACE_PLANOS } from '../../components/mapa2d/ocupacionReal';
+import { EstadoError } from '../../components/ui/EstadoError';
+import { useOcupacionMapa } from '../../hooks/useOcupacionMapa';
 import type {
   ResumenAsignacionDTO,
   ResultadoVerificacionDTO,
@@ -240,46 +247,138 @@ const ListaEscaladas: React.FC<{
   );
 };
 
-/** Jefatura: resumen de sus alertas y acceso al formulario de laboratorio (Issue 4.19). */
+/**
+ * Inicio de Jefatura de Laboratorios (Issue 4.16): laboratorios activos, PCs operativas e
+ * inoperativas, la alerta más reciente, accesos y el mapa de ocupación con sus laboratorios
+ * resaltados (componente del mapa de los Issues 4.13 y 4.14).
+ */
 const InicioJefatura: React.FC = () => {
-  const { datos, cargando, error, recargar } = useCarga(obtenerAlertas, { clave: 'alertas' });
-  const pendientes = datos?.filter((a) => a.estado === 'PENDIENTE').length ?? 0;
+  const alertas = useCarga(obtenerAlertas, { clave: 'alertas' });
+  const labs = useCarga(obtenerLaboratoriosConEstado, { clave: CLAVE_LABORATORIOS_ESTADO });
+  const mapa = useOcupacionMapa(obtenerMapaOcupacionAdmin, 'admin', null);
+  const [seleccionado, setSeleccionado] = useState<string | null>(null);
+  const [pisoElegido, setPisoElegido] = useState<number | 'todos' | null>(null);
+
+  const pendientes = (alertas.datos ?? []).filter((a) => a.estado === 'PENDIENTE');
+  // `obtenerAlertas` ya las devuelve de la más reciente a la más antigua.
+  const destacada = pendientes[0] ?? null;
+  const laboratorios = labs.datos ?? [];
+  const activos = laboratorios.filter((l) => l.habilitado);
+  const inoperativas = activos.reduce((t, l) => t + (l.pcsMalogradas ?? 0), 0);
+  const operativas = activos.reduce((t, l) => t + l.capacidadReal, 0);
+  const resaltados = laboratorios
+    .map((l) => ENLACE_PLANOS.idDeEspacio(l.pabellon, l.identificador))
+    .filter((id): id is string => id !== null);
+  const pisoInicial = laboratorios.length > 0 ? Math.min(...laboratorios.map((l) => l.piso)) : 1;
+  const error = alertas.error ?? labs.error;
+  const reintentar = () => {
+    alertas.recargar();
+    labs.recargar();
+  };
+  const cargandoTodo = (alertas.cargando && !alertas.datos) || (labs.cargando && !labs.datos);
 
   return (
-    <LayoutAdmin dashboard titulo="Área administrativa" subtitulo="Jefatura de Laboratorios">
-      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-rows-[auto_1fr]">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Metrica valor={pendientes} etiqueta="Alertas pendientes" tono="text-saie-danger" />
-          <Metrica
-            valor={datos?.filter((a) => a.tipo === 'SOFTWARE').length ?? 0}
-            etiqueta="De software"
-          />
-          <Metrica
-            valor={datos?.filter((a) => a.tipo === 'CAPACIDAD').length ?? 0}
-            etiqueta="De capacidad"
-          />
-        </div>
-
-        {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-        {cargando && !datos ? (
-          <EsqueletoCarga texto="Cargando resumen…" />
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:min-h-0">
-            <Acceso
-              to={RUTAS.alertasAdmin}
-              titulo="Alertas de mis laboratorios"
-              descripcion="Revisa y marca como resueltas las alertas."
-              trazo={ICONOS.alerta}
-            />
-            <Acceso
-              to={RUTAS.cambioLaboratorio}
-              titulo="Reportar cambio de laboratorio"
-              descripcion="Software instalado y PCs malogradas o reparadas."
-              trazo={ICONOS.monitor}
-            />
-          </div>
-        )}
+    <LayoutAdmin titulo="Área administrativa" subtitulo="Jefatura de Laboratorios">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Metrica
+          valor={labs.datos ? `${activos.length}/${laboratorios.length}` : '—'}
+          etiqueta="Laboratorios activos"
+        />
+        <Metrica
+          valor={labs.datos ? operativas : '—'}
+          etiqueta="PCs operativas"
+          tono="text-saie-success-strong"
+        />
+        <Metrica
+          valor={labs.datos ? inoperativas : '—'}
+          etiqueta="PCs inoperativas"
+          tono={inoperativas > 0 ? 'text-saie-danger' : 'text-saie-text'}
+        />
+        <Metrica valor={pendientes.length} etiqueta="Alertas pendientes" tono="text-saie-danger" />
       </div>
+
+      {error && <AvisoError mensaje={error} onReintentar={reintentar} />}
+      {cargandoTodo ? (
+        <EsqueletoCarga texto="Cargando resumen…" />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <div className="flex min-w-0 flex-col gap-4 lg:col-span-5">
+            <section
+              aria-labelledby="titulo-alerta-destacada"
+              className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-4"
+            >
+              <h2 id="titulo-alerta-destacada" className="m-0 text-sm font-bold">
+                Alerta más reciente
+              </h2>
+              {destacada ? (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <BadgeEstado tono="advertencia">
+                      {destacada.tipo === 'SOFTWARE' ? 'Software' : 'Capacidad'}
+                    </BadgeEstado>
+                    <span className="text-sm font-semibold">{destacada.espacio.identificador}</span>
+                    <span className="text-xs text-saie-muted">
+                      {formatearFechaCorta(destacada.fechaDeteccion)}
+                    </span>
+                  </div>
+                  <p className="m-0 text-sm">{destacada.motivo}</p>
+                  <Link to={RUTAS.alertasAdmin} className="text-sm font-medium text-saie-primary">
+                    Ver todas las alertas →
+                  </Link>
+                </>
+              ) : (
+                <p className="m-0 text-sm text-saie-muted">
+                  No hay alertas pendientes en tus laboratorios.
+                </p>
+              )}
+            </section>
+
+            <nav aria-label="Accesos de Jefatura" className="grid gap-3">
+              <Acceso
+                to={RUTAS.laboratoriosAdmin}
+                titulo="Ver todos mis laboratorios"
+                descripcion="Búsqueda y filtros por piso y estado, con aforo real."
+                trazo={ICONOS.monitor}
+              />
+              <Acceso
+                to={RUTAS.alertasAdmin}
+                titulo="Alertas de mis laboratorios"
+                descripcion="Revisa y marca como resueltas las alertas."
+                trazo={ICONOS.alerta}
+              />
+              <Acceso
+                to={RUTAS.cambioLaboratorio}
+                titulo="Reportar cambio de laboratorio"
+                descripcion="Software instalado y PCs malogradas o reparadas."
+                trazo={ICONOS.ajustes}
+              />
+            </nav>
+          </div>
+
+          <section
+            aria-labelledby="titulo-vista-mapa"
+            className="flex min-w-0 flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4 lg:col-span-7"
+          >
+            <h2 id="titulo-vista-mapa" className="m-0 text-sm font-bold">
+              Tus laboratorios en el mapa de ocupación
+            </h2>
+            {mapa.error ? (
+              <EstadoError mensaje={mapa.error} onReintentar={mapa.recargar} />
+            ) : !mapa.datos ? (
+              <EsqueletoCarga texto="Cargando el mapa…" />
+            ) : (
+              <VistaMapa
+                espacios={mapa.datos.espacios}
+                seleccionado={seleccionado}
+                onSeleccionar={setSeleccionado}
+                resaltados={resaltados}
+                piso={pisoElegido ?? pisoInicial}
+                onPisoCambiado={setPisoElegido}
+              />
+            )}
+          </section>
+        </div>
+      )}
     </LayoutAdmin>
   );
 };

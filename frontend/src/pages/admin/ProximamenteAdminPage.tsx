@@ -15,10 +15,6 @@ interface Pendiente {
 /** Capacidades de Coordinación Académica que se construyen en la siguiente entrega. */
 const COORDINACION: Pendiente[] = [
   {
-    titulo: 'Laboratorios y equipos',
-    descripcion: 'Estado de las PCs, la capacidad y el software de cada laboratorio.',
-  },
-  {
     titulo: 'Alta de alumnos y docentes',
     descripcion: 'Registro individual fuera de la carga masiva.',
   },
