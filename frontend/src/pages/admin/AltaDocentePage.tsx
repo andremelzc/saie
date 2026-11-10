@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import AltaCompletada from '../../components/admin/AltaCompletada';
 import CampoFormulario from '../../components/admin/CampoFormulario';
+import { RUTAS } from '../../config/rutas';
 import LayoutAdmin from '../../components/admin/LayoutAdmin';
 import { Aviso } from '../../components/ui/Aviso';
 import { Boton } from '../../components/ui/Boton';
@@ -52,7 +53,11 @@ export const AltaDocentePage: React.FC = () => {
   };
 
   return (
-    <LayoutAdmin titulo="Alta de docentes" subtitulo="Coordinación Académica">
+    <LayoutAdmin
+      volverA={{ to: RUTAS.inicioAdmin, etiqueta: 'Volver al inicio' }}
+      titulo="Alta de docentes"
+      subtitulo="Coordinación Académica"
+    >
       <section
         aria-label="Alta individual de un docente"
         className="flex max-w-3xl flex-col gap-5 rounded-2xl border border-saie-divider bg-white p-5"

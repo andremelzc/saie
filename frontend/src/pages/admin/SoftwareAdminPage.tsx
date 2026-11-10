@@ -346,6 +346,7 @@ export const SoftwareAdminPage: React.FC = () => {
 
   return (
     <LayoutAdmin
+      volverA={{ to: RUTAS.inicioAdmin, etiqueta: 'Volver al inicio' }}
       titulo="Catálogo de software"
       subtitulo={
         puedeEditar

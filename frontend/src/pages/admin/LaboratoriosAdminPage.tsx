@@ -170,6 +170,7 @@ export const LaboratoriosAdminPage: React.FC = () => {
 
   return (
     <LayoutAdmin
+      volverA={esJefatura ? undefined : { to: RUTAS.inicioAdmin, etiqueta: 'Volver al inicio' }}
       titulo="Laboratorios y equipos"
       subtitulo={
         esJefatura

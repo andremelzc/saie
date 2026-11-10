@@ -62,7 +62,7 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
       expect(
         await screen.findByRole('heading', { name: 'Panel Administrativo' }),
       ).toBeInTheDocument();
-      expect(screen.queryByText('Área administrativa')).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Inicio' })).not.toBeInTheDocument();
     });
 
     it('cada área privada redirige al login de su rol cuando no hay sesión', async () => {
@@ -86,7 +86,7 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
         await screen.findByRole('heading', { name: 'Acceso no autorizado' }),
       ).toBeInTheDocument();
       expect(screen.getByRole('alert')).toHaveTextContent(/no tiene permiso/i);
-      expect(screen.queryByText('Área administrativa')).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Inicio' })).not.toBeInTheDocument();
     });
 
     it('permite el acceso a un rol autorizado (Jefatura al panel administrativo)', async () => {
@@ -94,9 +94,7 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
       vi.spyOn(api, 'get').mockResolvedValue({ data: { success: true, data: [] } } as never);
       renderizar('/admin');
 
-      expect(
-        await screen.findByRole('heading', { name: 'Área administrativa' }),
-      ).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Inicio' })).toBeInTheDocument();
     });
   });
 
@@ -283,7 +281,7 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
         /Usuario/i,
       );
 
-      expect(await screen.findByRole('heading', { name: 'Área administrativa' })).toBeVisible();
+      expect(await screen.findByRole('heading', { name: 'Inicio' })).toBeVisible();
       expect(obtenerToken()).not.toBeNull();
     });
 
@@ -353,9 +351,7 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
     it('un 401 del servidor en una petición autenticada cierra la sesión y avisa', async () => {
       iniciarSesionDePrueba('COORDINACION_ACADEMICA');
       renderizar('/admin');
-      expect(
-        await screen.findByRole('heading', { name: 'Área administrativa' }),
-      ).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Inicio' })).toBeInTheDocument();
 
       api.defaults.adapter = async (config: InternalAxiosRequestConfig): Promise<AxiosResponse> => {
         const respuesta = { data: {}, status: 401, statusText: '', headers: {}, config };

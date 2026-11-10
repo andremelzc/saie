@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import { RUTAS } from '../../config/rutas';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
 import { SelectorSegmentado } from '../../components/ui/SelectorSegmentado';
@@ -168,6 +169,7 @@ export const SolicitudesSoftwareAdminPage: React.FC = () => {
 
   return (
     <LayoutAdmin
+      volverA={{ to: RUTAS.softwareAdmin, etiqueta: 'Volver al catálogo' }}
       titulo="Solicitudes de software"
       subtitulo="Qué software piden los docentes y qué se resolvió"
       acciones={

@@ -269,7 +269,7 @@ const InicioJefatura: React.FC = () => {
   const cargandoTodo = (alertas.cargando && !alertas.datos) || (labs.cargando && !labs.datos);
 
   return (
-    <LayoutAdmin titulo="Área administrativa" subtitulo="Jefatura de Laboratorios">
+    <LayoutAdmin titulo="Inicio" subtitulo="Jefatura de Laboratorios">
       <TiraMetricas etiqueta="Resumen de laboratorios" className="grid-cols-2 lg:grid-cols-4">
         <Metrica
           etiqueta="Alertas pendientes"
@@ -500,7 +500,7 @@ const InicioCoordinacion: React.FC = () => {
   }
 
   return (
-    <LayoutAdmin dashboard titulo="Área administrativa">
+    <LayoutAdmin dashboard titulo="Inicio" subtitulo="Coordinación Académica">
       {/*
         El tablero ocupa lo que queda del `main` (que es una columna flex) una vez descontados
         el título y los espacios. Antes iba con `lg:h-full`, que sumaba el 100 % de `main` al
