@@ -41,6 +41,8 @@ function sesion(
   } as unknown as SesionDTO;
 }
 
+const NAVEGACION = 'Navegación del área del estudiante';
+
 function horarioCon(dias: Record<string, SesionDTO[]>): HorarioSemanalDTO {
   return { periodo: '2026-2', vista: 'semana', dias } as unknown as HorarioSemanalDTO;
 }
@@ -72,26 +74,41 @@ describe('InicioEstudiante', () => {
   });
 
   describe('sin horario disponible', () => {
-    it('mientras carga muestra los accesos y la tarjeta por defecto, sin resumen', () => {
+    it('mientras carga muestra esqueletos y no afirma que no hay clases', () => {
       vi.spyOn(api, 'get').mockReturnValue(new Promise(() => {}) as never);
       montar();
 
-      expect(screen.getByText('Hoy no tienes clases')).toBeVisible();
-      expect(screen.getByText(/Aprovecha para revisar tu horario/)).toBeVisible();
+      // Sin horario no se sabe si hay clases: «Hoy no tienes clases» sería falso.
+      expect(screen.queryByText('Hoy no tienes clases')).toBeNull();
+      expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
+      expect(screen.getByText('Cargando tu horario…')).toBeInTheDocument();
+      expect(screen.getByText('Cargando tus clases del día…')).toBeInTheDocument();
+      expect(screen.getByRole('navigation', { name: NAVEGACION })).toBeVisible();
+      // El inicio ya no repite las secciones que lista la barra de navegación.
       expect(
-        screen.getByRole('navigation', { name: 'Secciones del portal del estudiante' }),
-      ).toBeVisible();
+        screen.queryByRole('navigation', { name: 'Secciones del portal del estudiante' }),
+      ).toBeNull();
       expect(screen.queryByText('clases por semana')).toBeNull();
     });
 
-    it('si la API falla, sigue mostrando los accesos a horario y perfil', async () => {
+    it('si la API falla, la barra de navegación sigue llevando a horario y perfil', async () => {
       const get = vi.spyOn(api, 'get').mockRejectedValue(new Error('caída'));
       montar();
 
       await waitFor(() => expect(get).toHaveBeenCalled());
-      expect(await screen.findByRole('link', { name: /Mi horario/ })).toBeVisible();
-      expect(screen.getByRole('link', { name: /Mi perfil/ })).toBeVisible();
+      const barra = await screen.findByRole('navigation', { name: NAVEGACION });
+      expect(within(barra).getByRole('link', { name: 'Horario' })).toBeVisible();
+      expect(within(barra).getByRole('link', { name: 'Perfil' })).toBeVisible();
       expect(screen.queryByText('clases por semana')).toBeNull();
+    });
+
+    it('si la API falla, la tarjeta no dice que no hay clases y el esqueleto desaparece', async () => {
+      vi.spyOn(api, 'get').mockRejectedValue(new Error('caída'));
+      montar();
+
+      expect(await screen.findByText('No pudimos mostrar tu clase')).toBeVisible();
+      expect(screen.queryByText('Hoy no tienes clases')).toBeNull();
+      expect(screen.queryByText('Cargando tu horario…')).toBeNull();
     });
 
     it('si la API falla, avisa del error y permite reintentar', async () => {
@@ -116,8 +133,12 @@ describe('InicioEstudiante', () => {
 
       const alerta = await screen.findByRole('alert');
       expect(alerta).toHaveTextContent('No pudimos cargar tu horario.');
-      // Aun sin horario, los accesos a las demás pantallas siguen disponibles.
-      expect(screen.getByRole('link', { name: /Mi horario/ })).toBeVisible();
+      // Aun sin horario, la navegación a las demás pantallas sigue disponible.
+      expect(
+        within(screen.getByRole('navigation', { name: NAVEGACION })).getByRole('link', {
+          name: 'Horario',
+        }),
+      ).toBeVisible();
     });
 
     it('si el reintento también falla, vuelve a avisar sin romper la pantalla', async () => {
@@ -129,7 +150,11 @@ describe('InicioEstudiante', () => {
 
       // Sigue habiendo un aviso y la pantalla no se queda a medio cargar.
       await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
-      expect(screen.getByRole('link', { name: /Mi horario/ })).toBeVisible();
+      expect(
+        within(screen.getByRole('navigation', { name: NAVEGACION })).getByRole('link', {
+          name: 'Horario',
+        }),
+      ).toBeVisible();
     });
 
     it('con el horario vacío muestra el periodo pero no resumen ni semana', async () => {
@@ -196,14 +221,28 @@ describe('InicioEstudiante', () => {
       expect(screen.queryByText('Clase en curso')).toBeNull();
     });
 
-    it('resumen en singular: solo las cifras que mueven una decisión (Issue 3.38)', async () => {
+    it('resumen en singular: la carga de la semana va en una frase, no en cifras sueltas', async () => {
       vi.setSystemTime(lunesA(8));
       responder(horarioCon({ [LUNES]: [sesion('MAT101', 'Matemática I', '09:00', '11:00')] }));
       montar();
 
-      expect(await screen.findByText('clase te queda hoy')).toBeVisible();
-      expect(screen.getByText('clase esta semana, en 1 día')).toBeVisible();
+      expect(await screen.findByText('1 clase esta semana, en 1 día')).toBeVisible();
       expect(screen.queryByText('de clase a la semana')).toBeNull();
+    });
+
+    it('con varias clases por delante cuenta cuántas quedan hoy', async () => {
+      vi.setSystemTime(lunesA(8));
+      responder(
+        horarioCon({
+          [LUNES]: [
+            sesion('MAT101', 'Matemática I', '09:00', '10:00'),
+            sesion('FIS101', 'Física I', '11:00', '12:00'),
+          ],
+        }),
+      );
+      montar();
+
+      expect(await screen.findByText('Te quedan 2 clases hoy')).toBeVisible();
     });
 
     it('resumen en plural con varios cursos y días', async () => {
@@ -215,7 +254,7 @@ describe('InicioEstudiante', () => {
       );
       montar();
 
-      expect(await screen.findByText('clases esta semana, en 2 días')).toBeVisible();
+      expect(await screen.findByText('2 clases esta semana, en 2 días')).toBeVisible();
     });
 
     it('con varias clases en el día cuenta «N clases» en la tira semanal', async () => {
@@ -304,7 +343,11 @@ describe('InicioEstudiante', () => {
         }),
       ).toBeVisible();
       expect(screen.getByText('Química I', { selector: 'span' })).toBeVisible();
-      expect(screen.getByRole('link', { name: /Mi horario/ })).toBeVisible();
+      expect(
+        within(screen.getByRole('navigation', { name: NAVEGACION })).getByRole('link', {
+          name: 'Horario',
+        }),
+      ).toBeVisible();
     });
   });
 });
