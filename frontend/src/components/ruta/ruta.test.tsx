@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import VistaMapaRuta from './VistaMapaRuta';
 import { ASIGNACIONES_EJEMPLO, rutaDeEjemplo, TIEMPOS } from './rutaEjemplo';
-import { calcularTrazado, formatearDuracion } from './trazado';
+import { calcularTrazado, formatearDuracion, precalentarRutas } from './trazado';
 import { centroDe, leerPlano2D } from '../mapa2d/plano';
 import { PLANOS_SVG } from '../mapa2d/planos';
 
@@ -205,6 +205,28 @@ describe('calcularTrazado con punto de partida', () => {
     expect(calcularTrazado(NUE_204, PLANOS_SVG, { tipo: 'espacio', id: 'XXX-1' }).pasos).toEqual(
       [],
     );
+  });
+});
+
+describe('precalentarRutas', () => {
+  it('deja listo el cálculo en pasos cortos y se puede cancelar', () => {
+    vi.useFakeTimers();
+    try {
+      const cancelar = precalentarRutas(PLANOS_SVG);
+      // Cancelado antes de empezar, no hace nada ni deja temporizadores vivos.
+      cancelar();
+      expect(vi.getTimerCount()).toBe(0);
+
+      // Sin cancelar, avanza paso a paso y termina solo.
+      precalentarRutas(PLANOS_SVG);
+      vi.runAllTimers();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+    // Y la primera ruta se calcula igual de bien con lo precalculado.
+    const t = calcularTrazado(rutaDeEjemplo(LAB_PISO_1, false), PLANOS_SVG);
+    expect(t.pasos.at(-1)?.focoId).toBe('ANT-104');
   });
 });
 

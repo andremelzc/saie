@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import LayoutEstudiante from '../components/estudiante/LayoutEstudiante';
 import { EsqueletoCarga } from '../components/estudiante/ElementosHorario';
 import { ENLACE_PLANOS } from '../components/mapa2d/ocupacionReal';
@@ -7,7 +7,8 @@ import { PLANOS_SVG } from '../components/mapa2d/planos';
 import { ordenarPorProxima } from '../components/ruta/clases';
 import { leerOrigen, origenesDeRuta } from '../components/ruta/origenes';
 import { fechaActual } from '../utils/horario';
-import { ORIGEN_ENTRADA, type OrigenRuta } from '../components/ruta/trazado';
+import { ORIGEN_ENTRADA, precalentarRutas, type OrigenRuta } from '../components/ruta/trazado';
+import { useTrazado } from '../components/ruta/useTrazado';
 import {
   ORIGEN_POR_DEFECTO,
   SelectorClase,
@@ -66,10 +67,23 @@ export const RutaAlumnoPage: React.FC = () => {
     clave: `ruta:${asignacionId}`,
     habilitado: asignacionId !== null,
   });
+  // `useCarga` conserva lo anterior mientras llega lo nuevo (sirve en las listas). Aquí sería la
+  // ruta de otra clase: solo vale la que corresponde a la clase elegida.
+  const rutaVigente =
+    rutaCarga.datos &&
+    (rutaCarga.datos.asignacionId === undefined
+      ? !rutaCarga.cargando
+      : rutaCarga.datos.asignacionId === asignacionId)
+      ? rutaCarga.datos
+      : null;
+  // El recorrido se calcula después de pintar, para poder mostrar «Calculando…» mientras tanto.
+  const { trazado, calculando } = useTrazado(rutaVigente, PLANOS_SVG, origen);
+  // Al abrir la pantalla se deja listo, en ratos libres, lo que la primera ruta tendría que calcular.
+  useEffect(() => precalentarRutas(PLANOS_SVG), []);
   // Si dices que ya estás en el aula de la clase, no hay recorrido que dibujar.
   const yEstasAlli =
     desde !== VALOR_ENTRADA &&
-    (rutaCarga.datos?.tramos ?? []).some(
+    (rutaVigente?.tramos ?? []).some(
       (t) => t.tipo === 'ESPACIO_ASIGNADO' && t.espacioId === leerOrigen(desde).id,
     );
 
@@ -108,28 +122,28 @@ export const RutaAlumnoPage: React.FC = () => {
             />
           </section>
 
-          {rutaCarga.error && !rutaCarga.datos ? (
+          {rutaCarga.error && !rutaVigente ? (
             <EstadoError mensaje={rutaCarga.error} onReintentar={rutaCarga.recargar} />
-          ) : rutaCarga.datos ? (
-            yEstasAlli ? (
+          ) : rutaVigente && yEstasAlli ? (
+            <Aviso tono="info">
+              Ya estás en el aula de esta clase: no hay recorrido que mostrar.
+            </Aviso>
+          ) : rutaVigente && trazado && !calculando ? (
+            <>
               <Aviso tono="info">
-                Ya estás en el aula de esta clase: no hay recorrido que mostrar.
+                El recorrido es de referencia: une los puntos principales, no cada pasillo.
               </Aviso>
-            ) : (
-              <>
-                <Aviso tono="info">
-                  El recorrido es de referencia: une los puntos principales, no cada pasillo.
-                </Aviso>
-                <VistaMapaRuta ruta={rutaCarga.datos} origen={origen} />
-              </>
-            )
+              <VistaMapaRuta ruta={rutaVigente} origen={origen} trazado={trazado} />
+            </>
           ) : (
-            <div role="status" aria-busy="true">
-              <span className="sr-only">Calculando la ruta…</span>
+            <div role="status" aria-busy="true" className="relative">
               <div
                 aria-hidden="true"
                 className="saie-esqueleto h-96 rounded-xl border border-saie-divider"
               />
+              <p className="absolute inset-0 m-0 flex items-center justify-center text-sm font-medium text-saie-muted">
+                Calculando la ruta…
+              </p>
             </div>
           )}
         </>

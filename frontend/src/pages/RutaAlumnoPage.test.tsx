@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { configure, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import RutaAlumnoPage from './RutaAlumnoPage';
 import { vaciarCacheCarga } from '../hooks/useCarga';
@@ -94,6 +94,8 @@ const montar = () =>
 // La primera ruta arma las mallas de los tres pisos (~1 s): con la suite completa en paralelo
 // hace falta más margen que los 5 s por defecto.
 vi.setConfig({ testTimeout: 20_000 });
+// Y los `findBy`, que esperan 1 s por defecto, también necesitan más con la primera ruta en frío.
+configure({ asyncUtilTimeout: 10_000 });
 
 describe('RutaAlumnoPage', () => {
   beforeEach(() => {
@@ -145,6 +147,34 @@ describe('RutaAlumnoPage', () => {
     fireEvent.change(campo, { target: { value: busqueda } });
     fireEvent.mouseDown(screen.getByRole('option', { name: opcion }));
   };
+
+  it('al cambiar de clase no deja la ruta anterior: muestra «Calculando la ruta…» hasta tener la nueva', async () => {
+    let resolver: (r: unknown) => void = () => {};
+    vi.mocked(obtenerCursos).mockResolvedValue({
+      periodo: '2026-2',
+      cursos: [curso('asig-lab', 'Redes', [LAB]), curso('asig-aula', 'Cálculo', [AULA])] as never,
+    });
+    montar();
+    await screen.findByText('Tiempo estimado de caminata');
+
+    // La ruta de la otra clase tarda en llegar.
+    vi.mocked(obtenerRuta).mockImplementationOnce(
+      () => new Promise((r) => (resolver = r)) as never,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Cambiar clase' }));
+    fireEvent.change(screen.getByRole('combobox', { name: '¿A qué clase vas?' }), {
+      target: { value: 'asig-aula' },
+    });
+
+    expect(await screen.findByText('Calculando la ruta…')).toBeVisible();
+    // Ni el plano ni los pasos de la ruta anterior siguen a la vista.
+    expect(screen.queryByRole('region', { name: 'Pasos de la ruta' })).toBeNull();
+    expect(screen.queryByRole('group', { name: /Plano del piso/ })).toBeNull();
+
+    resolver(rutaDe(AULA, 'asig-aula'));
+    expect(await screen.findByRole('region', { name: 'Pasos de la ruta' })).toBeVisible();
+    expect(screen.queryByText('Calculando la ruta…')).toBeNull();
+  });
 
   it('pregunta primero dónde estás y parte de la entrada principal por defecto', async () => {
     vi.mocked(obtenerCursos).mockResolvedValue({

@@ -90,6 +90,52 @@ function leerPiso(texto: string | undefined, conPatio: boolean): PisoLeido | nul
 /** Distancias desde cada conector a todo su piso: se calculan una vez por malla y conector. */
 const cacheConectores = new WeakMap<Malla, Map<string, Float64Array>>();
 
+/** Distancias desde un conector a todo su piso, guardadas por malla y conector. */
+function distanciasDeConector(malla: Malla, figura: FiguraPlano2D): Float64Array {
+  const guardadas = cacheConectores.get(malla) ?? new Map<string, Float64Array>();
+  cacheConectores.set(malla, guardadas);
+  let d = guardadas.get(figura.id);
+  if (!d) {
+    d = distanciasDesde(malla, celdasDePuerta(malla, figura));
+    guardadas.set(figura.id, d);
+  }
+  return d;
+}
+
+/**
+ * Deja listo lo que la primera ruta tendría que calcular (las mallas de pasillos de cada piso y las
+ * distancias desde cada escalera y ascensor), en pasos cortos entre los que el navegador respira.
+ * Se llama al abrir la pantalla de la ruta: cuando la persona elige, el cálculo ya está hecho.
+ * Devuelve la función que lo cancela.
+ */
+export function precalentarRutas(planos: Record<number, string>): () => void {
+  const pasos: (() => void)[] = [];
+  for (const piso of Object.keys(planos).map(Number)) {
+    pasos.push(() => {
+      const leido = leerPiso(planos[piso], piso === PISO_DEL_PATIO);
+      const malla = leido?.malla;
+      if (!leido || !malla) return;
+      // Un paso por conector: cada uno es un recorrido completo del piso.
+      for (const f of leido.plano.figuras) {
+        if (f.clase === 'escalera' || f.clase === 'ascensor') {
+          pasos.unshift(() => void distanciasDeConector(malla, f));
+        }
+      }
+    });
+  }
+  let cancelado = false;
+  const siguiente = () => {
+    if (cancelado) return;
+    pasos.shift()?.();
+    if (pasos.length > 0) setTimeout(siguiente, 0);
+  };
+  const temporizador = setTimeout(siguiente, 50);
+  return () => {
+    cancelado = true;
+    clearTimeout(temporizador);
+  };
+}
+
 /** Un lugar por el que pasa la ruta, en un piso. */
 interface Parada {
   piso: number;
@@ -244,14 +290,7 @@ export function calcularTrazado(
     const malla = mallaDe(piso);
     const figura = figuraEn(piso, id);
     if (!malla || !figura) return null;
-    const guardadas = cacheConectores.get(malla) ?? new Map<string, Float64Array>();
-    cacheConectores.set(malla, guardadas);
-    let d = guardadas.get(id);
-    if (!d) {
-      d = distanciasDesde(malla, celdasEn(piso, figura));
-      guardadas.set(id, d);
-    }
-    return d;
+    return distanciasDeConector(malla, figura);
   };
   const entreConectores = (piso: number, a: string, b: string): number => {
     const d = distanciasDelConector(piso, a);

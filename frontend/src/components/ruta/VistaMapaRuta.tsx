@@ -4,12 +4,20 @@ import { PLANOS_SVG } from '../mapa2d/planos';
 import { Aviso } from '../ui/Aviso';
 import { BadgeEstado } from '../ui/BadgeEstado';
 import type { RutaReferencia } from './tipos';
-import { calcularTrazado, formatearDuracion, ORIGEN_ENTRADA, type OrigenRuta } from './trazado';
+import {
+  calcularTrazado,
+  formatearDuracion,
+  ORIGEN_ENTRADA,
+  type OrigenRuta,
+  type Trazado,
+} from './trazado';
 
 export interface VistaMapaRutaProps {
   ruta: RutaReferencia;
   /** De dónde sale la persona; por defecto, la entrada principal de la facultad. */
   origen?: OrigenRuta;
+  /** Trazado ya calculado (la pantalla lo calcula aparte para mostrar la carga); si no, se calcula aquí. */
+  trazado?: Trazado;
   /** Planos por piso. Por defecto, los de `assets/planos/`. */
   planos?: Record<number, string>;
   className?: string;
@@ -51,10 +59,15 @@ const LeyendaRuta: React.FC = () => (
 export const VistaMapaRuta: React.FC<VistaMapaRutaProps> = ({
   ruta,
   origen = ORIGEN_ENTRADA,
+  trazado: trazadoDado,
   planos = PLANOS_SVG,
   className = '',
 }) => {
-  const trazado = useMemo(() => calcularTrazado(ruta, planos, origen), [ruta, planos, origen]);
+  const calculado = useMemo(
+    () => (trazadoDado ? null : calcularTrazado(ruta, planos, origen)),
+    [trazadoDado, ruta, planos, origen],
+  );
+  const trazado = (trazadoDado ?? calculado) as Trazado;
   const pisoInicial = trazado.pasos[0]?.piso ?? 1;
   const [piso, setPiso] = useState<number | null>(null);
   const [pasoActivo, setPasoActivo] = useState<number | null>(null);
