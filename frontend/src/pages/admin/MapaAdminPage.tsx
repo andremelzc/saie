@@ -3,6 +3,7 @@ import LayoutAdmin from '../../components/admin/LayoutAdmin';
 import VistaMapa from '../../components/mapa2d/VistaMapa';
 import PanelEspacio from '../../components/mapa2d/PanelEspacio';
 import { Aviso } from '../../components/ui/Aviso';
+import { EsqueletoCarga } from '../../components/ui/EstadosCarga';
 import { EstadoError } from '../../components/ui/EstadoError';
 import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
 import { useMapaEnUrl } from '../../hooks/useMapaEnUrl';
@@ -30,9 +31,7 @@ export const MapaAdminPage: React.FC = () => {
         error ? (
           <EstadoError mensaje={error} onReintentar={recargar} />
         ) : (
-          <p role="status" className="text-saie-muted">
-            Cargando el mapa…
-          </p>
+          <EsqueletoCarga texto="Cargando el mapa…" forma="texto" filas={6} />
         )
       ) : (
         <ZonaActualizable actualizando={cargando}>

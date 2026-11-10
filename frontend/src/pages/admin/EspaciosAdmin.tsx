@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import FormularioEspacio from '../../components/admin/FormularioEspacio';
 import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
+import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
@@ -541,8 +542,8 @@ export const EspaciosAdmin: React.FC = () => {
       }
     >
       <section aria-label="Filtros de espacios" className="flex flex-col gap-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Campo etiqueta="Buscar espacio">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Campo etiqueta="Buscar espacio" className="col-span-2 lg:col-span-1">
             <input
               type="search"
               placeholder="Ej. AULA-101"
@@ -551,7 +552,7 @@ export const EspaciosAdmin: React.FC = () => {
               className={CLASE_CAMPO}
             />
           </Campo>
-          <Campo etiqueta="Tipo de espacio">
+          <Campo etiqueta="Tipo de espacio" className="col-span-2 sm:col-span-1">
             <select
               value={filtro}
               onChange={(e) => setFiltro(e.target.value as Filtro)}
@@ -632,7 +633,9 @@ export const EspaciosAdmin: React.FC = () => {
         </Aviso>
       )}
 
-      {contenidoListado}
+      <ZonaActualizable actualizando={cargando && datos !== null}>
+        {contenidoListado}
+      </ZonaActualizable>
 
       <Drawer
         abierto={seleccionado !== null || creando}

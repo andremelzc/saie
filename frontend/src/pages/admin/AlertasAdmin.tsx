@@ -4,6 +4,7 @@ import TarjetaAlerta from '../../components/admin/TarjetaAlerta';
 import { ICONOS } from '../../components/ui/iconos';
 import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
 import { SelectorSegmentado } from '../../components/ui/SelectorSegmentado';
+import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
 import { Boton } from '../../components/ui/Boton';
 import { useAuth } from '../../context/useAuth';
 import { useAccion } from '../../hooks/useAccion';
@@ -174,20 +175,22 @@ export const AlertasAdmin: React.FC = () => {
       )}
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
 
-      {cargando && !datos ? (
-        <EsqueletoCarga texto="Cargando alertas…" forma="tarjeta" />
-      ) : (
-        <ListaAlertas
-          hayAlertas={base.length > 0}
-          hayCoincidencias={alertas.length > 0}
-          error={Boolean(error)}
-          filtro={filtro}
-          alertas={alertas}
-          onResolver={manejarResolver}
-          reintentando={enCurso}
-          onVerTodas={() => setFiltro('TODAS')}
-        />
-      )}
+      <ZonaActualizable actualizando={cargando && datos !== null}>
+        {cargando && !datos ? (
+          <EsqueletoCarga texto="Cargando alertas…" forma="tarjeta" />
+        ) : (
+          <ListaAlertas
+            hayAlertas={base.length > 0}
+            hayCoincidencias={alertas.length > 0}
+            error={Boolean(error)}
+            filtro={filtro}
+            alertas={alertas}
+            onResolver={manejarResolver}
+            reintentando={enCurso}
+            onVerTodas={() => setFiltro('TODAS')}
+          />
+        )}
+      </ZonaActualizable>
     </LayoutAdmin>
   );
 };
