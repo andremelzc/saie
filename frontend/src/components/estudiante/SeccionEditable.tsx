@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import type { ErroresFormulario, ValoresFormulario } from '../../utils/perfil';
 import { mensajeDeError } from '../../services/errores';
+import { ResumenErrores } from '../ui/ResumenErrores';
 import { Aviso } from '../ui/Aviso';
 import { Boton } from '../ui/Boton';
 import { Icono } from './ElementosHorario';
@@ -68,6 +69,8 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
   const [errores, setErrores] = useState<ErroresFormulario>({});
   const [guardando, setGuardando] = useState(false);
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null);
+  /** El resumen aparece al intentar guardar y se mantiene mientras queden errores. */
+  const [resumenVisible, setResumenVisible] = useState(false);
   const [confirmacion, setConfirmacion] = useState(false);
 
   const botonEditarRef = useRef<HTMLButtonElement>(null);
@@ -87,6 +90,7 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
   const empezarEdicion = () => {
     setBorrador(valores);
     setErrores({});
+    setResumenVisible(false);
     setErrorGeneral(null);
     setConfirmacion(false);
     setModo('edicion');
@@ -94,6 +98,7 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
 
   const cancelar = () => {
     setErrores({});
+    setResumenVisible(false);
     setErrorGeneral(null);
     setModo('lectura');
   };
@@ -109,12 +114,25 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
     }
   };
 
+  /** Issue 3.41: al salir de un campo se valida solo ese campo, con las mismas reglas que al guardar. */
+  const validarAlSalir = (clave: string) => {
+    const error = validar(borrador)[clave];
+    setErrores((actuales) => {
+      if (actuales[clave] === error) return actuales;
+      const resto = { ...actuales };
+      if (error) resto[clave] = error;
+      else delete resto[clave];
+      return resto;
+    });
+  };
+
   const guardar = async (evento: React.FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
     if (guardando) return;
 
     const erroresEncontrados = validar(borrador);
     setErrores(erroresEncontrados);
+    setResumenVisible(true);
     setErrorGeneral(null);
     const primerError = campos.find((campo) => erroresEncontrados[campo.clave]);
     if (primerError) {
@@ -180,6 +198,7 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
       value: borrador[campo.clave] ?? '',
       'aria-invalid': error ? true : undefined,
       'aria-describedby': describedBy || undefined,
+      onBlur: () => validarAlSalir(campo.clave),
       className: `${CLASES_CAMPO} ${error ? 'border-saie-danger' : 'border-saie-border'}`,
     };
 
@@ -326,6 +345,18 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
               ))}
             </div>
 
+            {resumenVisible && (
+              <ResumenErrores
+                className="mt-4"
+                errores={campos
+                  .filter((c) => errores[c.clave])
+                  .map((c) => ({
+                    idCampo: `${id}-${c.clave}`,
+                    etiqueta: c.etiqueta,
+                    mensaje: errores[c.clave] as string,
+                  }))}
+              />
+            )}
             {errorGeneral && (
               <Aviso tono="error" className="mt-4">
                 {errorGeneral}

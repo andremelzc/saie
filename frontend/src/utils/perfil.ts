@@ -1,3 +1,4 @@
+import { longitudMaxima, patron, validarCampo } from './validacion';
 import { TIPOS_SANGRE } from '../types/perfil';
 import type {
   CambiosPerfil,
@@ -71,10 +72,16 @@ const LIMITES_TEXTO = {
 } as const;
 
 function validarLongitud(valor: string, maximo: number, errores: ErroresFormulario, clave: string) {
-  if (valor.trim().length > maximo) {
-    errores[clave] = `Usa como máximo ${maximo} caracteres.`;
-  }
+  const error = validarCampo(valor, [longitudMaxima(maximo)]);
+  if (error) errores[clave] = error;
 }
+
+/** Reglas compartidas (Issue 3.41): las usa el formulario al salir de cada campo y al guardar. */
+const REGLA_DNI = patron(/^\d{8}$/, 'El DNI debe tener 8 dígitos.');
+const REGLA_TELEFONO = patron(
+  /^\+?\d{7,15}$/,
+  'El teléfono debe tener entre 7 y 15 dígitos, sin espacios ni guiones.',
+);
 
 /** Valida los datos personales con las mismas reglas que el backend (todos son opcionales). */
 export function validarDatosPersonales(
@@ -86,13 +93,13 @@ export function validarDatosPersonales(
   const fecha = (valores.fechaNacimiento ?? '').trim();
   const telefono = (valores.telefono ?? '').trim();
 
-  if (dni && !/^\d{8}$/.test(dni)) errores.dni = 'El DNI debe tener 8 dígitos.';
+  const errorDni = validarCampo(dni, [REGLA_DNI]);
+  if (errorDni) errores.dni = errorDni;
   if (fecha && !esFechaNacimientoValida(fecha, hoy)) {
     errores.fechaNacimiento = 'Ingresa una fecha de nacimiento válida.';
   }
-  if (telefono && !/^\+?\d{7,15}$/.test(telefono)) {
-    errores.telefono = 'El teléfono debe tener entre 7 y 15 dígitos, sin espacios ni guiones.';
-  }
+  const errorTelefono = validarCampo(telefono, [REGLA_TELEFONO]);
+  if (errorTelefono) errores.telefono = errorTelefono;
   validarLongitud(valores.direccion ?? '', LIMITES_TEXTO.direccion, errores, 'direccion');
   return errores;
 }

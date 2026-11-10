@@ -45,9 +45,6 @@ export const HORAS_GRILLA: number[] = Array.from(
   (_, i) => HORA_INICIO_GRILLA + i,
 );
 
-const MINUTOS_INICIO_GRILLA = HORA_INICIO_GRILLA * 60;
-const MINUTOS_FIN_GRILLA = HORA_FIN_GRILLA * 60;
-
 const DIA_POR_INDICE_JS: DiaSemana[] = [
   'DOMINGO',
   'LUNES',
@@ -116,16 +113,43 @@ export function estadoDeClase(
   return 'PROXIMA';
 }
 
+/** Horas que muestra una grilla: de `desde` (incluida) a `hasta` (excluida). */
+export interface RangoGrilla {
+  desde: number;
+  hasta: number;
+}
+
+/**
+ * Rango de horas de la grilla ajustado a las clases (Issue 3.39): de la hora en que empieza la
+ * primera a la hora en que termina la última, con al menos 4 horas. Sin clases, 08:00–22:00.
+ */
+export function rangoDeHorario(horario: HorarioSemanalDTO): RangoGrilla {
+  const sesiones = todasLasSesiones(horario);
+  if (sesiones.length === 0) return { desde: HORA_INICIO_GRILLA, hasta: HORA_FIN_GRILLA };
+  const desde = Math.floor(Math.min(...sesiones.map((s) => aMinutos(s.horaInicio))) / 60);
+  let hasta = Math.ceil(Math.max(...sesiones.map((s) => aMinutos(s.horaFin))) / 60);
+  if (hasta - desde < 4) hasta = Math.min(24, desde + 4);
+  return { desde, hasta };
+}
+
+/** Horas enteras de un rango, para las líneas y rótulos de la grilla. */
+export function horasDeRango(rango: RangoGrilla): number[] {
+  return Array.from({ length: rango.hasta - rango.desde }, (_, i) => rango.desde + i);
+}
+
 /** Posición vertical de un bloque dentro de la grilla, en porcentaje de su alto total. */
 export function posicionBloque(
   horaInicio: string,
   horaFin: string,
+  rango: RangoGrilla = { desde: HORA_INICIO_GRILLA, hasta: HORA_FIN_GRILLA },
 ): { top: number; height: number } {
-  const total = MINUTOS_FIN_GRILLA - MINUTOS_INICIO_GRILLA;
-  const inicio = Math.max(aMinutos(horaInicio), MINUTOS_INICIO_GRILLA);
-  const fin = Math.min(aMinutos(horaFin), MINUTOS_FIN_GRILLA);
+  const minInicio = rango.desde * 60;
+  const minFin = rango.hasta * 60;
+  const total = minFin - minInicio;
+  const inicio = Math.max(aMinutos(horaInicio), minInicio);
+  const fin = Math.min(aMinutos(horaFin), minFin);
   return {
-    top: ((inicio - MINUTOS_INICIO_GRILLA) / total) * 100,
+    top: ((inicio - minInicio) / total) * 100,
     height: (Math.max(fin - inicio, 0) / total) * 100,
   };
 }
