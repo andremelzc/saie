@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
-import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
-import { Contenedor } from '../components/ui/Contenedor';
-import { ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
+import LayoutEstudiante from '../components/estudiante/LayoutEstudiante';
 import { aplicarPreferencias, guardarPreferencias, leerPreferencias } from '../utils/preferencias';
 import type { PreferenciasApp } from '../utils/preferencias';
-import { ICONOS } from '../components/ui/iconos';
-
-const TRAZO_AJUSTES = ICONOS.ajustes;
 
 interface OpcionPreferencia {
   clave: keyof PreferenciasApp;
@@ -71,57 +66,42 @@ export const ConfiguracionAlumno: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-saie-canvas pb-[var(--saie-barra-inferior)] text-saie-text">
-      <CabeceraPantalla
-        titulo="Configuración"
-        subtitulo="Ajusta la app a tu comodidad."
-        trazoIcono={TRAZO_AJUSTES}
-        ancho="normal"
-      />
-
-      <Contenedor
-        como="main"
-        ancho="normal"
-        id={ID_CONTENIDO}
-        tabIndex={-1}
-        className="flex flex-col gap-3 py-6 focus:outline-none"
+    <LayoutEstudiante titulo="Configuración" subtitulo="Ajusta la app a tu comodidad.">
+      <section
+        aria-labelledby="config-accesibilidad"
+        className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-5 shadow-sm sm:p-6"
       >
-        <section
-          aria-labelledby="config-accesibilidad"
-          className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-5 shadow-sm sm:p-6"
-        >
-          <div>
-            <h2 id="config-accesibilidad" className="m-0 font-serif text-xl font-bold">
-              Accesibilidad
-            </h2>
-            <p className="m-0 mt-1 text-sm text-saie-muted">
-              Estos ajustes se guardan solo en este dispositivo.
-            </p>
-          </div>
-          <ul className="m-0 flex list-none flex-col divide-y divide-saie-divider p-0">
-            {OPCIONES.map((o) => (
-              <li key={o.clave} className="flex items-center justify-between gap-4 py-4">
-                <div className="min-w-0">
-                  <p id={`pref-${o.clave}-t`} className="m-0 font-medium">
-                    {o.titulo}
-                  </p>
-                  <p className="m-0 text-sm text-saie-muted">{o.descripcion}</p>
-                </div>
-                <Interruptor
-                  id={`pref-${o.clave}`}
-                  activo={preferencias[o.clave]}
-                  onCambio={(v) => cambiar(o.clave, v)}
-                  etiquetaPor={`pref-${o.clave}-t`}
-                />
-              </li>
-            ))}
-          </ul>
-        </section>
-        <p role="status" className="m-0 min-h-5 px-1 text-sm text-saie-muted">
-          {guardado ? 'Cambio guardado en este dispositivo.' : ''}
-        </p>
-      </Contenedor>
-    </div>
+        <div>
+          <h2 id="config-accesibilidad" className="m-0 font-serif text-xl font-bold">
+            Accesibilidad
+          </h2>
+          <p className="m-0 mt-1 text-sm text-saie-muted">
+            Estos ajustes se guardan solo en este dispositivo.
+          </p>
+        </div>
+        <ul className="m-0 flex list-none flex-col divide-y divide-saie-divider p-0">
+          {OPCIONES.map((o) => (
+            <li key={o.clave} className="flex items-center justify-between gap-4 py-4">
+              <div className="min-w-0">
+                <p id={`pref-${o.clave}-t`} className="m-0 font-medium">
+                  {o.titulo}
+                </p>
+                <p className="m-0 text-sm text-saie-muted">{o.descripcion}</p>
+              </div>
+              <Interruptor
+                id={`pref-${o.clave}`}
+                activo={preferencias[o.clave]}
+                onCambio={(v) => cambiar(o.clave, v)}
+                etiquetaPor={`pref-${o.clave}-t`}
+              />
+            </li>
+          ))}
+        </ul>
+      </section>
+      <p role="status" className="m-0 min-h-5 px-1 text-sm text-saie-muted">
+        {guardado ? 'Cambio guardado en este dispositivo.' : ''}
+      </p>
+    </LayoutEstudiante>
   );
 };
 

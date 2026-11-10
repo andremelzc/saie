@@ -32,9 +32,14 @@ export const MapaOcupacionPage: React.FC = () => {
         error ? (
           <EstadoError mensaje={error} onReintentar={recargar} />
         ) : (
-          <p role="status" className="text-saie-muted">
-            Cargando el mapa…
-          </p>
+          <div role="status" aria-busy="true" className="flex flex-col gap-3">
+            <span className="sr-only">Cargando el mapa…</span>
+            <div aria-hidden="true" className="flex flex-col gap-3">
+              <span className="saie-esqueleto block h-11 w-64 rounded-lg" />
+              <span className="saie-esqueleto block h-28 rounded-xl border border-saie-divider" />
+              <span className="saie-esqueleto block h-96 rounded-xl border border-saie-divider" />
+            </div>
+          </div>
         )
       ) : (
         <ZonaActualizable actualizando={cargando}>

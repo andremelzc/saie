@@ -1,12 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
-import { Contenedor } from '../components/ui/Contenedor';
-import { ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
+import LayoutEstudiante from '../components/estudiante/LayoutEstudiante';
 import { RUTAS } from '../config/rutas';
-import { ICONOS } from '../components/ui/iconos';
-
-const TRAZO_AYUDA = ICONOS.ayuda;
 
 interface Pregunta {
   pregunta: string;
@@ -104,60 +99,40 @@ const GRUPOS: GrupoPreguntas[] = [
  * solo lectura y no necesita datos del backend. Es alcanzable desde el inicio del alumno.
  */
 export const AyudaAlumno: React.FC = () => (
-  <div className="min-h-screen bg-saie-canvas pb-[var(--saie-barra-inferior)] text-saie-text">
-    <CabeceraPantalla
-      titulo="Ayuda"
-      subtitulo="Respuestas a las dudas más comunes."
-      trazoIcono={TRAZO_AYUDA}
-      ancho="normal"
-    />
+  <LayoutEstudiante titulo="Ayuda" subtitulo="Respuestas a las dudas más comunes.">
+    {GRUPOS.map((grupo) => (
+      <section key={grupo.id} aria-labelledby={`ayuda-${grupo.id}`} className="flex flex-col gap-3">
+        <h2 id={`ayuda-${grupo.id}`} className="m-0 font-serif text-xl font-bold">
+          {grupo.titulo}
+        </h2>
+        <div className="flex flex-col gap-3">
+          {grupo.preguntas.map((p) => (
+            <details
+              key={p.pregunta}
+              className="group rounded-2xl border border-saie-divider bg-white shadow-sm"
+            >
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 py-3 text-base font-medium marker:content-none focus-visible:outline-3 focus-visible:outline-saie-text [&::-webkit-details-marker]:hidden">
+                <span>{p.pregunta}</span>
+                <span
+                  aria-hidden="true"
+                  className="shrink-0 text-saie-primary transition-transform group-open:rotate-180"
+                >
+                  ▾
+                </span>
+              </summary>
+              <div className="px-5 pb-4 text-sm leading-6 text-saie-muted [&_a]:font-medium [&_a]:text-saie-primary">
+                {p.respuesta}
+              </div>
+            </details>
+          ))}
+        </div>
+      </section>
+    ))}
 
-    <Contenedor
-      como="main"
-      ancho="normal"
-      id={ID_CONTENIDO}
-      tabIndex={-1}
-      className="flex flex-col gap-8 py-6 focus:outline-none"
-    >
-      {GRUPOS.map((grupo) => (
-        <section
-          key={grupo.id}
-          aria-labelledby={`ayuda-${grupo.id}`}
-          className="flex flex-col gap-3"
-        >
-          <h2 id={`ayuda-${grupo.id}`} className="m-0 font-serif text-xl font-bold">
-            {grupo.titulo}
-          </h2>
-          <div className="flex flex-col gap-3">
-            {grupo.preguntas.map((p) => (
-              <details
-                key={p.pregunta}
-                className="group rounded-2xl border border-saie-divider bg-white shadow-sm"
-              >
-                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 py-3 text-base font-medium marker:content-none focus-visible:outline-3 focus-visible:outline-saie-text [&::-webkit-details-marker]:hidden">
-                  <span>{p.pregunta}</span>
-                  <span
-                    aria-hidden="true"
-                    className="shrink-0 text-saie-primary transition-transform group-open:rotate-180"
-                  >
-                    ▾
-                  </span>
-                </summary>
-                <div className="px-5 pb-4 text-sm leading-6 text-saie-muted [&_a]:font-medium [&_a]:text-saie-primary">
-                  {p.respuesta}
-                </div>
-              </details>
-            ))}
-          </div>
-        </section>
-      ))}
-
-      <p className="m-0 rounded-2xl border border-saie-divider bg-white p-5 text-sm text-saie-muted">
-        ¿No encontraste lo que buscabas? Acércate a la oficina académica de la Facultad de
-        Ingeniería.
-      </p>
-    </Contenedor>
-  </div>
+    <p className="m-0 rounded-2xl border border-saie-divider bg-white p-5 text-sm text-saie-muted">
+      ¿No encontraste lo que buscabas? Acércate a la oficina académica de la Facultad de Ingeniería.
+    </p>
+  </LayoutEstudiante>
 );
 
 export default AyudaAlumno;
