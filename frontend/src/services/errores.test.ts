@@ -29,6 +29,16 @@ describe('mensajeDeError', () => {
     );
   });
 
+  it('traduce 429 a un texto propio, con o sin cuerpo del servidor', () => {
+    expect(mensajeDeError(conRespuesta(429, { success: false, message: 'otro texto' }))).toBe(
+      TEXTOS_ERROR.demasiadosIntentos,
+    );
+    expect(mensajeDeError(conRespuesta(429))).toBe(TEXTOS_ERROR.demasiadosIntentos);
+    expect(mensajeSeguroDelServidor(conRespuesta(429, '<html>Too Many</html>'))).toBe(
+      TEXTOS_ERROR.demasiadosIntentos,
+    );
+  });
+
   it('muestra el mensaje de dominio del backend', () => {
     expect(mensajeDeError(conRespuesta(409, { success: false, message: 'Ya existe.' }))).toBe(
       'Ya existe.',

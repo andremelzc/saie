@@ -12,9 +12,7 @@ test.describe('Flujo de Consulta Pública del Estudiante (Issue #181 / 5.9)', ()
           data: {
             alumno: {
               codigo: '20200001',
-              nombre: 'Juan Pérez García',
-              correo: 'juan.perez@unmsm.edu.pe',
-              movilidadReducida: false,
+              nombre: 'Juan',
             },
             asignaciones: [
               {
@@ -58,9 +56,7 @@ test.describe('Flujo de Consulta Pública del Estudiante (Issue #181 / 5.9)', ()
           data: {
             alumno: {
               codigo: '20200002',
-              nombre: 'Carlos Mendoza',
-              correo: 'carlos.mendoza@unmsm.edu.pe',
-              movilidadReducida: false,
+              nombre: 'Carlos',
             },
             asignaciones: [],
           },

@@ -3,8 +3,12 @@ import {
   consultarPorCodigoAlumno,
   consultarPorCodigoCurso,
 } from '../controllers/consulta.controller';
+import { crearLimitadorConsulta } from '../middlewares/limitador.middleware';
 
 const router = Router();
+
+// Consulta pública: límite por IP holgado (Issue 1.12).
+router.use(crearLimitadorConsulta());
 
 // GET /api/v1/consulta/alumno/:codigoAlumno (Issue 3.2)
 router.get('/alumno/:codigoAlumno', consultarPorCodigoAlumno);

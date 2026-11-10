@@ -34,9 +34,8 @@ export interface AsignacionConsultaItemDTO {
 export interface ConsultaAlumnoResponseDTO {
   alumno: {
     codigo: string;
+    /** Solo el nombre de pila: la consulta es pública (Issue 3.37, RNF-09). */
     nombre: string;
-    correo: string;
-    movilidadReducida: boolean;
   };
   asignaciones: AsignacionConsultaItemDTO[];
 }

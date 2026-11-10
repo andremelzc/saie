@@ -16,6 +16,8 @@ export const TEXTOS_ERROR = {
   noEncontrado: 'No encontramos lo que buscas. Puede que ya no exista: actualiza la página.',
   servidor: 'Algo salió mal de nuestro lado. Inténtalo de nuevo en unos minutos.',
   datosInvalidos: 'Revisa los datos ingresados.',
+  /** 429: el backend limita los intentos de inicio de sesión y las consultas públicas. */
+  demasiadosIntentos: 'Demasiados intentos. Espera un momento e inténtalo de nuevo.',
 } as const;
 
 /** Texto cuando un código del backend no tiene traducción (y se avisa en la consola). */
