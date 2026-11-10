@@ -238,7 +238,8 @@ function dijkstra(m: Malla, origenes: number[], destinos?: Set<number>): Resulta
       const nk = nj * m.ancho + ni;
       if (!m.libre[nk]) continue;
       // En diagonal no se corta una esquina: las dos celdas laterales también deben estar libres.
-      if (di !== 0 && dj !== 0 && (!m.libre[j * m.ancho + ni] || !m.libre[nj * m.ancho + i])) continue;
+      if (di !== 0 && dj !== 0 && (!m.libre[j * m.ancho + ni] || !m.libre[nj * m.ancho + i]))
+        continue;
       const nd = d + costo;
       if (nd < distancia[nk]) {
         distancia[nk] = nd;
@@ -355,10 +356,15 @@ export function parejasContiguas(figuras: FiguraPlano2D[]): [string, string][] {
       const solapeX = Math.min(r.x + r.ancho, s.x + s.ancho) - Math.max(r.x, s.x);
       const solapeY = Math.min(r.y + r.alto, s.y + s.alto) - Math.max(r.y, s.y);
       const tocaLados =
-        Math.abs(r.x + r.ancho - s.x) <= HOLGURA_PARED || Math.abs(s.x + s.ancho - r.x) <= HOLGURA_PARED;
+        Math.abs(r.x + r.ancho - s.x) <= HOLGURA_PARED ||
+        Math.abs(s.x + s.ancho - r.x) <= HOLGURA_PARED;
       const tocaFilas =
-        Math.abs(r.y + r.alto - s.y) <= HOLGURA_PARED || Math.abs(s.y + s.alto - r.y) <= HOLGURA_PARED;
-      if ((tocaLados && solapeY >= TRAMO_MINIMO_PARED) || (tocaFilas && solapeX >= TRAMO_MINIMO_PARED)) {
+        Math.abs(r.y + r.alto - s.y) <= HOLGURA_PARED ||
+        Math.abs(s.y + s.alto - r.y) <= HOLGURA_PARED;
+      if (
+        (tocaLados && solapeY >= TRAMO_MINIMO_PARED) ||
+        (tocaFilas && solapeX >= TRAMO_MINIMO_PARED)
+      ) {
         parejas.push([rects[a].id, rects[b].id]);
       }
     }
@@ -377,7 +383,9 @@ export function distanciasAlAscensor(plano: Plano2D): Map<string, number> {
   const resultado = new Map<string, number>();
   const m = crearMalla(plano);
   if (!m) return resultado;
-  const prefijos = new Set(plano.figuras.filter((f) => f.clase === 'ascensor').map((f) => f.id.slice(0, 3)));
+  const prefijos = new Set(
+    plano.figuras.filter((f) => f.clase === 'ascensor').map((f) => f.id.slice(0, 3)),
+  );
   for (const prefijo of prefijos) {
     const accesos = plano.figuras
       .filter((f) => f.clase === 'ascensor' && f.id.startsWith(prefijo))

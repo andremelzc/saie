@@ -773,11 +773,7 @@ function Controles({ centro, tamano, encuadre, orden, puntoDe }: ControlesProps)
     const objetivo = new Vector3(...centro);
     const posicion = new Vector3();
     if (orden.tipo === 'reiniciar') {
-      posicion.set(
-        centro[0] + tamano * 0.45,
-        centro[1] + tamano * 0.85,
-        centro[2] + tamano * 0.95,
-      );
+      posicion.set(centro[0] + tamano * 0.45, centro[1] + tamano * 0.85, centro[2] + tamano * 0.95);
     } else if (orden.tipo === 'cenital') {
       const polar = CAMARA.anguloMinimo + 0.01;
       posicion.set(
@@ -791,7 +787,9 @@ function Controles({ centro, tamano, encuadre, orden, puntoDe }: ControlesProps)
       objetivo.set(...punto);
       // Se conserva la dirección desde la que se mira; solo cambia la distancia.
       const direccion = camara.position.clone().sub(controles.target).normalize();
-      posicion.copy(objetivo).addScaledVector(direccion, Math.max(tamano * 0.5, controles.minDistance));
+      posicion
+        .copy(objetivo)
+        .addScaledVector(direccion, Math.max(tamano * 0.5, controles.minDistance));
     }
 
     const desdePosicion = camara.position.clone();

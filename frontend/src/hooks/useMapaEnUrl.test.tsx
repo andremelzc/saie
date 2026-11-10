@@ -20,7 +20,9 @@ describe('useMapaEnUrl', () => {
   });
 
   it('lee la vista, el piso, el espacio y la franja de la URL', () => {
-    const { result } = montar('/mapa?vista=3d&piso=2&espacio=NUE-204&dia=MARTES&desde=08:00&hasta=10:00');
+    const { result } = montar(
+      '/mapa?vista=3d&piso=2&espacio=NUE-204&dia=MARTES&desde=08:00&hasta=10:00',
+    );
     expect(result.current.vista).toBe('3d');
     expect(result.current.piso).toBe(2);
     expect(result.current.espacio).toBe('NUE-204');

@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { acercar, centrarEn, desplazar, limitar, nivelZoom, pantallaAPlano, ZOOM_MAXIMO } from './zoom';
+import {
+  acercar,
+  centrarEn,
+  desplazar,
+  limitar,
+  nivelZoom,
+  pantallaAPlano,
+  ZOOM_MAXIMO,
+} from './zoom';
 
 const BASE = { x: 0, y: 0, ancho: 400, alto: 300 };
 

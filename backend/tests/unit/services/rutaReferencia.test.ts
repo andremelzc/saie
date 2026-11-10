@@ -136,7 +136,9 @@ describe('Algoritmo de Ruta de Referencia (Issue 3.14)', () => {
       expect(sinPabellon.tramos).toHaveLength(0);
 
       const sinPiso = calcularRutaReferencia({
-        espacios: [{ id: 'esp-y', identificador: 'Aula Y', pabellon: 'Nuevo Pabellón', piso: null }],
+        espacios: [
+          { id: 'esp-y', identificador: 'Aula Y', pabellon: 'Nuevo Pabellón', piso: null },
+        ],
       });
       expect(sinPiso.estado).toBe('RUTA_NO_DISPONIBLE');
       expect(sinPiso.tramos).toHaveLength(0);

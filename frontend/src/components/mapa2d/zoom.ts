@@ -22,13 +22,23 @@ function ajuste(vista: CajaPlano, pantalla: Pantalla) {
 }
 
 /** Punto del plano que hay bajo un punto de la pantalla (relativo al elemento). */
-export function pantallaAPlano(vista: CajaPlano, pantalla: Pantalla, px: number, py: number): Punto {
+export function pantallaAPlano(
+  vista: CajaPlano,
+  pantalla: Pantalla,
+  px: number,
+  py: number,
+): Punto {
   const { escala, dx, dy } = ajuste(vista, pantalla);
   return { x: vista.x + (px - dx) / escala, y: vista.y + (py - dy) / escala };
 }
 
 /** Acerca o aleja la vista manteniendo quieto el punto `ancla` (en coordenadas del plano). */
-export function acercar(base: CajaPlano, vista: CajaPlano, factor: number, ancla: Punto): CajaPlano {
+export function acercar(
+  base: CajaPlano,
+  vista: CajaPlano,
+  factor: number,
+  ancla: Punto,
+): CajaPlano {
   const ancho = Math.min(
     base.ancho / ZOOM_MINIMO,
     Math.max(base.ancho / ZOOM_MAXIMO, vista.ancho / factor),

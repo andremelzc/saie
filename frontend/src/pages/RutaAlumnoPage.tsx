@@ -31,7 +31,9 @@ export const RutaAlumnoPage: React.FC = () => {
 
   const [elegida, setElegida] = useState<string | null>(null);
   const asignacionId =
-    conAula.find((c) => c.asignacionId === elegida)?.asignacionId ?? conAula[0]?.asignacionId ?? null;
+    conAula.find((c) => c.asignacionId === elegida)?.asignacionId ??
+    conAula[0]?.asignacionId ??
+    null;
 
   const pedirRuta = useCallback(
     () =>

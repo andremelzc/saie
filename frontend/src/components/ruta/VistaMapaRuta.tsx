@@ -14,9 +14,15 @@ export interface VistaMapaRutaProps {
 }
 
 const LeyendaRuta: React.FC = () => (
-  <ul aria-label="Leyenda de la ruta" className="m-0 flex list-none flex-wrap gap-x-5 gap-y-2 p-0 text-sm text-saie-text">
+  <ul
+    aria-label="Leyenda de la ruta"
+    className="m-0 flex list-none flex-wrap gap-x-5 gap-y-2 p-0 text-sm text-saie-text"
+  >
     <li className="flex items-center gap-2">
-      <span aria-hidden="true" className="inline-block h-0 w-7 border-t-4 border-dashed border-indigo-600" />
+      <span
+        aria-hidden="true"
+        className="inline-block h-0 w-7 border-t-4 border-dashed border-indigo-600"
+      />
       Recorrido
     </li>
     <li className="flex items-center gap-2">

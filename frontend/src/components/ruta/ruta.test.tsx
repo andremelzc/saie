@@ -70,7 +70,14 @@ describe('calcularTrazado', () => {
   });
 
   it('el recorrido sigue los pasillos: ningún tramo atraviesa un aula, laboratorio ni baño', () => {
-    const ocupado = new Set(['aula', 'laboratorio', 'bano', 'administrativo', 'escalera', 'ascensor']);
+    const ocupado = new Set([
+      'aula',
+      'laboratorio',
+      'bano',
+      'administrativo',
+      'escalera',
+      'ascensor',
+    ]);
     for (const [a, esperado] of [
       [AULA_PISO_2, 'NUE-204'],
       [LAB_PISO_1, 'ANT-104'],
@@ -79,13 +86,18 @@ describe('calcularTrazado', () => {
       const t = calcularTrazado(rutaDeEjemplo(a, false), PLANOS_SVG);
       expect(t.destinos[0]).toBe(esperado);
       for (const [piso, trazo] of Object.entries(t.capa)) {
-        const figuras = leerPlano2D(PLANOS_SVG[Number(piso)]).figuras.filter((f) => ocupado.has(f.clase) && f.rect);
+        const figuras = leerPlano2D(PLANOS_SVG[Number(piso)]).figuras.filter(
+          (f) => ocupado.has(f.clase) && f.rect,
+        );
         // Los centros (entrada, conector, aulas) están dentro de una figura: esos tramos se saltan.
-        const centros = [...t.destinos, t.conector ?? '', 'entrada-1', 'entrada-2'].flatMap((id) => {
-          const f = leerPlano2D(PLANOS_SVG[Number(piso)]).figuras.find((q) => q.id === id);
-          return f ? [centroDe(f)] : [];
-        });
-        const esCentro = (q: { x: number; y: number }) => centros.some((c) => c.x === q.x && c.y === q.y);
+        const centros = [...t.destinos, t.conector ?? '', 'entrada-1', 'entrada-2'].flatMap(
+          (id) => {
+            const f = leerPlano2D(PLANOS_SVG[Number(piso)]).figuras.find((q) => q.id === id);
+            return f ? [centroDe(f)] : [];
+          },
+        );
+        const esCentro = (q: { x: number; y: number }) =>
+          centros.some((c) => c.x === q.x && c.y === q.y);
         const pts = trazo.puntos;
         for (let k = 0; k < pts.length - 1; k++) {
           if (esCentro(pts[k]) || esCentro(pts[k + 1])) continue;
@@ -93,7 +105,11 @@ describe('calcularTrazado', () => {
             const x = pts[k].x + ((pts[k + 1].x - pts[k].x) * s) / 20;
             const y = pts[k].y + ((pts[k + 1].y - pts[k].y) * s) / 20;
             const dentro = figuras.find(
-              (f) => x > f.rect!.x + 0.5 && x < f.rect!.x + f.rect!.ancho - 0.5 && y > f.rect!.y + 0.5 && y < f.rect!.y + f.rect!.alto - 0.5,
+              (f) =>
+                x > f.rect!.x + 0.5 &&
+                x < f.rect!.x + f.rect!.ancho - 0.5 &&
+                y > f.rect!.y + 0.5 &&
+                y < f.rect!.y + f.rect!.alto - 0.5,
             );
             // Salvo el conector elegido y el destino, que se tocan en su borde.
             expect(dentro?.id, `piso ${piso}, tramo ${k}: pasa por ${dentro?.id}`).toBeUndefined();

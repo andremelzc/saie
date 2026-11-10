@@ -37,7 +37,9 @@ const ESPACIOS: Record<string, unknown[]> = {
     },
     { identificador: 'Aula 199', tipo: 'AULA_TEORICA', estado: 'DISPONIBLE' },
   ],
-  'Antiguo Pabellón|2': [{ identificador: 'Aula 207', tipo: 'AULA_TEORICA', estado: 'DESHABILITADO' }],
+  'Antiguo Pabellón|2': [
+    { identificador: 'Aula 207', tipo: 'AULA_TEORICA', estado: 'DESHABILITADO' },
+  ],
   'Nuevo Pabellón|3': [{ identificador: 'Aula 399', tipo: 'AULA_TEORICA', estado: 'DISPONIBLE' }],
 };
 
@@ -98,7 +100,9 @@ describe('MapaAdminPage', () => {
     expect(screen.getByText(/no aparecen en el mapa/)).toHaveTextContent(
       'Antiguo Pabellón · Aula 199',
     );
-    expect(screen.getByText(/no aparecen en el mapa/)).toHaveTextContent('Nuevo Pabellón · Aula 399');
+    expect(screen.getByText(/no aparecen en el mapa/)).toHaveTextContent(
+      'Nuevo Pabellón · Aula 399',
+    );
     expect(screen.getByText(/Fuera de servicio/)).toHaveTextContent('ANT-207');
   });
 

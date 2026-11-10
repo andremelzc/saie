@@ -12,11 +12,17 @@ export const TODOS_LOS_TIPOS: TipoEspacio[] = ['AULA_TEORICA', 'LABORATORIO'];
 
 export const FILTRO_TODO: FiltroMapa = { estados: TODOS_LOS_ESTADOS, tipos: TODOS_LOS_TIPOS };
 
-export function pasaFiltro(espacio: Pick<EspacioMapa2D, 'estado' | 'tipo'>, f: FiltroMapa): boolean {
+export function pasaFiltro(
+  espacio: Pick<EspacioMapa2D, 'estado' | 'tipo'>,
+  f: FiltroMapa,
+): boolean {
   return f.estados.includes(espacio.estado) && f.tipos.includes(espacio.tipo);
 }
 
-export function hayFiltro(f: FiltroMapa, estadosPosibles: EstadoOcupacion[] = TODOS_LOS_ESTADOS): boolean {
+export function hayFiltro(
+  f: FiltroMapa,
+  estadosPosibles: EstadoOcupacion[] = TODOS_LOS_ESTADOS,
+): boolean {
   return (
     estadosPosibles.some((e) => !f.estados.includes(e)) ||
     TODOS_LOS_TIPOS.some((t) => !f.tipos.includes(t))

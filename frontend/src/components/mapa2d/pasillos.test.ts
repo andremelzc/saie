@@ -19,16 +19,19 @@ const figura = (piso: number, id: string) => {
 };
 
 describe('malla de pasillos', () => {
-  it.each([1, 2, 3])('el piso %i tiene malla y toda aula, laboratorio, escalera y ascensor da a un pasillo', (piso) => {
-    const p = plano(piso);
-    const malla = crearMalla(p);
-    expect(malla).not.toBeNull();
-    const sinPuerta = p.figuras
-      .filter((f) => ['aula', 'laboratorio', 'escalera', 'ascensor'].includes(f.clase))
-      .filter((f) => celdasDePuerta(malla!, f).length === 0)
-      .map((f) => f.id);
-    expect(sinPuerta).toEqual([]);
-  });
+  it.each([1, 2, 3])(
+    'el piso %i tiene malla y toda aula, laboratorio, escalera y ascensor da a un pasillo',
+    (piso) => {
+      const p = plano(piso);
+      const malla = crearMalla(p);
+      expect(malla).not.toBeNull();
+      const sinPuerta = p.figuras
+        .filter((f) => ['aula', 'laboratorio', 'escalera', 'ascensor'].includes(f.clase))
+        .filter((f) => celdasDePuerta(malla!, f).length === 0)
+        .map((f) => f.id);
+      expect(sinPuerta).toEqual([]);
+    },
+  );
 
   it('un plano sin la figura techo no tiene malla', () => {
     const p = plano(1);
@@ -39,7 +42,10 @@ describe('malla de pasillos', () => {
     for (const piso of [1, 2, 3]) {
       const p = plano(piso);
       const malla = crearMalla(p)!;
-      const desdeAscensor = distanciasDesde(malla, celdasDePuerta(malla, figura(piso, 'NUE-ascensor-1')));
+      const desdeAscensor = distanciasDesde(
+        malla,
+        celdasDePuerta(malla, figura(piso, 'NUE-ascensor-1')),
+      );
       for (const f of p.figuras.filter((q) => ['aula', 'laboratorio'].includes(q.clase))) {
         expect(
           Number.isFinite(distanciaMinima(desdeAscensor, celdasDePuerta(malla, f))),

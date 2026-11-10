@@ -22,9 +22,5 @@ export function indiceFiguras(planos: Record<number, string>): Map<string, Entra
 
 /** Minúsculas y sin tildes, para comparar lo que escribe la persona con los nombres. */
 export function normalizar(texto: string): string {
-  return texto
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .trim();
+  return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }

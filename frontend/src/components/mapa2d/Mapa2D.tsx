@@ -15,12 +15,7 @@ import {
 import type { EstadoOcupacion } from '../mapa3d/tipos';
 import type { TrazoPiso } from './capaRuta';
 import { ENTRADA_PABELLON, IDS_ENTRADAS, NORTE_GRADOS } from './entradas';
-import {
-  ESTADO_TEXTO,
-  PABELLON_TEXTO,
-  TIPO_TEXTO,
-  type EspacioMapa2D,
-} from './etiquetas';
+import { ESTADO_TEXTO, PABELLON_TEXTO, TIPO_TEXTO, type EspacioMapa2D } from './etiquetas';
 import { pasaFiltro, type FiltroMapa } from './filtros';
 import {
   centroDe,
@@ -124,7 +119,12 @@ const IconoConexion: React.FC<{ figura: FiguraPlano2D }> = ({ figura: f }) => {
   if (lado < 3) return null;
   const x = f.caja.x + f.caja.ancho / 2 - lado / 2;
   const y = f.caja.y + f.caja.alto * 0.08;
-  const trazo = { fill: 'none', stroke: '#0f172a', strokeWidth: lado * 0.1, strokeLinejoin: 'round' as const };
+  const trazo = {
+    fill: 'none',
+    stroke: '#0f172a',
+    strokeWidth: lado * 0.1,
+    strokeLinejoin: 'round' as const,
+  };
   return f.clase === 'escalera' ? (
     <polyline
       points={`${x},${y + lado} ${x},${y + lado * 0.66} ${x + lado * 0.33},${y + lado * 0.66} ${x + lado * 0.33},${y + lado * 0.33} ${x + lado * 0.66},${y + lado * 0.33} ${x + lado * 0.66},${y} ${x + lado},${y}`}
@@ -133,8 +133,14 @@ const IconoConexion: React.FC<{ figura: FiguraPlano2D }> = ({ figura: f }) => {
     />
   ) : (
     <g pointerEvents="none" {...trazo}>
-      <polygon points={`${x + lado * 0.5},${y} ${x + lado * 0.2},${y + lado * 0.4} ${x + lado * 0.8},${y + lado * 0.4}`} fill="#0f172a" />
-      <polygon points={`${x + lado * 0.5},${y + lado} ${x + lado * 0.2},${y + lado * 0.6} ${x + lado * 0.8},${y + lado * 0.6}`} fill="#0f172a" />
+      <polygon
+        points={`${x + lado * 0.5},${y} ${x + lado * 0.2},${y + lado * 0.4} ${x + lado * 0.8},${y + lado * 0.4}`}
+        fill="#0f172a"
+      />
+      <polygon
+        points={`${x + lado * 0.5},${y + lado} ${x + lado * 0.2},${y + lado * 0.6} ${x + lado * 0.8},${y + lado * 0.6}`}
+        fill="#0f172a"
+      />
     </g>
   );
 };
@@ -348,8 +354,23 @@ const RutaSobrePlano: React.FC<{ trazo: TrazoPiso }> = ({ trazo }) => {
     <g aria-hidden="true" pointerEvents="none">
       {trazo.puntos.length > 1 && (
         <>
-          <polyline points={puntos} fill="none" stroke="#ffffff" strokeWidth={4.4} strokeLinecap="round" strokeLinejoin="round" />
-          <polyline points={puntos} fill="none" stroke={COLOR_RUTA} strokeWidth={2.2} strokeDasharray="5 3" strokeLinecap="round" strokeLinejoin="round" />
+          <polyline
+            points={puntos}
+            fill="none"
+            stroke="#ffffff"
+            strokeWidth={4.4}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <polyline
+            points={puntos}
+            fill="none"
+            stroke={COLOR_RUTA}
+            strokeWidth={2.2}
+            strokeDasharray="5 3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </>
       )}
       {trazo.marcas.map((m) => (
@@ -397,13 +418,25 @@ const RutaSobrePlano: React.FC<{ trazo: TrazoPiso }> = ({ trazo }) => {
 /** Flecha del norte, dibujada en la esquina de la vista actual. No hay escala: el plano no la tiene. */
 const Norte: React.FC<{ vista: CajaPlano }> = ({ vista }) => {
   const u = vista.ancho / 150; // tamaño en pantalla constante: crece y se encoge con el zoom
-  const texto = { fontSize: 2.4 * u, fontFamily: 'sans-serif', fill: '#0f172a', stroke: '#ffffff', strokeWidth: 0.7 * u, paintOrder: 'stroke' as const };
+  const texto = {
+    fontSize: 2.4 * u,
+    fontFamily: 'sans-serif',
+    fill: '#0f172a',
+    stroke: '#ffffff',
+    strokeWidth: 0.7 * u,
+    paintOrder: 'stroke' as const,
+  };
   const cx = vista.x + vista.ancho - 6 * u;
   const cy = vista.y + 9 * u;
   return (
     <g aria-hidden="true" pointerEvents="none">
       <g transform={`rotate(${NORTE_GRADOS} ${cx} ${cy})`}>
-        <polygon points={`${cx},${cy - 3.6 * u} ${cx + 1.8 * u},${cy + 2 * u} ${cx},${cy + 0.8 * u} ${cx - 1.8 * u},${cy + 2 * u}`} fill="#0f172a" stroke="#ffffff" strokeWidth={0.5 * u} />
+        <polygon
+          points={`${cx},${cy - 3.6 * u} ${cx + 1.8 * u},${cy + 2 * u} ${cx},${cy + 0.8 * u} ${cx - 1.8 * u},${cy + 2 * u}`}
+          fill="#0f172a"
+          stroke="#ffffff"
+          strokeWidth={0.5 * u}
+        />
         <text x={cx} y={cy - 4.6 * u} textAnchor="middle" fontWeight={700} {...texto}>
           N
         </text>
@@ -683,7 +716,11 @@ export const Mapa2D: React.FC<Mapa2DProps> = ({
       return;
     }
     if (!gesto.current.arrastrado) {
-      if (Math.hypot(e.clientX - gesto.current.inicioX, e.clientY - gesto.current.inicioY) < UMBRAL_ARRASTRE) return;
+      if (
+        Math.hypot(e.clientX - gesto.current.inicioX, e.clientY - gesto.current.inicioY) <
+        UMBRAL_ARRASTRE
+      )
+        return;
       gesto.current.arrastrado = true;
       e.currentTarget.setPointerCapture?.(e.pointerId);
     }
@@ -871,9 +908,7 @@ export const Mapa2D: React.FC<Mapa2DProps> = ({
                 <MarcadorEntrada
                   key={f.id}
                   figura={f}
-                  etiqueta={
-                    f.id === ENTRADA_PABELLON.NUE ? 'Entrada nuevo' : 'Entrada antiguo'
-                  }
+                  etiqueta={f.id === ENTRADA_PABELLON.NUE ? 'Entrada nuevo' : 'Entrada antiguo'}
                 />
               ))}
             {trazo && <RutaSobrePlano trazo={trazo} />}
@@ -886,15 +921,36 @@ export const Mapa2D: React.FC<Mapa2DProps> = ({
           menos para acercar o alejar, y cero para ver todo el piso.
         </p>
 
-        <div role="group" aria-label="Zoom del plano" className="absolute right-3 top-3 flex flex-col gap-1">
+        <div
+          role="group"
+          aria-label="Zoom del plano"
+          className="absolute right-3 top-3 flex flex-col gap-1"
+        >
           <BotonZoom etiqueta="Acercar" onClick={() => acercarEn(PASO_ZOOM)}>
             +
           </BotonZoom>
-          <BotonZoom etiqueta="Alejar" onClick={() => acercarEn(1 / PASO_ZOOM)} deshabilitado={zoom <= 1.01}>
+          <BotonZoom
+            etiqueta="Alejar"
+            onClick={() => acercarEn(1 / PASO_ZOOM)}
+            deshabilitado={zoom <= 1.01}
+          >
             −
           </BotonZoom>
-          <BotonZoom etiqueta="Ver todo el piso" onClick={() => setZp(null)} deshabilitado={zoom <= 1.01}>
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <BotonZoom
+            etiqueta="Ver todo el piso"
+            onClick={() => setZp(null)}
+            deshabilitado={zoom <= 1.01}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
               <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
             </svg>
           </BotonZoom>

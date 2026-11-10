@@ -599,7 +599,9 @@ export async function cargarPlantilla(
         OR: sobrantes.map((r) => ({ espacioIdA: r.espacioIdA, espacioIdB: r.espacioIdB })),
       },
     });
-    log(`      ${sobrantes.length} relaciones de contigüidad que ya no están en el Excel se quitaron.`);
+    log(
+      `      ${sobrantes.length} relaciones de contigüidad que ya no están en el Excel se quitaron.`,
+    );
   }
 
   log('[2/6] Docentes...');

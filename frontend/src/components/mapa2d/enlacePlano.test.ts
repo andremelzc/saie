@@ -24,8 +24,23 @@ const con = (pabellon: string, ...nombres: string[]) =>
 const ESPACIOS_BD = [
   ...aulas(NUEVO, 101, 109),
   ...aulas(NUEVO, 201, 205),
-  ...con(NUEVO, 'Aula 206 - Data center', 'Aula 207 - Laboratorio 01', 'Aula 208 - Laboratorio 02', 'Aula 209 - Laboratorio 03'),
-  ...con(NUEVO, 'Aula 301', 'Aula 302', 'Aula 303 - Laboratorio 04', 'Aula 304 - Laboratorio 05', 'Aula 305 - Laboratorio 06', 'Aula 306 - Laboratorio 07', 'Aula 307 - Laboratorio 08'),
+  ...con(
+    NUEVO,
+    'Aula 206 - Data center',
+    'Aula 207 - Laboratorio 01',
+    'Aula 208 - Laboratorio 02',
+    'Aula 209 - Laboratorio 03',
+  ),
+  ...con(
+    NUEVO,
+    'Aula 301',
+    'Aula 302',
+    'Aula 303 - Laboratorio 04',
+    'Aula 304 - Laboratorio 05',
+    'Aula 305 - Laboratorio 06',
+    'Aula 306 - Laboratorio 07',
+    'Aula 307 - Laboratorio 08',
+  ),
   ...aulas(ANTIGUO, 101, 103),
   ...con(ANTIGUO, 'Aula 104 - Laboratorio 08'),
   ...aulas(ANTIGUO, 105, 109),
@@ -33,7 +48,16 @@ const ESPACIOS_BD = [
   ...aulas(ANTIGUO, 201, 205),
   ...con(ANTIGUO, 'Aula 206 - Laboratorio 09', 'Aula 207', 'Aula 208 y 209 - Aula Magna'),
   ...aulas(ANTIGUO, 210, 213),
-  ...con(ANTIGUO, 'Aula 301', 'Aula 302 - Laboratorio 06', 'Aula 303 - Laboratorio 05', 'Aula 304 - Laboratorio 01', 'Aula 305 - Laboratorio 02', 'Aula 306 - Laboratorio 03', 'Aula 307 - Laboratorio 04'),
+  ...con(
+    ANTIGUO,
+    'Aula 301',
+    'Aula 302 - Laboratorio 06',
+    'Aula 303 - Laboratorio 05',
+    'Aula 304 - Laboratorio 01',
+    'Aula 305 - Laboratorio 02',
+    'Aula 306 - Laboratorio 03',
+    'Aula 307 - Laboratorio 04',
+  ),
 ];
 
 const enlace = crearEnlacePlano(PLANOS_SVG);
@@ -94,8 +118,17 @@ describe('espaciosDesdeOcupacion', () => {
     pabellon: ANTIGUO,
     piso: 1,
     espacios: [
-      { identificador: 'Aula 101', tipo: 'AULA_TEORICA' as const, estado: 'OCUPADO' as const, aforoNominal: 40 },
-      { identificador: 'Aula 104 - Laboratorio 08', tipo: 'LABORATORIO' as const, estado: 'DISPONIBLE' as const },
+      {
+        identificador: 'Aula 101',
+        tipo: 'AULA_TEORICA' as const,
+        estado: 'OCUPADO' as const,
+        aforoNominal: 40,
+      },
+      {
+        identificador: 'Aula 104 - Laboratorio 08',
+        tipo: 'LABORATORIO' as const,
+        estado: 'DISPONIBLE' as const,
+      },
       { identificador: 'Aula 199', tipo: 'AULA_TEORICA' as const, estado: 'DISPONIBLE' as const },
     ],
   };
@@ -136,7 +169,14 @@ describe('rutaConIdsDePlano', () => {
     tiempoEstimadoTotalSegundos: 135,
     movilidadReducida: false,
     tramos: [
-      { orden: 1, tipo: 'ENTRADA_PABELLON', titulo: 'Entrada', descripcion: '', tiempoEstimadoSegundos: 45, esAccesible: true },
+      {
+        orden: 1,
+        tipo: 'ENTRADA_PABELLON',
+        titulo: 'Entrada',
+        descripcion: '',
+        tiempoEstimadoSegundos: 45,
+        esAccesible: true,
+      },
       {
         orden: 2,
         tipo: 'ESPACIO_ASIGNADO',

@@ -138,7 +138,9 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
     it('Coordinación entra al mapa de ocupación por piso', async () => {
       iniciarSesionDePrueba('COORDINACION_ACADEMICA');
       // El mapa pide la ocupación real de cada pabellón y piso: se responde un piso vacío.
-      api.defaults.adapter = async (config: InternalAxiosRequestConfig): Promise<AxiosResponse> => ({
+      api.defaults.adapter = async (
+        config: InternalAxiosRequestConfig,
+      ): Promise<AxiosResponse> => ({
         data: { success: true, data: { ...config.params, espacios: [] } },
         status: 200,
         statusText: 'OK',
@@ -149,10 +151,11 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
       expect(
         await screen.findByRole('heading', { name: 'Mapa de ocupación por piso' }),
       ).toBeInTheDocument();
+      // El mapa pide seis consultas y dibuja los planos: con la máquina cargada pasa de 1 s.
       expect(
-        await screen.findByRole('group', { name: /Plano del piso 1/ }),
+        await screen.findByRole('group', { name: /Plano del piso 1/ }, { timeout: 5000 }),
       ).toBeInTheDocument();
-    });
+    }, 10000);
 
     // Estas dos pantallas ya no están «en desarrollo» (Issue 4.29): se comprueba el acceso por rol.
     it('Coordinación entra a la bandeja de solicitudes de software', async () => {

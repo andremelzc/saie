@@ -133,8 +133,16 @@ export function vecinoEnDireccion(
     const c = centroDe(f);
     const dx = c.x - o.x;
     const dy = c.y - o.y;
-    const eje = direccion === 'derecha' ? dx : direccion === 'izquierda' ? -dx : direccion === 'abajo' ? dy : -dy;
-    const lateral = direccion === 'derecha' || direccion === 'izquierda' ? Math.abs(dy) : Math.abs(dx);
+    const eje =
+      direccion === 'derecha'
+        ? dx
+        : direccion === 'izquierda'
+          ? -dx
+          : direccion === 'abajo'
+            ? dy
+            : -dy;
+    const lateral =
+      direccion === 'derecha' || direccion === 'izquierda' ? Math.abs(dy) : Math.abs(dx);
     if (eje <= 0.5 || lateral > eje * 2.5) continue;
     const puntaje = eje + lateral * 2;
     if (puntaje < mejorPuntaje) {

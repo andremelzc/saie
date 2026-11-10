@@ -28,10 +28,11 @@ describe('ListaEspacios', () => {
     montar();
 
     const lista = screen.getByRole('region', { name: 'Lista de espacios' });
-    expect(within(lista).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual([
-      'Piso 1',
-      'Piso 2',
-    ]);
+    expect(
+      within(lista)
+        .getAllByRole('heading', { level: 3 })
+        .map((h) => h.textContent),
+    ).toEqual(['Piso 1', 'Piso 2']);
     const botones = within(lista).getAllByRole('button');
     expect(botones).toHaveLength(4);
     // Dentro de un piso, por pabellón y por nombre (Aula 101 del antiguo antes que la del nuevo).
@@ -54,8 +55,14 @@ describe('ListaEspacios', () => {
     const onElegir = vi.fn();
     montar({ onElegir, seleccionado: 'NUE-204' });
 
-    expect(screen.getByRole('button', { name: /Aula 204/ })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: /Aula 104/ })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: /Aula 204/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: /Aula 104/ })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /Aula 104/ }));
     expect(onElegir).toHaveBeenCalledWith('ANT-104');

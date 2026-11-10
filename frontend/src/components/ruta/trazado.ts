@@ -182,7 +182,11 @@ export function calcularTrazado(ruta: RutaReferencia, planos: Record<number, str
         tipo: 'cambio',
       });
       pasos.push({ tramo, piso: piso1, focoId: conector.figura.id });
-    } else if (tramo.tipo === 'ESPACIO_ASIGNADO' && tramo.espacioId && indice.has(tramo.espacioId)) {
+    } else if (
+      tramo.tipo === 'ESPACIO_ASIGNADO' &&
+      tramo.espacioId &&
+      indice.has(tramo.espacioId)
+    ) {
       const figura = (indice.get(tramo.espacioId) as EntradaIndice).figura;
       const centro = centroDe(figura);
       const t = trazo(pisoDestino);
