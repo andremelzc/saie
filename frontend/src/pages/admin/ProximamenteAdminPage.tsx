@@ -13,12 +13,7 @@ interface Pendiente {
 }
 
 /** Capacidades de Coordinación Académica que se construyen en la siguiente entrega. */
-const COORDINACION: Pendiente[] = [
-  {
-    titulo: 'Catálogo y solicitudes de software',
-    descripcion: 'Alta del software disponible y revisión de lo que solicitan los docentes.',
-  },
-];
+const COORDINACION: Pendiente[] = [];
 
 /**
  * Capacidades de Jefatura de Laboratorios que se construyen en la siguiente entrega. Hoy no queda

@@ -413,20 +413,30 @@ describe('Inicio del panel administrativo', () => {
       expect(await screen.findByText(/IS101/)).toBeInTheDocument();
     });
 
-    it('enlaza a carga de datos, espacios, secciones y auditoría', async () => {
+    it('los accesos solo ofrecen lo que no está en la barra de pestañas', async () => {
       montar();
       await screen.findByText(/IS101/);
-      // Se acota a la región «Accesos» del tablero: el menú superior usa los mismos nombres.
       const accesos = screen.getByRole('region', { name: 'Accesos' });
-      expect(within(accesos).getByRole('link', { name: /Carga de datos/ })).toBeInTheDocument();
-      expect(within(accesos).getByRole('link', { name: 'Espacios' })).toBeInTheDocument();
-      expect(within(accesos).getByRole('link', { name: 'Secciones' })).toBeInTheDocument();
-      expect(within(accesos).getByRole('link', { name: 'Auditoría' })).toBeInTheDocument();
-      expect(within(accesos).getByRole('link', { name: 'Informe de salones' })).toBeInTheDocument();
-      // La cifra de alertas ya está en su métrica: el atajo no la repite.
-      const enlaceAlertas = within(accesos).getByRole('link', { name: 'Alertas' });
-      expect(enlaceAlertas).not.toHaveTextContent(/\d/);
-      expect(enlaceAlertas).toHaveAttribute('href', '/admin/alertas');
+      expect(within(accesos).getByRole('link', { name: 'Laboratorios' })).toHaveAttribute(
+        'href',
+        '/admin/laboratorios',
+      );
+      expect(within(accesos).getByRole('link', { name: 'Alta de alumnos' })).toBeInTheDocument();
+      expect(within(accesos).getByRole('link', { name: 'Alta de docentes' })).toBeInTheDocument();
+      expect(within(accesos).getByRole('link', { name: 'Claves' })).toBeInTheDocument();
+      expect(
+        within(accesos).getByRole('link', { name: 'Catálogo de software' }),
+      ).toBeInTheDocument();
+      // Lo que ya es una pestaña no se repite aquí.
+      for (const nombre of [
+        'Espacios',
+        'Secciones',
+        'Alertas',
+        'Historial',
+        'Informe de salones',
+      ]) {
+        expect(within(accesos).queryByRole('link', { name: nombre })).toBeNull();
+      }
     });
   });
 

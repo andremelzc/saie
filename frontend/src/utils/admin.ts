@@ -74,6 +74,7 @@ const T_LAB = ICONOS.monitor;
 const T_SECCIONES = ICONOS.libro;
 const T_AUDITORIA = ICONOS.portapapeles;
 const T_REPORTE = ICONOS.documento;
+const T_MAPA = ICONOS.mapa;
 
 /**
  * Puntos de corte del panel (Issue 4.35): móvil < 768 px y escritorio ≥ 1024 px (`lg`), con una
@@ -106,7 +107,9 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
       { to: RUTAS.alertasAdmin, etiqueta: 'Alertas', trazo: T_ALERTA },
       // Issue 7.11: bandeja de incidencias que reportan los docentes.
       { to: RUTAS.incidenciasAdmin, etiqueta: 'Incidencias', trazo: T_AUDITORIA },
-      { to: RUTAS.cambioLaboratorio, etiqueta: 'Laboratorio', trazo: T_LAB },
+      { to: RUTAS.laboratoriosAdmin, etiqueta: 'Laboratorios', trazo: T_LAB },
+      // El reporte de cambios también sale de cada tarjeta de «Laboratorios».
+      { to: RUTAS.cambioLaboratorio, etiqueta: 'Cambio', trazo: T_CARGA, secundaria: true },
     ];
   }
   return [
@@ -122,10 +125,11 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
     { to: RUTAS.cargaAdmin, etiqueta: 'Carga', trazo: T_CARGA },
     {
       to: RUTAS.auditoriaAdmin,
-      etiqueta: 'Auditoría',
+      etiqueta: 'Historial',
       trazo: T_AUDITORIA,
       secundaria: true,
     },
+    { to: RUTAS.mapaAdmin, etiqueta: 'Mapa', trazo: T_MAPA, secundaria: true },
     {
       to: RUTAS.reporteSalonesAdmin,
       etiqueta: 'Informe',

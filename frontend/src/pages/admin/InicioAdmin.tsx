@@ -707,15 +707,7 @@ const InicioCoordinacion: React.FC = () => {
               Accesos
             </h2>
             <div className="grid min-h-0 gap-2 sm:grid-cols-2 lg:grid-cols-2">
-              <Atajo to={RUTAS.cargaAdmin} titulo="Carga de datos" trazo={ICONOS.subir} />
-              <Atajo to={RUTAS.espaciosAdmin} titulo="Espacios" trazo={ICONOS.edificio} />
-              <Atajo to={RUTAS.seccionesAdmin} titulo="Secciones" trazo={ICONOS.libro} />
-              <Atajo to={RUTAS.auditoriaAdmin} titulo="Auditoría" trazo={ICONOS.portapapeles} />
-              <Atajo
-                to={RUTAS.reporteSalonesAdmin}
-                titulo="Informe de salones"
-                trazo={ICONOS.documento}
-              />
+              <Atajo to={RUTAS.laboratoriosAdmin} titulo="Laboratorios" trazo={ICONOS.monitor} />
               <Atajo
                 to={RUTAS.altaAlumnoAdmin}
                 titulo="Alta de alumnos"
@@ -723,7 +715,6 @@ const InicioCoordinacion: React.FC = () => {
               />
               <Atajo to={RUTAS.altaDocenteAdmin} titulo="Alta de docentes" trazo={ICONOS.pizarra} />
               <Atajo to={RUTAS.clavesAdmin} titulo="Claves" trazo={ICONOS.escudo} />
-              <Atajo to={RUTAS.alertasAdmin} titulo="Alertas" trazo={ICONOS.alerta} />
               <Atajo
                 to={RUTAS.softwareAdmin}
                 titulo="Catálogo de software"

@@ -30,7 +30,8 @@ describe('ProximamenteAdminPage', () => {
     // Mapa, laboratorios, altas y claves ya funcionan: salen de la hoja de ruta.
     expect(screen.queryByText('Mapa de ocupación por piso')).toBeNull();
     expect(screen.queryByText('Laboratorios y equipos')).toBeNull();
-    expect(screen.getByText('Catálogo y solicitudes de software')).toBeVisible();
+    // El catálogo y las solicitudes de software también ya funcionan.
+    expect(screen.queryByText('Catálogo y solicitudes de software')).toBeNull();
     expect(screen.queryByText('Alta de alumnos y docentes')).toBeNull();
     expect(screen.queryByText('Revisión de incidencias')).toBeNull();
     expect(screen.queryByRole('link', { name: /Mapa de ocupación por piso/ })).toBeNull();

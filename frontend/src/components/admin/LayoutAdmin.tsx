@@ -98,7 +98,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
         data-barra-inferior
         className="saie-no-imprimir fixed inset-x-0 bottom-0 z-30 border-t border-saie-divider bg-white lg:static lg:border-b lg:border-t-0"
       >
-        <Contenedor como="ul" className="m-0 flex list-none gap-1 py-0 lg:py-2">
+        <Contenedor como="ul" className="m-0 flex list-none gap-1 py-0 lg:flex-wrap lg:py-2">
           {pestanas.map((p) => (
             <li
               key={p.to}
