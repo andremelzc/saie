@@ -148,7 +148,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
         {!resuelta && onResolver && (
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Boton
-              variante="primario"
+              variante="secundario"
               tamano="sm"
               onClick={() => setConfirmando(true)}
               disabled={resolviendo}

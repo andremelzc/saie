@@ -128,7 +128,11 @@ const TarjetaLaboratorio: React.FC<{ lab: LaboratorioConEstadoDTO; esJefatura: b
 
       {esJefatura && (
         <div className="mt-auto flex flex-wrap gap-2">
-          <BotonEnlace to={RUTAS.cambioLaboratorio} variante="secundario" tamano="sm">
+          <BotonEnlace
+            to={`${RUTAS.cambioLaboratorio}?lab=${encodeURIComponent(lab.id)}`}
+            variante="secundario"
+            tamano="sm"
+          >
             Reportar cambio <span className="sr-only">de {lab.identificador}</span>
           </BotonEnlace>
         </div>

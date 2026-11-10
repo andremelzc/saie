@@ -330,9 +330,14 @@ const InicioJefatura: React.FC = () => {
                     </span>
                   </div>
                   <p className="m-0 text-sm">{fraseDeMotivoAlerta(destacada.motivo)}</p>
-                  <Link to={RUTAS.alertasAdmin} className="text-sm font-medium text-saie-primary">
+                  <BotonEnlace
+                    to={RUTAS.alertasAdmin}
+                    variante="fantasma"
+                    tamano="sm"
+                    className="self-start"
+                  >
                     Ver todas las alertas →
-                  </Link>
+                  </BotonEnlace>
                 </>
               ) : (
                 <p className="m-0 text-sm text-saie-muted">

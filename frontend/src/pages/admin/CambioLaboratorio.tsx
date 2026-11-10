@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { EsqueletoCarga } from '../../components/ui/EstadosCarga';
 import { SelectorSegmentado } from '../../components/ui/SelectorSegmentado';
@@ -216,6 +217,8 @@ const PanelPcs: React.FC<{
 
 export const CambioLaboratorio: React.FC = () => {
   const labs = useCarga(obtenerLaboratorios);
+  const [params] = useSearchParams();
+  const [urlAplicada, setUrlAplicada] = useState(false);
   const catalogo = useCarga(obtenerCatalogoActivo);
   const [labId, setLabId] = useState('');
   const [pestana, setPestana] = useState<Pestana>('software');
@@ -269,6 +272,14 @@ export const CambioLaboratorio: React.FC = () => {
     setMensaje(null);
     setUltimaGuardado(null);
     setPestana('software');
+  }
+
+  // «Reportar cambio» desde la lista de laboratorios llega con `?lab=<id>`: se elige ese laboratorio
+  // una sola vez, en cuanto llega el listado.
+  if (!urlAplicada && labs.datos) {
+    setUrlAplicada(true);
+    const deUrl = params.get('lab');
+    if (deUrl && labs.datos.some((l) => l.id === deUrl)) elegirLab(deUrl);
   }
 
   function alternar(id: string) {
