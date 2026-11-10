@@ -69,7 +69,7 @@ export const ConfiguracionAlumno: React.FC = () => {
     <LayoutEstudiante titulo="Configuración" subtitulo="Ajusta la app a tu comodidad.">
       <section
         aria-labelledby="config-accesibilidad"
-        className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-5 shadow-sm sm:p-6"
+        className="saie-fundido flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-5 sm:p-6"
       >
         <div>
           <h2 id="config-accesibilidad" className="m-0 font-serif text-xl font-bold">
@@ -79,7 +79,7 @@ export const ConfiguracionAlumno: React.FC = () => {
             Estos ajustes se guardan solo en este dispositivo.
           </p>
         </div>
-        <ul className="m-0 flex list-none flex-col divide-y divide-saie-divider p-0">
+        <ul className="saie-stagger m-0 flex list-none flex-col divide-y divide-saie-divider p-0">
           {OPCIONES.map((o) => (
             <li key={o.clave} className="flex items-center justify-between gap-4 py-4">
               <div className="min-w-0">
@@ -99,7 +99,9 @@ export const ConfiguracionAlumno: React.FC = () => {
         </ul>
       </section>
       <p role="status" className="m-0 min-h-5 px-1 text-sm text-saie-muted">
-        {guardado ? 'Cambio guardado en este dispositivo.' : ''}
+        {guardado && (
+          <span className="saie-fundido inline-block">Cambio guardado en este dispositivo.</span>
+        )}
       </p>
     </LayoutEstudiante>
   );

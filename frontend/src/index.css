@@ -376,6 +376,11 @@ html.saie-sin-movimiento path.saie-trazo {
   animation: saie-fundido 0.2s ease-out both;
 }
 
+/* Acordeón (<details>): al abrirlo, la respuesta entra con un fundido corto. */
+.saie-acordeon[open] > :not(summary) {
+  animation: saie-fundido 0.2s ease-out both;
+}
+
 /* Indicador deslizante del selector segmentado. */
 .saie-selector-pulgar {
   transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);

@@ -100,34 +100,41 @@ const GRUPOS: GrupoPreguntas[] = [
  */
 export const AyudaAlumno: React.FC = () => (
   <LayoutEstudiante titulo="Ayuda" subtitulo="Respuestas a las dudas más comunes.">
-    {GRUPOS.map((grupo) => (
-      <section key={grupo.id} aria-labelledby={`ayuda-${grupo.id}`} className="flex flex-col gap-3">
-        <h2 id={`ayuda-${grupo.id}`} className="m-0 font-serif text-xl font-bold">
-          {grupo.titulo}
-        </h2>
-        <div className="flex flex-col gap-3">
-          {grupo.preguntas.map((p) => (
-            <details
-              key={p.pregunta}
-              className="group rounded-2xl border border-saie-divider bg-white shadow-sm"
-            >
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 py-3 text-base font-medium marker:content-none focus-visible:outline-3 focus-visible:outline-saie-text [&::-webkit-details-marker]:hidden">
-                <span>{p.pregunta}</span>
-                <span
-                  aria-hidden="true"
-                  className="shrink-0 text-saie-primary transition-transform group-open:rotate-180"
-                >
-                  ▾
-                </span>
-              </summary>
-              <div className="px-5 pb-4 text-sm leading-6 text-saie-muted [&_a]:font-medium [&_a]:text-saie-primary">
-                {p.respuesta}
-              </div>
-            </details>
-          ))}
-        </div>
-      </section>
-    ))}
+    {/* Los temas entran de uno en uno y cada respuesta se despliega con un fundido corto. */}
+    <div className="saie-stagger flex flex-col gap-6">
+      {GRUPOS.map((grupo) => (
+        <section
+          key={grupo.id}
+          aria-labelledby={`ayuda-${grupo.id}`}
+          className="flex flex-col gap-3"
+        >
+          <h2 id={`ayuda-${grupo.id}`} className="m-0 font-serif text-xl font-bold">
+            {grupo.titulo}
+          </h2>
+          <div className="flex flex-col gap-3">
+            {grupo.preguntas.map((p) => (
+              <details
+                key={p.pregunta}
+                className="saie-acordeon group rounded-2xl border border-saie-divider bg-white"
+              >
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 py-3 text-base font-medium marker:content-none focus-visible:outline-3 focus-visible:outline-saie-text [&::-webkit-details-marker]:hidden">
+                  <span>{p.pregunta}</span>
+                  <span
+                    aria-hidden="true"
+                    className="shrink-0 text-saie-primary transition-transform group-open:rotate-180"
+                  >
+                    ▾
+                  </span>
+                </summary>
+                <div className="px-5 pb-4 text-sm leading-6 text-saie-muted [&_a]:font-medium [&_a]:text-saie-primary">
+                  {p.respuesta}
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
 
     <p className="m-0 rounded-2xl border border-saie-divider bg-white p-5 text-sm text-saie-muted">
       ¿No encontraste lo que buscabas? Acércate a la oficina académica de la Facultad de Ingeniería.
