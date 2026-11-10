@@ -1,5 +1,5 @@
 import { clasesBoton } from '../ui/clasesBoton';
-import { Component, useEffect, useMemo, useRef, useState } from 'react';
+import { Component, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { CLASES_CONEXION, CLASES_RESERVABLES } from './config';
@@ -7,6 +7,7 @@ import Escena from './Escena';
 import type { OrdenCamara } from './Escena';
 import { leerPlano } from './geometria';
 import type { PlanoGeometria } from './geometria';
+import { accionDeTecla } from './teclado';
 import type { EspacioMapa, Mapa3DProps } from './tipos';
 import { ESTADO_TEXTO, TIPO_TEXTO } from '../mapa2d/etiquetas';
 
@@ -126,7 +127,28 @@ export default function Mapa3D({
   const [ordenInterna, setOrdenInterna] = useState<OrdenCamara | null>(null);
   const orden =
     ordenCamara && (!ordenInterna || ordenCamara.n > ordenInterna.n) ? ordenCamara : ordenInterna;
-  const ordenar = (tipo: OrdenCamara['tipo']) => setOrdenInterna({ tipo, n: Date.now() });
+  // `n` siempre crece: dos pulsaciones en el mismo milisegundo son dos órdenes distintas.
+  const ultimaN = useRef(0);
+  const nuevaOrden = (orden: Omit<OrdenCamara, 'n'>): OrdenCamara => {
+    ultimaN.current = Math.max(Date.now(), ultimaN.current + 1);
+    return { ...orden, n: ultimaN.current };
+  };
+  const ordenar = (tipo: 'reiniciar' | 'cenital') => setOrdenInterna(nuevaOrden({ tipo }));
+  const alTeclear = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Solo si el foco está en el lienzo: en los botones, las teclas son suyas.
+    if (e.target !== e.currentTarget) return;
+    const accion = accionDeTecla(e.key, e.shiftKey, e.ctrlKey || e.altKey || e.metaKey);
+    if (!accion) return;
+    e.preventDefault();
+    setOrdenInterna(
+      nuevaOrden(
+        accion.tipo === 'reiniciar'
+          ? { tipo: 'reiniciar' }
+          : { tipo: 'mover', movimiento: accion.movimiento },
+      ),
+    );
+  };
+  const idAyuda = useId();
   const [seleccionInterna, setSeleccionInterna] = useState<string | null>(null);
   // El espacio bajo el cursor y dónde está, para el cuadro que lo describe.
   const [apuntado, setApuntado] = useState<{ id: string; x: number; y: number } | null>(null);
@@ -210,7 +232,25 @@ export default function Mapa3D({
   if (!webgl) return <>{fallback}</>;
 
   return (
-    <div className={`relative h-full min-h-80 w-full ${className}`}>
+    <div
+      // El lienzo se alcanza con Tab y se mueve con el teclado (ver `accionDeTecla`).
+      tabIndex={0}
+      role="group"
+      aria-label="Maqueta 3D interactiva"
+      aria-describedby={`${idAyuda}`}
+      onKeyDown={alTeclear}
+      className={`group relative h-full min-h-80 w-full focus:outline-none focus-visible:outline-3 focus-visible:-outline-offset-3 focus-visible:outline-saie-text ${className}`}
+    >
+      <p id={idAyuda} className="sr-only">
+        Maqueta 3D interactiva. Con el foco aquí: flechas para girar e inclinar, Mayús y flechas
+        para desplazar, más y menos para acercar o alejar, y cero para reiniciar la vista.
+      </p>
+      <p
+        aria-hidden="true"
+        className="pointer-events-none absolute right-3 top-3 z-10 m-0 hidden max-w-60 rounded-lg bg-saie-text px-3 py-2 text-xs text-white shadow-lg group-focus-visible:block"
+      >
+        Flechas: girar · Mayús + flechas: mover · + y −: zoom · 0: reiniciar
+      </p>
       {cargando && (
         <p
           role="status"

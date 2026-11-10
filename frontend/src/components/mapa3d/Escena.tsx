@@ -39,6 +39,8 @@ import {
 } from './config';
 import type { FiguraPlano, PlanoGeometria, Punto } from './geometria';
 import { bloquesDeEscalera } from './escalera';
+import { aplicarMovimiento } from './camara';
+import type { MovimientoCamara } from './teclado';
 import type { EspacioMapa } from './tipos';
 
 /** El plano se dibuja en XZ (SVG x -> x, SVG y -> z) y se extruye hacia arriba (+Y). */
@@ -855,11 +857,16 @@ function Piso({
 // Cámara, luces y composición
 // ---------------------------------------------------------------------------
 
-/** Orden a la cámara: volver al encuadre inicial, mirar desde arriba o volar hasta un espacio. */
+/**
+ * Orden a la cámara: volver al encuadre inicial, mirar desde arriba, volar hasta un espacio o
+ * moverla con el teclado (giro, inclinación, zoom y desplazamiento).
+ */
 export interface OrdenCamara {
-  tipo: 'reiniciar' | 'cenital' | 'enfocar';
+  tipo: 'reiniciar' | 'cenital' | 'enfocar' | 'mover';
   /** Id del espacio, para `enfocar`. */
   id?: string;
+  /** Cuánto se mueve la cámara, para `mover`. */
+  movimiento?: MovimientoCamara;
   /** Distingue una orden de la anterior igual. */
   n: number;
 }
@@ -921,6 +928,31 @@ function Controles({ centro, tamano, encuadre, orden, puntoDe }: ControlesProps)
     ultimaOrden.current = orden.n;
     const controles = controlesRef.current;
     if (!controles) return;
+
+    if (orden.tipo === 'mover') {
+      // El teclado actúa al instante y corta cualquier vuelo en marcha.
+      if (vuelo.current !== null) {
+        cancelAnimationFrame(vuelo.current);
+        vuelo.current = null;
+      }
+      if (orden.movimiento) {
+        aplicarMovimiento(
+          camara.position,
+          controles.target,
+          orden.movimiento,
+          {
+            anguloMinimo: controles.minPolarAngle,
+            anguloMaximo: controles.maxPolarAngle,
+            distanciaMinima: controles.minDistance,
+            distanciaMaxima: controles.maxDistance,
+          },
+          tamano,
+        );
+        controles.update();
+        invalidar();
+      }
+      return;
+    }
 
     const objetivo = new Vector3(...centro);
     const posicion = new Vector3();
