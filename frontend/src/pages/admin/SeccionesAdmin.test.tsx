@@ -206,6 +206,29 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     );
   });
 
+  it('deshabilita «versión mínima» para versiones no numéricas (Issue 4.30)', async () => {
+    catalogo.mockResolvedValue({
+      items: [
+        { id: 'sw1', nombre: 'Docker', version: '24.0', activo: true },
+        { id: 'sw3', nombre: 'MATLAB', version: 'R2023b', activo: true },
+      ],
+      total: 2,
+      page: 1,
+      limit: 100,
+    });
+    montar();
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
+    const panel = await screen.findByRole('dialog');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
+    fireEvent.click(await within(panel).findByRole('checkbox', { name: /MATLAB/ }));
+    fireEvent.click(within(panel).getByRole('checkbox', { name: /Docker/ }));
+
+    const reglaMatlab = within(panel).getByLabelText('Regla de versión para MATLAB');
+    expect(within(reglaMatlab).getByRole('option', { name: /mínima.*no aplica/ })).toBeDisabled();
+    const reglaDocker = within(panel).getByLabelText('Regla de versión para Docker');
+    expect(within(reglaDocker).getByRole('option', { name: /mínima/ })).toBeEnabled();
+  });
+
   it('no guarda software para un aula teórica y lo resume (Issue 3.41)', async () => {
     montar();
     fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);

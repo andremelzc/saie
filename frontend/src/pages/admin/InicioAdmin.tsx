@@ -712,6 +712,11 @@ const InicioCoordinacion: React.FC = () => {
                 trazo={ICONOS.documento}
               />
               <Atajo to={RUTAS.alertasAdmin} titulo="Alertas" trazo={ICONOS.alerta} />
+              <Atajo
+                to={RUTAS.softwareAdmin}
+                titulo="Catálogo de software"
+                trazo={ICONOS.monitor}
+              />
             </div>
           </section>
         </div>

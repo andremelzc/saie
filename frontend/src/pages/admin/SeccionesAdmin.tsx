@@ -12,6 +12,7 @@ import { FiltrosActivos } from '../../components/ui/FiltrosActivos';
 import type { FiltroActivo } from '../../components/ui/FiltrosActivos';
 import { Boton } from '../../components/ui/Boton';
 import { ResumenErrores } from '../../components/ui/ResumenErrores';
+import { admiteVersionMinima } from '../../utils/catalogoSoftware';
 import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
 import { CLASE_PIE_DRAWER, Drawer } from '../../components/ui/Drawer';
 import { useAvisos } from '../../components/ui/useAvisos';
@@ -359,8 +360,16 @@ const FormularioSeccion: React.FC<{
                     className="min-h-11 rounded-lg border border-saie-border bg-white px-2 py-1 text-xs"
                   >
                     {COMPARACIONES.map((c) => (
-                      <option key={c.valor} value={c.valor}>
+                      <option
+                        key={c.valor}
+                        value={c.valor}
+                        // Spec 08 §3: «mínima» solo con versiones numéricas (3.11, 2024.1).
+                        disabled={c.valor === 'MINIMA' && !admiteVersionMinima(s.version ?? '')}
+                      >
                         {c.etiqueta}
+                        {c.valor === 'MINIMA' && !admiteVersionMinima(s.version ?? '')
+                          ? ' (no aplica a esta versión)'
+                          : ''}
                       </option>
                     ))}
                   </select>
