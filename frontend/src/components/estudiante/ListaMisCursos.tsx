@@ -98,11 +98,18 @@ export const ListaMisCursos: React.FC<ListaMisCursosProps> = ({
             <li key={grupo.codigoCurso}>
               <article
                 aria-labelledby={idTitulo}
-                className="saie-lift flex flex-col gap-4 rounded-2xl border border-l-[6px] border-saie-divider bg-white p-5 shadow-sm"
-                style={{ borderLeftColor: color.borde }}
+                className="saie-lift flex flex-col gap-4 rounded-2xl border border-saie-divider bg-white p-5"
               >
                 <header className="flex flex-col gap-1">
-                  <h3 id={idTitulo} className="m-0 text-lg font-bold text-saie-text">
+                  <h3
+                    id={idTitulo}
+                    className="m-0 flex items-center gap-2 text-lg font-bold text-saie-text"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: color.borde }}
+                    />
                     {grupo.nombreCurso}
                   </h3>
                   <p className="m-0 text-sm text-saie-muted">
