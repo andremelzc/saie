@@ -98,7 +98,7 @@ describe('Solicitudes de software — Coordinación (Issue 4.29)', () => {
     const dialogo = await screen.findByRole('alertdialog');
     expect(within(dialogo).getByText(/no lo instala en ningún laboratorio/i)).toBeInTheDocument();
     fireEvent.click(within(dialogo).getByLabelText(/Añadirlo también a los requerimientos/));
-    fireEvent.click(within(dialogo).getByRole('button', { name: 'Sí, aprobar' }));
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Sí, aprobar la solicitud' }));
 
     await waitFor(() => expect(aprobar).toHaveBeenCalledWith('s1', { agregarASeccion: true }));
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
@@ -112,14 +112,14 @@ describe('Solicitudes de software — Coordinación (Issue 4.29)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Rechazar' }));
     const dialogo = await screen.findByRole('alertdialog');
-    fireEvent.click(within(dialogo).getByRole('button', { name: 'Rechazar' }));
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Rechazar la solicitud' }));
     expect(await within(dialogo).findByRole('alert')).toHaveTextContent(/motivo/i);
     expect(rechazar).not.toHaveBeenCalled();
 
     fireEvent.change(within(dialogo).getByLabelText(/Motivo del rechazo/), {
       target: { value: 'No tenemos licencia' },
     });
-    fireEvent.click(within(dialogo).getByRole('button', { name: 'Rechazar' }));
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Rechazar la solicitud' }));
 
     await waitFor(() => expect(rechazar).toHaveBeenCalledWith('s1', 'No tenemos licencia'));
   });

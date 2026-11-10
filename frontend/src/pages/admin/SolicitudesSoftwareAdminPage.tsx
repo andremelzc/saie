@@ -42,7 +42,7 @@ const TarjetaSolicitud: React.FC<{
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="m-0 text-base font-bold text-saie-text">{nombreConVersion(s)}</h3>
-          <p className="m-0 text-xs text-saie-muted">
+          <p className="m-0 text-sm text-saie-muted">
             {etiquetaCategoria(s.categoria)} · pedido el {formatearFechaCorta(s.fechaSolicitud)}
           </p>
         </div>
@@ -54,7 +54,7 @@ const TarjetaSolicitud: React.FC<{
           <dt className="text-xs text-saie-muted">Docente</dt>
           <dd className="m-0">
             {s.docente.nombre}{' '}
-            <span className="text-xs text-saie-muted">({s.docente.codigoDocente})</span>
+            <span className="text-sm text-saie-muted">({s.docente.codigoDocente})</span>
           </dd>
         </div>
         <div>
@@ -175,7 +175,7 @@ export const SolicitudesSoftwareAdminPage: React.FC = () => {
           cargando={cargando}
           textoCargando="Actualizando…"
         >
-          Actualizar
+          Actualizar datos
         </Boton>
       }
     >
@@ -242,7 +242,7 @@ export const SolicitudesSoftwareAdminPage: React.FC = () => {
             )}
           </span>
         }
-        textoConfirmar="Sí, aprobar"
+        textoConfirmar="Sí, aprobar la solicitud"
         cargando={accion.cargando}
         textoCargando="Aprobando…"
         onConfirmar={confirmarAprobacion}
@@ -278,7 +278,7 @@ export const SolicitudesSoftwareAdminPage: React.FC = () => {
             )}
           </span>
         }
-        textoConfirmar="Rechazar"
+        textoConfirmar="Rechazar la solicitud"
         cargando={accion.cargando}
         textoCargando="Rechazando…"
         onConfirmar={confirmarRechazo}

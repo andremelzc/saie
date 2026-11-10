@@ -183,7 +183,7 @@ export const LaboratoriosAdminPage: React.FC = () => {
           cargando={cargando}
           textoCargando="Actualizando…"
         >
-          Actualizar
+          Actualizar datos
         </Boton>
       }
     >
@@ -240,7 +240,7 @@ export const LaboratoriosAdminPage: React.FC = () => {
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
       <ZonaActualizable actualizando={cargando && datos !== null}>
         {cargando && !datos ? (
-          <EsqueletoCarga texto="Cargando laboratorios…" />
+          <EsqueletoCarga texto="Cargando laboratorios…" forma="tarjeta" />
         ) : laboratorios.length === 0 ? (
           <EstadoVacio
             titulo={todos.length === 0 ? 'Sin laboratorios' : 'Sin coincidencias'}

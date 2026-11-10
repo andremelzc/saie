@@ -135,7 +135,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
             <nav
               aria-label="Otros portales"
               className="saie-rise flex flex-wrap items-center justify-center gap-2 text-sm text-saie-muted"
-              style={{ animationDelay: '0.25s' }}
+              style={{ animationDelay: '0.05s' }}
             >
               <span>¿Buscas otro portal?</span>
               {otros.map((p) => (
@@ -153,7 +153,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
         </main>
 
         <footer className="relative px-4 pb-4 text-center text-xs text-saie-muted">
-          SAIE &copy; {new Date().getFullYear()} · UNMSM · Grupo 6
+          SAIE &copy; {new Date().getFullYear()} · Universidad Nacional Mayor de San Marcos
         </footer>
       </div>
     </div>

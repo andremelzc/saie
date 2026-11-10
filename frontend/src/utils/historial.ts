@@ -1,4 +1,5 @@
 import type { HistorialAsignacionDTO } from '../types/admin';
+import { TEXTOS_ASIGNACION } from '../config/textos';
 import { formatearFechaCorta } from './fechas';
 
 export interface GrupoCorrida {
@@ -39,10 +40,12 @@ export function agruparPorCorrida(items: HistorialAsignacionDTO[]): GrupoCorrida
   return [...grupos.values()];
 }
 
-/** «Corrida del 12 oct, 10:32 · 230 asignadas · 17 en revisión». */
+/** «Asignación automática del 12 oct, 10:32 · 230 asignadas · 17 en revisión». */
 export function tituloDeCorrida(grupo: GrupoCorrida): string {
   const cuando = formatearFechaCorta(grupo.fecha);
-  const inicio = grupo.corridaId ? `Corrida del ${cuando}` : `Asignación individual del ${cuando}`;
+  const inicio = grupo.corridaId
+    ? TEXTOS_ASIGNACION.asignacionDel(cuando)
+    : TEXTOS_ASIGNACION.asignacionIndividualDel(cuando);
   const partes = [
     `${grupo.asignadas} ${grupo.asignadas === 1 ? 'asignada' : 'asignadas'}`,
     ...(grupo.enRevision > 0 ? [`${grupo.enRevision} en revisión`] : []),

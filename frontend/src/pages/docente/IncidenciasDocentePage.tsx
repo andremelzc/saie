@@ -91,23 +91,17 @@ const ConfirmacionIncidencia: React.FC<{ c: Confirmacion; onOtra: () => void }> 
       </div>
       <dl className="m-0 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
-            Código de seguimiento
-          </dt>
+          <dt className="text-xs font-semibold text-saie-muted">Código de seguimiento</dt>
           <dd className="m-0 font-mono text-lg font-bold">{c.registro.identificadorSeguimiento}</dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
-            Prioridad
-          </dt>
+          <dt className="text-xs font-semibold text-saie-muted">Prioridad</dt>
           <dd className="m-0 mt-1">
             <BadgeEstado tono={prioridad.tono}>{prioridad.etiqueta}</BadgeEstado>
           </dd>
         </div>
         <div>
-          <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
-            Ubicación
-          </dt>
+          <dt className="text-xs font-semibold text-saie-muted">Ubicación</dt>
           <dd className="m-0">
             <strong className="font-semibold">
               {etiquetaTipoEspacio(c.espacio.tipo)} {c.espacio.identificador}

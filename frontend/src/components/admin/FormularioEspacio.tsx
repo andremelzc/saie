@@ -551,7 +551,7 @@ const GrupoLaboratorio: React.FC<{
       return <p className="m-0 text-sm text-saie-muted">{mensajeVacio}</p>;
     }
     return (
-      <ul className="m-0 flex max-h-56 list-none flex-col gap-1 overflow-auto p-0">
+      <ul className="m-0 flex list-none flex-col gap-1 p-0">
         {softwareFiltrado.map((s) => (
           <li key={s.id}>
             <Casilla
@@ -617,7 +617,7 @@ const GrupoLaboratorio: React.FC<{
           value={busquedaSoftware}
           placeholder="Nombre o versión…"
           onChange={(e) => onBusquedaSoftware(e.target.value)}
-          className={CLASE_CAMPO}
+          className={`${CLASE_CAMPO} sticky top-0 z-10`}
         />
         {contenido}
       </div>
@@ -660,12 +660,12 @@ const GrupoContiguos: React.FC<{
         value={busquedaContiguos}
         placeholder="Buscar por código…"
         onChange={(e) => onBusquedaContiguos(e.target.value)}
-        className={CLASE_CAMPO}
+        className={`${CLASE_CAMPO} sticky top-0 z-10`}
       />
       {sinCoincidencias ? (
         <p className="m-0 text-sm text-saie-muted">{mensajeVacio}</p>
       ) : (
-        <ul className="m-0 flex max-h-56 list-none flex-col gap-1 overflow-auto p-0">
+        <ul className="m-0 flex list-none flex-col gap-1 p-0">
           {contiguosFiltrados.map((e) => (
             <li key={e.id}>
               <Casilla

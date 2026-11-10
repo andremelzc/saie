@@ -118,7 +118,7 @@ export const REGLA_VERIFICACION: Record<string, string> = {
   TIPO_HOMOGENEO: 'Tipo de espacio correcto',
   BLOQUE_CONTIGUO: 'Bloque contiguo',
   SOFTWARE_COMPLETO: 'Software completo',
-  ESCALADA_CON_MOTIVO: 'Escaladas con motivo',
+  ESCALADA_CON_MOTIVO: 'Secciones en revisión con motivo',
   UNA_VIGENTE_POR_SECCION: 'Una asignación vigente por sección',
 };
 

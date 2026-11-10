@@ -244,7 +244,7 @@ describe('Inicio del panel administrativo', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
 
       expect(await screen.findByText(/Puede que se haya completado/)).toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: 'Actualizar' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Actualizar datos' }));
       await waitFor(() => expect(escaladas).toHaveBeenCalledTimes(2));
       expect(corrida).toHaveBeenCalledTimes(1);
     });
@@ -292,7 +292,7 @@ describe('Inicio del panel administrativo', () => {
       expect(
         await screen.findByText('Conforme: la asignación cumple las 7 reglas.'),
       ).toBeInTheDocument();
-      expect(screen.getByText('CONFORME')).toBeInTheDocument();
+      expect(screen.getByText('Conforme')).toBeInTheDocument();
       expect(screen.getByText('8 asignaciones revisadas · 0 incumplimientos')).toBeInTheDocument();
       expect(screen.getByText('Sin doble reserva')).toBeInTheDocument();
       expect(screen.getByText('Capacidad suficiente')).toBeInTheDocument();
@@ -311,7 +311,7 @@ describe('Inicio del panel administrativo', () => {
       expect(
         await screen.findByText('No conforme: 1 incumplimiento en 1 regla.'),
       ).toBeInTheDocument();
-      expect(screen.getByText('NO CONFORME')).toBeInTheDocument();
+      expect(screen.getByText('No conforme')).toBeInTheDocument();
       expect(screen.getByText(/Ver 1 incumplimiento/)).toBeInTheDocument();
       expect(screen.getByText(/Aforo insuficiente para 45 alumnos/)).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }));
@@ -325,7 +325,7 @@ describe('Inicio del panel administrativo', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Sí, asignar aulas' }));
 
       // En la tarjeta queda el distintivo de que no hubo nada que verificar.
-      expect(await screen.findByText('Verificador: sin asignaciones que revisar')).toBeVisible();
+      expect(await screen.findByText('Sin asignaciones que comprobar')).toBeVisible();
       // Y el aviso completo de la corrida vive en el drawer.
       fireEvent.click(screen.getByRole('button', { name: 'Ver el detalle de las reglas' }));
       expect(

@@ -56,7 +56,7 @@ const TarjetaAsignacion: React.FC<{ a: AsignacionActivaDocenteDTO }> = ({ a }) =
     </div>
     <dl className="m-0 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
       <div>
-        <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">Horario</dt>
+        <dt className="text-xs font-semibold text-saie-muted">Horario</dt>
         <dd className="m-0">
           {a.horarios.length === 0 ? (
             'Sin horarios registrados.'
@@ -70,7 +70,7 @@ const TarjetaAsignacion: React.FC<{ a: AsignacionActivaDocenteDTO }> = ({ a }) =
         </dd>
       </div>
       <div>
-        <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
+        <dt className="text-xs font-semibold text-saie-muted">
           {a.espacios.length > 1 ? 'Espacios' : 'Espacio'}
         </dt>
         <dd className="m-0">

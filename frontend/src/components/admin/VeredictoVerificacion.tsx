@@ -6,6 +6,7 @@ import { etiquetaReglaVerificacion } from '../../utils/diccionarios';
 import { fraseDeViolacion, indexarEspacios, tieneDetalleTecnico } from '../../utils/textoMotor';
 import { plural } from '../../utils/texto';
 import { DetalleTecnico } from '../ui/DetalleTecnico';
+import { TEXTOS_ASIGNACION } from '../../config/textos';
 
 const cargarEspacios = () => obtenerEspacios();
 
@@ -59,10 +60,10 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
   if (!verificacion) {
     return (
       <section
-        aria-label="Veredicto del verificador"
+        aria-label={TEXTOS_ASIGNACION.tituloComprobacion}
         className="rounded-xl border border-dashed border-saie-divider bg-white px-4 py-3 text-sm text-saie-muted"
       >
-        No hubo asignaciones que comprobar en esta asignación automática.
+        {TEXTOS_ASIGNACION.sinNadaQueComprobar}
       </section>
     );
   }
@@ -83,7 +84,7 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
   return (
     <section
       aria-labelledby={ocultarTitulo ? undefined : 'titulo-verificador'}
-      aria-label={ocultarTitulo ? 'Veredicto del verificador' : undefined}
+      aria-label={ocultarTitulo ? TEXTOS_ASIGNACION.tituloComprobacion : undefined}
       className={`flex flex-col gap-4 rounded-2xl border p-4 sm:p-5 ${tono.caja}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -96,7 +97,7 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
           <div className="min-w-0">
             {!ocultarTitulo && (
               <h2 id="titulo-verificador" className="m-0 text-base font-bold text-saie-text">
-                Veredicto del verificador
+                {TEXTOS_ASIGNACION.tituloComprobacion}
               </h2>
             )}
             <p className={`m-0 mt-0.5 text-sm font-semibold ${tono.texto}`}>
@@ -108,19 +109,19 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
                     'reglas',
                   )}.`}
             </p>
-            <p className="m-0 mt-0.5 text-xs text-saie-muted">
+            <p className="m-0 mt-0.5 text-sm text-saie-muted">
               {plural(totalRevisadas, 'asignación revisada', 'asignaciones revisadas')} ·{' '}
               {plural(totalViolaciones, 'incumplimiento', 'incumplimientos')}
             </p>
           </div>
         </div>
         <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ${
             conforme ? 'bg-saie-success text-white' : 'bg-saie-danger text-white'
           }`}
         >
           <IconoEstado conforme={conforme} className="h-3.5 w-3.5" />
-          {conforme ? 'CONFORME' : 'NO CONFORME'}
+          {conforme ? 'Conforme' : 'No conforme'}
         </span>
       </div>
 
@@ -146,7 +147,7 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
                 <span className="font-medium text-saie-text">
                   {etiquetaReglaVerificacion(regla.regla)}
                 </span>
-                <span className="ml-auto text-xs text-saie-muted">
+                <span className="ml-auto text-sm text-saie-muted">
                   {noAplica ? 'No aplica' : `${regla.cumplen}/${regla.revisadas} cumplen`}
                 </span>
               </div>
@@ -184,10 +185,7 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
         })}
       </ul>
 
-      <p className="m-0 text-xs text-saie-muted">
-        Comprobación automática posterior a la asignación. Los incumplimientos quedan registrados en
-        la auditoría.
-      </p>
+      <p className="m-0 text-xs text-saie-muted">{TEXTOS_ASIGNACION.nota}</p>
     </section>
   );
 };

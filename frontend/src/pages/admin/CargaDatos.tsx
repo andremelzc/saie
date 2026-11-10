@@ -731,8 +731,8 @@ const TarjetaPlantilla: React.FC<{ plantilla: PlantillaCSV }> = ({ plantilla }) 
       <Acordeon titulo={`Ver columnas (${plantilla.columnas.length})`}>
         {/* Tabla desde `sm` y lista apilada por debajo: una tabla de cuatro columnas no cabe a 320 px. */}
         <div className="hidden overflow-x-auto sm:block">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-saie-canvas uppercase tracking-wide text-saie-muted">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-saie-canvas text-saie-muted">
               <tr>
                 <th scope="col" className="px-2 py-2">
                   Columna

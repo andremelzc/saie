@@ -31,7 +31,7 @@ export interface CabeceraTablaProps {
 
 /** `thead` común: mismo aspecto y `scope="col"` en todas las tablas. */
 export const CabeceraTabla: React.FC<CabeceraTablaProps> = ({ columnas, compacta = false }) => (
-  <thead className="bg-saie-canvas text-xs uppercase tracking-wide text-saie-muted">
+  <thead className="bg-saie-canvas text-xs text-saie-muted">
     <tr>
       {columnas.map((columna) => (
         <th key={columna} scope="col" className={compacta ? 'px-3 py-2' : 'px-4 py-3'}>

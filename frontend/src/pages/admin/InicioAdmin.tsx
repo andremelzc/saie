@@ -36,6 +36,7 @@ import { formatearFechaCorta } from '../../utils/fechas';
 import { plural } from '../../utils/texto';
 import { fraseDeMotivoAlerta } from '../../utils/textoMotor';
 import { ICONOS } from '../../components/ui/iconos';
+import { TEXTOS_ASIGNACION } from '../../config/textos';
 import { Metrica, TiraMetricas } from '../../components/admin/Metrica';
 
 /**
@@ -115,7 +116,7 @@ const Atajo: React.FC<{ to: string; titulo: string; trazo: string }> = ({ to, ti
 
 /** Texto del distintivo del verificador según el resultado de la corrida. */
 function textoVerificador(verificacion: ResultadoVerificacionDTO | null): string {
-  if (!verificacion) return 'Verificador: sin asignaciones que revisar';
+  if (!verificacion) return TEXTOS_ASIGNACION.distintivoSinNada;
   if (verificacion.conforme) {
     return `Conforme · ${verificacion.totalRevisadas} revisadas`;
   }
@@ -156,7 +157,7 @@ const FilaEscalada: React.FC<{
           {seccion.seccion.codigoCurso} · {seccion.seccion.codigoSeccion} —{' '}
           {seccion.seccion.nombreCurso}
         </p>
-        <p className="m-0 flex flex-wrap items-center gap-2 text-xs text-saie-muted">
+        <p className="m-0 flex flex-wrap items-center gap-2 text-sm text-saie-muted">
           <BadgeEstado tono="advertencia">{motivo.etiqueta}</BadgeEstado>
           <span className="min-w-0 sm:truncate">{motivo.descripcion}</span>
           <span>
@@ -324,7 +325,7 @@ const InicioJefatura: React.FC = () => {
                       {destacada.tipo === 'SOFTWARE' ? 'Software' : 'Capacidad'}
                     </BadgeEstado>
                     <span className="text-sm font-semibold">{destacada.espacio.identificador}</span>
-                    <span className="text-xs text-saie-muted">
+                    <span className="text-sm text-saie-muted">
                       {formatearFechaCorta(destacada.fechaDeteccion)}
                     </span>
                   </div>
@@ -463,7 +464,7 @@ const InicioCoordinacion: React.FC = () => {
         setErrorAccion({
           mensaje: resultado.error,
           reintentar: comprobarCorrida,
-          etiqueta: 'Actualizar',
+          etiqueta: 'Actualizar datos',
         });
       } else {
         setErrorAccion({ mensaje: resultado.error, reintentar: correr });
@@ -564,14 +565,14 @@ const InicioCoordinacion: React.FC = () => {
             className="flex flex-col justify-between gap-3 rounded-2xl bg-gradient-to-br from-saie-primary to-saie-primary-dark p-4 text-white lg:col-span-8"
           >
             <div className="min-w-0">
-              <p className="m-0 text-xs text-white/80">Asignación de aulas · Periodo {periodo}</p>
+              <p className="m-0 text-sm text-white/80">Asignación de aulas · Periodo {periodo}</p>
               <p role="status" aria-live="polite" className="m-0 mt-0.5 text-sm">
                 {resumenCorrida
                   ? `Asignación terminada: se revisaron ${plural(resumenCorrida.totalSecciones, 'sección', 'secciones')} del periodo.`
                   : 'Asigna las aulas del periodo para ver cuántas secciones cambian o conservan su aula.'}
               </p>
               {ultimaCorrida && (
-                <p className="m-0 mt-1 text-xs text-white/75">
+                <p className="m-0 mt-1 text-sm text-white/75">
                   Última actualización: {formatearFechaCorta(ultimaCorrida)}
                 </p>
               )}
@@ -602,19 +603,21 @@ const InicioCoordinacion: React.FC = () => {
           </section>
 
           <section
-            aria-label="Veredicto del verificador"
+            aria-label={TEXTOS_ASIGNACION.tituloComprobacion}
             className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-4"
           >
-            <h2 className="m-0 text-sm font-bold text-saie-text">Comprobación de la asignación</h2>
+            <h2 className="m-0 text-sm font-bold text-saie-text">
+              {TEXTOS_ASIGNACION.tituloComprobacion}
+            </h2>
             {resumenCorrida ? (
               <>
-                <p className="m-0 text-xs text-saie-muted">
+                <p className="m-0 text-sm text-saie-muted">
                   {resumenCorrida.verificacion
                     ? `${resumenCorrida.verificacion.totalRevisadas} asignaciones revisadas contra las 7 reglas de asignación.`
                     : 'Esta asignación no dejó resultados que comprobar.'}
                 </p>
                 <span
-                  className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${claseVerificador(resumenCorrida.verificacion)}`}
+                  className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ${claseVerificador(resumenCorrida.verificacion)}`}
                 >
                   {textoVerificador(resumenCorrida.verificacion)}
                 </span>
@@ -733,7 +736,7 @@ const InicioCoordinacion: React.FC = () => {
       <Drawer
         abierto={detalleAbierto}
         onCerrar={() => setDetalleAbierto(false)}
-        titulo="Veredicto del verificador"
+        titulo={TEXTOS_ASIGNACION.tituloComprobacion}
       >
         <VeredictoVerificacion verificacion={resumenCorrida?.verificacion ?? null} ocultarTitulo />
       </Drawer>

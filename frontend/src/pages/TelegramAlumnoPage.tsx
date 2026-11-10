@@ -129,7 +129,7 @@ export const TelegramAlumnoPage: React.FC = () => {
                     </div>
                   </div>
                   <span
-                    className={`inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${
+                    className={`inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold ${
                       estado.vinculado
                         ? 'bg-saie-success-soft text-saie-success-strong'
                         : 'bg-saie-warning-soft text-saie-warning-strong'
@@ -172,7 +172,7 @@ export const TelegramAlumnoPage: React.FC = () => {
                         abierto={confirmando}
                         titulo="¿Dejar de recibir avisos por Telegram?"
                         descripcion="Podrás volver a vincularte cuando quieras."
-                        textoConfirmar="Sí, desvincular"
+                        textoConfirmar="Sí, desvincular Telegram"
                         variante="peligro"
                         cargando={desvinculando}
                         textoCargando="Desvinculando…"

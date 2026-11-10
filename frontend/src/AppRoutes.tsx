@@ -52,7 +52,7 @@ const IncidenciasAdminPage = lazy(() => import('./pages/admin/IncidenciasAdminPa
 /** Mientras llega el código de una pantalla se muestra el esqueleto de carga habitual. */
 const CargandoPantalla: React.FC = () => (
   <div className="min-h-screen bg-saie-canvas px-4 py-6">
-    <EsqueletoCarga texto="Cargando la pantalla…" />
+    <EsqueletoCarga texto="Cargando la pantalla…" forma="texto" />
   </div>
 );
 
