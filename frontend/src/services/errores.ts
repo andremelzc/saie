@@ -63,6 +63,8 @@ export function mensajeSeguroDelServidor(error: unknown): string | undefined {
   const respuesta = comoErrorHttp(error)?.response;
   if (!respuesta) return undefined;
   const { status } = respuesta;
+  // 429: texto propio y fijo; también cubre el 429 que un proxy devuelve sin cuerpo JSON.
+  if (status === 429) return TEXTOS_ERROR.demasiadosIntentos;
   const cuerpo = cuerpoDe(error);
   const mensaje = typeof cuerpo?.message === 'string' ? cuerpo.message.trim() : '';
   // `success: false` es la forma del backend para errores de dominio; `{ error, message }` (sin
@@ -119,6 +121,7 @@ export function mensajeDeError(error: unknown): string {
 
   const { status } = errorHttp.response;
   if (status === 401) return TEXTOS_ERROR.sesionVencida;
+  if (status === 429) return TEXTOS_ERROR.demasiadosIntentos;
   if (status >= 500) return TEXTOS_ERROR.servidor;
 
   const mensaje = mensajeSeguroDelServidor(error);

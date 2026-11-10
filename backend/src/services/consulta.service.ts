@@ -80,6 +80,16 @@ function resumirSeccion(seccion: SeccionConAsignacion) {
   };
 }
 
+/**
+ * Issue 3.37 — La consulta pública solo expone el nombre de pila. Acepta «Nombre Apellido» y
+ * «Apellido, Nombre»; si el nombre viene vacío devuelve una cadena vacía.
+ */
+export function soloNombreDePila(nombreCompleto: string): string {
+  const limpio = nombreCompleto.trim();
+  const tras = limpio.includes(',') ? limpio.slice(limpio.indexOf(',') + 1) : limpio;
+  return tras.trim().split(/\s+/)[0] ?? '';
+}
+
 export async function obtenerAsignacionPorAlumno(
   codigoAlumno: string,
   prisma: PrismaClient,
@@ -142,9 +152,7 @@ export async function obtenerAsignacionPorAlumno(
   return {
     alumno: {
       codigo: alumno.codigo,
-      nombre: alumno.nombre,
-      correo: alumno.correo,
-      movilidadReducida: alumno.matriculas.some((m) => m.movilidadReducida),
+      nombre: soloNombreDePila(alumno.nombre),
     },
     asignaciones: ordenarPorProximidad(
       asignacionesItems,

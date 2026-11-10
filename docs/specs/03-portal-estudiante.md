@@ -18,6 +18,7 @@ El **Portal del Estudiante** es la interfaz web/móvil responsiva donde los alum
 ### 2.1 Consulta por Alumno / Curso (#3.1, #3.2, #3.3, #3.4)
 * `GET /api/v1/consulta/alumno/:codigoAlumno`
   * Devuelve la lista de asignaciones vigentes del estudiante (Curso, Sección, Pabellón, Piso, Números de Aula/Lab, Horario y Docente).
+  * **Datos personales mínimos (Issue 3.37, RNF-09):** la ruta es pública, así que `alumno` es solo `{ codigo, nombre }`, con `nombre` reducido al **nombre de pila** (`soloNombreDePila` admite «Nombre Apellido» y «Apellido, Nombre»). **Decisión:** no se devuelven `correo` ni `movilidadReducida` (dato de salud). La consulta pública no calcula rutas accesibles: la ruta de referencia es del portal autenticado (§2.3), donde el alumno ve sus propios datos. Una prueba de integración (`consultaPublicaPrivacidad.test.ts`) falla si aparece un campo fuera de la lista.
 * `GET /api/v1/consulta/curso/:codigoCurso`
   * Devuelve la ubicación y docente asignado a cada sección de un curso.
 

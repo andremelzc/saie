@@ -6,6 +6,7 @@ const prismaMock: any = {
   espacioResponsable: { findUnique: jest.fn(), findMany: jest.fn() },
   espacioContiguo: { findMany: jest.fn(), deleteMany: jest.fn(), createMany: jest.fn() },
   asignacion: { findUnique: jest.fn(), findMany: jest.fn() },
+  seccion: { findMany: jest.fn(), findFirst: jest.fn() },
   alerta: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
   incidencia: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
   registroAuditoria: { create: jest.fn() },
@@ -210,6 +211,54 @@ describe('Endpoints Sprint 4 (Issue #267)', () => {
       expect(res.body.data.pabellon).toBe('A');
       expect(res.body.data.piso).toBe(2);
       expect(res.body.data.espacios).toEqual([]);
+    });
+  });
+
+  describe('Periodos (GET /admin/periodos, Issue 4.42)', () => {
+    const originalEnv = process.env.PERIODO_VIGENTE;
+    beforeEach(() => {
+      delete process.env.PERIODO_VIGENTE;
+    });
+    afterAll(() => {
+      if (originalEnv !== undefined) process.env.PERIODO_VIGENTE = originalEnv;
+    });
+
+    it('responde 200 con vigente y la lista de periodos para Coordinación y Jefatura', async () => {
+      prismaMock.seccion.findMany.mockResolvedValue([{ periodo: '2026-2' }, { periodo: '2026-1' }]);
+      prismaMock.seccion.findFirst.mockResolvedValue({ periodo: '2026-2' });
+
+      for (const rol of [RolCuenta.COORDINACION_ACADEMICA, RolCuenta.JEFATURA_LABORATORIOS]) {
+        const res = await request(app)
+          .get('/api/v1/admin/periodos')
+          .set('Authorization', bearer(rol));
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({
+          success: true,
+          data: { vigente: '2026-2', periodos: ['2026-2', '2026-1'] },
+        });
+      }
+    });
+
+    it('responde 401 sin token y 403 para alumno y docente', async () => {
+      expect((await request(app).get('/api/v1/admin/periodos')).status).toBe(401);
+      for (const rol of [RolCuenta.ALUMNO, RolCuenta.DOCENTE]) {
+        const res = await request(app)
+          .get('/api/v1/admin/periodos')
+          .set('Authorization', bearer(rol));
+        expect(res.status).toBe(403);
+      }
+    });
+
+    it('sin secciones responde periodos vacío y vigente null', async () => {
+      prismaMock.seccion.findMany.mockResolvedValue([]);
+      prismaMock.seccion.findFirst.mockResolvedValue(null);
+
+      const res = await request(app)
+        .get('/api/v1/admin/periodos')
+        .set('Authorization', bearer(RolCuenta.COORDINACION_ACADEMICA));
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({ vigente: null, periodos: [] });
     });
   });
 

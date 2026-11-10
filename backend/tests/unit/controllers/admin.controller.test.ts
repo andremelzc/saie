@@ -15,6 +15,7 @@ import {
   listarEspaciosAdmin,
   listarHistorial,
   listarIncidenciasReportadas,
+  listarPeriodosAdmin,
   listarRegistrosAuditoria,
   listarSeccionesAdmin,
   obtenerEspacio,
@@ -50,6 +51,7 @@ import {
 } from '../../../src/services/laboratorio.service';
 import { obtenerOcupacionPorPiso } from '../../../src/services/ocupacion.service';
 import { restablecerClave } from '../../../src/services/restablecerClave.service';
+import { listarPeriodos } from '../../../src/services/periodo.service';
 import { listarSeccionesEscaladas } from '../../../src/services/revision.service';
 import { crearAlumno, crearDocente } from '../../../src/services/usuario.service';
 
@@ -65,6 +67,10 @@ jest.mock('../../../src/services/laboratorio.service', () => ({
 
 jest.mock('../../../src/services/ocupacion.service', () => ({
   obtenerOcupacionPorPiso: jest.fn(),
+}));
+
+jest.mock('../../../src/services/periodo.service', () => ({
+  listarPeriodos: jest.fn(),
 }));
 
 jest.mock('../../../src/services/revision.service', () => ({
@@ -285,6 +291,32 @@ describe('Admin Controller (Sprint 4)', () => {
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: mockData });
+    });
+  });
+
+  describe('listarPeriodosAdmin', () => {
+    it('debe responder 200 con el vigente y los periodos', async () => {
+      const data = { vigente: '2026-2', periodos: ['2026-2', '2026-1'] };
+      (listarPeriodos as jest.Mock).mockResolvedValue(data);
+      const res = mockResponse();
+
+      await listarPeriodosAdmin({} as Request, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true, data });
+    });
+
+    it('debe responder 500 uniforme si el servicio falla', async () => {
+      (listarPeriodos as jest.Mock).mockRejectedValue(new Error('fallo'));
+      const res = mockResponse();
+
+      await listarPeriodosAdmin({} as Request, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Error interno del servidor',
+      });
     });
   });
 
