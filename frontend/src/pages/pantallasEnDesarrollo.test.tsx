@@ -1,8 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { MENSAJE_EN_DESARROLLO, PREVISION_EN_DESARROLLO } from '../components/PantallaEnDesarrollo';
-import SoftwareAdminPage from './admin/SoftwareAdminPage';
 import ProximamenteAdminPage from './admin/ProximamenteAdminPage';
 
 const auth = vi.hoisted(() => ({
@@ -20,24 +19,6 @@ vi.mock('../components/auth/BotonCerrarSesion', () => ({
 function montar(nodo: React.ReactNode) {
   return render(<MemoryRouter>{nodo}</MemoryRouter>);
 }
-
-const PANTALLAS = [
-  { nombre: 'Catálogo de software', Page: SoftwareAdminPage, titulo: 'Catálogo de software' },
-];
-
-describe('pantallas en desarrollo', () => {
-  beforeEach(() => {
-    auth.sesion = { rol: 'COORDINACION_ACADEMICA' };
-  });
-
-  it.each(PANTALLAS)('$nombre anuncia que está en desarrollo', ({ Page, titulo }) => {
-    montar(<Page />);
-
-    expect(screen.getByRole('heading', { name: titulo })).toBeVisible();
-    expect(screen.getByRole('status')).toHaveTextContent(MENSAJE_EN_DESARROLLO);
-    expect(screen.getByText(PREVISION_EN_DESARROLLO)).toBeVisible();
-  });
-});
 
 describe('ProximamenteAdminPage', () => {
   it('Coordinación ve su hoja de ruta sin enlaces a pantallas vacías', () => {

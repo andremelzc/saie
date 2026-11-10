@@ -109,6 +109,8 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
       ['JEFATURA_LABORATORIOS', '/admin/incidencias', 'Revisión de incidencias'],
       ['COORDINACION_ACADEMICA', '/admin/laboratorios', 'Laboratorios y equipos'],
       ['JEFATURA_LABORATORIOS', '/admin/laboratorios', 'Laboratorios y equipos'],
+      ['COORDINACION_ACADEMICA', '/admin/software', 'Catálogo de software'],
+      ['JEFATURA_LABORATORIOS', '/admin/software', 'Catálogo de software'],
     ] as const)('%s autorizado ve "%s"', async (rol, ruta, titulo) => {
       iniciarSesionDePrueba(rol);
       renderizar(ruta);
@@ -121,16 +123,16 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
   });
 
   describe('pantallas en desarrollo', () => {
-    it.each([
-      ['COORDINACION_ACADEMICA', '/admin/proximamente', 'Hoja de ruta'],
-      ['COORDINACION_ACADEMICA', '/admin/software', 'Catálogo de software'],
-    ] as const)('%s autorizado ve "%s"', async (rol, ruta, titulo) => {
-      iniciarSesionDePrueba(rol);
-      renderizar(ruta);
+    it.each([['COORDINACION_ACADEMICA', '/admin/proximamente', 'Hoja de ruta']] as const)(
+      '%s autorizado ve "%s"',
+      async (rol, ruta, titulo) => {
+        iniciarSesionDePrueba(rol);
+        renderizar(ruta);
 
-      expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument();
-      expect(screen.getByRole('status')).toHaveTextContent(/próximamente/i);
-    });
+        expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument();
+        expect(screen.getByRole('status')).toHaveTextContent(/próximamente/i);
+      },
+    );
 
     // Altas y claves ya no están «en desarrollo» (Issues 4.17, 4.18, 4.21 y 4.26): se comprueba el acceso.
     it.each([

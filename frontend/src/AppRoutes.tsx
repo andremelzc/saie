@@ -328,10 +328,8 @@ export const AppRoutes: React.FC = () => {
           <Route
             path={RUTAS.softwareAdmin}
             element={
-              <RutaProtegida
-                rolesPermitidos={['COORDINACION_ACADEMICA']}
-                rutaLogin={RUTAS.loginAdmin}
-              >
+              // Jefatura consulta el catálogo; solo Coordinación lo edita (Issue 4.30).
+              <RutaProtegida rolesPermitidos={ROLES_ADMIN} rutaLogin={RUTAS.loginAdmin}>
                 <SoftwareAdminPage />
               </RutaProtegida>
             }
