@@ -34,7 +34,9 @@ import type {
 import { describirMotivoEscalamiento } from '../../utils/admin';
 import { formatearFechaCorta } from '../../utils/fechas';
 import { plural } from '../../utils/texto';
+import { fraseDeMotivoAlerta } from '../../utils/textoMotor';
 import { ICONOS } from '../../components/ui/iconos';
+import { Metrica, TiraMetricas } from '../../components/admin/Metrica';
 
 /**
  * Issue 4.20 — inicio de Coordinación Académica.
@@ -109,18 +111,6 @@ const Atajo: React.FC<{ to: string; titulo: string; trazo: string }> = ({ to, ti
       {titulo}
     </span>
   </Link>
-);
-
-/** Métrica del tablero: cifra grande y etiqueta corta. */
-const Metrica: React.FC<{ valor: number | string; etiqueta: string; tono?: string }> = ({
-  valor,
-  etiqueta,
-  tono = 'text-saie-text',
-}) => (
-  <div className="rounded-xl border border-saie-divider bg-white p-3">
-    <p className={`m-0 text-3xl font-bold leading-none ${tono} tabular-nums`}>{valor}</p>
-    <p className="m-0 mt-1 text-xs font-medium text-saie-muted">{etiqueta}</p>
-  </div>
 );
 
 /** Texto del distintivo del verificador según el resultado de la corrida. */
@@ -279,23 +269,40 @@ const InicioJefatura: React.FC = () => {
 
   return (
     <LayoutAdmin titulo="Área administrativa" subtitulo="Jefatura de Laboratorios">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <TiraMetricas etiqueta="Resumen de laboratorios" className="grid-cols-2 lg:grid-cols-4">
         <Metrica
-          valor={labs.datos ? `${activos.length}/${laboratorios.length}` : '—'}
+          etiqueta="Alertas pendientes"
+          valor={pendientes.length}
+          cargando={alertas.cargando && !alertas.datos}
+          tono={pendientes.length > 0 ? 'peligro' : 'neutro'}
+          icono={ICONOS.alerta}
+          to={RUTAS.alertasAdmin}
+          textoEnlace="Ver alertas"
+          principal={pendientes.length > 0}
+        />
+        <Metrica
           etiqueta="Laboratorios activos"
+          valor={`${activos.length}/${laboratorios.length}`}
+          cargando={labs.cargando && !labs.datos}
+          icono={ICONOS.monitor}
+          to={RUTAS.laboratoriosAdmin}
+          textoEnlace="Ver laboratorios"
         />
         <Metrica
-          valor={labs.datos ? operativas : '—'}
           etiqueta="PCs operativas"
-          tono="text-saie-success-strong"
+          valor={operativas}
+          cargando={labs.cargando && !labs.datos}
+          tono="exito"
+          icono={ICONOS.checkCirculo}
         />
         <Metrica
-          valor={labs.datos ? inoperativas : '—'}
           etiqueta="PCs inoperativas"
-          tono={inoperativas > 0 ? 'text-saie-danger' : 'text-saie-text'}
+          valor={inoperativas}
+          cargando={labs.cargando && !labs.datos}
+          tono={inoperativas > 0 ? 'peligro' : 'neutro'}
+          icono={ICONOS.errorCirculo}
         />
-        <Metrica valor={pendientes.length} etiqueta="Alertas pendientes" tono="text-saie-danger" />
-      </div>
+      </TiraMetricas>
 
       {error && <AvisoError mensaje={error} onReintentar={reintentar} />}
       {cargandoTodo ? (
@@ -321,7 +328,7 @@ const InicioJefatura: React.FC = () => {
                       {formatearFechaCorta(destacada.fechaDeteccion)}
                     </span>
                   </div>
-                  <p className="m-0 text-sm">{destacada.motivo}</p>
+                  <p className="m-0 text-sm">{fraseDeMotivoAlerta(destacada.motivo)}</p>
                   <Link to={RUTAS.alertasAdmin} className="text-sm font-medium text-saie-primary">
                     Ver todas las alertas →
                   </Link>
@@ -394,6 +401,8 @@ const InicioCoordinacion: React.FC = () => {
   const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [reintentando, setReintentando] = useState<string | null>(null);
   const [resumenCorrida, setResumenCorrida] = useState<ResumenAsignacionDTO | null>(null);
+  /** Corrida anterior de esta sesión, para el delta de las métricas. */
+  const [resumenAnterior, setResumenAnterior] = useState<ResumenAsignacionDTO | null>(null);
   const [resultadoSeccion, setResultadoSeccion] = useState<{
     resumen: ResumenAsignacionDTO;
     seccion: SeccionEscaladaDTO;
@@ -408,6 +417,8 @@ const InicioCoordinacion: React.FC = () => {
   const [otraCorrida, setOtraCorrida] = useState(false);
 
   const pendientes = alertas.datos?.filter((a) => a.estado === 'PENDIENTE').length ?? 0;
+  const delta = (campo: 'asignadas' | 'mantenidas' | 'escaladas') =>
+    resumenCorrida && resumenAnterior ? resumenCorrida[campo] - resumenAnterior[campo] : null;
   const periodo = escaladas.datos?.periodo ?? resumenCorrida?.periodo ?? '—';
   const secciones = escaladas.datos?.secciones ?? [];
 
@@ -428,6 +439,7 @@ const InicioCoordinacion: React.FC = () => {
     const resultado = await accionCorrida.ejecutar(
       async () => {
         const resumen = await ejecutarCorrida();
+        setResumenAnterior(resumenCorrida);
         setResumenCorrida(resumen);
         setUltimaCorrida(new Date().toISOString());
         // La corrida crea y resuelve alertas: hay que volver a pedirlas, no solo las escaladas.
@@ -492,29 +504,52 @@ const InicioCoordinacion: React.FC = () => {
         aria-busy={corriendo}
         className="grid grid-cols-1 gap-4 lg:min-h-0 lg:flex-1 lg:grid-rows-[auto_auto_1fr]"
       >
-        {/* FILA 1 — las cuatro cifras que resumen la asignación */}
-        <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 lg:grid-cols-4">
-          <li>
-            <Metrica
-              valor={resumenCorrida?.asignadas ?? '—'}
-              etiqueta="Con aula nueva"
-              tono="text-saie-success-strong"
-            />
-          </li>
-          <li>
-            <Metrica valor={resumenCorrida?.mantenidas ?? '—'} etiqueta="Conservan la suya" />
-          </li>
-          <li>
-            <Metrica
-              valor={resumenCorrida?.escaladas ?? escaladas.datos?.total ?? '—'}
-              etiqueta="Esperan revisión"
-              tono="text-saie-warning-strong"
-            />
-          </li>
-          <li>
-            <Metrica valor={pendientes} etiqueta="Alertas pendientes" tono="text-saie-danger" />
-          </li>
-        </ul>
+        {/*
+          FILA 1 — las cifras que mueven una decisión (Issue 4.52). «Esperan revisión» es la
+          principal y es la única vez que aparece esa cifra en el tablero; cada métrica lleva a
+          su lista y mientras carga muestra un esqueleto.
+        */}
+        <TiraMetricas etiqueta="Resumen de la asignación" className="grid-cols-2 lg:grid-cols-4">
+          <Metrica
+            etiqueta="Esperan revisión"
+            valor={resumenCorrida?.escaladas ?? escaladas.datos?.total ?? null}
+            cargando={escaladas.cargando && !escaladas.datos && !resumenCorrida}
+            delta={delta('escaladas')}
+            tono="advertencia"
+            icono={ICONOS.alerta}
+            to="#titulo-atencion"
+            textoEnlace="Ver secciones en revisión"
+            principal
+          />
+          <Metrica
+            etiqueta="Alertas pendientes"
+            valor={pendientes}
+            cargando={alertas.cargando && !alertas.datos}
+            tono={pendientes > 0 ? 'peligro' : 'neutro'}
+            icono={ICONOS.errorCirculo}
+            to={RUTAS.alertasAdmin}
+            textoEnlace="Ver alertas"
+          />
+          <Metrica
+            etiqueta="Con aula nueva"
+            valor={resumenCorrida?.asignadas ?? null}
+            delta={delta('asignadas')}
+            sinDato="tras asignar"
+            tono="exito"
+            icono={ICONOS.checkCirculo}
+            to={RUTAS.auditoriaAdmin}
+            textoEnlace="Ver historial"
+          />
+          <Metrica
+            etiqueta="Conservan la suya"
+            valor={resumenCorrida?.mantenidas ?? null}
+            delta={delta('mantenidas')}
+            sinDato="tras asignar"
+            icono={ICONOS.edificio}
+            to={RUTAS.auditoriaAdmin}
+            textoEnlace="Ver historial"
+          />
+        </TiraMetricas>
 
         {/* FILA 2 — estado de la corrida y veredicto del verificador */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
@@ -532,10 +567,8 @@ const InicioCoordinacion: React.FC = () => {
               <p className="m-0 text-xs text-white/80">Asignación de aulas · Periodo {periodo}</p>
               <p role="status" aria-live="polite" className="m-0 mt-0.5 text-sm">
                 {resumenCorrida
-                  ? `${resumenCorrida.asignadas} con aula nueva · ${resumenCorrida.mantenidas} conservan la suya · ${resumenCorrida.escaladas} de ${resumenCorrida.totalSecciones} esperan revisión`
-                  : escaladas.datos
-                    ? `${plural(escaladas.datos.total, 'sección espera', 'secciones esperan')} revisión`
-                    : 'Consultando las secciones…'}
+                  ? `Asignación terminada: se revisaron ${plural(resumenCorrida.totalSecciones, 'sección', 'secciones')} del periodo.`
+                  : 'Asigna las aulas del periodo para ver cuántas secciones cambian o conservan su aula.'}
               </p>
               {ultimaCorrida && (
                 <p className="m-0 mt-1 text-xs text-white/75">
@@ -613,14 +646,13 @@ const InicioCoordinacion: React.FC = () => {
             className="flex min-h-0 flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-8"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 id="titulo-atencion" className="m-0 text-sm font-bold text-saie-text">
+              <h2
+                id="titulo-atencion"
+                tabIndex={-1}
+                className="m-0 scroll-mt-24 text-sm font-bold text-saie-text"
+              >
                 Secciones que requieren revisión
               </h2>
-              {secciones.length > 0 && (
-                <span className="text-xs text-saie-muted">
-                  {secciones.length} {secciones.length === 1 ? 'sección' : 'secciones'}
-                </span>
-              )}
             </div>
             {escaladas.error && (
               <AvisoError mensaje={escaladas.error} onReintentar={escaladas.recargar} />
@@ -676,20 +708,7 @@ const InicioCoordinacion: React.FC = () => {
                 titulo="Informe de salones"
                 trazo={ICONOS.documento}
               />
-              {/*
-                Atajo a las alertas: la tarjeta «Requieren tu atención» repetía las dos cifras
-                de la fila de métricas; queda solo el enlace a la lista completa.
-              */}
-              <Link
-                to={RUTAS.alertasAdmin}
-                className="flex items-center justify-between gap-3 rounded-xl border border-saie-danger/30 bg-saie-danger-soft py-2.5 pl-4 pr-3 no-underline transition-colors hover:border-saie-danger sm:col-span-2"
-              >
-                <span className="flex items-center gap-2 text-sm font-bold text-saie-danger-strong">
-                  <span>Alertas pendientes</span>
-                  <strong className="text-lg leading-none">{pendientes}</strong>
-                </span>
-                <span className="text-xs font-semibold text-saie-danger-strong">Ver alertas →</span>
-              </Link>
+              <Atajo to={RUTAS.alertasAdmin} titulo="Alertas" trazo={ICONOS.alerta} />
             </div>
           </section>
         </div>
