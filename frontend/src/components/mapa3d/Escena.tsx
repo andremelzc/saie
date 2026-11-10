@@ -26,6 +26,7 @@ import {
   COLOR_PATIO,
   COLOR_MURO_EXTERIOR,
   COLOR_MURO_INTERIOR,
+  COLOR_PUERTA,
   COLOR_RESALTE,
   COLOR_SIN_DATOS,
   COLOR_TECHO,
@@ -33,8 +34,11 @@ import {
   COLOR_VENTANA_CORTINA,
   COLOR_VENTANA_VIDRIO,
   EDIFICIO,
+  ORIENTACION_ESCALERA,
+  type DireccionEscalera,
 } from './config';
 import type { FiguraPlano, PlanoGeometria, Punto } from './geometria';
+import { bloquesDeEscalera } from './escalera';
 import type { EspacioMapa } from './tipos';
 
 /** El plano se dibuja en XZ (SVG x -> x, SVG y -> z) y se extruye hacia arriba (+Y). */
@@ -65,16 +69,78 @@ function contornos(shapes: Shape[]): Punto[][] {
   return anillos;
 }
 
-/** Une en una sola geometría los muros que recorren cada contorno (cerrado o abierto). */
+/** Hueco de una puerta en un muro: su caja en el plano. */
+interface Abertura {
+  x: number;
+  y: number;
+  ancho: number;
+  alto: number;
+}
+
+/** Cuánto se separa del muro, como máximo, el centro de una puerta que se abre en él. */
+const TOLERANCIA_ABERTURA = 4;
+
+/**
+ * Tramo `[desde, hasta]` (a lo largo del muro de `a` a `b`) que ocupa una abertura, o `null` si
+ * el muro no pasa por ella. Las puertas del plano son rectángulos alineados con el muro.
+ */
+function tramoDeAbertura(
+  a: Punto,
+  b: Punto,
+  largo: number,
+  abertura: Abertura,
+): [number, number] | null {
+  const dx = (b.x - a.x) / largo;
+  const dy = (b.y - a.y) / largo;
+  const cx = abertura.x + abertura.ancho / 2 - a.x;
+  const cy = abertura.y + abertura.alto / 2 - a.y;
+  const t = cx * dx + cy * dy;
+  const lateral = Math.abs(cx * dy - cy * dx);
+  if (lateral > TOLERANCIA_ABERTURA || t <= 0 || t >= largo) return null;
+  // Un muro horizontal abre el ancho de la puerta; uno vertical, su alto.
+  const medio = (Math.abs(dx) >= Math.abs(dy) ? abertura.ancho : abertura.alto) / 2;
+  return [Math.max(0, t - medio), Math.min(largo, t + medio)];
+}
+
+/**
+ * Une en una sola geometría los muros que recorren cada contorno (cerrado o abierto). Donde pasa
+ * una abertura el muro se corta y queda un dintel sobre ella.
+ */
 function construirParedes(
   anillos: Punto[][],
   altura: number,
   grosor: number,
   yBase: number,
   cerrados: boolean,
+  aberturas: Abertura[] = [],
 ): BufferGeometry | null {
   const piezas: BufferGeometry[] = [];
   const arriba = new Vector3(0, 1, 0);
+
+  /** Un trozo de muro entre dos distancias del tramo, entre dos alturas. */
+  const trozo = (
+    a: Punto,
+    angulo: number,
+    largoTotal: number,
+    b: Punto,
+    desde: number,
+    hasta: number,
+    y0: number,
+    y1: number,
+  ) => {
+    if (hasta - desde < 0.01 || y1 - y0 < 0.01) return;
+    const f = (desde + hasta) / 2 / largoTotal;
+    // El trozo se alarga el grosor para cubrir la esquina con el siguiente.
+    const caja = new BoxGeometry(hasta - desde + grosor, y1 - y0, grosor);
+    caja.applyMatrix4(
+      new Matrix4().compose(
+        new Vector3(a.x + (b.x - a.x) * f, yBase + (y0 + y1) / 2, a.y + (b.y - a.y) * f),
+        new Quaternion().setFromAxisAngle(arriba, -angulo),
+        new Vector3(1, 1, 1),
+      ),
+    );
+    piezas.push(caja);
+  };
 
   for (const anillo of anillos) {
     const tramos = cerrados ? anillo.length : anillo.length - 1;
@@ -83,18 +149,20 @@ function construirParedes(
       const b = anillo[(i + 1) % anillo.length];
       const largo = Math.hypot(b.x - a.x, b.y - a.y);
       if (largo < 0.01) continue;
-
-      // El tramo se alarga el grosor para cubrir la esquina con el siguiente.
-      const caja = new BoxGeometry(largo + grosor, altura, grosor);
       const angulo = Math.atan2(b.y - a.y, b.x - a.x);
-      caja.applyMatrix4(
-        new Matrix4().compose(
-          new Vector3((a.x + b.x) / 2, yBase + altura / 2, (a.y + b.y) / 2),
-          new Quaternion().setFromAxisAngle(arriba, -angulo),
-          new Vector3(1, 1, 1),
-        ),
-      );
-      piezas.push(caja);
+
+      const huecos = aberturas
+        .map((ab) => tramoDeAbertura(a, b, largo, ab))
+        .filter((h): h is [number, number] => h !== null)
+        .sort((p, q) => p[0] - q[0]);
+      // Muro a ambos lados de cada hueco y, sobre él, el dintel.
+      let cursor = 0;
+      for (const [desde, hasta] of huecos) {
+        trozo(a, angulo, largo, b, cursor, desde, 0, altura);
+        trozo(a, angulo, largo, b, desde, hasta, EDIFICIO.puerta, altura);
+        cursor = Math.max(cursor, hasta);
+      }
+      trozo(a, angulo, largo, b, cursor, largo, 0, altura);
     }
   }
 
@@ -108,6 +176,7 @@ function construirParedes(
 function construirVentanas(
   anillos: Punto[][],
   yBase: number,
+  aberturas: Abertura[] = [],
 ): { cortinas: BufferGeometry | null; vidrio: BufferGeometry | null } {
   const cortinas: BufferGeometry[] = [];
   const vidrio: BufferGeometry[] = [];
@@ -127,6 +196,18 @@ function construirVentanas(
       for (let k = 0; k < cuantas; k++) {
         // Centradas en el tramo, a la misma distancia unas de otras.
         const t = (k + 1) / (cuantas + 1);
+        // Una ventana no se dibuja sobre el hueco de una puerta.
+        const centro = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+        const sobrePuerta = aberturas.some((ab) => {
+          const margen = 3.5;
+          return (
+            centro.x > ab.x - margen &&
+            centro.x < ab.x + ab.ancho + margen &&
+            centro.y > ab.y - margen &&
+            centro.y < ab.y + ab.alto + margen
+          );
+        });
+        if (sobrePuerta) continue;
         const caja = new BoxGeometry(4.6, 5.8, EDIFICIO.grosorExterior + 0.4);
         caja.applyMatrix4(
           new Matrix4().compose(
@@ -266,7 +347,18 @@ function cursorSobre(e: ThreeEvent<PointerEvent>, dentro: boolean) {
   if (destino instanceof HTMLElement) destino.style.cursor = dentro ? 'pointer' : '';
 }
 
-/** Escalera: peldaños que suben a lo largo del lado más largo de la figura. */
+/** Vector unitario de cada punto cardinal del plano (x hacia el este, y hacia el sur). */
+const VECTOR_DIRECCION: Record<DireccionEscalera, { x: number; y: number }> = {
+  E: { x: 1, y: 0 },
+  O: { x: -1, y: 0 },
+  S: { x: 0, y: 1 },
+  N: { x: 0, y: -1 },
+};
+
+/**
+ * Escalera de dos tramos con descanso, orientada según `ORIENTACION_ESCALERA`. Se sube por un
+ * lado hasta el descanso, se da la vuelta y se sube por el otro.
+ */
 function Escalera({
   figura,
   zSuelo,
@@ -279,8 +371,15 @@ function Escalera({
   onPulsar: (e: ThreeEvent<MouseEvent>) => void;
 }) {
   const caja = useMemo(() => cajaDe(figura.shapes), [figura.shapes]);
-  const pasos = 7;
-  const alLargo = caja.ancho >= caja.alto;
+  const direccion = ORIENTACION_ESCALERA[figura.id] ?? 'E';
+  const sube = VECTOR_DIRECCION[direccion];
+  // Izquierda de quien sube, en un plano con el sur hacia abajo.
+  const izquierda = { x: sube.y, y: -sube.x };
+  const horizontal = sube.x !== 0;
+  const largo = horizontal ? caja.ancho : caja.alto;
+  const ancho = horizontal ? caja.alto : caja.ancho;
+  const centro = { x: caja.x + caja.ancho / 2, y: caja.y + caja.alto / 2 };
+  const bloques = useMemo(() => bloquesDeEscalera(largo, ancho, EDIFICIO.escalera), [largo, ancho]);
   const color = destacada ? COLOR_RESALTE : COLOR_CONTEXTO.escalera;
   return (
     <group
@@ -288,15 +387,14 @@ function Escalera({
       onPointerOver={(e) => cursorSobre(e, true)}
       onPointerOut={(e) => cursorSobre(e, false)}
     >
-      {Array.from({ length: pasos }, (_, i) => {
-        const alto = (EDIFICIO.escalera * (i + 1)) / pasos;
-        const largo = (alLargo ? caja.ancho : caja.alto) / pasos;
-        const cx = alLargo ? caja.x + largo * (i + 0.5) : caja.x + caja.ancho / 2;
-        const cy = alLargo ? caja.y + caja.alto / 2 : caja.y + largo * (i + 0.5);
+      {bloques.map((b, i) => {
+        const u = b.u - largo / 2;
+        const cx = centro.x + sube.x * u + izquierda.x * b.v;
+        const cy = centro.y + sube.y * u + izquierda.y * b.v;
         return (
-          <mesh key={i} position={[cx, cy, zSuelo + alto / 2]} castShadow receiveShadow>
+          <mesh key={i} position={[cx, cy, zSuelo + b.alto / 2]} castShadow receiveShadow>
             <boxGeometry
-              args={[alLargo ? largo : caja.ancho * 0.92, alLargo ? caja.alto * 0.92 : largo, alto]}
+              args={[horizontal ? b.largo : b.ancho, horizontal ? b.ancho : b.largo, b.alto]}
             />
             <meshStandardMaterial
               color={color}
@@ -479,6 +577,30 @@ function Figura({
 // Un piso del edificio
 // ---------------------------------------------------------------------------
 
+/** Hoja de cada puerta del piso, al ras del muro y del color con que el plano marca las entradas. */
+function Puertas({ aberturas, ySuelo }: { aberturas: Abertura[]; ySuelo: number }) {
+  return (
+    <>
+      {aberturas.map((ab, i) => {
+        const horizontal = ab.ancho >= ab.alto;
+        const largo = (horizontal ? ab.ancho : ab.alto) - 1;
+        const alto = EDIFICIO.puerta - 0.4;
+        return (
+          <mesh
+            key={i}
+            position={[ab.x + ab.ancho / 2, ySuelo + alto / 2, ab.y + ab.alto / 2]}
+            raycast={() => null}
+            castShadow
+          >
+            <boxGeometry args={[horizontal ? largo : 0.7, alto, horizontal ? 0.7 : largo]} />
+            <meshStandardMaterial color={COLOR_PUERTA} roughness={0.6} />
+          </mesh>
+        );
+      })}
+    </>
+  );
+}
+
 interface PisoProps {
   plano: PlanoGeometria;
   /** Posición del piso en la pila: 0 es la planta baja. */
@@ -517,6 +639,11 @@ function Piso({
 
   const losa = plano.figuras.find((f) => f.clase === 'losa');
   const techo = plano.figuras.find((f) => f.clase === 'techo');
+  // Las puertas del plano: abren un hueco en el muro y llevan su hoja.
+  const aberturas = useMemo<Abertura[]>(
+    () => plano.figuras.filter((f) => f.clase === 'puerta').map((f) => cajaDe(f.shapes)),
+    [plano.figuras],
+  );
   const espaciosDelPiso = useMemo(
     () =>
       plano.figuras.filter(
@@ -547,6 +674,7 @@ function Piso({
             EDIFICIO.grosorExterior,
             ySuelo,
             true,
+            aberturas,
           )
         : construirParedes(
             plano.muros,
@@ -554,13 +682,16 @@ function Piso({
             EDIFICIO.grosorExterior,
             ySuelo,
             false,
+            aberturas,
           ),
-    [techo, plano.muros, ySuelo],
+    [techo, plano.muros, ySuelo, aberturas],
   );
   const ventanas = useMemo(
     () =>
-      techo ? construirVentanas(contornos(techo.shapes), ySuelo) : { cortinas: null, vidrio: null },
-    [techo, ySuelo],
+      techo
+        ? construirVentanas(contornos(techo.shapes), ySuelo, aberturas)
+        : { cortinas: null, vidrio: null },
+    [techo, ySuelo, aberturas],
   );
   const tabiques = useMemo(
     () =>
@@ -622,6 +753,8 @@ function Piso({
           <meshStandardMaterial color={COLOR_MURO_EXTERIOR} roughness={0.95} />
         </mesh>
       )}
+
+      <Puertas aberturas={aberturas} ySuelo={ySuelo} />
 
       {ventanas.cortinas && (
         <mesh geometry={ventanas.cortinas} raycast={() => null}>

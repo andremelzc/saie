@@ -1,3 +1,4 @@
+import { clasesBoton } from '../ui/clasesBoton';
 import { Component, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Canvas } from '@react-three/fiber';
@@ -7,6 +8,9 @@ import type { OrdenCamara } from './Escena';
 import { leerPlano } from './geometria';
 import type { PlanoGeometria } from './geometria';
 import type { Mapa3DProps } from './tipos';
+
+/** Botón de los controles flotantes del 3D: mismo tamaño y colores que el resto de la interfaz. */
+const claseControl3D = (activo: boolean) => clasesBoton(activo ? 'primario' : 'fantasma', 'sm');
 
 function hayWebGL(): boolean {
   try {
@@ -193,14 +197,17 @@ export default function Mapa3D({
       {cargando && (
         <p
           role="status"
-          className="absolute inset-0 flex items-center justify-center text-slate-600"
+          className="absolute inset-0 flex items-center justify-center text-saie-muted"
         >
           Cargando el mapa 3D…
         </p>
       )}
 
       {!cargando && estado.error && (
-        <p role="alert" className="absolute inset-0 flex items-center justify-center text-red-700">
+        <p
+          role="alert"
+          className="absolute inset-0 flex items-center justify-center text-saie-danger-strong"
+        >
           {estado.error}
         </p>
       )}
@@ -246,7 +253,7 @@ export default function Mapa3D({
                   type="button"
                   aria-pressed={piso === p}
                   onClick={() => elegirPiso(p)}
-                  className={`rounded-md px-3 py-1 text-sm ${piso === p ? 'bg-indigo-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
+                  className={claseControl3D(piso === p)}
                 >
                   Piso {p}
                 </button>
@@ -256,7 +263,7 @@ export default function Mapa3D({
                   type="button"
                   aria-pressed={piso === 'todos'}
                   onClick={() => elegirPiso('todos')}
-                  className={`rounded-md px-3 py-1 text-sm ${piso === 'todos' ? 'bg-indigo-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
+                  className={claseControl3D(piso === 'todos')}
                 >
                   Edificio
                 </button>
@@ -272,14 +279,14 @@ export default function Mapa3D({
             <button
               type="button"
               onClick={() => ordenar('reiniciar')}
-              className="rounded-md px-3 py-1 text-left text-sm text-slate-700 hover:bg-slate-100"
+              className={`${claseControl3D(false)} justify-start text-left`}
             >
               Reiniciar vista
             </button>
             <button
               type="button"
               onClick={() => ordenar('cenital')}
-              className="rounded-md px-3 py-1 text-left text-sm text-slate-700 hover:bg-slate-100"
+              className={`${claseControl3D(false)} justify-start text-left`}
             >
               Vista desde arriba
             </button>
@@ -290,11 +297,13 @@ export default function Mapa3D({
               aria-label={`${infoConector.clase === 'ascensor' ? 'Ascensor' : 'Escalera'} ${conector}`}
               className="absolute bottom-3 left-3 flex max-w-xs flex-col gap-2 rounded-lg bg-white/95 p-3 text-sm shadow"
             >
-              <p className="font-medium text-indigo-950">
+              <p className="m-0 font-medium text-saie-text">
                 {infoConector.clase === 'ascensor' ? 'Ascensor' : 'Escalera'} {conector}
               </p>
               {destinos.length === 0 ? (
-                <p className="text-slate-600">No conecta con otros pisos en los planos cargados.</p>
+                <p className="m-0 text-saie-muted">
+                  No conecta con otros pisos en los planos cargados.
+                </p>
               ) : (
                 <div className="flex flex-wrap gap-1">
                   {destinos.map((destino) => (
@@ -302,7 +311,7 @@ export default function Mapa3D({
                       key={destino}
                       type="button"
                       onClick={() => elegirPiso(destino)}
-                      className="rounded-md bg-indigo-900 px-3 py-1 text-white hover:bg-indigo-800"
+                      className={`${claseControl3D(true)} hover:bg-saie-primary-dark`}
                     >
                       {typeof piso !== 'number'
                         ? `Ir al piso ${destino}`
@@ -316,7 +325,7 @@ export default function Mapa3D({
               <button
                 type="button"
                 onClick={() => setConector(null)}
-                className="self-start text-slate-600 underline"
+                className="min-h-11 self-start px-2 text-saie-muted underline"
               >
                 Cerrar
               </button>
@@ -328,7 +337,7 @@ export default function Mapa3D({
       {!cargando && planos && pisos.length === 0 && (
         <p
           role="status"
-          className="absolute inset-0 flex items-center justify-center text-slate-600"
+          className="absolute inset-0 flex items-center justify-center text-saie-muted"
         >
           No hay planos para mostrar.
         </p>
