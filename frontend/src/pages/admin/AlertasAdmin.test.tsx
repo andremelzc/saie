@@ -33,7 +33,7 @@ describe('Tarjeta de alerta (Issue 4.9)', () => {
     expect(screen.getByText('Pendiente')).toBeInTheDocument();
   });
 
-  it('distingue visualmente software de capacidad', () => {
+  it('distingue software de capacidad por texto e ícono, no solo por color', () => {
     const { container } = render(
       <>
         <TarjetaAlerta alerta={base} />
@@ -41,7 +41,11 @@ describe('Tarjeta de alerta (Issue 4.9)', () => {
       </>,
     );
     const [sw, cap] = container.querySelectorAll('article');
-    expect(sw.className).not.toEqual(cap.className);
+    expect(sw).toHaveAccessibleName(/alerta de software/i);
+    expect(cap).toHaveAccessibleName(/alerta de capacidad/i);
+    expect(sw.querySelector('svg path')?.getAttribute('d')).not.toEqual(
+      cap.querySelector('svg path')?.getAttribute('d'),
+    );
   });
 
   it('pide confirmación y expone la acción solo si está pendiente', () => {

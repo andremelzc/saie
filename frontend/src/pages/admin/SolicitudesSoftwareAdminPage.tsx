@@ -204,7 +204,7 @@ export const SolicitudesSoftwareAdminPage: React.FC = () => {
             }
           />
         ) : (
-          <ul className="m-0 flex list-none flex-col gap-3 p-0">
+          <ul className="saie-stagger m-0 flex list-none flex-col gap-3 p-0">
             {solicitudes.map((s) => (
               <TarjetaSolicitud
                 key={s.id}

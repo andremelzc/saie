@@ -149,7 +149,7 @@ export const TiraMetricas: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ etiqueta, children, className = '' }) => (
-  <dl aria-label={etiqueta} className={`m-0 grid gap-3 ${className}`}>
+  <dl aria-label={etiqueta} className={`saie-stagger m-0 grid gap-3 ${className}`}>
     {children}
   </dl>
 );

@@ -338,7 +338,10 @@ export const IncidenciasAdminPage: React.FC = () => {
             }
           />
         ) : (
-          <ul className="m-0 flex list-none flex-col gap-3 p-0" aria-label="Incidencias">
+          <ul
+            className="saie-stagger m-0 flex list-none flex-col gap-3 p-0"
+            aria-label="Incidencias"
+          >
             {incidencias.map((inc) => (
               <li key={inc.id}>
                 <TarjetaIncidencia inc={inc} onRevisar={() => detalle.abrir(inc.id)} />

@@ -71,7 +71,7 @@ const ListaAlertas: React.FC<{
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <div className="saie-stagger grid grid-cols-1 gap-4 lg:grid-cols-2">
       {alertas.map((a) => (
         <TarjetaAlerta
           key={a.id}

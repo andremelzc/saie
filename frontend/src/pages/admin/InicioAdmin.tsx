@@ -587,18 +587,17 @@ const InicioCoordinacion: React.FC = () => {
             <div className="flex flex-col gap-3">
               <div className="flex flex-wrap items-center justify-start gap-2">
                 <Boton
-                  variante="secundario"
+                  variante="claro"
                   onClick={() => setConfirmandoCorrida(true)}
                   disabled={corriendo || otraCorrida}
                   aria-describedby="motivo-corrida"
                   cargando={corriendo}
                   textoCargando="Asignando…"
-                  className="border-white! bg-white! text-saie-primary! hover:bg-saie-canvas!"
                 >
                   Asignar aulas del periodo
                 </Boton>
               </div>
-              <p id="motivo-corrida" className="m-0 text-right text-xs text-white/85">
+              <p id="motivo-corrida" className="m-0 text-sm text-white/85">
                 {corriendo
                   ? 'Esto puede tardar hasta 1 min. No cierres esta pantalla.'
                   : otraCorrida

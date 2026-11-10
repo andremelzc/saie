@@ -261,7 +261,7 @@ export const LaboratoriosAdminPage: React.FC = () => {
         ) : (
           <ul
             aria-label="Laboratorios"
-            className="m-0 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3"
+            className="saie-stagger m-0 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3"
           >
             {laboratorios.map((lab) => (
               <li key={lab.id} className="flex">
