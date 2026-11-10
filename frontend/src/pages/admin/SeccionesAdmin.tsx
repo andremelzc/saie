@@ -140,7 +140,7 @@ const TarjetaSeccion: React.FC<{
     </header>
     <dl className="m-0 grid grid-cols-2 gap-2 text-sm">
       <div>
-        <dt className="text-xs text-saie-muted">Aula</dt>
+        <dt className="text-sm text-saie-muted">Aula</dt>
         <dd className="m-0 font-medium text-saie-text">
           {seccion.asignacion?.espacios.length
             ? seccion.asignacion.espacios.map((e) => e.identificador).join(', ')
@@ -148,15 +148,15 @@ const TarjetaSeccion: React.FC<{
         </dd>
       </div>
       <div>
-        <dt className="text-xs text-saie-muted">Alumnos</dt>
+        <dt className="text-sm text-saie-muted">Alumnos</dt>
         <dd className="m-0 font-medium text-saie-text">{seccion.alumnosMatriculados}</dd>
       </div>
       <div>
-        <dt className="text-xs text-saie-muted">Docente</dt>
+        <dt className="text-sm text-saie-muted">Docente</dt>
         <dd className="m-0 font-medium text-saie-text">{seccion.docente?.nombre ?? '—'}</dd>
       </div>
       <div>
-        <dt className="text-xs text-saie-muted">Tipo</dt>
+        <dt className="text-sm text-saie-muted">Tipo</dt>
         <dd className="m-0 font-medium text-saie-text">
           {etiquetaTipoEspacio(seccion.tipoEspacioRequerido)}
         </dd>
@@ -314,7 +314,7 @@ const FormularioSeccion: React.FC<{
 
       <fieldset className="m-0 flex flex-col gap-2">
         <legend className={CLASE_ETIQUETA}>Software que exige la sección</legend>
-        <p className="m-0 text-xs text-saie-muted">
+        <p className="m-0 text-sm text-saie-muted">
           Marca lo que el laboratorio debe tener instalado. La asignación automática solo elige un
           laboratorio que cumpla con todo lo listado.
         </p>
@@ -359,7 +359,7 @@ const FormularioSeccion: React.FC<{
                         [s.id]: e.target.value as ComparacionVersion,
                       }))
                     }
-                    className="min-h-11 rounded-lg border border-saie-border bg-white px-2 py-1 text-xs"
+                    className="min-h-11 rounded-lg border border-saie-border bg-white px-2 py-1 text-sm"
                   >
                     {COMPARACIONES.map((c) => (
                       <option
@@ -693,7 +693,7 @@ export const SeccionesAdmin: React.FC = () => {
           <div className="flex flex-col gap-5">
             <dl className="m-0 rounded-xl border border-saie-divider bg-white p-4 text-sm">
               <div className="border-b border-saie-divider py-2">
-                <dt className="text-xs font-semibold text-saie-muted">Aula asignada</dt>
+                <dt className="text-sm font-semibold text-saie-muted">Aula asignada</dt>
                 <dd className="m-0 text-saie-text">
                   {seleccionada.asignacion?.espacios.length
                     ? seleccionada.asignacion.espacios
@@ -703,7 +703,7 @@ export const SeccionesAdmin: React.FC = () => {
                 </dd>
               </div>
               <div className="border-b border-saie-divider py-2">
-                <dt className="text-xs font-semibold text-saie-muted">Docente</dt>
+                <dt className="text-sm font-semibold text-saie-muted">Docente</dt>
                 <dd className="m-0 text-saie-text">
                   {seleccionada.docente ? (
                     `${seleccionada.docente.nombre} (${seleccionada.docente.codigoDocente})`
@@ -713,7 +713,7 @@ export const SeccionesAdmin: React.FC = () => {
                 </dd>
               </div>
               <div className="border-b border-saie-divider py-2">
-                <dt className="text-xs font-semibold text-saie-muted">Horarios</dt>
+                <dt className="text-sm font-semibold text-saie-muted">Horarios</dt>
                 <dd className="m-0 text-saie-text">
                   {seleccionada.horarios.length === 0 ? (
                     'Sin horarios registrados.'
@@ -733,7 +733,7 @@ export const SeccionesAdmin: React.FC = () => {
                 </dd>
               </div>
               <div className="py-2">
-                <dt className="text-xs font-semibold text-saie-muted">Software requerido</dt>
+                <dt className="text-sm font-semibold text-saie-muted">Software requerido</dt>
                 <dd className="m-0 text-saie-text">
                   {seleccionada.softwareRequerido.length === 0
                     ? 'No exige software: sirve cualquier aula del tipo pedido.'
@@ -745,7 +745,7 @@ export const SeccionesAdmin: React.FC = () => {
             </dl>
 
             {seleccionada.asignacion && (
-              <p className="m-0 text-xs text-saie-muted">
+              <p className="m-0 text-sm text-saie-muted">
                 Asignada el {formatearFechaCorta(seleccionada.asignacion.fechaAsignacion)}
               </p>
             )}

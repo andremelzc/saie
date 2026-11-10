@@ -31,7 +31,7 @@ const Dato: React.FC<{ etiqueta: string; children: React.ReactNode }> = ({
   children,
 }) => (
   <div className="flex flex-col gap-0.5 border-b border-saie-divider py-2 last:border-b-0">
-    <dt className="text-xs font-semibold text-saie-muted">{etiqueta}</dt>
+    <dt className="text-sm font-semibold text-saie-muted">{etiqueta}</dt>
     <dd className="m-0 text-sm text-saie-text">{children}</dd>
   </div>
 );
@@ -142,11 +142,11 @@ const ListadoEspacios: React.FC<{
             </header>
             <dl className="m-0 grid grid-cols-2 gap-2 text-sm">
               <div>
-                <dt className="text-xs text-saie-muted">Capacidad</dt>
+                <dt className="text-sm text-saie-muted">Capacidad</dt>
                 <dd className="m-0 font-medium text-saie-text">{celdaCapacidad(e)}</dd>
               </div>
               <div>
-                <dt className="text-xs text-saie-muted">PCs malogradas</dt>
+                <dt className="text-sm text-saie-muted">PCs malogradas</dt>
                 <dd className="m-0 font-medium text-saie-text">{celdaPcs(e)}</dd>
               </div>
             </dl>

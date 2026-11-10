@@ -52,14 +52,14 @@ const TarjetaSolicitud: React.FC<{
 
       <dl className="m-0 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
         <div>
-          <dt className="text-xs text-saie-muted">Docente</dt>
+          <dt className="text-sm text-saie-muted">Docente</dt>
           <dd className="m-0">
             {s.docente.nombre}{' '}
             <span className="text-sm text-saie-muted">({s.docente.codigoDocente})</span>
           </dd>
         </div>
         <div>
-          <dt className="text-xs text-saie-muted">Sección</dt>
+          <dt className="text-sm text-saie-muted">Sección</dt>
           <dd className="m-0">
             {s.seccion
               ? `${s.seccion.codigoCurso} · ${s.seccion.codigoSeccion} — ${s.seccion.nombreCurso}`
@@ -69,13 +69,13 @@ const TarjetaSolicitud: React.FC<{
       </dl>
 
       <p className="m-0 text-sm text-saie-text">
-        <span className="block text-xs text-saie-muted">Justificación</span>
+        <span className="block text-sm text-saie-muted">Justificación</span>
         {s.justificacion}
       </p>
 
       {s.estado === 'RECHAZADA' && s.motivoRechazo && (
         <p className="m-0 rounded-lg bg-saie-danger-soft px-3 py-2 text-sm text-saie-danger-strong">
-          <span className="block text-xs font-semibold">Motivo del rechazo</span>
+          <span className="block text-sm font-semibold">Motivo del rechazo</span>
           {s.motivoRechazo}
         </p>
       )}

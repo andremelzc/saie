@@ -63,7 +63,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
         <Contenedor className="flex min-h-18 items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-4">
             <img src={logoBlanco} alt="SAIE" className="h-9 w-auto shrink-0" />
-            <span className="inline-flex min-w-0 items-center truncate rounded-full bg-white/15 px-3 py-1 text-xs font-medium sm:text-sm">
+            <span className="inline-flex min-w-0 items-center truncate rounded-full bg-white/15 px-3 py-1 text-sm font-medium">
               {etiquetaRol(sesion?.rol)}
             </span>
           </div>

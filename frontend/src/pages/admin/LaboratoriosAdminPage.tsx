@@ -82,6 +82,9 @@ const TarjetaLaboratorio: React.FC<{ lab: LaboratorioConEstadoDTO; esJefatura: b
         <p className="m-0 text-sm">
           Aforo real <strong className="font-semibold tabular-nums">{lab.capacidadReal}</strong> de{' '}
           <span className="tabular-nums">{lab.aforoNominal}</span> nominal
+          {porcentaje < 80 && lab.aforoNominal > 0 && (
+            <span className="font-semibold text-saie-warning-strong"> · aforo reducido</span>
+          )}
         </p>
         <div
           role="meter"
@@ -100,7 +103,7 @@ const TarjetaLaboratorio: React.FC<{ lab: LaboratorioConEstadoDTO; esJefatura: b
 
       <dl className="m-0 grid grid-cols-2 gap-2 text-sm">
         <div>
-          <dt className="text-xs text-saie-muted">PCs inoperativas</dt>
+          <dt className="text-sm text-saie-muted">PCs inoperativas</dt>
           <dd
             className={`m-0 font-semibold tabular-nums ${inoperativas > 0 ? 'text-saie-danger-strong' : ''}`}
           >
@@ -108,7 +111,7 @@ const TarjetaLaboratorio: React.FC<{ lab: LaboratorioConEstadoDTO; esJefatura: b
           </dd>
         </div>
         <div>
-          <dt className="text-xs text-saie-muted">Software</dt>
+          <dt className="text-sm text-saie-muted">Software</dt>
           <dd className="m-0 font-semibold">{plural(software.length, 'programa', 'programas')}</dd>
         </div>
       </dl>

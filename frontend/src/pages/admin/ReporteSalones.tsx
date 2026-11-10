@@ -132,25 +132,25 @@ export const ReporteSalones: React.FC = () => {
                 </div>
                 <dl className="m-0 flex flex-wrap gap-4 text-sm">
                   <div>
-                    <dt className="text-xs text-saie-muted">Secciones</dt>
+                    <dt className="text-sm text-saie-muted">Secciones</dt>
                     <dd className="m-0 text-lg font-bold text-saie-text">
                       {datos.totales.secciones}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-saie-muted">Con aula</dt>
+                    <dt className="text-sm text-saie-muted">Con aula</dt>
                     <dd className="m-0 text-lg font-bold text-saie-text">
                       {datos.totales.asignadas}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-saie-muted">Sin aula</dt>
+                    <dt className="text-sm text-saie-muted">Sin aula</dt>
                     <dd className="m-0 text-lg font-bold text-saie-danger-strong">
                       {datos.totales.sinAula}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-saie-muted">Aulas usadas</dt>
+                    <dt className="text-sm text-saie-muted">Aulas usadas</dt>
                     <dd className="m-0 text-lg font-bold text-saie-text">
                       {datos.totales.aulasDistintas}
                     </dd>
@@ -184,7 +184,7 @@ export const ReporteSalones: React.FC = () => {
                       </span>
                     </p>
                     <div>
-                      <span className="block text-xs text-saie-muted">Aula</span>
+                      <span className="block text-sm text-saie-muted">Aula</span>
                       {s.aula ? (
                         <span>
                           <span className="font-semibold">{s.aula.identificador}</span>
@@ -271,7 +271,7 @@ export const ReporteSalones: React.FC = () => {
                 </TablaDatos>
               </div>
 
-              <footer className="border-t border-saie-divider pt-3 text-xs text-saie-muted">
+              <footer className="border-t border-saie-divider pt-3 text-sm text-saie-muted">
                 <p className="m-0">
                   Total de alumnos matriculados: {datos.totales.alumnos}. Documento generado por el
                   SAIE; los horarios están en hora de Lima.

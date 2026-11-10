@@ -109,7 +109,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
       </div>
 
       <div>
-        <p className="m-0 mb-1 text-xs font-semibold text-saie-muted">
+        <p className="m-0 mb-1 text-sm font-semibold text-saie-muted">
           Cursos afectados ({cursos.length})
         </p>
         {cursos.length === 0 ? (

@@ -81,7 +81,7 @@ const Acceso: React.FC<{ to: string; titulo: string; descripcion: string; trazo:
     </span>
     <span className="min-w-0 flex-1">
       <span className="block text-sm font-bold text-saie-text">{titulo}</span>
-      <span className="block text-xs text-saie-muted">{descripcion}</span>
+      <span className="block text-sm text-saie-muted">{descripcion}</span>
     </span>
   </Link>
 );
@@ -170,9 +170,9 @@ const FilaEscalada: React.FC<{
           lenguaje llano y solo abra el código si necesita pasarlo a soporte técnico.
         */}
         {motivo.codigo && (
-          <details className="w-fit text-xs text-saie-muted">
+          <details className="w-fit text-sm text-saie-muted">
             <summary className="cursor-pointer py-3.5">Código de soporte</summary>
-            <span className="font-mono text-xs">{motivo.codigo}</span>
+            <span className="font-mono text-sm">{motivo.codigo}</span>
           </details>
         )}
       </div>
@@ -315,7 +315,7 @@ const InicioJefatura: React.FC = () => {
               aria-labelledby="titulo-alerta-destacada"
               className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-4"
             >
-              <h2 id="titulo-alerta-destacada" className="m-0 text-sm font-bold">
+              <h2 id="titulo-alerta-destacada" className="m-0 text-base font-bold">
                 Alerta más reciente
               </h2>
               {destacada ? (
@@ -378,7 +378,7 @@ const InicioJefatura: React.FC = () => {
             aria-labelledby="titulo-vista-mapa"
             className="flex min-w-0 flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4 lg:col-span-7"
           >
-            <h2 id="titulo-vista-mapa" className="m-0 text-sm font-bold">
+            <h2 id="titulo-vista-mapa" className="m-0 text-base font-bold">
               Tus laboratorios en el mapa de ocupación
             </h2>
             {mapa.error ? (
@@ -616,7 +616,7 @@ const InicioCoordinacion: React.FC = () => {
             aria-label={TEXTOS_ASIGNACION.tituloComprobacion}
             className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-4"
           >
-            <h2 className="m-0 text-sm font-bold text-saie-text">
+            <h2 className="m-0 text-base font-bold text-saie-text">
               {TEXTOS_ASIGNACION.tituloComprobacion}
             </h2>
             {resumenCorrida ? (
@@ -644,7 +644,7 @@ const InicioCoordinacion: React.FC = () => {
                 </Boton>
               </>
             ) : (
-              <p className="m-0 text-xs text-saie-muted">
+              <p className="m-0 text-sm text-saie-muted">
                 Corre la asignación para ver el veredicto: comprueba que no haya doble reservas, que
                 el aula tenga capacidad y el software necesario.
               </p>
@@ -662,7 +662,7 @@ const InicioCoordinacion: React.FC = () => {
               <h2
                 id="titulo-atencion"
                 tabIndex={-1}
-                className="m-0 scroll-mt-24 text-sm font-bold text-saie-text"
+                className="m-0 scroll-mt-24 text-base font-bold text-saie-text"
               >
                 Secciones que requieren revisión
               </h2>
@@ -708,7 +708,7 @@ const InicioCoordinacion: React.FC = () => {
             aria-labelledby="titulo-accesos"
             className="flex min-h-0 flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-4"
           >
-            <h2 id="titulo-accesos" className="m-0 text-sm font-bold text-saie-text">
+            <h2 id="titulo-accesos" className="m-0 text-base font-bold text-saie-text">
               Accesos
             </h2>
             <div className="grid min-h-0 gap-2 sm:grid-cols-2 lg:grid-cols-2">

@@ -38,7 +38,7 @@ const ESTADOS: { valor: EstadoIncidencia; etiqueta: string }[] = [
   { valor: 'DESCARTADA', etiqueta: 'Descartadas' },
 ];
 
-const TITULO_DT = 'text-xs font-semibold text-saie-muted';
+const TITULO_DT = 'text-sm font-semibold text-saie-muted';
 
 /** Solo se enlaza la evidencia si es una URL web; si no, se muestra como texto. */
 function esEnlace(texto: string): boolean {

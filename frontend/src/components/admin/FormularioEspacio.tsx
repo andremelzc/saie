@@ -485,7 +485,7 @@ const GrupoCapacidad: React.FC<{
       onCambio={(marcada) => cambiar('habilitado', marcada)}
     >
       <span className="font-semibold text-saie-text">Espacio en servicio</span>
-      <span className="block text-xs text-saie-muted">
+      <span className="block text-sm text-saie-muted">
         Si lo pones fuera de servicio, el sistema deja de asignarlo y queda fuera de la consulta de
         disponibilidad.
       </span>

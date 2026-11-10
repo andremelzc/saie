@@ -154,7 +154,7 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
 
               {regla.violaciones.length > 0 && (
                 <details className="mt-2 border-t border-saie-divider pt-2">
-                  <summary className="cursor-pointer py-3.5 text-xs font-semibold text-saie-danger">
+                  <summary className="cursor-pointer py-3.5 text-sm font-semibold text-saie-danger">
                     Ver {plural(regla.violaciones.length, 'incumplimiento', 'incumplimientos')}
                   </summary>
                   <ul className="m-0 mt-2 flex list-none flex-col gap-1.5 p-0 text-sm text-saie-text">
@@ -185,7 +185,7 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
         })}
       </ul>
 
-      <p className="m-0 text-xs text-saie-muted">{TEXTOS_ASIGNACION.nota}</p>
+      <p className="m-0 text-sm text-saie-muted">{TEXTOS_ASIGNACION.nota}</p>
     </section>
   );
 };

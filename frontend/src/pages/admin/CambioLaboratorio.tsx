@@ -383,7 +383,7 @@ export const CambioLaboratorio: React.FC = () => {
           </Aviso>
         )}
         {labs.datos && labs.datos.length === 0 && (
-          <p className="m-0 text-xs font-medium text-saie-danger">
+          <p className="m-0 text-sm font-medium text-saie-danger">
             No hay laboratorios registrados todavía.
           </p>
         )}
