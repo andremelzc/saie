@@ -10,6 +10,11 @@ export interface BuscadorEspaciosProps {
   pisoDe: (id: string) => number | undefined;
   /** Se elige un resultado: el mapa debe ir a su piso, centrarlo y seleccionarlo. */
   onElegir: (id: string) => void;
+  /** Rótulo del campo. */
+  etiqueta?: string;
+  placeholder?: string;
+  /** Muestra el estado (disponible, ocupado…) en cada resultado. No aplica a la ruta. */
+  mostrarEstado?: boolean;
   className?: string;
 }
 
@@ -23,6 +28,9 @@ export const BuscadorEspacios: React.FC<BuscadorEspaciosProps> = ({
   espacios,
   pisoDe,
   onElegir,
+  etiqueta = 'Buscar aula o laboratorio',
+  placeholder = 'Ej.: 204 o laboratorio',
+  mostrarEstado = true,
   className = '',
 }) => {
   const id = useId();
@@ -62,7 +70,7 @@ export const BuscadorEspacios: React.FC<BuscadorEspaciosProps> = ({
   return (
     <div className={`relative ${className}`}>
       <label htmlFor={`${id}-entrada`} className={CLASE_ROTULO_MAPA}>
-        Buscar aula o laboratorio
+        {etiqueta}
       </label>
       <input
         id={`${id}-entrada`}
@@ -73,7 +81,7 @@ export const BuscadorEspacios: React.FC<BuscadorEspaciosProps> = ({
         aria-autocomplete="list"
         aria-activedescendant={lista && resultados.length > 0 ? idOpcion(activo) : undefined}
         autoComplete="off"
-        placeholder="Ej.: 204 o laboratorio"
+        placeholder={placeholder}
         value={texto}
         onChange={(ev) => {
           setTexto(ev.target.value);
@@ -133,7 +141,7 @@ export const BuscadorEspacios: React.FC<BuscadorEspaciosProps> = ({
                   {[
                     pab ? PABELLON_TEXTO[pab] : null,
                     piso ? `Piso ${piso}` : null,
-                    ESTADO_TEXTO[e.estado],
+                    mostrarEstado ? ESTADO_TEXTO[e.estado] : null,
                   ]
                     .filter(Boolean)
                     .join(' · ')}

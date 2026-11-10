@@ -1,26 +1,23 @@
-import React, { useCallback, useId, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import LayoutEstudiante from '../components/estudiante/LayoutEstudiante';
 import { EsqueletoCarga } from '../components/estudiante/ElementosHorario';
-import { CLASE_CAMPO_MAPA } from '../components/mapa2d/controles';
 import { ENLACE_PLANOS } from '../components/mapa2d/ocupacionReal';
 import { rutaConIdsDePlano } from '../components/mapa2d/enlacePlano';
 import { PLANOS_SVG } from '../components/mapa2d/planos';
 import { origenesDeRuta } from '../components/ruta/origenes';
 import { ORIGEN_ENTRADA, type OrigenRuta } from '../components/ruta/trazado';
+import {
+  ORIGEN_POR_DEFECTO,
+  SelectorClase,
+  SelectorOrigen,
+} from '../components/ruta/SelectoresRuta';
 import VistaMapaRuta from '../components/ruta/VistaMapaRuta';
 import { Aviso } from '../components/ui/Aviso';
 import { EstadoError } from '../components/ui/EstadoError';
 import { useCarga } from '../hooks/useCarga';
 import { obtenerCursos, obtenerRuta } from '../services/estudiante';
-import type { CursoMatriculadoDTO } from '../types/horario';
 
-const etiquetaDe = (c: CursoMatriculadoDTO) => {
-  const lugar = c.espacios.map((e) => e.identificador).join(', ');
-  return `${c.nombreCurso} · sección ${c.codigoSeccion}${lugar ? ` · ${lugar}` : ''}`;
-};
-
-/** Valor de «Dónde estás» que significa la entrada principal. */
-const VALOR_ENTRADA = 'entrada';
+const VALOR_ENTRADA = ORIGEN_POR_DEFECTO;
 
 /**
  * Pantalla de ruta hacia el espacio asignado (Issues 3.19 y 3.20). Primero se dice dónde se está:
@@ -31,7 +28,6 @@ const VALOR_ENTRADA = 'entrada';
  * los puntos principales, no cada pasillo.
  */
 export const RutaAlumnoPage: React.FC = () => {
-  const id = useId();
   const cursosCarga = useCarga(obtenerCursos, { clave: 'cursos-para-ruta' });
   const conAula = useMemo(
     () => (cursosCarga.datos?.cursos ?? []).filter((c) => c.asignacionId),
@@ -41,6 +37,7 @@ export const RutaAlumnoPage: React.FC = () => {
 
   const [elegida, setElegida] = useState<string | null>(null);
   const [desde, setDesde] = useState<string>(VALOR_ENTRADA);
+  const [buscandoLugar, setBuscandoLugar] = useState(false);
   const asignacionId =
     conAula.find((c) => c.asignacionId === elegida)?.asignacionId ??
     conAula[0]?.asignacionId ??
@@ -86,48 +83,16 @@ export const RutaAlumnoPage: React.FC = () => {
         <>
           <section
             aria-label="Punto de partida y destino"
-            className="grid grid-cols-1 gap-3 rounded-xl border border-saie-divider bg-white p-4 md:grid-cols-2"
+            className="flex flex-col gap-5 rounded-xl border border-saie-divider bg-white p-4"
           >
-            <div className="flex min-w-0 flex-col gap-1">
-              <label htmlFor={`${id}-desde`} className="text-sm font-medium text-saie-text">
-                ¿Dónde estás?
-              </label>
-              <select
-                id={`${id}-desde`}
-                value={desde}
-                onChange={(e) => setDesde(e.target.value)}
-                className={`${CLASE_CAMPO_MAPA} w-full`}
-              >
-                <option value={VALOR_ENTRADA}>En la entrada principal de la facultad</option>
-                {gruposOrigen.map((g) => (
-                  <optgroup key={g.titulo} label={g.titulo}>
-                    {g.opciones.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.nombre}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex min-w-0 flex-col gap-1">
-              <label htmlFor={`${id}-clase`} className="text-sm font-medium text-saie-text">
-                ¿A qué clase vas?
-              </label>
-              <select
-                id={`${id}-clase`}
-                value={asignacionId ?? ''}
-                onChange={(e) => setElegida(e.target.value)}
-                className={`${CLASE_CAMPO_MAPA} w-full`}
-              >
-                {conAula.map((c) => (
-                  <option key={c.asignacionId as string} value={c.asignacionId as string}>
-                    {etiquetaDe(c)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SelectorOrigen
+              grupos={gruposOrigen}
+              valor={desde}
+              onCambiar={setDesde}
+              buscandoLugar={buscandoLugar}
+              onBuscandoLugar={setBuscandoLugar}
+            />
+            <SelectorClase cursos={conAula} valor={asignacionId} onCambiar={setElegida} />
           </section>
 
           {rutaCarga.error && !rutaCarga.datos ? (

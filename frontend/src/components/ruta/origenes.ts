@@ -5,6 +5,7 @@ export interface OpcionOrigen {
   /** Id de la figura en el plano (`ANT-104`). */
   id: string;
   nombre: string;
+  piso: number;
 }
 
 export interface GrupoOrigen {
@@ -38,7 +39,7 @@ export function origenesDeRuta(planos: Record<number, string>): GrupoOrigen[] {
     // El antiguo (donde está la entrada) va primero; luego, por piso.
     const orden = (pabellon === 'ANT' ? 0 : 100) + piso;
     const grupo = grupos.get(titulo) ?? { orden, opciones: [] };
-    grupo.opciones.push({ id: figura.id, nombre: figura.nombre || figura.id });
+    grupo.opciones.push({ id: figura.id, nombre: figura.nombre || figura.id, piso });
     grupos.set(titulo, grupo);
   }
 
