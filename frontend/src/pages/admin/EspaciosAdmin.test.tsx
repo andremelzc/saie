@@ -99,9 +99,10 @@ describe('Gestión de espacios (Issue 4.15)', () => {
     expect(enLista().getByText('No aplica')).toBeInTheDocument();
     expect(enLista().getByText('En servicio')).toBeInTheDocument();
     expect(enLista().getByText('Fuera de servicio')).toBeInTheDocument();
-    expect(screen.getByText('2 espacios')).toBeInTheDocument();
-    expect(screen.getByText('1 aula teórica')).toBeInTheDocument();
-    expect(screen.getByText('1 laboratorio')).toBeInTheDocument();
+    // Un solo resumen; los totales por tipo están en el filtro (Issue 4.40, DEN-09).
+    expect(screen.getByRole('option', { name: 'Todos (2)' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Aulas teóricas (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Laboratorios (1)' })).toBeInTheDocument();
     expect(screen.getByText('1 fuera de servicio')).toBeInTheDocument();
   });
 
@@ -148,7 +149,13 @@ describe('Gestión de espacios (Issue 4.15)', () => {
     fireEvent.change(screen.getByLabelText('Piso'), { target: { value: '3' } });
     expect(enLista().getByText('LAB-301')).toBeInTheDocument();
 
+    // Cada filtro activo aparece como chip (Issue 4.40).
+    const chips = screen.getByRole('group', { name: 'Filtros activos' });
+    expect(within(chips).getByText('B')).toBeInTheDocument();
+    expect(within(chips).getByText('Piso 3')).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+    expect(screen.queryByRole('group', { name: 'Filtros activos' })).toBeNull();
     expect(enLista().getByText('AULA-101')).toBeInTheDocument();
     expect(enLista().getByText('LAB-301')).toBeInTheDocument();
   });

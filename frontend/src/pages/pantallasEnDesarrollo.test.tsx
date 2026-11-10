@@ -2,16 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { MENSAJE_EN_DESARROLLO, PREVISION_EN_DESARROLLO } from '../components/PantallaEnDesarrollo';
-import InicioDocentePage from './docente/InicioDocentePage';
-import HorarioDocentePage from './docente/HorarioDocentePage';
-import EspaciosDocentePage from './docente/EspaciosDocentePage';
-import IncidenciasDocentePage from './docente/IncidenciasDocentePage';
 import LaboratoriosAdminPage from './admin/LaboratoriosAdminPage';
 import AltaAlumnoPage from './admin/AltaAlumnoPage';
 import AltaDocentePage from './admin/AltaDocentePage';
 import ClavesAdminPage from './admin/ClavesAdminPage';
 import SoftwareAdminPage from './admin/SoftwareAdminPage';
-import IncidenciasAdminPage from './admin/IncidenciasAdminPage';
 import ProximamenteAdminPage from './admin/ProximamenteAdminPage';
 
 const auth = vi.hoisted(() => ({
@@ -32,21 +27,6 @@ function montar(nodo: React.ReactNode) {
 
 const PANTALLAS = [
   {
-    nombre: 'Horario del docente',
-    Page: HorarioDocentePage,
-    titulo: 'Mi horario y asignaciones',
-  },
-  {
-    nombre: 'Espacios del docente',
-    Page: EspaciosDocentePage,
-    titulo: 'Explorar espacios y equipos',
-  },
-  {
-    nombre: 'Incidencias del docente',
-    Page: IncidenciasDocentePage,
-    titulo: 'Reportar una incidencia',
-  },
-  {
     nombre: 'Laboratorios del panel',
     Page: LaboratoriosAdminPage,
     titulo: 'Laboratorios y equipos',
@@ -55,11 +35,6 @@ const PANTALLAS = [
   { nombre: 'Alta de docentes', Page: AltaDocentePage, titulo: 'Alta de docentes' },
   { nombre: 'Claves del panel', Page: ClavesAdminPage, titulo: 'Claves y contraseñas' },
   { nombre: 'Catálogo de software', Page: SoftwareAdminPage, titulo: 'Catálogo de software' },
-  {
-    nombre: 'Revisión de incidencias',
-    Page: IncidenciasAdminPage,
-    titulo: 'Revisión de incidencias',
-  },
 ];
 
 describe('pantallas en desarrollo', () => {
@@ -73,23 +48,6 @@ describe('pantallas en desarrollo', () => {
     expect(screen.getByRole('heading', { name: titulo })).toBeVisible();
     expect(screen.getByRole('status')).toHaveTextContent(MENSAJE_EN_DESARROLLO);
     expect(screen.getByText(PREVISION_EN_DESARROLLO)).toBeVisible();
-  });
-});
-
-describe('InicioDocentePage', () => {
-  it('explica que el portal estará disponible y ofrece salidas claras', () => {
-    auth.sesion = { rol: 'DOCENTE' };
-    montar(<InicioDocentePage />);
-
-    expect(screen.getByRole('heading', { name: 'Portal del docente' })).toBeVisible();
-    expect(screen.getByRole('status')).toHaveTextContent(MENSAJE_EN_DESARROLLO);
-    expect(screen.getByText(PREVISION_EN_DESARROLLO)).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Volver al inicio' })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('link', { name: 'Consultar espacios' })).toHaveAttribute(
-      'href',
-      '/consulta',
-    );
-    expect(screen.queryByRole('link', { name: /Mi horario y asignaciones/ })).toBeNull();
   });
 });
 
@@ -110,9 +68,9 @@ describe('ProximamenteAdminPage', () => {
     auth.sesion = { rol: 'JEFATURA_LABORATORIOS' };
     montar(<ProximamenteAdminPage />);
 
-    expect(screen.getByText('Revisión de incidencias')).toBeVisible();
+    // La revisión de incidencias ya funciona (Issue 7.11): sale de la hoja de ruta.
+    expect(screen.queryByText('Revisión de incidencias')).toBeNull();
     expect(screen.getByText('Claves y contraseñas')).toBeVisible();
     expect(screen.queryByText('Mapa de ocupación por piso')).toBeNull();
-    expect(screen.queryByRole('link', { name: /Revisión de incidencias/ })).toBeNull();
   });
 });
