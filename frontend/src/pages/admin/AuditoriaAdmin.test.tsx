@@ -131,6 +131,53 @@ describe('Auditoria e historial (Issue 4.32)', () => {
     );
   });
 
+  it('pagina el historial de a 50 con el total real y vuelve a la página 1 al filtrar (Issue 4.39)', async () => {
+    historial.mockResolvedValue({
+      items: [],
+      total: 120,
+      pagina: 1,
+      limite: 50,
+    });
+    montar(<AuditoriaAdmin />);
+    await waitFor(() =>
+      expect(historial).toHaveBeenCalledWith(expect.objectContaining({ pagina: 1, limite: 50 })),
+    );
+    expect(await screen.findByText(/120/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Página siguiente' }));
+    await waitFor(() =>
+      expect(historial).toHaveBeenCalledWith(expect.objectContaining({ pagina: 2, limite: 50 })),
+    );
+
+    fireEvent.change(screen.getByLabelText('Estado'), { target: { value: 'ESCALADA' } });
+    await waitFor(() =>
+      expect(historial).toHaveBeenLastCalledWith(
+        expect.objectContaining({ pagina: 1, estado: 'ESCALADA' }),
+      ),
+    );
+  });
+
+  it('pagina el registro de actividad y reinicia la página al cambiar el filtro (Issue 4.39)', async () => {
+    auditoria.mockResolvedValue({ items: [], total: 75, pagina: 1, limite: 50 });
+    montar(<AuditoriaAdmin />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Registro de actividad' }));
+    await waitFor(() =>
+      expect(auditoria).toHaveBeenCalledWith(expect.objectContaining({ pagina: 1, limite: 50 })),
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Página siguiente' }));
+    await waitFor(() =>
+      expect(auditoria).toHaveBeenCalledWith(expect.objectContaining({ pagina: 2, limite: 50 })),
+    );
+
+    fireEvent.change(screen.getByLabelText('Tipo de evento'), { target: { value: 'ALERTA' } });
+    await waitFor(() =>
+      expect(auditoria).toHaveBeenLastCalledWith(
+        expect.objectContaining({ pagina: 1, tipo: 'ALERTA' }),
+      ),
+    );
+  });
+
   it('muestra el estado vacio cuando no hay historial', async () => {
     historial.mockResolvedValue({ items: [], total: 0, pagina: 1, limite: 200 });
     montar(<AuditoriaAdmin />);

@@ -13,6 +13,7 @@ import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
 import { Campo } from '../../components/ui/Campo';
 import { CLASE_CAMPO } from '../../components/ui/campos';
 import { useCarga } from '../../hooks/useCarga';
+import { usePaginacion } from '../../hooks/usePaginacion';
 import { useValorDiferido } from '../../hooks/useValorDiferido';
 import { obtenerAuditoria, obtenerEspacios, obtenerHistorial } from '../../services/admin';
 import type {
@@ -27,6 +28,7 @@ import { agruparPorCorrida, tituloDeCorrida, ubicacionDeEspacios } from '../../u
 import type { GrupoCorrida } from '../../utils/historial';
 import { describirEstadoAsignacion, describirEventoAuditoria } from '../../utils/diccionarios';
 import { FiltrosActivos } from '../../components/ui/FiltrosActivos';
+import { Paginador } from '../../components/ui/Paginador';
 import type { FiltroActivo } from '../../components/ui/FiltrosActivos';
 import { BuscadorSeccion } from '../../components/admin/BuscadorSeccion';
 import type { SeccionElegida } from '../../components/admin/BuscadorSeccion';
@@ -238,6 +240,11 @@ const VistaHistorial: React.FC<PropsVista & { onAbrir: (a: HistorialAsignacionDT
   // Una sola petición tras una pausa al escribir el periodo (Issue 4.41).
   const periodoDiferido = useValorDiferido(periodo);
   const seccionId = comunes.seccion?.id;
+  const rango = rangoIso(comunes);
+  const { pagina, tamano, setPagina, cambiarTamano } = usePaginacion(
+    'saie:historial:tamanoPagina',
+    `${periodoDiferido.trim()}|${estado}|${seccionId ?? ''}|${rango?.desde ?? ''}|${rango?.hasta ?? ''}`,
+  );
 
   const cargar = useCallback(
     () =>
@@ -245,16 +252,16 @@ const VistaHistorial: React.FC<PropsVista & { onAbrir: (a: HistorialAsignacionDT
         periodo: periodoDiferido.trim() || undefined,
         estado: estado === 'TODOS' ? undefined : estado,
         seccionId,
-        limite: 200,
+        pagina,
+        limite: tamano,
       }),
-    [periodoDiferido, estado, seccionId],
+    [periodoDiferido, estado, seccionId, pagina, tamano],
   );
 
   const { datos, cargando, error, recargar } = useCarga(cargar, {
-    clave: `historial:${periodoDiferido.trim()}|${estado}|${seccionId ?? ''}`,
+    clave: `historial:${periodoDiferido.trim()}|${estado}|${seccionId ?? ''}|${pagina}|${tamano}`,
   });
   useRecargarAl(version, recargar);
-  const rango = rangoIso(comunes);
   // El historial no filtra por fecha en el servidor: el rango se aplica a lo recibido.
   const items = useMemo(
     () => (datos?.items ?? []).filter((a) => !rango || dentroDelRango(a.fechaAsignacion, rango)),
@@ -366,6 +373,15 @@ const VistaHistorial: React.FC<PropsVista & { onAbrir: (a: HistorialAsignacionDT
           </div>
         )}
       </ZonaActualizable>
+      <Paginador
+        pagina={pagina}
+        tamano={tamano}
+        total={datos?.total ?? 0}
+        onCambiarPagina={setPagina}
+        onCambiarTamano={cambiarTamano}
+        etiqueta="Paginación del historial"
+        nombreRegistros="asignaciones"
+      />
     </div>
   );
 };
@@ -396,6 +412,10 @@ const VistaAuditoria: React.FC<PropsVista & { espacios: EspaciosPorId }> = ({
   const rango = rangoIso(comunes);
   const desde = rango?.desde;
   const hasta = rango?.hasta;
+  const { pagina, tamano, setPagina, cambiarTamano } = usePaginacion(
+    'saie:auditoria:tamanoPagina',
+    `${tipo}|${desde ?? ''}|${hasta ?? ''}|${comunes.seccion?.id ?? ''}`,
+  );
 
   const cargar = useCallback(
     () =>
@@ -403,13 +423,14 @@ const VistaAuditoria: React.FC<PropsVista & { espacios: EspaciosPorId }> = ({
         tipo: tipo === 'TODOS' ? undefined : tipo,
         desde,
         hasta,
-        limite: 200,
+        pagina,
+        limite: tamano,
       }),
-    [tipo, desde, hasta],
+    [tipo, desde, hasta, pagina, tamano],
   );
 
   const { datos, cargando, error, recargar } = useCarga(cargar, {
-    clave: `auditoria:${tipo}|${desde ?? ''}|${hasta ?? ''}`,
+    clave: `auditoria:${tipo}|${desde ?? ''}|${hasta ?? ''}|${pagina}|${tamano}`,
   });
   useRecargarAl(version, recargar);
   const seccionId = comunes.seccion?.id;
@@ -529,6 +550,15 @@ const VistaAuditoria: React.FC<PropsVista & { espacios: EspaciosPorId }> = ({
           </>
         )}
       </ZonaActualizable>
+      <Paginador
+        pagina={pagina}
+        tamano={tamano}
+        total={datos?.total ?? 0}
+        onCambiarPagina={setPagina}
+        onCambiarTamano={cambiarTamano}
+        etiqueta="Paginación del registro de actividad"
+        nombreRegistros="registros"
+      />
     </div>
   );
 };
