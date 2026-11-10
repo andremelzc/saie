@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import VistaMapaRuta from './VistaMapaRuta';
 import { ASIGNACIONES_EJEMPLO, rutaDeEjemplo, TIEMPOS } from './rutaEjemplo';
@@ -7,6 +7,10 @@ import { centroDe, leerPlano2D } from '../mapa2d/plano';
 import { PLANOS_SVG } from '../mapa2d/planos';
 
 const [AULA_PISO_2, LAB_PISO_1, BLOQUE_PISO_3, SIN_AULA] = ASIGNACIONES_EJEMPLO;
+
+// La primera ruta arma las mallas de los tres pisos (~1 s): con la suite completa en paralelo
+// hace falta más margen que los 5 s por defecto.
+vi.setConfig({ testTimeout: 20_000 });
 
 describe('rutaDeEjemplo', () => {
   it('suma los tiempos con las mismas constantes del backend', () => {

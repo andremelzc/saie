@@ -91,6 +91,10 @@ const montar = () =>
     </MemoryRouter>,
   );
 
+// La primera ruta arma las mallas de los tres pisos (~1 s): con la suite completa en paralelo
+// hace falta más margen que los 5 s por defecto.
+vi.setConfig({ testTimeout: 20_000 });
+
 describe('RutaAlumnoPage', () => {
   beforeEach(() => {
     vaciarCacheCarga();
