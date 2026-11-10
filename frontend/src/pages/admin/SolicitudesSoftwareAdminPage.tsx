@@ -115,7 +115,9 @@ export const SolicitudesSoftwareAdminPage: React.FC = () => {
     () => obtenerSolicitudes(filtro === 'TODAS' ? undefined : filtro),
     [filtro],
   );
-  const { datos, cargando, error, recargar } = useCarga(cargar, { clave: `solicitudes:${filtro}` });
+  const { datos, cargando, error, recargar, deOtraConsulta } = useCarga(cargar, {
+    clave: `solicitudes:${filtro}`,
+  });
   const solicitudes = datos?.items ?? [];
 
   function abrirAprobacion(s: SolicitudSoftwareDTO) {
@@ -188,8 +190,8 @@ export const SolicitudesSoftwareAdminPage: React.FC = () => {
       />
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      <ZonaActualizable actualizando={cargando && datos !== null}>
-        {cargando && !datos ? (
+      <ZonaActualizable actualizando={cargando && datos !== null && !deOtraConsulta}>
+        {cargando && (!datos || deOtraConsulta) ? (
           <EsqueletoCarga texto="Cargando solicitudes…" />
         ) : solicitudes.length === 0 ? (
           <EstadoVacio

@@ -251,7 +251,7 @@ export const IncidenciasAdminPage: React.FC = () => {
       }),
     [estado, prioridad],
   );
-  const { datos, cargando, error, recargar } = useCarga(cargar, {
+  const { datos, cargando, error, recargar, deOtraConsulta } = useCarga(cargar, {
     clave: `${CLAVE_INCIDENCIAS}:${estado}|${prioridad}`,
   });
 
@@ -324,8 +324,8 @@ export const IncidenciasAdminPage: React.FC = () => {
       </section>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      <ZonaActualizable actualizando={cargando && datos !== null}>
-        {cargando && !datos ? (
+      <ZonaActualizable actualizando={cargando && datos !== null && !deOtraConsulta}>
+        {cargando && (!datos || deOtraConsulta) ? (
           <EsqueletoCarga texto="Cargando incidencias…" />
         ) : incidencias.length === 0 ? (
           <EstadoVacio

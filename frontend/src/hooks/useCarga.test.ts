@@ -18,6 +18,33 @@ describe('useCarga hook', () => {
     expect(result.current.cargando).toBe(false);
   });
 
+  describe('datos de otra consulta', () => {
+    it('al cambiar de consulta sin caché marca los datos como de otra consulta', async () => {
+      const nunca = () => new Promise<string>(() => undefined);
+      const { result, rerender } = renderHook(
+        ({ valor }: { valor: string }) =>
+          useCarga(valor === 'b' ? nunca : () => Promise.resolve(valor), { clave: `k:${valor}` }),
+        { initialProps: { valor: 'a' } },
+      );
+      await waitFor(() => expect(result.current.datos).toBe('a'));
+      expect(result.current.deOtraConsulta).toBe(false);
+
+      rerender({ valor: 'b' });
+      expect(result.current.datos).toBe('a');
+      expect(result.current.cargando).toBe(true);
+      expect(result.current.deOtraConsulta).toBe(true);
+    });
+
+    it('recargar la misma consulta no la marca como de otra consulta', async () => {
+      const cargador = () => Promise.resolve('x');
+      const { result } = renderHook(() => useCarga(cargador, { clave: 'k' }));
+      await waitFor(() => expect(result.current.datos).toBe('x'));
+      act(() => result.current.recargar());
+      expect(result.current.cargando).toBe(true);
+      expect(result.current.deOtraConsulta).toBe(false);
+    });
+  });
+
   describe('caché breve con revalidación (Issue 3.49)', () => {
     it('al volver muestra los datos anteriores mientras revalida y luego los actualiza', async () => {
       const primera = renderHook(() =>
