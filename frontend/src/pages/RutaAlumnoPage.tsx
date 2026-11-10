@@ -4,7 +4,9 @@ import { EsqueletoCarga } from '../components/estudiante/ElementosHorario';
 import { ENLACE_PLANOS } from '../components/mapa2d/ocupacionReal';
 import { rutaConIdsDePlano } from '../components/mapa2d/enlacePlano';
 import { PLANOS_SVG } from '../components/mapa2d/planos';
+import { ordenarPorProxima } from '../components/ruta/clases';
 import { origenesDeRuta } from '../components/ruta/origenes';
+import { fechaActual } from '../utils/horario';
 import { ORIGEN_ENTRADA, type OrigenRuta } from '../components/ruta/trazado';
 import {
   ORIGEN_POR_DEFECTO,
@@ -29,9 +31,15 @@ const VALOR_ENTRADA = ORIGEN_POR_DEFECTO;
  */
 export const RutaAlumnoPage: React.FC = () => {
   const cursosCarga = useCarga(obtenerCursos, { clave: 'cursos-para-ruta' });
+  // La clase de la que se parte es la que toca ahora o la próxima, no la primera de la lista.
+  const [ahora] = useState(fechaActual);
   const conAula = useMemo(
-    () => (cursosCarga.datos?.cursos ?? []).filter((c) => c.asignacionId),
-    [cursosCarga.datos],
+    () =>
+      ordenarPorProxima(
+        (cursosCarga.datos?.cursos ?? []).filter((c) => c.asignacionId),
+        ahora,
+      ),
+    [cursosCarga.datos, ahora],
   );
   const gruposOrigen = useMemo(() => origenesDeRuta(PLANOS_SVG), []);
 
@@ -92,7 +100,12 @@ export const RutaAlumnoPage: React.FC = () => {
               buscandoLugar={buscandoLugar}
               onBuscandoLugar={setBuscandoLugar}
             />
-            <SelectorClase cursos={conAula} valor={asignacionId} onCambiar={setElegida} />
+            <SelectorClase
+              cursos={conAula}
+              valor={asignacionId}
+              onCambiar={setElegida}
+              ahora={ahora}
+            />
           </section>
 
           {rutaCarga.error && !rutaCarga.datos ? (

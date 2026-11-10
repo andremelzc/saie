@@ -129,7 +129,10 @@ describe('RutaAlumnoPage', () => {
     montar();
     await screen.findByText('Tiempo estimado de caminata');
 
-    fireEvent.click(screen.getByRole('radio', { name: /Cálculo/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cambiar clase' }));
+    fireEvent.change(screen.getByRole('combobox', { name: '¿A qué clase vas?' }), {
+      target: { value: 'asig-aula' },
+    });
 
     expect(await screen.findByRole('group', { name: /Plano del piso 1/ })).toBeVisible();
     expect(vi.mocked(obtenerRuta)).toHaveBeenLastCalledWith('asig-aula');
@@ -192,21 +195,40 @@ describe('RutaAlumnoPage', () => {
     expect(screen.getByText(/Pasa al pabellón nuevo por el pasadizo/)).toBeVisible();
     expect(screen.queryByText('Entras por la entrada principal')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cambiar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cambiar lugar' }));
     expect(await screen.findByText('Entras por la entrada principal')).toBeVisible();
   });
 
-  it('las clases se eligen de un toque, como opciones', async () => {
+  it('parte de la clase que toca ahora o la próxima, y las demás se ven al cambiar', async () => {
+    const ahora = new Date();
+    const dia = (
+      ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'] as const
+    )[ahora.getDay()];
+    const lunes = curso('asig-lab', 'Redes', [LAB]);
+    const proxima = curso('asig-aula', 'Cálculo', [AULA]);
+    // Cálculo empieza en una hora; Redes, el mismo día pero mucho antes ya pasó: toca la semana próxima.
+    (proxima as { proximaSesion: unknown }).proximaSesion = {
+      diaSemana: dia,
+      horaInicio: `${String((ahora.getHours() + 1) % 24).padStart(2, '0')}:00`,
+      horaFin: `${String((ahora.getHours() + 2) % 24).padStart(2, '0')}:00`,
+      espacios: [],
+    };
     vi.mocked(obtenerCursos).mockResolvedValue({
       periodo: '2026-2',
-      cursos: [curso('asig-lab', 'Redes', [LAB]), curso('asig-aula', 'Cálculo', [AULA])] as never,
+      cursos: [lunes, proxima] as never,
     });
     montar();
-    await screen.findByText('Tiempo estimado de caminata');
+    await screen.findByRole('group', { name: /Plano del piso 1/ });
 
     const grupo = screen.getByRole('group', { name: '¿A qué clase vas?' });
-    expect(within(grupo).getAllByRole('radio')).toHaveLength(2);
-    expect(within(grupo).getByRole('radio', { name: /Redes/ })).toBeChecked();
+    // La primera de la lista del servidor es Redes, pero la que toca es Cálculo.
+    expect(vi.mocked(obtenerRuta)).toHaveBeenCalledWith('asig-aula');
+    expect(within(grupo).getByText('Cálculo')).toBeVisible();
+    expect(within(grupo).queryByRole('combobox')).toBeNull();
+
+    fireEvent.click(within(grupo).getByRole('button', { name: 'Cambiar clase' }));
+    const lista = within(grupo).getByRole('combobox');
+    expect(within(lista).getAllByRole('option')).toHaveLength(2);
   });
 
   it('si ya estás en el aula de la clase no hay recorrido que dibujar', async () => {

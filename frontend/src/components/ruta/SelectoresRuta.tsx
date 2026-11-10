@@ -1,10 +1,12 @@
-import React, { useId, useMemo } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 import { SelectorSegmentado } from '../estudiante/SelectorSegmentado';
 import BuscadorEspacios from '../mapa2d/BuscadorEspacios';
 import type { EspacioMapa2D } from '../mapa2d/etiquetas';
 import { pabellonDe } from '../mapa2d/plano';
 import { clasesBoton } from '../ui/clasesBoton';
 import type { CursoMatriculadoDTO } from '../../types/horario';
+import { CLASE_CAMPO_MAPA } from '../mapa2d/controles';
+import { etiquetaDeProxima } from './clases';
 import type { GrupoOrigen } from './origenes';
 
 /** Valor de «dónde estás» que significa la entrada principal. */
@@ -96,7 +98,7 @@ export const SelectorOrigen: React.FC<SelectorOrigenProps> = ({
               onClick={() => onCambiar(ORIGEN_POR_DEFECTO)}
               className={clasesBoton('fantasma', 'sm')}
             >
-              Cambiar
+              Cambiar lugar
             </button>
           </div>
         ) : (
@@ -119,45 +121,82 @@ export const SelectorOrigen: React.FC<SelectorOrigenProps> = ({
 const etiquetaLugar = (c: CursoMatriculadoDTO) => c.espacios.map((e) => e.identificador).join(', ');
 
 interface SelectorClaseProps {
+  /** Las clases con aula, ya ordenadas por cuándo toca la siguiente sesión. */
   cursos: CursoMatriculadoDTO[];
   /** `asignacionId` de la clase elegida. */
   valor: string | null;
   onCambiar: (asignacionId: string) => void;
+  ahora: Date;
 }
 
 /**
- * «¿A qué clase vas?»: las clases con aula, a la vista y de un toque, en vez de una lista
- * desplegable. Son un grupo de opciones (radio): flechas para moverse, como en cualquier formulario.
+ * «¿A qué clase vas?»: casi siempre es la que toca ahora o la próxima, así que esa viene elegida y
+ * se ve de un vistazo. Solo quien va a otra la cambia, desde una lista corta ordenada por cuándo
+ * empieza cada una. Así no hay que leer todas las clases para empezar.
  */
-export const SelectorClase: React.FC<SelectorClaseProps> = ({ cursos, valor, onCambiar }) => {
-  const nombre = useId();
+export const SelectorClase: React.FC<SelectorClaseProps> = ({
+  cursos,
+  valor,
+  onCambiar,
+  ahora,
+}) => {
+  const idTitulo = useId();
+  const [cambiando, setCambiando] = useState(false);
+  const actual = cursos.find((c) => c.asignacionId === valor) ?? cursos[0];
+  if (!actual) return null;
+  const proxima = actual.proximaSesion ? etiquetaDeProxima(actual.proximaSesion, ahora) : null;
+
   return (
-    <fieldset className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
-      <legend className="mb-1 p-0 text-sm font-medium text-saie-text">¿A qué clase vas?</legend>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {cursos.map((c) => {
-          const id = c.asignacionId as string;
-          return (
-            <label key={id} className="relative block cursor-pointer">
-              <input
-                type="radio"
-                name={nombre}
-                value={id}
-                checked={valor === id}
-                onChange={() => onCambiar(id)}
-                className="peer sr-only"
-              />
-              <span className="flex min-h-14 flex-col justify-center rounded-xl border border-saie-border bg-white px-3 py-2 text-sm transition-colors hover:bg-saie-primary/5 peer-checked:border-saie-primary peer-checked:bg-saie-primary/5 peer-checked:ring-1 peer-checked:ring-saie-primary peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-saie-text">
-                <strong className="font-semibold text-saie-text">{c.nombreCurso}</strong>
-                <span className="text-saie-muted">
-                  {`Sección ${c.codigoSeccion}`}
-                  {etiquetaLugar(c) ? ` · ${etiquetaLugar(c)}` : ''}
-                </span>
-              </span>
-            </label>
-          );
-        })}
-      </div>
-    </fieldset>
+    <div role="group" aria-labelledby={idTitulo} className="flex min-w-0 flex-col gap-2">
+      <span id={idTitulo} className="text-sm font-medium text-saie-text">
+        ¿A qué clase vas?
+      </span>
+      {cambiando ? (
+        <select
+          aria-labelledby={idTitulo}
+          autoFocus
+          value={actual.asignacionId as string}
+          onChange={(e) => {
+            onCambiar(e.target.value);
+            setCambiando(false);
+          }}
+          onBlur={() => setCambiando(false)}
+          className={`${CLASE_CAMPO_MAPA} w-full`}
+        >
+          {cursos.map((c) => (
+            <option key={c.asignacionId as string} value={c.asignacionId as string}>
+              {[
+                c.nombreCurso,
+                c.proximaSesion ? etiquetaDeProxima(c.proximaSesion, ahora) : null,
+                etiquetaLugar(c),
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-saie-border bg-white px-3 py-2">
+          <p className="m-0 min-w-0 text-sm text-saie-text">
+            <strong className="font-semibold">{actual.nombreCurso}</strong>
+            <span className="block text-saie-muted">
+              {[`Sección ${actual.codigoSeccion}`, etiquetaLugar(actual)]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+            {proxima && <span className="block font-medium text-saie-primary">{proxima}</span>}
+          </p>
+          {cursos.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setCambiando(true)}
+              className={clasesBoton('fantasma', 'sm')}
+            >
+              Cambiar clase
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
