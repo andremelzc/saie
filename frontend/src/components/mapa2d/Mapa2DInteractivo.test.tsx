@@ -94,10 +94,10 @@ describe('Mapa2D interactivo', () => {
     expect(within(plano).getByRole('button', { name: /Aula 101/ })).toBeInTheDocument();
   });
 
-  it('marca la entrada de cada pabellón y la lleva a la leyenda', () => {
+  it('marca la entrada principal y las puertas al patio y las lleva a la leyenda', () => {
     montar();
-    expect(screen.getByText('Entrada antiguo')).toBeInTheDocument();
-    expect(screen.getByText('Entrada del pabellón')).toBeInTheDocument();
+    expect(screen.getByText('Entrada principal')).toBeInTheDocument();
+    expect(screen.getByText('Entrada principal o puerta al patio')).toBeInTheDocument();
   });
 
   it('dibuja el norte y no inventa una escala en metros', () => {

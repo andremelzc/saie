@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import RutaAlumnoPage from './RutaAlumnoPage';
 import { vaciarCacheCarga } from '../hooks/useCarga';
@@ -125,10 +125,59 @@ describe('RutaAlumnoPage', () => {
     montar();
     await screen.findByText('Tiempo estimado de caminata');
 
-    fireEvent.change(screen.getByLabelText('Clase'), { target: { value: 'asig-aula' } });
+    fireEvent.change(screen.getByLabelText('¿A qué clase vas?'), {
+      target: { value: 'asig-aula' },
+    });
 
     expect(await screen.findByRole('group', { name: /Plano del piso 1/ })).toBeVisible();
     expect(vi.mocked(obtenerRuta)).toHaveBeenLastCalledWith('asig-aula');
+  });
+
+  it('pregunta primero dónde estás y parte de la entrada principal por defecto', async () => {
+    vi.mocked(obtenerCursos).mockResolvedValue({
+      periodo: '2026-2',
+      cursos: [curso('asig-aula', 'Cálculo', [AULA])] as never,
+    });
+    montar();
+    await screen.findByRole('group', { name: /Plano del piso 1/ });
+
+    const desde = screen.getByLabelText('¿Dónde estás?') as HTMLSelectElement;
+    expect(desde.value).toBe('entrada');
+    expect(within(desde).getByRole('option', { name: /entrada principal/ })).toBeInTheDocument();
+    // También se puede partir de cualquier aula o espacio del plano, agrupado por pabellón y piso.
+    expect(within(desde).getAllByRole('group').length).toBeGreaterThan(3);
+    // La entrada del pabellón nuevo (puerta del patio) no es un punto de partida.
+    expect(within(desde).queryByRole('option', { name: /patio/i })).toBeNull();
+    expect(screen.getByText('Entras por la entrada principal')).toBeInTheDocument();
+  });
+
+  it('al elegir otro punto de partida la ruta sale de ahí', async () => {
+    vi.mocked(obtenerCursos).mockResolvedValue({
+      periodo: '2026-2',
+      cursos: [curso('asig-aula', 'Cálculo', [AULA])] as never,
+    });
+    montar();
+    await screen.findByRole('group', { name: /Plano del piso 1/ });
+
+    fireEvent.change(screen.getByLabelText('¿Dónde estás?'), { target: { value: 'ANT-108' } });
+
+    expect(await screen.findByText('Sales de donde estás')).toBeVisible();
+    expect(screen.getByText(/Pasa al pabellón nuevo por el pasadizo/)).toBeVisible();
+    expect(screen.queryByText('Entras por la entrada principal')).toBeNull();
+  });
+
+  it('si ya estás en el aula de la clase no hay recorrido que dibujar', async () => {
+    vi.mocked(obtenerCursos).mockResolvedValue({
+      periodo: '2026-2',
+      cursos: [curso('asig-lab', 'Redes', [LAB])] as never,
+    });
+    montar();
+    await screen.findByRole('group', { name: /Plano del piso 1/ });
+
+    fireEvent.change(screen.getByLabelText('¿Dónde estás?'), { target: { value: 'ANT-104' } });
+
+    expect(await screen.findByText(/Ya estás en el aula de esta clase/)).toBeVisible();
+    expect(screen.queryByRole('group', { name: /Plano del piso 1/ })).toBeNull();
   });
 
   it('sin ninguna clase con aula lo dice y no pide ruta', async () => {

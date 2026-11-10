@@ -1,13 +1,16 @@
+import { clasesBoton } from '../ui/clasesBoton';
 import React, { useMemo, useState } from 'react';
 import Mapa2D from '../mapa2d/Mapa2D';
 import { PLANOS_SVG } from '../mapa2d/planos';
 import { Aviso } from '../ui/Aviso';
 import { BadgeEstado } from '../ui/BadgeEstado';
 import type { RutaReferencia } from './tipos';
-import { calcularTrazado, formatearDuracion } from './trazado';
+import { calcularTrazado, formatearDuracion, ORIGEN_ENTRADA, type OrigenRuta } from './trazado';
 
 export interface VistaMapaRutaProps {
   ruta: RutaReferencia;
+  /** De dónde sale la persona; por defecto, la entrada principal de la facultad. */
+  origen?: OrigenRuta;
   /** Planos por piso. Por defecto, los de `assets/planos/`. */
   planos?: Record<number, string>;
   className?: string;
@@ -21,21 +24,21 @@ const LeyendaRuta: React.FC = () => (
     <li className="flex items-center gap-2">
       <span
         aria-hidden="true"
-        className="inline-block h-0 w-7 border-t-4 border-dashed border-indigo-600"
+        className="inline-block h-0 w-7 border-t-4 border-dashed border-saie-primary"
       />
       Recorrido
     </li>
     <li className="flex items-center gap-2">
-      <span aria-hidden="true" className="inline-block h-4 w-4 rounded-full bg-indigo-600" />
+      <span aria-hidden="true" className="inline-block h-4 w-4 rounded-full bg-saie-primary" />
       Punto del recorrido (número del paso)
     </li>
     <li className="flex items-center gap-2">
-      <span aria-hidden="true" className="inline-block h-4 w-4 rounded-full bg-rose-700" />
+      <span aria-hidden="true" className="inline-block h-4 w-4 rounded-full bg-saie-text" />
       Tu aula o laboratorio
     </li>
     <li className="flex items-center gap-2">
-      <span aria-hidden="true" className="inline-block h-4 w-4 rounded-full bg-blue-900" />
-      Entrada del pabellón
+      <span aria-hidden="true" className="inline-block h-4 w-4 rounded-full bg-saie-info" />
+      Entrada principal o puerta al patio
     </li>
   </ul>
 );
@@ -48,13 +51,13 @@ const LeyendaRuta: React.FC = () => (
  */
 export const VistaMapaRuta: React.FC<VistaMapaRutaProps> = ({
   ruta,
+  origen = ORIGEN_ENTRADA,
   planos = PLANOS_SVG,
   className = '',
 }) => {
-  const trazado = useMemo(() => calcularTrazado(ruta, planos), [ruta, planos]);
+  const trazado = useMemo(() => calcularTrazado(ruta, planos, origen), [ruta, planos, origen]);
   const pisoInicial = trazado.pasos[0]?.piso ?? 1;
   const [piso, setPiso] = useState<number | null>(null);
-  const [enfoque, setEnfoque] = useState<{ id: string; n: number } | null>(null);
   const [pasoActivo, setPasoActivo] = useState<number | null>(null);
   const pisoMostrado = piso ?? pisoInicial;
 
@@ -63,43 +66,52 @@ export const VistaMapaRuta: React.FC<VistaMapaRutaProps> = ({
       <Aviso tono="advertencia" role="alert" className={className}>
         <strong className="block">Ruta no disponible</strong>
         {ruta.mensaje ?? 'No pudimos calcular la ruta hacia este espacio.'} Consulta tu horario o
-        pregunta en la entrada del pabellón.
+        pregunta en la entrada principal.
       </Aviso>
     );
   }
 
   const irAlPaso = (i: number) => {
-    const paso = trazado.pasos[i];
+    // El plano del piso entero se queda como está: lo que cambia es el piso y el punto resaltado.
     setPasoActivo(i);
-    setPiso(paso.piso);
-    const id = paso.focoId;
-    if (id) setEnfoque((previo) => ({ id, n: (previo?.n ?? 0) + 1 }));
+    setPiso(trazado.pasos[i].piso);
   };
+  const pasoElegido = pasoActivo === null ? null : trazado.pasos[pasoActivo];
 
   return (
     <div className={`grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] ${className}`}>
       <div className="flex min-w-0 flex-col gap-3">
         <Mapa2D
           espacios={[]}
-          resaltados={trazado.destinos}
+          resaltados={
+            pasoElegido?.focoId ? [...trazado.destinos, pasoElegido.focoId] : trazado.destinos
+          }
+          marcaActiva={pasoElegido?.tramo.orden ?? null}
           piso={pisoMostrado}
           onPisoCambiado={setPiso}
           planos={planos}
           capaRuta={trazado.capa}
-          enfocar={enfoque}
           leyenda={false}
         />
         <LeyendaRuta />
       </div>
 
       <section aria-label="Pasos de la ruta" className="flex flex-col gap-3">
-        <div className="rounded-xl border border-saie-divider bg-white p-4 shadow-sm">
-          <p className="m-0 text-sm text-saie-muted">Tiempo estimado de caminata</p>
-          <p className="m-0 text-2xl font-bold text-saie-text" aria-live="polite">
-            {formatearDuracion(ruta.tiempoEstimadoTotalSegundos)}
-          </p>
+        <div className="rounded-xl border border-saie-divider bg-white p-4">
+          {trazado.tiempoDelServidor ? (
+            <>
+              <p className="m-0 text-sm text-saie-muted">Tiempo estimado de caminata</p>
+              <p className="m-0 text-2xl font-bold text-saie-text" aria-live="polite">
+                {formatearDuracion(ruta.tiempoEstimadoTotalSegundos)}
+              </p>
+            </>
+          ) : (
+            <p className="m-0 text-base font-bold text-saie-text">
+              {trazado.pasos.length === 1 ? '1 paso' : `${trazado.pasos.length} pasos`}
+            </p>
+          )}
           <p className="m-0 mt-1 text-sm text-saie-muted">
-            {ruta.pabellon}
+            Destino: {ruta.pabellon}
             {ruta.pisoDestino ? `, piso ${ruta.pisoDestino}` : ''}
             {ruta.movilidadReducida ? ' · ruta accesible por ascensor' : ''}
           </p>
@@ -116,7 +128,7 @@ export const VistaMapaRuta: React.FC<VistaMapaRutaProps> = ({
               <div className="flex items-start gap-3">
                 <span
                   aria-hidden="true"
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-saie-primary text-sm font-bold text-white"
                 >
                   {tramo.orden}
                 </span>
@@ -127,9 +139,6 @@ export const VistaMapaRuta: React.FC<VistaMapaRutaProps> = ({
                   </p>
                   <p className="m-0 mt-1 text-sm text-saie-muted">{tramo.descripcion}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-saie-muted">
-                      {formatearDuracion(tramo.tiempoEstimadoSegundos)}
-                    </span>
                     {tramo.tipo === 'CAMBIO_PISO' && tramo.esAccesible && (
                       <BadgeEstado tono="exito">Accesible</BadgeEstado>
                     )}
@@ -138,7 +147,7 @@ export const VistaMapaRuta: React.FC<VistaMapaRutaProps> = ({
                       aria-label={`Ver el paso ${tramo.orden} en el plano`}
                       aria-pressed={pasoActivo === i}
                       onClick={() => irAlPaso(i)}
-                      className="min-h-9 cursor-pointer rounded-lg px-2 text-sm font-medium text-saie-primary hover:bg-saie-primary/5"
+                      className={clasesBoton('fantasma', 'sm')}
                     >
                       Ver en el plano
                     </button>

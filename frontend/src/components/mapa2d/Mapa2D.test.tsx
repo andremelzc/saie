@@ -62,17 +62,17 @@ describe('Mapa2D', () => {
     expect(relleno('Aula 102, pabellón nuevo, con alerta')).toMatch(/^url\(#mapa2d-alerta-.+\)$/);
   });
 
-  it('marca el laboratorio con su borde turquesa y el texto LAB', () => {
+  it('marca el laboratorio con su borde azul y el texto LAB', () => {
     montar();
 
     const lab = screen.getByRole('button', { name: /Laboratorio 08/ });
-    expect(lab.querySelector('rect')).toHaveAttribute('stroke', '#0d9488');
+    expect(lab.querySelector('rect')).toHaveAttribute('stroke', '#1f5fa8');
     expect(within(lab).getByText('LAB')).toBeInTheDocument();
     expect(
       screen
         .getByRole('button', { name: 'Aula 101, pabellón nuevo, disponible' })
         .querySelector('rect'),
-    ).not.toHaveAttribute('stroke', '#0d9488');
+    ).not.toHaveAttribute('stroke', '#1f5fa8');
   });
 
   it('al pulsar un espacio lo selecciona y avisa con su id', () => {
@@ -180,7 +180,7 @@ describe('Mapa2D', () => {
     // Primero lo resaltado y al final lo seleccionado: queda arriba de todo, con halo blanco.
     const ultimo = contornos[1].querySelectorAll('rect');
     expect(ultimo[0]).toHaveAttribute('stroke', '#ffffff');
-    expect(ultimo[1]).toHaveAttribute('stroke', '#4f46e5');
+    expect(ultimo[1]).toHaveAttribute('stroke', '#7b1113');
     expect(contornos[1].getAttribute('aria-hidden')).toBe('true');
     expect(contornos[0].querySelector('rect:last-child')).toHaveAttribute('stroke-dasharray');
   });

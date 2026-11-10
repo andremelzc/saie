@@ -3,7 +3,13 @@
  * 3.15). Es el mismo `RutaReferenciaDTO` del backend (`backend/src/types/ruta.ts`): cuando la
  * pantalla se conecte (Issue 3.20) se sustituyen los datos de ejemplo sin tocar el resto.
  */
-export type TipoTramoRuta = 'ENTRADA_PABELLON' | 'CAMBIO_PISO' | 'ESPACIO_ASIGNADO';
+export type TipoTramoRuta =
+  | 'ENTRADA_PABELLON'
+  | 'CAMBIO_PISO'
+  | 'ESPACIO_ASIGNADO'
+  /** Pasos que arma el cliente al dibujar la ruta sobre el plano (el servidor no los conoce): */
+  | 'ORIGEN'
+  | 'PUERTA';
 
 export interface TramoRuta {
   orden: number;
