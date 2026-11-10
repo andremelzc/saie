@@ -121,13 +121,6 @@ export const HorarioMisCursos: React.FC<HorarioMisCursosProps> = ({
 
     return (
       <div className="flex flex-col gap-5">
-        <SelectorSegmentado
-          opciones={OPCIONES_VISTA}
-          valor={vista}
-          onCambiar={setVista}
-          etiquetaGrupo="Tipo de vista del horario"
-          className="self-start"
-        />
         {vista === 'dia' ? (
           <HorarioDia
             horario={horario}
@@ -149,14 +142,24 @@ export const HorarioMisCursos: React.FC<HorarioMisCursosProps> = ({
       titulo="Mi horario y mis cursos"
       subtitulo={horario.periodo ? `Periodo ${horario.periodo}` : 'Periodo académico sin definir'}
     >
-      <SelectorSegmentado
-        opciones={OPCIONES_SECCION}
-        valor={seccion}
-        onCambiar={setSeccion}
-        etiquetaGrupo="Secciones de la pantalla"
-        idBase="mis-cursos"
-        className="self-start"
-      />
+      {/* Los dos selectores comparten fila: la sección a la izquierda y, si hay horario, día o semana. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <SelectorSegmentado
+          opciones={OPCIONES_SECCION}
+          valor={seccion}
+          onCambiar={setSeccion}
+          etiquetaGrupo="Secciones de la pantalla"
+          idBase="mis-cursos"
+        />
+        {seccion === 'horario' && hayHorario && !cargando && !error && (
+          <SelectorSegmentado
+            opciones={OPCIONES_VISTA}
+            valor={vista}
+            onCambiar={setVista}
+            etiquetaGrupo="Tipo de vista del horario"
+          />
+        )}
+      </div>
       <section
         role="tabpanel"
         id={idPanelPestana('mis-cursos', seccion)}
