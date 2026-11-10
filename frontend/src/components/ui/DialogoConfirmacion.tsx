@@ -69,7 +69,7 @@ export const DialogoConfirmacion: React.FC<DialogoConfirmacionProps> = ({
         <div id={idDescripcion} className="text-sm text-saie-text">
           {descripcion}
         </div>
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <div className="flex flex-wrap justify-end gap-2">
           <Boton
             ref={cancelarRef}
             variante="cancelar"

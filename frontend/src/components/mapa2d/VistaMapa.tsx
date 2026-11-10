@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 import { SelectorSegmentado } from '../estudiante/SelectorSegmentado';
 import Mapa3DLazy from '../mapa3d/Mapa3DLazy';
 import type { EstadoOcupacion } from '../mapa3d/tipos';
@@ -10,8 +10,8 @@ import ListaEspacios from './ListaEspacios';
 import Mapa2D, { LeyendaMapa } from './Mapa2D';
 import VentanaMapa from './VentanaMapa';
 import { ESTADO_TEXTO, type EspacioMapa2D } from './etiquetas';
-import { FILTRO_TODO, pasaFiltro, type FiltroMapa } from './filtros';
-import type { Franja } from './franja';
+import { FILTRO_TODO, hayFiltro, pasaFiltro, type FiltroMapa } from './filtros';
+import { DIAS, type Franja } from './franja';
 import { indiceFiguras } from './indice';
 import { PLANOS_SVG, PLANOS_URL } from './planos';
 
@@ -25,6 +25,47 @@ const OPCIONES: { valor: Vista; etiqueta: string }[] = [
 ];
 
 const TRAZO_AMPLIAR = 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5';
+
+/** «Lun 07:00–09:00» o «Ahora»: lo que dice el botón de día y hora cuando está cerrado. */
+function resumenDeFranja(franja: Franja | null): string {
+  if (!franja) return 'Día y hora';
+  const dia = DIAS.find((d) => d.valor === franja.dia)?.etiqueta ?? '';
+  return `${dia.slice(0, 3)} ${franja.horaInicio}–${franja.horaFin}`;
+}
+
+/**
+ * Botón que abre o cierra un panel de la barra de herramientas. Solo se ve en pantallas
+ * estrechas: ahí día y hora y filtros se pliegan para que el mapa no quede lejos; desde `md`
+ * los paneles están siempre a la vista.
+ */
+const BotonPlegable: React.FC<{
+  abierto: boolean;
+  idPanel: string;
+  onAlternar: () => void;
+  children: React.ReactNode;
+}> = ({ abierto, idPanel, onAlternar, children }) => (
+  <button
+    type="button"
+    aria-expanded={abierto}
+    aria-controls={idPanel}
+    onClick={onAlternar}
+    className={`${claseBotonMapa(abierto)} min-w-0 justify-between`}
+  >
+    <span className="truncate">{children}</span>
+    <svg
+      className={`h-4 w-4 shrink-0 transition-transform ${abierto ? 'rotate-180' : ''}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  </button>
+);
 
 export interface VistaMapaProps {
   espacios: EspacioMapa2D[];
@@ -67,6 +108,9 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
   const [pisoInterno, setPisoInterno] = useState<Piso | undefined>(undefined);
   const [ampliado, setAmpliado] = useState(false);
   const [filtro, setFiltro] = useState<FiltroMapa>(FILTRO_TODO);
+  // En pantallas estrechas, qué panel de la barra de herramientas está abierto.
+  const [panel, setPanel] = useState<'franja' | 'filtros' | null>(null);
+  const idBase = useId();
   const [enfoque, setEnfoque] = useState<{ id: string; n: number } | null>(null);
   const vista = vistaControlada ?? vistaInterna;
   const piso = pisoControlado ?? pisoInterno;
@@ -225,9 +269,44 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
       </div>
 
       {!ampliado && (
-        // Buscador y día/hora comparten fila; los filtros ocupan la de abajo, a todo el ancho.
-        <div className="grid grid-cols-1 items-start gap-x-6 gap-y-3 rounded-xl border border-saie-divider bg-white p-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          {herramientas}
+        // Desde `md`: buscador y día/hora comparten fila y los filtros ocupan la de abajo. Por
+        // debajo, el buscador va solo y día/hora y filtros son dos botones en una misma fila.
+        <div className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4 md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:items-start md:gap-x-6">
+          <BuscadorEspacios
+            espacios={espacios}
+            pisoDe={(id) => figuras.get(id)?.piso}
+            onElegir={irAEspacio}
+            className="w-full"
+          />
+          <div className={`grid gap-2 md:hidden ${onFranjaCambiada ? 'grid-cols-2' : ''}`}>
+            {onFranjaCambiada && (
+              <BotonPlegable
+                abierto={panel === 'franja'}
+                idPanel={`${idBase}-franja`}
+                onAlternar={() => setPanel(panel === 'franja' ? null : 'franja')}
+              >
+                {resumenDeFranja(franja)}
+              </BotonPlegable>
+            )}
+            <BotonPlegable
+              abierto={panel === 'filtros'}
+              idPanel={`${idBase}-filtros`}
+              onAlternar={() => setPanel(panel === 'filtros' ? null : 'filtros')}
+            >
+              {hayFiltro(filtro, estadosLeyenda) ? 'Filtros activos' : 'Filtros'}
+            </BotonPlegable>
+          </div>
+          {onFranjaCambiada && (
+            <div id={`${idBase}-franja`} className={panel === 'franja' ? '' : 'hidden md:block'}>
+              <FranjaMapa franja={franja} onCambiar={onFranjaCambiada} />
+            </div>
+          )}
+          <div
+            id={`${idBase}-filtros`}
+            className={`md:col-span-2 ${panel === 'filtros' ? '' : 'hidden md:block'}`}
+          >
+            <FiltrosMapa filtro={filtro} onCambiar={setFiltro} estados={estadosLeyenda} />
+          </div>
         </div>
       )}
 

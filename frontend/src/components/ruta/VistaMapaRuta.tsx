@@ -1,4 +1,3 @@
-import { clasesBoton } from '../ui/clasesBoton';
 import React, { useMemo, useState } from 'react';
 import Mapa2D from '../mapa2d/Mapa2D';
 import { PLANOS_SVG } from '../mapa2d/planos';
@@ -119,41 +118,38 @@ export const VistaMapaRuta: React.FC<VistaMapaRutaProps> = ({
 
         <ol className="m-0 flex list-none flex-col gap-2 p-0">
           {trazado.pasos.map(({ tramo }, i) => (
-            <li
-              key={tramo.orden}
-              className={`rounded-xl border bg-white p-3 ${
-                pasoActivo === i ? 'border-saie-primary' : 'border-saie-divider'
-              }`}
-            >
-              <div className="flex items-start gap-3">
+            <li key={tramo.orden}>
+              {/* Un solo control por paso: pulsarlo muestra su piso y lo resalta en el plano. */}
+              <button
+                type="button"
+                aria-pressed={pasoActivo === i}
+                onClick={() => irAlPaso(i)}
+                className={`flex w-full cursor-pointer items-start gap-3 rounded-xl border p-3 text-left transition-colors hover:bg-saie-primary/5 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-saie-text ${
+                  pasoActivo === i
+                    ? 'border-saie-primary bg-saie-primary/5'
+                    : 'border-saie-divider bg-white'
+                }`}
+              >
                 <span
                   aria-hidden="true"
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-saie-primary text-sm font-bold text-white"
                 >
                   {tramo.orden}
                 </span>
-                <div className="min-w-0 flex-1">
-                  <p className="m-0 text-sm font-semibold text-saie-text">
+                <span className="flex min-w-0 flex-1 flex-col gap-1">
+                  <span className="text-sm font-semibold text-saie-text">
                     <span className="sr-only">Paso {tramo.orden}: </span>
                     {tramo.titulo}
-                  </p>
-                  <p className="m-0 mt-1 text-sm text-saie-muted">{tramo.descripcion}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {tramo.tipo === 'CAMBIO_PISO' && tramo.esAccesible && (
+                  </span>
+                  <span className="text-sm text-saie-muted">{tramo.descripcion}</span>
+                  {tramo.tipo === 'CAMBIO_PISO' && tramo.esAccesible && (
+                    <span className="mt-1 self-start">
                       <BadgeEstado tono="exito">Accesible</BadgeEstado>
-                    )}
-                    <button
-                      type="button"
-                      aria-label={`Ver el paso ${tramo.orden} en el plano`}
-                      aria-pressed={pasoActivo === i}
-                      onClick={() => irAlPaso(i)}
-                      className={clasesBoton('fantasma', 'sm')}
-                    >
-                      Ver en el plano
-                    </button>
-                  </div>
-                </div>
-              </div>
+                    </span>
+                  )}
+                  <span className="sr-only">Ver el paso {tramo.orden} en el plano</span>
+                </span>
+              </button>
             </li>
           ))}
         </ol>

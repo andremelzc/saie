@@ -246,10 +246,10 @@ describe('VistaMapaRuta', () => {
   it('«Ver en el plano» lleva al piso del paso', () => {
     render(<VistaMapaRuta ruta={rutaDeEjemplo(AULA_PISO_2, false)} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Ver el paso 4 en el plano' }));
+    fireEvent.click(screen.getByRole('button', { name: /Ver el paso 4 en el plano/ }));
 
     expect(screen.getByRole('group', { name: /Plano del piso 2/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Ver el paso 4 en el plano' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /Ver el paso 4 en el plano/ })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
