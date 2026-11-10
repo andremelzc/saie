@@ -1,7 +1,14 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useCarga } from '../../hooks/useCarga';
+import { obtenerEspacios } from '../../services/admin';
 import type { ResultadoVerificacionDTO } from '../../types/admin';
 import { etiquetaReglaVerificacion } from '../../utils/diccionarios';
+import { fraseDeViolacion, indexarEspacios, tieneDetalleTecnico } from '../../utils/textoMotor';
 import { plural } from '../../utils/texto';
+import { DetalleTecnico } from '../ui/DetalleTecnico';
+import { TEXTOS_ASIGNACION } from '../../config/textos';
+
+const cargarEspacios = () => obtenerEspacios();
 
 const TRAZO_CHECK = 'M4.5 12.75l6 6 9-13.5';
 const TRAZO_X = 'M6 18L18 6M6 6l12 12';
@@ -42,13 +49,21 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
   verificacion,
   ocultarTitulo = false,
 }) => {
+  // Las violaciones nombran los espacios por su UUID: se cruzan con el listado (Issue 4.49).
+  const hayViolaciones = (verificacion?.totalViolaciones ?? 0) > 0;
+  const { datos: listaEspacios } = useCarga(cargarEspacios, {
+    clave: 'espacios:nombres',
+    habilitado: hayViolaciones,
+  });
+  const espacios = useMemo(() => indexarEspacios(listaEspacios), [listaEspacios]);
+
   if (!verificacion) {
     return (
       <section
-        aria-label="Veredicto del verificador"
+        aria-label={TEXTOS_ASIGNACION.tituloComprobacion}
         className="rounded-xl border border-dashed border-saie-divider bg-white px-4 py-3 text-sm text-saie-muted"
       >
-        No hubo asignaciones que comprobar en esta asignación automática.
+        {TEXTOS_ASIGNACION.sinNadaQueComprobar}
       </section>
     );
   }
@@ -69,7 +84,7 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
   return (
     <section
       aria-labelledby={ocultarTitulo ? undefined : 'titulo-verificador'}
-      aria-label={ocultarTitulo ? 'Veredicto del verificador' : undefined}
+      aria-label={ocultarTitulo ? TEXTOS_ASIGNACION.tituloComprobacion : undefined}
       className={`flex flex-col gap-4 rounded-2xl border p-4 sm:p-5 ${tono.caja}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -82,7 +97,7 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
           <div className="min-w-0">
             {!ocultarTitulo && (
               <h2 id="titulo-verificador" className="m-0 text-base font-bold text-saie-text">
-                Veredicto del verificador
+                {TEXTOS_ASIGNACION.tituloComprobacion}
               </h2>
             )}
             <p className={`m-0 mt-0.5 text-sm font-semibold ${tono.texto}`}>
@@ -94,19 +109,19 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
                     'reglas',
                   )}.`}
             </p>
-            <p className="m-0 mt-0.5 text-xs text-saie-muted">
+            <p className="m-0 mt-0.5 text-sm text-saie-muted">
               {plural(totalRevisadas, 'asignación revisada', 'asignaciones revisadas')} ·{' '}
               {plural(totalViolaciones, 'incumplimiento', 'incumplimientos')}
             </p>
           </div>
         </div>
         <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ${
             conforme ? 'bg-saie-success text-white' : 'bg-saie-danger text-white'
           }`}
         >
           <IconoEstado conforme={conforme} className="h-3.5 w-3.5" />
-          {conforme ? 'CONFORME' : 'NO CONFORME'}
+          {conforme ? 'Conforme' : 'No conforme'}
         </span>
       </div>
 
@@ -132,7 +147,7 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
                 <span className="font-medium text-saie-text">
                   {etiquetaReglaVerificacion(regla.regla)}
                 </span>
-                <span className="ml-auto text-xs text-saie-muted">
+                <span className="ml-auto text-sm text-saie-muted">
                   {noAplica ? 'No aplica' : `${regla.cumplen}/${regla.revisadas} cumplen`}
                 </span>
               </div>
@@ -142,16 +157,26 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
                   <summary className="cursor-pointer py-3.5 text-xs font-semibold text-saie-danger">
                     Ver {plural(regla.violaciones.length, 'incumplimiento', 'incumplimientos')}
                   </summary>
-                  <ul className="m-0 mt-2 flex list-none flex-col gap-1.5 p-0 text-xs text-saie-text">
-                    {regla.violaciones.map((violacion, indice) => (
-                      <li
-                        key={`${violacion.asignacionId}-${indice}`}
-                        className="rounded-lg bg-saie-danger-soft px-2.5 py-1.5"
-                      >
-                        <strong className="font-semibold">{violacion.codigoSeccion}</strong>:{' '}
-                        {violacion.detalle}
-                      </li>
-                    ))}
+                  <ul className="m-0 mt-2 flex list-none flex-col gap-1.5 p-0 text-sm text-saie-text">
+                    {regla.violaciones.map((violacion, indice) => {
+                      const frase = fraseDeViolacion(violacion.detalle, espacios);
+                      return (
+                        <li
+                          key={`${violacion.asignacionId}-${indice}`}
+                          className="flex flex-col gap-1 rounded-lg bg-saie-danger-soft px-2.5 py-1.5"
+                        >
+                          <span>
+                            <strong className="font-semibold">
+                              Sección {violacion.codigoSeccion}
+                            </strong>
+                            : {frase}
+                          </span>
+                          {tieneDetalleTecnico(frase, violacion.detalle) && (
+                            <DetalleTecnico texto={violacion.detalle} />
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </details>
               )}
@@ -160,10 +185,7 @@ export const VeredictoVerificacion: React.FC<VeredictoVerificacionProps> = ({
         })}
       </ul>
 
-      <p className="m-0 text-xs text-saie-muted">
-        Comprobación automática posterior a la asignación. Los incumplimientos quedan registrados en
-        la auditoría.
-      </p>
+      <p className="m-0 text-xs text-saie-muted">{TEXTOS_ASIGNACION.nota}</p>
     </section>
   );
 };

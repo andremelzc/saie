@@ -1,4 +1,5 @@
 import type { HistorialAsignacionDTO } from '../types/admin';
+import { TEXTOS_ASIGNACION } from '../config/textos';
 import { formatearFechaCorta } from './fechas';
 
 export interface GrupoCorrida {
@@ -39,10 +40,12 @@ export function agruparPorCorrida(items: HistorialAsignacionDTO[]): GrupoCorrida
   return [...grupos.values()];
 }
 
-/** «Corrida del 12 oct, 10:32 · 230 asignadas · 17 en revisión». */
+/** «Asignación automática del 12 oct, 10:32 · 230 asignadas · 17 en revisión». */
 export function tituloDeCorrida(grupo: GrupoCorrida): string {
   const cuando = formatearFechaCorta(grupo.fecha);
-  const inicio = grupo.corridaId ? `Corrida del ${cuando}` : `Asignación individual del ${cuando}`;
+  const inicio = grupo.corridaId
+    ? TEXTOS_ASIGNACION.asignacionDel(cuando)
+    : TEXTOS_ASIGNACION.asignacionIndividualDel(cuando);
   const partes = [
     `${grupo.asignadas} ${grupo.asignadas === 1 ? 'asignada' : 'asignadas'}`,
     ...(grupo.enRevision > 0 ? [`${grupo.enRevision} en revisión`] : []),
@@ -52,7 +55,7 @@ export function tituloDeCorrida(grupo: GrupoCorrida): string {
 
 /** «Pabellón C · piso 3» a partir de los espacios de una asignación (sin repetir ubicaciones). */
 export function ubicacionDeEspacios(espacios: HistorialAsignacionDTO['espacios']): string {
-  const pabellon = (nombre: string) => (/^pabell/i.test(nombre) ? nombre : `Pabellón ${nombre}`);
+  const pabellon = (nombre: string) => (/pabell/i.test(nombre) ? nombre : `Pabellón ${nombre}`);
   const ubicaciones = [...new Set(espacios.map((e) => `${pabellon(e.pabellon)} · piso ${e.piso}`))];
   return ubicaciones.join(', ');
 }

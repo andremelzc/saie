@@ -88,7 +88,7 @@ const FilaSeccion: React.FC<{ seccion: SeccionAdminDTO; onVer: (s: SeccionAdminD
       <span className="block font-semibold text-saie-text">
         {seccion.codigoCurso} · {seccion.codigoSeccion}
       </span>
-      <span className="block text-xs text-saie-muted">{seccion.nombreCurso}</span>
+      <span className="block text-sm text-saie-muted">{seccion.nombreCurso}</span>
     </td>
     <td className="px-4 py-3">{etiquetaTipoEspacio(seccion.tipoEspacioRequerido)}</td>
     <td className="px-4 py-3">
@@ -108,13 +108,9 @@ const FilaSeccion: React.FC<{ seccion: SeccionAdminDTO; onVer: (s: SeccionAdminD
       <EtiquetaEstado seccion={seccion} />
     </td>
     <td className="px-4 py-3">
-      <Boton
-        variante="fantasma"
-        tamano="sm"
-        onClick={() => onVer(seccion)}
-        aria-label={`Ver detalle de ${seccion.codigoCurso} ${seccion.codigoSeccion}`}
-      >
-        Ver
+      <Boton variante="fantasma" tamano="sm" onClick={() => onVer(seccion)}>
+        Ver detalle{' '}
+        <span className="sr-only">de {`${seccion.codigoCurso} ${seccion.codigoSeccion}`}</span>
       </Boton>
     </td>
   </tr>
@@ -134,7 +130,7 @@ const TarjetaSeccion: React.FC<{
         <h3 className="m-0 text-base font-bold text-saie-text">
           {seccion.codigoCurso} · {seccion.codigoSeccion}
         </h3>
-        <p className="m-0 text-xs text-saie-muted">{seccion.nombreCurso}</p>
+        <p className="m-0 text-sm text-saie-muted">{seccion.nombreCurso}</p>
       </div>
       <EtiquetaEstado seccion={seccion} />
     </header>
@@ -164,7 +160,8 @@ const TarjetaSeccion: React.FC<{
     </dl>
     <div className="flex justify-end">
       <Boton variante="fantasma" tamano="sm" onClick={() => onVer(seccion)}>
-        Ver
+        Ver detalle{' '}
+        <span className="sr-only">de {`${seccion.codigoCurso} ${seccion.codigoSeccion}`}</span>
       </Boton>
     </div>
   </article>
@@ -281,18 +278,18 @@ const FormularioSeccion: React.FC<{
       <fieldset className="m-0 flex flex-col gap-2">
         <legend className={CLASE_ETIQUETA}>Software que exige la sección</legend>
         <p className="m-0 text-xs text-saie-muted">
-          Marca lo que el laboratorio debe tener instalado. El motor solo asigna un laboratorio que
-          cumpla con todo lo listado.
+          Marca lo que el laboratorio debe tener instalado. La asignación automática solo elige un
+          laboratorio que cumpla con todo lo listado.
         </p>
         <input
           type="search"
           placeholder="Buscar software…"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          className={CLASE_CAMPO}
+          className={`${CLASE_CAMPO} sticky top-0 z-10`}
           aria-label="Buscar software del catálogo"
         />
-        <ul className="m-0 max-h-64 list-none overflow-y-auto rounded-xl border border-saie-divider bg-white p-2">
+        <ul className="m-0 list-none rounded-xl border border-saie-divider bg-white p-2">
           {filtrados.length === 0 && (
             <li className="p-3 text-sm text-saie-muted">No hay software que coincida.</li>
           )}
@@ -544,7 +541,7 @@ export const SeccionesAdmin: React.FC = () => {
           cargando={cargando}
           textoCargando="Actualizando…"
         >
-          Actualizar
+          Actualizar datos
         </Boton>
       }
     >
@@ -631,9 +628,7 @@ export const SeccionesAdmin: React.FC = () => {
           <div className="flex flex-col gap-5">
             <dl className="m-0 rounded-xl border border-saie-divider bg-white p-4 text-sm">
               <div className="border-b border-saie-divider py-2">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
-                  Aula asignada
-                </dt>
+                <dt className="text-xs font-semibold text-saie-muted">Aula asignada</dt>
                 <dd className="m-0 text-saie-text">
                   {seleccionada.asignacion?.espacios.length
                     ? seleccionada.asignacion.espacios
@@ -643,9 +638,7 @@ export const SeccionesAdmin: React.FC = () => {
                 </dd>
               </div>
               <div className="border-b border-saie-divider py-2">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
-                  Docente
-                </dt>
+                <dt className="text-xs font-semibold text-saie-muted">Docente</dt>
                 <dd className="m-0 text-saie-text">
                   {seleccionada.docente ? (
                     `${seleccionada.docente.nombre} (${seleccionada.docente.codigoDocente})`
@@ -655,9 +648,7 @@ export const SeccionesAdmin: React.FC = () => {
                 </dd>
               </div>
               <div className="border-b border-saie-divider py-2">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
-                  Horarios
-                </dt>
+                <dt className="text-xs font-semibold text-saie-muted">Horarios</dt>
                 <dd className="m-0 text-saie-text">
                   {seleccionada.horarios.length === 0 ? (
                     'Sin horarios registrados.'
@@ -677,9 +668,7 @@ export const SeccionesAdmin: React.FC = () => {
                 </dd>
               </div>
               <div className="py-2">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
-                  Software requerido
-                </dt>
+                <dt className="text-xs font-semibold text-saie-muted">Software requerido</dt>
                 <dd className="m-0 text-saie-text">
                   {seleccionada.softwareRequerido.length === 0
                     ? 'No exige software: sirve cualquier aula del tipo pedido.'

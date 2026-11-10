@@ -30,7 +30,7 @@ export const Icono: React.FC<{ trazo: string; className?: string }> = ({
 );
 
 const CLASES_BADGE =
-  'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium tracking-[0.2px]';
+  'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium tracking-[0.2px]';
 
 const ESTILOS_CLASE: Record<EstadoClase, { etiqueta: string; clases: string }> = {
   EN_CURSO: { etiqueta: 'En curso', clases: 'bg-saie-primary text-white' },
@@ -134,36 +134,97 @@ export const EstadoVacio: React.FC<EstadoVacioProps> = ({
     </div>
   );
 
-/** Esqueleto de carga con la forma del contenido; respeta «Reducir movimiento». */
-export const EsqueletoCarga: React.FC<{ texto?: string; forma?: 'lista' | 'tabla' }> = ({
-  texto = 'Cargando tu horario…',
-  forma = 'lista',
-}) => (
-  <div role="status" aria-busy="true" className="flex flex-col gap-3">
-    <span className="sr-only">{texto}</span>
-    {forma === 'tabla' ? (
-      <div
-        aria-hidden="true"
-        className="overflow-hidden rounded-xl border border-saie-divider bg-white"
-      >
-        {[0, 1, 2, 3, 4, 5].map((fila) => (
-          <div
-            key={fila}
-            className="saie-esqueleto h-12 border-b border-saie-divider last:border-b-0"
-          />
-        ))}
-      </div>
-    ) : (
-      [0, 1, 2].map((posicion) => (
-        <div
-          key={posicion}
-          aria-hidden="true"
-          className="saie-esqueleto h-24 rounded-xl border border-saie-divider"
-        />
-      ))
-    )}
+export type FormaEsqueleto = 'lista' | 'tabla' | 'tarjeta' | 'texto';
+
+const BARRA = 'saie-esqueleto block rounded-md';
+
+/** Una fila de lista: título y una línea secundaria, con la altura de las tarjetas reales. */
+const FilaLista: React.FC = () => (
+  <div className="flex min-h-24 flex-col justify-center gap-2 rounded-xl border border-saie-divider bg-white p-4">
+    <span className={`${BARRA} h-4 w-2/5`} />
+    <span className={`${BARRA} h-3.5 w-3/5`} />
+    <span className={`${BARRA} h-3.5 w-1/4`} />
   </div>
 );
+
+/**
+ * Esqueleto de carga con la forma del contenido (Issue 3.48): `lista` (tarjetas apiladas),
+ * `tabla` (cabecera y filas desde `lg`, tarjetas por debajo, igual que las tablas reales, así no
+ * hay salto al llegar los datos), `tarjeta` (rejilla) y `texto` (párrafo). El brillo se detiene
+ * con «Reducir movimiento».
+ */
+export const EsqueletoCarga: React.FC<{
+  texto?: string;
+  forma?: FormaEsqueleto;
+  filas?: number;
+}> = ({ texto = 'Cargando tu horario…', forma = 'lista', filas }) => {
+  const n = filas ?? (forma === 'tabla' ? 6 : 3);
+  const indices = Array.from({ length: n }, (_, i) => i);
+  return (
+    <div role="status" aria-busy="true" className="flex flex-col gap-3">
+      <span className="sr-only">{texto}</span>
+      {forma === 'tabla' && (
+        <>
+          <div
+            aria-hidden="true"
+            className="hidden overflow-hidden rounded-xl border border-saie-divider bg-white lg:block"
+          >
+            <div className="flex gap-6 bg-saie-canvas px-4 py-3">
+              {[0, 1, 2, 3].map((c) => (
+                <span key={c} className={`${BARRA} h-3 w-20`} />
+              ))}
+            </div>
+            {indices.map((fila) => (
+              <div
+                key={fila}
+                className="flex h-14 items-center gap-6 border-t border-saie-divider px-4"
+              >
+                <span className={`${BARRA} h-4 w-1/5`} />
+                <span className={`${BARRA} h-4 w-1/4`} />
+                <span className={`${BARRA} h-6 w-24 rounded-full`} />
+                <span className={`${BARRA} h-4 w-1/6`} />
+              </div>
+            ))}
+          </div>
+          <div aria-hidden="true" className="flex flex-col gap-2 lg:hidden">
+            {indices.slice(0, 3).map((i) => (
+              <FilaLista key={i} />
+            ))}
+          </div>
+        </>
+      )}
+      {forma === 'lista' && (
+        <div aria-hidden="true" className="flex flex-col gap-3">
+          {indices.map((i) => (
+            <FilaLista key={i} />
+          ))}
+        </div>
+      )}
+      {forma === 'tarjeta' && (
+        <div aria-hidden="true" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {indices.map((i) => (
+            <div
+              key={i}
+              className="flex min-h-40 flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4"
+            >
+              <span className={`${BARRA} h-5 w-1/3`} />
+              <span className={`${BARRA} h-3.5 w-1/2`} />
+              <span className={`${BARRA} h-2 w-full rounded-full`} />
+              <span className={`${BARRA} mt-auto h-8 w-28`} />
+            </div>
+          ))}
+        </div>
+      )}
+      {forma === 'texto' && (
+        <div aria-hidden="true" className="flex flex-col gap-2">
+          {indices.map((i) => (
+            <span key={i} className={`${BARRA} h-4 ${i === n - 1 ? 'w-2/3' : 'w-full'}`} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 /** Barra con el avance de la clase en curso (0 a 1). */
 export const BarraProgresoClase: React.FC<{ valor: number; className?: string }> = ({

@@ -30,7 +30,7 @@ const Dato: React.FC<{ etiqueta: string; children: React.ReactNode }> = ({
   children,
 }) => (
   <div className="flex flex-col gap-0.5 border-b border-saie-divider py-2 last:border-b-0">
-    <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">{etiqueta}</dt>
+    <dt className="text-xs font-semibold text-saie-muted">{etiqueta}</dt>
     <dd className="m-0 text-sm text-saie-text">{children}</dd>
   </div>
 );
@@ -133,7 +133,7 @@ const ListadoEspacios: React.FC<{
             <header className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
                 <h3 className="m-0 text-base font-bold text-saie-text">{e.identificador}</h3>
-                <p className="m-0 text-xs text-saie-muted">
+                <p className="m-0 text-sm text-saie-muted">
                   {etiquetaTipoEspacio(e.tipo)} · {e.pabellon} · Piso {e.piso}
                 </p>
               </div>
@@ -150,13 +150,8 @@ const ListadoEspacios: React.FC<{
               </div>
             </dl>
             <div className="flex justify-end">
-              <Boton
-                variante="fantasma"
-                tamano="sm"
-                onClick={() => onVer(e)}
-                aria-label={`Ver detalle de ${e.identificador}`}
-              >
-                Ver
+              <Boton variante="fantasma" tamano="sm" onClick={() => onVer(e)}>
+                Ver detalle <span className="sr-only">de {`${e.identificador}`}</span>
               </Boton>
             </div>
           </article>
@@ -191,13 +186,8 @@ const ListadoEspacios: React.FC<{
               <td className="px-4 py-3">{celdaPcs(e)}</td>
               <td className="px-4 py-3">{celdaEstado(e)}</td>
               <td className="px-4 py-3">
-                <Boton
-                  variante="fantasma"
-                  tamano="sm"
-                  onClick={() => onVer(e)}
-                  aria-label={`Ver detalle de ${e.identificador}`}
-                >
-                  Ver
+                <Boton variante="fantasma" tamano="sm" onClick={() => onVer(e)}>
+                  Ver detalle <span className="sr-only">de {`${e.identificador}`}</span>
                 </Boton>
               </td>
             </tr>
@@ -545,7 +535,7 @@ export const EspaciosAdmin: React.FC = () => {
             cargando={cargando}
             textoCargando="Actualizando…"
           >
-            Actualizar
+            Actualizar datos
           </Boton>
         </div>
       }

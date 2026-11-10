@@ -53,7 +53,7 @@ const IncidenciasAdminPage = lazy(() => import('./pages/admin/IncidenciasAdminPa
 /** Mientras llega el código de una pantalla se muestra el esqueleto de carga habitual. */
 const CargandoPantalla: React.FC = () => (
   <div className="min-h-screen bg-saie-canvas px-4 py-6">
-    <EsqueletoCarga texto="Cargando la pantalla…" />
+    <EsqueletoCarga texto="Cargando la pantalla…" forma="texto" />
   </div>
 );
 
@@ -290,10 +290,7 @@ export const AppRoutes: React.FC = () => {
           <Route
             path={RUTAS.laboratoriosAdmin}
             element={
-              <RutaProtegida
-                rolesPermitidos={['COORDINACION_ACADEMICA']}
-                rutaLogin={RUTAS.loginAdmin}
-              >
+              <RutaProtegida rolesPermitidos={ROLES_ADMIN} rutaLogin={RUTAS.loginAdmin}>
                 <LaboratoriosAdminPage />
               </RutaProtegida>
             }

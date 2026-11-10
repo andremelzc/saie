@@ -37,7 +37,7 @@ const ESTADOS: { valor: EstadoIncidencia; etiqueta: string }[] = [
   { valor: 'DESCARTADA', etiqueta: 'Descartadas' },
 ];
 
-const TITULO_DT = 'text-xs font-semibold uppercase tracking-wide text-saie-muted';
+const TITULO_DT = 'text-xs font-semibold text-saie-muted';
 
 /** Solo se enlaza la evidencia si es una URL web; si no, se muestra como texto. */
 function esEnlace(texto: string): boolean {
@@ -98,7 +98,7 @@ const DetalleTecnico: React.FC<{ espacioId: string }> = ({ espacioId }) => {
     clave: `incidencias:espacio:${espacioId}`,
   });
 
-  if (cargando && !datos) return <EsqueletoCarga texto="Cargando el laboratorio…" />;
+  if (cargando && !datos) return <EsqueletoCarga texto="Cargando el laboratorio…" forma="texto" />;
   if (error) return <AvisoError mensaje={error} onReintentar={recargar} />;
   if (!datos) return null;
 
@@ -283,7 +283,7 @@ export const IncidenciasAdminPage: React.FC = () => {
           cargando={cargando}
           textoCargando="Actualizando…"
         >
-          Actualizar
+          Actualizar datos
         </Boton>
       }
     >

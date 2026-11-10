@@ -39,7 +39,7 @@ const FilaSolicitud: React.FC<{ s: SolicitudSoftwareDTO }> = ({ s }) => {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="m-0 text-base font-bold">{nombreConVersion(s)}</h3>
-          <p className="m-0 text-xs text-saie-muted">
+          <p className="m-0 text-sm text-saie-muted">
             {etiquetaCategoria(s.categoria)} · pedido el {formatearFechaCorta(s.fechaSolicitud)}
           </p>
         </div>

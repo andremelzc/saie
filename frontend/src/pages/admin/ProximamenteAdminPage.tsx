@@ -15,14 +15,6 @@ interface Pendiente {
 /** Capacidades de Coordinación Académica que se construyen en la siguiente entrega. */
 const COORDINACION: Pendiente[] = [
   {
-    titulo: 'Mapa de ocupación por piso',
-    descripcion: 'Planos por pabellón con la ocupación de cada aula y laboratorio.',
-  },
-  {
-    titulo: 'Laboratorios y equipos',
-    descripcion: 'Estado de las PCs, la capacidad y el software de cada laboratorio.',
-  },
-  {
     titulo: 'Catálogo y solicitudes de software',
     descripcion: 'Alta del software disponible y revisión de lo que solicitan los docentes.',
   },

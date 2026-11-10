@@ -46,7 +46,7 @@ describe('TarjetaAlerta', () => {
     expect(onResolver).not.toHaveBeenCalled();
     expect(screen.getByText('¿Marcar como resuelta?')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sí, resolver' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, marcar como resuelta' }));
     expect(onResolver).toHaveBeenCalledWith('1');
   });
 

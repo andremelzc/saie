@@ -20,3 +20,21 @@ export const TEXTOS_ERROR = {
 
 /** Texto cuando un código del backend no tiene traducción (y se avisa en la consola). */
 export const TEXTO_NO_DISPONIBLE = 'No disponible';
+
+/**
+ * Glosario de la asignación de aulas (Issue 3.52). La interfaz habla de «asignación automática»,
+ * «comprobación», «incumplimiento» y «requiere revisión»; los nombres internos del equipo
+ * («motor», «corrida», «verificador», «reglas duras», «violación», «escalamiento») solo aparecen
+ * bajo «Detalle técnico». Las frases que se repiten en varias pantallas se redactan aquí.
+ */
+export const TEXTOS_ASIGNACION = {
+  /** Título del resultado de la comprobación posterior a la asignación (antes «Veredicto del verificador»). */
+  tituloComprobacion: 'Comprobación de la asignación',
+  sinNadaQueComprobar: 'No hubo asignaciones que comprobar en esta asignación automática.',
+  /** Distintivo corto cuando no hubo nada que comprobar. */
+  distintivoSinNada: 'Sin asignaciones que comprobar',
+  /** «Asignación automática del 9 nov., 09:00» (antes «Corrida del …»). */
+  asignacionDel: (cuando: string) => `Asignación automática del ${cuando}`,
+  asignacionIndividualDel: (cuando: string) => `Asignación individual del ${cuando}`,
+  nota: 'Comprobación automática posterior a la asignación. Los incumplimientos quedan registrados en el historial.',
+} as const;

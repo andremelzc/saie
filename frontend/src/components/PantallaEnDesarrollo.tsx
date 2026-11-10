@@ -77,9 +77,7 @@ export const AvisoEnDesarrollo: React.FC<AvisoEnDesarrolloProps> = ({
 
       {funciones.length > 0 && (
         <div className="flex flex-col gap-2">
-          <h2 className="m-0 text-sm font-bold uppercase tracking-wide text-saie-muted">
-            Lo que incluirá
-          </h2>
+          <h2 className="m-0 text-sm font-bold text-saie-muted">Lo que incluirá</h2>
           <ul className="m-0 flex list-none flex-col gap-2 p-0 text-sm">
             {funciones.map((funcion) => (
               <li key={funcion} className="flex items-start gap-2">

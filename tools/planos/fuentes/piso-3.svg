@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Tercer piso. Fuente del plano para tools/planos/convertir-plano.mjs (ver README).
+     Los tres pisos comparten marco y origen: una escalera queda en la misma posición en cada piso.
+     Cada figura lleva data-codigo (su id final) y data-nombre. Los colores siguen la convención del README. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-20 -20 424 430" width="1272" height="1290">
+  <title>Tercer piso (fuente)</title>
+  <g id="figuras">
+    <path fill="#e5e7eb" fill-rule="evenodd" data-codigo="losa-3" d="M 0 9.1 L 86 9.1 L 86 0 L 115.9 0 L 115.9 9.1 L 288.7 9.1 L 288.7 74.9 L 287.6 74.9 L 287 74.7 L 104.7 74.7 L 104.7 122.6 L 118.8 122.6 L 118.8 185.5 L 128 185.5 L 128 194.7 L 115.1 194.7 L 115.1 293.1 L 211.5 293.1 L 211.5 270 L 248.6 270 L 248.6 293.1 L 317.4 293.1 L 317.4 362.6 L 336.8 362.6 L 336.8 389.4 L 281.7 389.4 L 281.7 349.8 L 115.9 349.8 L 115.9 369.3 L 13.4 369.3 L 13.4 329.6 L 0 329.6 L 0 111.2 L 86 111.2 L 86 74.9 L 0 74.9 Z"/>
+    <path fill="#d6d3d1" fill-rule="evenodd" data-codigo="techo-3" d="M 0 9.1 L 86 9.1 L 86 0 L 115.9 0 L 115.9 9.1 L 288.7 9.1 L 288.7 74.9 L 287.6 74.9 L 287 74.7 L 104.7 74.7 L 104.7 122.6 L 118.8 122.6 L 118.8 185.5 L 128 185.5 L 128 194.7 L 115.1 194.7 L 115.1 293.1 L 211.5 293.1 L 211.5 270 L 248.6 270 L 248.6 293.1 L 317.4 293.1 L 317.4 362.6 L 336.8 362.6 L 336.8 389.4 L 281.7 389.4 L 281.7 349.8 L 115.9 349.8 L 115.9 369.3 L 13.4 369.3 L 13.4 329.6 L 0 329.6 L 0 111.2 L 86 111.2 L 86 74.9 L 0 74.9 Z"/>
+    <rect x="86.1" y="0" width="29.4" height="26.5" fill="#ffbdbd" stroke="#222" stroke-width="0.5" data-codigo="NUE-escalera-1" data-nombre="Escalera"/>
+    <rect x="115.5" y="8.8" width="13.3" height="26.5" fill="#d3c8ff" stroke="#222" stroke-width="0.5" data-codigo="NUE-ascensor-1" data-nombre="Ascensor"/>
+    <rect x="257.1" y="8.8" width="31.3" height="26.5" fill="#ffbdbd" stroke="#222" stroke-width="0.5" data-codigo="NUE-escalera-2" data-nombre="Escalera"/>
+    <rect x="131.1" y="48.4" width="40" height="26.5" fill="#ff86e4" stroke="#222" stroke-width="0.5" data-codigo="NUE-bano-1" data-nombre="Baño"/>
+    <rect x="0" y="111.3" width="86" height="13.3" fill="#efe7cb" stroke="#222" stroke-width="0.5" data-codigo="NUE-sala-profesores" data-nombre="Sala de profesores"/>
+    <rect x="0" y="180.7" width="54.8" height="19.8" fill="#ff86e4" stroke="#222" stroke-width="0.5" data-codigo="ANT-bano-1" data-nombre="Baño"/>
+    <rect x="0" y="207.1" width="54.8" height="19.8" fill="#ff86e4" stroke="#222" stroke-width="0.5" data-codigo="ANT-bano-2" data-nombre="Baño"/>
+    <rect x="0" y="226.9" width="38" height="23.1" fill="#ffbdbd" stroke="#222" stroke-width="0.5" data-codigo="ANT-escalera-1" data-nombre="Escalera"/>
+    <rect x="118.5" y="185.6" width="9.9" height="9.5" fill="#d3c8ff" stroke="#222" stroke-width="0.5" data-codigo="ANT-ascensor-1" data-nombre="Ascensor"/>
+    <rect x="0" y="250.1" width="46.3" height="19.8" fill="#efe7cb" stroke="#222" stroke-width="0.5" data-codigo="ANT-administrativo-1" data-nombre="Administrativo"/>
+    <rect x="0" y="269.9" width="46.3" height="19.8" fill="#efe7cb" stroke="#222" stroke-width="0.5" data-codigo="ANT-administrativo-2" data-nombre="Administrativo"/>
+    <rect x="0" y="289.8" width="46.3" height="19.8" fill="#efe7cb" stroke="#222" stroke-width="0.5" data-codigo="ANT-administrativo-3" data-nombre="Administrativo"/>
+    <rect x="0" y="309.6" width="46.3" height="19.8" fill="#efe7cb" stroke="#222" stroke-width="0.5" data-codigo="ANT-administrativo-4" data-nombre="Administrativo"/>
+    <rect x="86.8" y="342.6" width="28.7" height="26.5" fill="#ffbdbd" stroke="#222" stroke-width="0.5" data-codigo="ANT-escalera-2" data-nombre="Escalera"/>
+    <rect x="311.4" y="362.6" width="25.3" height="26.4" fill="#ffbdbd" stroke="#222" stroke-width="0.5" data-codigo="ANT-escalera-3" data-nombre="Escalera"/>
+    <rect x="0" y="124.5" width="86" height="49.6" fill="#ffbd59" stroke="#222" stroke-width="0.5" data-codigo="ANT-comedor-3" data-nombre="Comedor"/>
+    <rect x="13.4" y="329.2" width="32.9" height="39.7" fill="#3a7ebf" stroke="#222" stroke-width="0.5" data-codigo="ANT-administrativo-5" data-nombre="Administrativo"/>
+    <rect x="46.3" y="349.3" width="40.4" height="19.8" fill="#efe7cb" stroke="#222" stroke-width="0.5" data-codigo="ANT-administrativo-6" data-nombre="Administrativo"/>
+    <rect x="0" y="8.8" width="86" height="33.05" fill="#b2d9ff" stroke="#222" stroke-width="0.5" data-codigo="NUE-301" data-nombre="Aula 301"/>
+    <rect x="0" y="41.85" width="86" height="33.05" fill="#b2d9ff" stroke="#222" stroke-width="0.5" data-codigo="NUE-302" data-nombre="Aula 302"/>
+    <rect x="128.7" y="8.8" width="43" height="26.5" fill="#d3c8ff" stroke="#222" stroke-width="0.5" data-codigo="NUE-303" data-nombre="Aula 303 - Laboratorio 04"/>
+    <rect x="171.4" y="8.8" width="43" height="26.5" fill="#d3c8ff" stroke="#222" stroke-width="0.5" data-codigo="NUE-305" data-nombre="Aula 305 - Laboratorio 06"/>
+    <rect x="214" y="8.8" width="43" height="26.5" fill="#d3c8ff" stroke="#222" stroke-width="0.5" data-codigo="NUE-307" data-nombre="Aula 307 - Laboratorio 08"/>
+    <rect x="171" y="48.4" width="43" height="26.5" fill="#d3c8ff" stroke="#222" stroke-width="0.5" data-codigo="NUE-304" data-nombre="Aula 304 - Laboratorio 05"/>
+    <rect x="214" y="48.4" width="43" height="26.5" fill="#d3c8ff" stroke="#222" stroke-width="0.5" data-codigo="NUE-306" data-nombre="Aula 306 - Laboratorio 07"/>
+    <rect x="115.1" y="293.1" width="33" height="23.1" fill="#dbe4ee" stroke="#222" stroke-width="0.5" data-codigo="ANT-sin-nombre-3a"/>
+    <rect x="148.1" y="293.1" width="29.7" height="23.1" fill="#b2d9ff" stroke="#222" stroke-width="0.5" data-codigo="ANT-301" data-nombre="Aula 301"/>
+    <rect x="177.8" y="293.1" width="33.7" height="23.1" fill="#d3c8ff" stroke="#222" stroke-width="0.5" data-codigo="ANT-302" data-nombre="Aula 302 - Laboratorio 06"/>
+    <rect x="211.5" y="270" width="36.9" height="46.2" fill="#efe7cb" stroke="#222" stroke-width="0.5" data-codigo="ANT-soporte-tecnico" data-nombre="Soporte técnico"/>
+    <rect x="248.4" y="293.1" width="30.5" height="23.1" fill="#dbe4ee" stroke="#222" stroke-width="0.5" data-codigo="ANT-sin-nombre-3b"/>
+    <rect x="278.9" y="293.1" width="38.5" height="23.1" fill="#d3c8ff" stroke="#222" stroke-width="0.5" data-codigo="ANT-303" data-nombre="Aula 303 - Laboratorio 05"/>
+    <rect x="116.2" y="326.1" width="36.3" height="23.1" fill="#d3c8ff" stroke="#222" stroke-width="0.5" data-codigo="ANT-307" data-nombre="Aula 307 - Laboratorio 04"/>
+    <rect x="152.5" y="326.1" width="36.4" height="23.1" fill="#d3c8ff" stroke="#222" stroke-width="0.5" data-codigo="ANT-306" data-nombre="Aula 306 - Laboratorio 03"/>
+    <rect x="188.9" y="326.1" width="36.3" height="23.1" fill="#d3c8ff" stroke="#222" stroke-width="0.5" data-codigo="ANT-305" data-nombre="Aula 305 - Laboratorio 02"/>
+    <rect x="225.2" y="326.1" width="36.3" height="23.1" fill="#d3c8ff" stroke="#222" stroke-width="0.5" data-codigo="ANT-304" data-nombre="Aula 304 - Laboratorio 01"/>
+  </g>
+  <g id="muros">
+    <path fill="none" stroke="#4a4a44" stroke-width="2" d="M 317.4 293.1 L 317.4 362.6 L 336.8 362.6 L 336.8 389.4 L 281.7 389.4 L 281.7 349.8 L 115.9 349.8 L 115.9 369.3 L 13.4 369.3 L 13.4 329.6 L 0 329.6 L 0 111.2 L 86 111.2 L 86 74.9 L 0 74.9 L 0 9.1 L 86 9.1 L 86 0 L 115.9 0 L 115.9 9.1 L 288.7 9.1 L 288.7 74.9 L 287.6 74.9"/>
+    <path fill="none" stroke="#4a4a44" stroke-width="2" d="M 317.4 293.1 L 248.6 293.1 L 248.6 270 L 211.5 270 L 211.5 293.1 L 115.1 293.1 L 115.1 194.7 L 128 194.7 L 128 185.5 L 118.8 185.5 L 118.8 122.6 L 104.7 122.6 L 104.7 74.7 L 287 74.7 L 257.2 74.7"/>
+  </g>
+  <g id="rotulos" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif">
+    <text x="100.8" y="13.3" font-size="5" fill="#000">Esc.</text>
+    <text x="122.2" y="22.1" font-size="3" fill="#000">Asc.</text>
+    <text x="272.8" y="22.1" font-size="5" fill="#000">Esc.</text>
+    <text x="151.1" y="61.7" font-size="5" fill="#000">Baño</text>
+    <text x="43" y="118" font-size="3" fill="#000">Sala Prof.</text>
+    <text x="27.4" y="190.6" font-size="3" fill="#000">Baño</text>
+    <text x="27.4" y="217" font-size="3" fill="#000">Baño</text>
+    <text x="19" y="238.5" font-size="5" fill="#000">Esc.</text>
+    <text x="123.5" y="190.4" font-size="3" fill="#000">A</text>
+    <text x="23.2" y="260" font-size="3" fill="#000">Adm.</text>
+    <text x="23.2" y="279.8" font-size="3" fill="#000">Adm.</text>
+    <text x="23.2" y="299.7" font-size="3" fill="#000">Adm.</text>
+    <text x="23.2" y="319.5" font-size="3" fill="#000">Adm.</text>
+    <text x="101.1" y="355.9" font-size="5" fill="#000">Esc.</text>
+    <text x="324" y="375.8" font-size="5" fill="#000">Esc.</text>
+    <text x="43" y="149.3" font-size="6" fill="#000">Comedor</text>
+    <text x="29.9" y="349.1" font-size="5" fill="#fff">Adm.</text>
+    <text x="66.5" y="359.2" font-size="3" fill="#000">Adm.</text>
+    <text x="150.2" y="22.1" font-size="5" fill="#000">303</text>
+    <text x="192.9" y="22.1" font-size="5" fill="#000">305</text>
+    <text x="235.5" y="22.1" font-size="5" fill="#000">307</text>
+    <text x="192.5" y="61.7" font-size="5" fill="#000">304</text>
+    <text x="235.5" y="61.7" font-size="5" fill="#000">306</text>
+    <text x="131.6" y="304.7" font-size="5" fill="#000">-</text>
+    <text x="163" y="304.7" font-size="5" fill="#000">301 NO</text>
+    <text x="194.7" y="304.7" font-size="5" fill="#000">302</text>
+    <text x="230" y="293.1" font-size="5" fill="#000">Soporte técnico</text>
+    <text x="263.7" y="304.7" font-size="5" fill="#000">--</text>
+    <text x="298.2" y="304.7" font-size="5" fill="#000">303</text>
+    <text x="134.4" y="337.7" font-size="5" fill="#000">307</text>
+    <text x="170.7" y="337.7" font-size="5" fill="#000">306</text>
+    <text x="207.1" y="337.7" font-size="5" fill="#000">305</text>
+    <text x="243.4" y="337.7" font-size="5" fill="#000">304</text>
+  </g>
+</svg>

@@ -1,8 +1,9 @@
 import { Component, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { CLASES_CONEXION, CLASES_RESERVABLES, SEPARACION_PISOS } from './config';
+import { CLASES_CONEXION, CLASES_RESERVABLES } from './config';
 import Escena from './Escena';
+import type { OrdenCamara } from './Escena';
 import { leerPlano } from './geometria';
 import type { PlanoGeometria } from './geometria';
 import type { Mapa3DProps } from './tipos';
@@ -88,6 +89,8 @@ export default function Mapa3D({
   resaltados = [],
   pisoInicial,
   onSeleccionar,
+  onPisoCambiado,
+  ordenCamara,
   onAviso = (mensaje) => console.warn(`[Mapa3D] ${mensaje}`),
   fallback = null,
   className = '',
@@ -95,6 +98,16 @@ export default function Mapa3D({
   const webgl = useMemo(() => hayWebGL(), []);
   const { cargando, estado } = usePlanos(urls);
   const [pisoElegido, setPisoElegido] = useState<number | 'todos' | undefined>(pisoInicial);
+  // El piso puede venir de fuera (buscador, URL): si `pisoInicial` cambia, se sigue.
+  const [pisoPrevio, setPisoPrevio] = useState(pisoInicial);
+  if (pisoInicial !== pisoPrevio) {
+    setPisoPrevio(pisoInicial);
+    setPisoElegido(pisoInicial);
+  }
+  const [ordenInterna, setOrdenInterna] = useState<OrdenCamara | null>(null);
+  const orden =
+    ordenCamara && (!ordenInterna || ordenCamara.n > ordenInterna.n) ? ordenCamara : ordenInterna;
+  const ordenar = (tipo: OrdenCamara['tipo']) => setOrdenInterna({ tipo, n: Date.now() });
   const [seleccionInterna, setSeleccionInterna] = useState<string | null>(null);
   const [conector, setConector] = useState<string | null>(null);
   const avisados = useRef(new Set<string>());
@@ -108,7 +121,9 @@ export default function Mapa3D({
     [planos],
   );
   const piso = pisoElegido ?? pisos[0];
-  const pisosVisibles = piso === 'todos' || piso === undefined ? pisos : [piso];
+  // Un piso se muestra como corte del edificio: ese piso abierto sobre los de abajo.
+  const pisosVisibles =
+    piso === 'todos' || piso === undefined ? pisos : pisos.filter((p) => p <= piso);
 
   // Escaleras y ascensores: el mismo id en varios planos es la misma escalera o ascensor.
   const conexiones = useMemo(() => {
@@ -160,6 +175,11 @@ export default function Mapa3D({
     }
   }, [planos, mapaEspacios, onAviso]);
 
+  const elegirPiso = (nuevo: number | 'todos') => {
+    setPisoElegido(nuevo);
+    onPisoCambiado?.(nuevo);
+  };
+
   const alSeleccionar = (id: string | null) => {
     setSeleccionInterna(id);
     setConector(null);
@@ -190,6 +210,7 @@ export default function Mapa3D({
           <LimiteError fallback={fallback}>
             <Canvas
               frameloop="demand"
+              shadows="soft"
               dpr={[1, 2]}
               camera={{ fov: 45, near: 1, far: 5000 }}
               gl={{ antialias: true, powerPreference: 'high-performance' }}
@@ -200,13 +221,15 @@ export default function Mapa3D({
               <Escena
                 planos={planos}
                 pisos={pisosVisibles}
-                separacionPisos={SEPARACION_PISOS}
+                activo={piso ?? 'todos'}
                 espacios={mapaEspacios}
                 resaltados={setResaltados}
                 seleccionado={seleccionado}
                 conector={conector}
                 onSeleccionar={alSeleccionar}
                 onConector={setConector}
+                onPiso={elegirPiso}
+                orden={orden}
               />
             </Canvas>
           </LimiteError>
@@ -222,7 +245,7 @@ export default function Mapa3D({
                   key={p}
                   type="button"
                   aria-pressed={piso === p}
-                  onClick={() => setPisoElegido(p)}
+                  onClick={() => elegirPiso(p)}
                   className={`rounded-md px-3 py-1 text-sm ${piso === p ? 'bg-indigo-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
                 >
                   Piso {p}
@@ -232,7 +255,7 @@ export default function Mapa3D({
                 <button
                   type="button"
                   aria-pressed={piso === 'todos'}
-                  onClick={() => setPisoElegido('todos')}
+                  onClick={() => elegirPiso('todos')}
                   className={`rounded-md px-3 py-1 text-sm ${piso === 'todos' ? 'bg-indigo-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
                 >
                   Edificio
@@ -240,6 +263,27 @@ export default function Mapa3D({
               )}
             </div>
           )}
+
+          <div
+            role="group"
+            aria-label="Cámara"
+            className="absolute right-3 top-3 flex flex-col gap-1 rounded-lg bg-white/90 p-1 shadow"
+          >
+            <button
+              type="button"
+              onClick={() => ordenar('reiniciar')}
+              className="rounded-md px-3 py-1 text-left text-sm text-slate-700 hover:bg-slate-100"
+            >
+              Reiniciar vista
+            </button>
+            <button
+              type="button"
+              onClick={() => ordenar('cenital')}
+              className="rounded-md px-3 py-1 text-left text-sm text-slate-700 hover:bg-slate-100"
+            >
+              Vista desde arriba
+            </button>
+          </div>
 
           {conector && infoConector && (
             <section
@@ -257,7 +301,7 @@ export default function Mapa3D({
                     <button
                       key={destino}
                       type="button"
-                      onClick={() => setPisoElegido(destino)}
+                      onClick={() => elegirPiso(destino)}
                       className="rounded-md bg-indigo-900 px-3 py-1 text-white hover:bg-indigo-800"
                     >
                       {typeof piso !== 'number'

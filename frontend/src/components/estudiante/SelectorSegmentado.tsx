@@ -21,6 +21,8 @@ export interface SelectorSegmentadoProps<T extends string> {
    * `aria-labelledby={idPestana(idBase, valor)}`. Sin `idBase` es un grupo de botones (`aria-pressed`).
    */
   idBase?: string;
+  /** `vertical` apila las opciones (para una barra lateral); por defecto, en fila. */
+  orientacion?: 'horizontal' | 'vertical';
   className?: string;
 }
 
@@ -39,8 +41,10 @@ export function SelectorSegmentado<T extends string>({
   etiquetaGrupo,
   deshabilitado = false,
   idBase,
+  orientacion = 'horizontal',
   className = '',
 }: SelectorSegmentadoProps<T>) {
+  const vertical = orientacion === 'vertical';
   const botones = useRef<(HTMLButtonElement | null)[]>([]);
   const comoPestanas = idBase !== undefined;
   const total = Math.max(opciones.length, 1);
@@ -52,9 +56,9 @@ export function SelectorSegmentado<T extends string>({
   const alPulsarTecla = (e: React.KeyboardEvent, posicion: number) => {
     const ultimo = opciones.length - 1;
     const destino =
-      e.key === 'ArrowRight'
+      e.key === (vertical ? 'ArrowDown' : 'ArrowRight')
         ? (posicion + 1) % opciones.length
-        : e.key === 'ArrowLeft'
+        : e.key === (vertical ? 'ArrowUp' : 'ArrowLeft')
           ? (posicion - 1 + opciones.length) % opciones.length
           : e.key === 'Home'
             ? 0
@@ -71,15 +75,25 @@ export function SelectorSegmentado<T extends string>({
     <>
       <div
         {...(comoPestanas
-          ? { role: 'tablist', 'aria-label': etiquetaGrupo, 'aria-orientation': 'horizontal' }
+          ? { role: 'tablist', 'aria-label': etiquetaGrupo, 'aria-orientation': orientacion }
           : {})}
         className="relative grid"
-        style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }}
+        style={
+          vertical
+            ? { gridTemplateRows: `repeat(${total}, minmax(0, 1fr))` }
+            : { gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }
+        }
       >
         <span
           aria-hidden="true"
-          className="saie-selector-pulgar absolute inset-y-0 left-0 rounded-lg bg-saie-primary shadow-md"
-          style={{ width: `${100 / total}%`, transform: `translateX(${indice * 100}%)` }}
+          className={`saie-selector-pulgar absolute rounded-lg bg-saie-primary shadow-md ${
+            vertical ? 'inset-x-0 top-0' : 'inset-y-0 left-0'
+          }`}
+          style={
+            vertical
+              ? { height: `${100 / total}%`, transform: `translateY(${indice * 100}%)` }
+              : { width: `${100 / total}%`, transform: `translateX(${indice * 100}%)` }
+          }
         />
         {opciones.map((opcion, posicion) => {
           const activa = opcion.valor === valor;

@@ -161,7 +161,7 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
             {iniciales(alumno.nombre)}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="m-0 inline-flex items-center gap-1.5 rounded-full bg-saie-primary/10 px-2.5 py-1 text-xs font-medium text-saie-primary">
+            <p className="m-0 inline-flex items-center gap-1.5 rounded-full bg-saie-primary/10 px-2.5 py-1 text-sm font-medium text-saie-primary">
               <Icono trazo={TRAZO_USUARIO} />
               Estudiante
             </p>

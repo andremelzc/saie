@@ -39,7 +39,7 @@ const FichaSeccion: React.FC<{ seccion: CursoMatriculadoDTO }> = ({ seccion }) =
                 {seccion.horarios.map((h) => (
                   <li
                     key={`${h.diaSemana}-${h.horaInicio}`}
-                    className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-saie-text"
+                    className="rounded-full bg-white px-2.5 py-1 text-sm font-medium text-saie-text"
                   >
                     {`${ABREVIATURA_DIA[h.diaSemana]} ${formatearRango(h.horaInicio, h.horaFin)}`}
                   </li>

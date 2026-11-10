@@ -2,8 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { MENSAJE_EN_DESARROLLO, PREVISION_EN_DESARROLLO } from '../components/PantallaEnDesarrollo';
-import MapaAdminPage from './admin/MapaAdminPage';
-import LaboratoriosAdminPage from './admin/LaboratoriosAdminPage';
 import SoftwareAdminPage from './admin/SoftwareAdminPage';
 import ProximamenteAdminPage from './admin/ProximamenteAdminPage';
 
@@ -24,12 +22,6 @@ function montar(nodo: React.ReactNode) {
 }
 
 const PANTALLAS = [
-  { nombre: 'Mapa del panel', Page: MapaAdminPage, titulo: 'Mapa de ocupación por piso' },
-  {
-    nombre: 'Laboratorios del panel',
-    Page: LaboratoriosAdminPage,
-    titulo: 'Laboratorios y equipos',
-  },
   { nombre: 'Catálogo de software', Page: SoftwareAdminPage, titulo: 'Catálogo de software' },
 ];
 
@@ -54,7 +46,9 @@ describe('ProximamenteAdminPage', () => {
     expect(screen.getByRole('heading', { name: 'Hoja de ruta' })).toBeVisible();
     expect(screen.getByRole('status')).toHaveTextContent(MENSAJE_EN_DESARROLLO);
     expect(screen.getByText(PREVISION_EN_DESARROLLO)).toBeVisible();
-    expect(screen.getByText('Mapa de ocupación por piso')).toBeVisible();
+    // Mapa, laboratorios, altas y claves ya funcionan: salen de la hoja de ruta.
+    expect(screen.queryByText('Mapa de ocupación por piso')).toBeNull();
+    expect(screen.queryByText('Laboratorios y equipos')).toBeNull();
     expect(screen.getByText('Catálogo y solicitudes de software')).toBeVisible();
     expect(screen.queryByText('Alta de alumnos y docentes')).toBeNull();
     expect(screen.queryByText('Revisión de incidencias')).toBeNull();

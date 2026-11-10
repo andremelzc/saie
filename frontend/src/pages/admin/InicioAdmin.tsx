@@ -15,10 +15,17 @@ import { useAccion } from '../../hooks/useAccion';
 import { useCarga } from '../../hooks/useCarga';
 import {
   ejecutarCorrida,
+  CLAVE_LABORATORIOS_ESTADO,
   obtenerAlertas,
   obtenerEscaladas,
+  obtenerLaboratoriosConEstado,
+  obtenerMapaOcupacionAdmin,
   reintentarSeccion,
 } from '../../services/admin';
+import VistaMapa from '../../components/mapa2d/VistaMapa';
+import { ENLACE_PLANOS } from '../../components/mapa2d/ocupacionReal';
+import { EstadoError } from '../../components/ui/EstadoError';
+import { useOcupacionMapa } from '../../hooks/useOcupacionMapa';
 import type {
   ResumenAsignacionDTO,
   ResultadoVerificacionDTO,
@@ -27,7 +34,10 @@ import type {
 import { describirMotivoEscalamiento } from '../../utils/admin';
 import { formatearFechaCorta } from '../../utils/fechas';
 import { plural } from '../../utils/texto';
+import { fraseDeMotivoAlerta } from '../../utils/textoMotor';
 import { ICONOS } from '../../components/ui/iconos';
+import { TEXTOS_ASIGNACION } from '../../config/textos';
+import { Metrica, TiraMetricas } from '../../components/admin/Metrica';
 
 /**
  * Issue 4.20 — inicio de Coordinación Académica.
@@ -104,21 +114,9 @@ const Atajo: React.FC<{ to: string; titulo: string; trazo: string }> = ({ to, ti
   </Link>
 );
 
-/** Métrica del tablero: cifra grande y etiqueta corta. */
-const Metrica: React.FC<{ valor: number | string; etiqueta: string; tono?: string }> = ({
-  valor,
-  etiqueta,
-  tono = 'text-saie-text',
-}) => (
-  <div className="rounded-xl border border-saie-divider bg-white p-3">
-    <p className={`m-0 text-3xl font-bold leading-none ${tono} tabular-nums`}>{valor}</p>
-    <p className="m-0 mt-1 text-xs font-medium text-saie-muted">{etiqueta}</p>
-  </div>
-);
-
 /** Texto del distintivo del verificador según el resultado de la corrida. */
 function textoVerificador(verificacion: ResultadoVerificacionDTO | null): string {
-  if (!verificacion) return 'Verificador: sin asignaciones que revisar';
+  if (!verificacion) return TEXTOS_ASIGNACION.distintivoSinNada;
   if (verificacion.conforme) {
     return `Conforme · ${verificacion.totalRevisadas} revisadas`;
   }
@@ -159,7 +157,7 @@ const FilaEscalada: React.FC<{
           {seccion.seccion.codigoCurso} · {seccion.seccion.codigoSeccion} —{' '}
           {seccion.seccion.nombreCurso}
         </p>
-        <p className="m-0 flex flex-wrap items-center gap-2 text-xs text-saie-muted">
+        <p className="m-0 flex flex-wrap items-center gap-2 text-sm text-saie-muted">
           <BadgeEstado tono="advertencia">{motivo.etiqueta}</BadgeEstado>
           <span className="min-w-0 sm:truncate">{motivo.descripcion}</span>
           <span>
@@ -240,52 +238,161 @@ const ListaEscaladas: React.FC<{
   );
 };
 
-/** Jefatura: resumen de sus alertas y acceso al formulario de laboratorio (Issue 4.19). */
+/**
+ * Inicio de Jefatura de Laboratorios (Issue 4.16): laboratorios activos, PCs operativas e
+ * inoperativas, la alerta más reciente, accesos y el mapa de ocupación con sus laboratorios
+ * resaltados (componente del mapa de los Issues 4.13 y 4.14).
+ */
 const InicioJefatura: React.FC = () => {
-  const { datos, cargando, error, recargar } = useCarga(obtenerAlertas, { clave: 'alertas' });
-  const pendientes = datos?.filter((a) => a.estado === 'PENDIENTE').length ?? 0;
+  const alertas = useCarga(obtenerAlertas, { clave: 'alertas' });
+  const labs = useCarga(obtenerLaboratoriosConEstado, { clave: CLAVE_LABORATORIOS_ESTADO });
+  const mapa = useOcupacionMapa(obtenerMapaOcupacionAdmin, 'admin', null);
+  const [seleccionado, setSeleccionado] = useState<string | null>(null);
+  const [pisoElegido, setPisoElegido] = useState<number | 'todos' | null>(null);
+
+  const pendientes = (alertas.datos ?? []).filter((a) => a.estado === 'PENDIENTE');
+  // `obtenerAlertas` ya las devuelve de la más reciente a la más antigua.
+  const destacada = pendientes[0] ?? null;
+  const laboratorios = labs.datos ?? [];
+  const activos = laboratorios.filter((l) => l.habilitado);
+  const inoperativas = activos.reduce((t, l) => t + (l.pcsMalogradas ?? 0), 0);
+  const operativas = activos.reduce((t, l) => t + l.capacidadReal, 0);
+  const resaltados = laboratorios
+    .map((l) => ENLACE_PLANOS.idDeEspacio(l.pabellon, l.identificador))
+    .filter((id): id is string => id !== null);
+  const pisoInicial = laboratorios.length > 0 ? Math.min(...laboratorios.map((l) => l.piso)) : 1;
+  const error = alertas.error ?? labs.error;
+  const reintentar = () => {
+    alertas.recargar();
+    labs.recargar();
+  };
+  const cargandoTodo = (alertas.cargando && !alertas.datos) || (labs.cargando && !labs.datos);
 
   return (
-    <LayoutAdmin dashboard titulo="Área administrativa" subtitulo="Jefatura de Laboratorios">
-      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-rows-[auto_1fr]">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Metrica valor={pendientes} etiqueta="Alertas pendientes" tono="text-saie-danger" />
-          <Metrica
-            valor={datos?.filter((a) => a.tipo === 'SOFTWARE').length ?? 0}
-            etiqueta="De software"
-          />
-          <Metrica
-            valor={datos?.filter((a) => a.tipo === 'CAPACIDAD').length ?? 0}
-            etiqueta="De capacidad"
-          />
-        </div>
+    <LayoutAdmin titulo="Área administrativa" subtitulo="Jefatura de Laboratorios">
+      <TiraMetricas etiqueta="Resumen de laboratorios" className="grid-cols-2 lg:grid-cols-4">
+        <Metrica
+          etiqueta="Alertas pendientes"
+          valor={pendientes.length}
+          cargando={alertas.cargando && !alertas.datos}
+          tono={pendientes.length > 0 ? 'peligro' : 'neutro'}
+          icono={ICONOS.alerta}
+          to={RUTAS.alertasAdmin}
+          textoEnlace="Ver alertas"
+          principal={pendientes.length > 0}
+        />
+        <Metrica
+          etiqueta="Laboratorios activos"
+          valor={`${activos.length}/${laboratorios.length}`}
+          cargando={labs.cargando && !labs.datos}
+          icono={ICONOS.monitor}
+          to={RUTAS.laboratoriosAdmin}
+          textoEnlace="Ver laboratorios"
+        />
+        <Metrica
+          etiqueta="PCs operativas"
+          valor={operativas}
+          cargando={labs.cargando && !labs.datos}
+          tono="exito"
+          icono={ICONOS.checkCirculo}
+        />
+        <Metrica
+          etiqueta="PCs inoperativas"
+          valor={inoperativas}
+          cargando={labs.cargando && !labs.datos}
+          tono={inoperativas > 0 ? 'peligro' : 'neutro'}
+          icono={ICONOS.errorCirculo}
+        />
+      </TiraMetricas>
 
-        {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-        {cargando && !datos ? (
-          <EsqueletoCarga texto="Cargando resumen…" />
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:min-h-0">
-            <Acceso
-              to={RUTAS.alertasAdmin}
-              titulo="Alertas de mis laboratorios"
-              descripcion="Revisa y marca como resueltas las alertas."
-              trazo={ICONOS.alerta}
-            />
-            <Acceso
-              to={RUTAS.cambioLaboratorio}
-              titulo="Reportar cambio de laboratorio"
-              descripcion="Software instalado y PCs malogradas o reparadas."
-              trazo={ICONOS.monitor}
-            />
-            <Acceso
-              to={RUTAS.clavesAdmin}
-              titulo="Cambiar mi clave"
-              descripcion="Actualiza la clave de acceso a tu cuenta."
-              trazo={ICONOS.escudo}
-            />
+      {error && <AvisoError mensaje={error} onReintentar={reintentar} />}
+      {cargandoTodo ? (
+        <EsqueletoCarga texto="Cargando resumen…" />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <div className="flex min-w-0 flex-col gap-4 lg:col-span-5">
+            <section
+              aria-labelledby="titulo-alerta-destacada"
+              className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-4"
+            >
+              <h2 id="titulo-alerta-destacada" className="m-0 text-sm font-bold">
+                Alerta más reciente
+              </h2>
+              {destacada ? (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <BadgeEstado tono="advertencia">
+                      {destacada.tipo === 'SOFTWARE' ? 'Software' : 'Capacidad'}
+                    </BadgeEstado>
+                    <span className="text-sm font-semibold">{destacada.espacio.identificador}</span>
+                    <span className="text-sm text-saie-muted">
+                      {formatearFechaCorta(destacada.fechaDeteccion)}
+                    </span>
+                  </div>
+                  <p className="m-0 text-sm">{fraseDeMotivoAlerta(destacada.motivo)}</p>
+                  <Link to={RUTAS.alertasAdmin} className="text-sm font-medium text-saie-primary">
+                    Ver todas las alertas →
+                  </Link>
+                </>
+              ) : (
+                <p className="m-0 text-sm text-saie-muted">
+                  No hay alertas pendientes en tus laboratorios.
+                </p>
+              )}
+            </section>
+
+            <nav aria-label="Accesos de Jefatura" className="grid gap-3">
+              <Acceso
+                to={RUTAS.laboratoriosAdmin}
+                titulo="Ver todos mis laboratorios"
+                descripcion="Búsqueda y filtros por piso y estado, con aforo real."
+                trazo={ICONOS.monitor}
+              />
+              <Acceso
+                to={RUTAS.alertasAdmin}
+                titulo="Alertas de mis laboratorios"
+                descripcion="Revisa y marca como resueltas las alertas."
+                trazo={ICONOS.alerta}
+              />
+              <Acceso
+                to={RUTAS.cambioLaboratorio}
+                titulo="Reportar cambio de laboratorio"
+                descripcion="Software instalado y PCs malogradas o reparadas."
+                trazo={ICONOS.ajustes}
+              />
+              <Acceso
+                to={RUTAS.clavesAdmin}
+                titulo="Cambiar mi clave"
+                descripcion="Actualiza la clave de acceso a tu cuenta."
+                trazo={ICONOS.escudo}
+              />
+            </nav>
           </div>
-        )}
-      </div>
+
+          <section
+            aria-labelledby="titulo-vista-mapa"
+            className="flex min-w-0 flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4 lg:col-span-7"
+          >
+            <h2 id="titulo-vista-mapa" className="m-0 text-sm font-bold">
+              Tus laboratorios en el mapa de ocupación
+            </h2>
+            {mapa.error ? (
+              <EstadoError mensaje={mapa.error} onReintentar={mapa.recargar} />
+            ) : !mapa.datos ? (
+              <EsqueletoCarga texto="Cargando el mapa…" />
+            ) : (
+              <VistaMapa
+                espacios={mapa.datos.espacios}
+                seleccionado={seleccionado}
+                onSeleccionar={setSeleccionado}
+                resaltados={resaltados}
+                piso={pisoElegido ?? pisoInicial}
+                onPisoCambiado={setPisoElegido}
+              />
+            )}
+          </section>
+        </div>
+      )}
     </LayoutAdmin>
   );
 };
@@ -301,6 +408,8 @@ const InicioCoordinacion: React.FC = () => {
   const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [reintentando, setReintentando] = useState<string | null>(null);
   const [resumenCorrida, setResumenCorrida] = useState<ResumenAsignacionDTO | null>(null);
+  /** Corrida anterior de esta sesión, para el delta de las métricas. */
+  const [resumenAnterior, setResumenAnterior] = useState<ResumenAsignacionDTO | null>(null);
   const [resultadoSeccion, setResultadoSeccion] = useState<{
     resumen: ResumenAsignacionDTO;
     seccion: SeccionEscaladaDTO;
@@ -315,6 +424,8 @@ const InicioCoordinacion: React.FC = () => {
   const [otraCorrida, setOtraCorrida] = useState(false);
 
   const pendientes = alertas.datos?.filter((a) => a.estado === 'PENDIENTE').length ?? 0;
+  const delta = (campo: 'asignadas' | 'mantenidas' | 'escaladas') =>
+    resumenCorrida && resumenAnterior ? resumenCorrida[campo] - resumenAnterior[campo] : null;
   const periodo = escaladas.datos?.periodo ?? resumenCorrida?.periodo ?? '—';
   const secciones = escaladas.datos?.secciones ?? [];
 
@@ -335,6 +446,7 @@ const InicioCoordinacion: React.FC = () => {
     const resultado = await accionCorrida.ejecutar(
       async () => {
         const resumen = await ejecutarCorrida();
+        setResumenAnterior(resumenCorrida);
         setResumenCorrida(resumen);
         setUltimaCorrida(new Date().toISOString());
         // La corrida crea y resuelve alertas: hay que volver a pedirlas, no solo las escaladas.
@@ -358,7 +470,7 @@ const InicioCoordinacion: React.FC = () => {
         setErrorAccion({
           mensaje: resultado.error,
           reintentar: comprobarCorrida,
-          etiqueta: 'Actualizar',
+          etiqueta: 'Actualizar datos',
         });
       } else {
         setErrorAccion({ mensaje: resultado.error, reintentar: correr });
@@ -399,29 +511,52 @@ const InicioCoordinacion: React.FC = () => {
         aria-busy={corriendo}
         className="grid grid-cols-1 gap-4 lg:min-h-0 lg:flex-1 lg:grid-rows-[auto_auto_1fr]"
       >
-        {/* FILA 1 — las cuatro cifras que resumen la asignación */}
-        <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 lg:grid-cols-4">
-          <li>
-            <Metrica
-              valor={resumenCorrida?.asignadas ?? '—'}
-              etiqueta="Con aula nueva"
-              tono="text-saie-success-strong"
-            />
-          </li>
-          <li>
-            <Metrica valor={resumenCorrida?.mantenidas ?? '—'} etiqueta="Conservan la suya" />
-          </li>
-          <li>
-            <Metrica
-              valor={resumenCorrida?.escaladas ?? escaladas.datos?.total ?? '—'}
-              etiqueta="Esperan revisión"
-              tono="text-saie-warning-strong"
-            />
-          </li>
-          <li>
-            <Metrica valor={pendientes} etiqueta="Alertas pendientes" tono="text-saie-danger" />
-          </li>
-        </ul>
+        {/*
+          FILA 1 — las cifras que mueven una decisión (Issue 4.52). «Esperan revisión» es la
+          principal y es la única vez que aparece esa cifra en el tablero; cada métrica lleva a
+          su lista y mientras carga muestra un esqueleto.
+        */}
+        <TiraMetricas etiqueta="Resumen de la asignación" className="grid-cols-2 lg:grid-cols-4">
+          <Metrica
+            etiqueta="Esperan revisión"
+            valor={resumenCorrida?.escaladas ?? escaladas.datos?.total ?? null}
+            cargando={escaladas.cargando && !escaladas.datos && !resumenCorrida}
+            delta={delta('escaladas')}
+            tono="advertencia"
+            icono={ICONOS.alerta}
+            to="#titulo-atencion"
+            textoEnlace="Ver secciones en revisión"
+            principal
+          />
+          <Metrica
+            etiqueta="Alertas pendientes"
+            valor={pendientes}
+            cargando={alertas.cargando && !alertas.datos}
+            tono={pendientes > 0 ? 'peligro' : 'neutro'}
+            icono={ICONOS.errorCirculo}
+            to={RUTAS.alertasAdmin}
+            textoEnlace="Ver alertas"
+          />
+          <Metrica
+            etiqueta="Con aula nueva"
+            valor={resumenCorrida?.asignadas ?? null}
+            delta={delta('asignadas')}
+            sinDato="tras asignar"
+            tono="exito"
+            icono={ICONOS.checkCirculo}
+            to={RUTAS.auditoriaAdmin}
+            textoEnlace="Ver historial"
+          />
+          <Metrica
+            etiqueta="Conservan la suya"
+            valor={resumenCorrida?.mantenidas ?? null}
+            delta={delta('mantenidas')}
+            sinDato="tras asignar"
+            icono={ICONOS.edificio}
+            to={RUTAS.auditoriaAdmin}
+            textoEnlace="Ver historial"
+          />
+        </TiraMetricas>
 
         {/* FILA 2 — estado de la corrida y veredicto del verificador */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
@@ -436,16 +571,14 @@ const InicioCoordinacion: React.FC = () => {
             className="flex flex-col justify-between gap-3 rounded-2xl bg-gradient-to-br from-saie-primary to-saie-primary-dark p-4 text-white lg:col-span-8"
           >
             <div className="min-w-0">
-              <p className="m-0 text-xs text-white/80">Asignación de aulas · Periodo {periodo}</p>
+              <p className="m-0 text-sm text-white/80">Asignación de aulas · Periodo {periodo}</p>
               <p role="status" aria-live="polite" className="m-0 mt-0.5 text-sm">
                 {resumenCorrida
-                  ? `${resumenCorrida.asignadas} con aula nueva · ${resumenCorrida.mantenidas} conservan la suya · ${resumenCorrida.escaladas} de ${resumenCorrida.totalSecciones} esperan revisión`
-                  : escaladas.datos
-                    ? `${plural(escaladas.datos.total, 'sección espera', 'secciones esperan')} revisión`
-                    : 'Consultando las secciones…'}
+                  ? `Asignación terminada: se revisaron ${plural(resumenCorrida.totalSecciones, 'sección', 'secciones')} del periodo.`
+                  : 'Asigna las aulas del periodo para ver cuántas secciones cambian o conservan su aula.'}
               </p>
               {ultimaCorrida && (
-                <p className="m-0 mt-1 text-xs text-white/75">
+                <p className="m-0 mt-1 text-sm text-white/75">
                   Última actualización: {formatearFechaCorta(ultimaCorrida)}
                 </p>
               )}
@@ -476,19 +609,21 @@ const InicioCoordinacion: React.FC = () => {
           </section>
 
           <section
-            aria-label="Veredicto del verificador"
+            aria-label={TEXTOS_ASIGNACION.tituloComprobacion}
             className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-4"
           >
-            <h2 className="m-0 text-sm font-bold text-saie-text">Comprobación de la asignación</h2>
+            <h2 className="m-0 text-sm font-bold text-saie-text">
+              {TEXTOS_ASIGNACION.tituloComprobacion}
+            </h2>
             {resumenCorrida ? (
               <>
-                <p className="m-0 text-xs text-saie-muted">
+                <p className="m-0 text-sm text-saie-muted">
                   {resumenCorrida.verificacion
                     ? `${resumenCorrida.verificacion.totalRevisadas} asignaciones revisadas contra las 7 reglas de asignación.`
                     : 'Esta asignación no dejó resultados que comprobar.'}
                 </p>
                 <span
-                  className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${claseVerificador(resumenCorrida.verificacion)}`}
+                  className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ${claseVerificador(resumenCorrida.verificacion)}`}
                 >
                   {textoVerificador(resumenCorrida.verificacion)}
                 </span>
@@ -520,14 +655,13 @@ const InicioCoordinacion: React.FC = () => {
             className="flex min-h-0 flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-8"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 id="titulo-atencion" className="m-0 text-sm font-bold text-saie-text">
+              <h2
+                id="titulo-atencion"
+                tabIndex={-1}
+                className="m-0 scroll-mt-24 text-sm font-bold text-saie-text"
+              >
                 Secciones que requieren revisión
               </h2>
-              {secciones.length > 0 && (
-                <span className="text-xs text-saie-muted">
-                  {secciones.length} {secciones.length === 1 ? 'sección' : 'secciones'}
-                </span>
-              )}
             </div>
             {escaladas.error && (
               <AvisoError mensaje={escaladas.error} onReintentar={escaladas.recargar} />
@@ -590,20 +724,7 @@ const InicioCoordinacion: React.FC = () => {
               />
               <Atajo to={RUTAS.altaDocenteAdmin} titulo="Alta de docentes" trazo={ICONOS.pizarra} />
               <Atajo to={RUTAS.clavesAdmin} titulo="Claves" trazo={ICONOS.escudo} />
-              {/*
-                Atajo a las alertas: la tarjeta «Requieren tu atención» repetía las dos cifras
-                de la fila de métricas; queda solo el enlace a la lista completa.
-              */}
-              <Link
-                to={RUTAS.alertasAdmin}
-                className="flex items-center justify-between gap-3 rounded-xl border border-saie-danger/30 bg-saie-danger-soft py-2.5 pl-4 pr-3 no-underline transition-colors hover:border-saie-danger sm:col-span-2"
-              >
-                <span className="flex items-center gap-2 text-sm font-bold text-saie-danger-strong">
-                  <span>Alertas pendientes</span>
-                  <strong className="text-lg leading-none">{pendientes}</strong>
-                </span>
-                <span className="text-xs font-semibold text-saie-danger-strong">Ver alertas →</span>
-              </Link>
+              <Atajo to={RUTAS.alertasAdmin} titulo="Alertas" trazo={ICONOS.alerta} />
             </div>
           </section>
         </div>
@@ -628,7 +749,7 @@ const InicioCoordinacion: React.FC = () => {
       <Drawer
         abierto={detalleAbierto}
         onCerrar={() => setDetalleAbierto(false)}
-        titulo="Veredicto del verificador"
+        titulo={TEXTOS_ASIGNACION.tituloComprobacion}
       >
         <VeredictoVerificacion verificacion={resumenCorrida?.verificacion ?? null} ocultarTitulo />
       </Drawer>

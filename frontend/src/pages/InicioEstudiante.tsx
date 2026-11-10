@@ -214,11 +214,11 @@ const ListaDeClases: React.FC<{
               }`}
               style={{ borderLeftColor: color.borde }}
             >
-              <span className="text-xs font-bold text-saie-muted">
+              <span className="text-sm font-bold text-saie-muted">
                 {formatearRango(s.horaInicio, s.horaFin)}
               </span>
               <span className="text-sm font-bold leading-5">{s.nombreCurso}</span>
-              <span className="text-xs text-saie-muted">{resumenUbicacion(s.espacios)}</span>
+              <span className="text-sm text-saie-muted">{resumenUbicacion(s.espacios)}</span>
               {estado && (
                 <span className="mt-1 flex flex-col gap-1.5">
                   <BadgeEstadoClase estado={estado} />
@@ -384,7 +384,7 @@ export const InicioEstudiante: React.FC = () => {
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="min-w-0">
-                <p className="m-0 text-xs text-white/80">{fechaLarga(ahora)}</p>
+                <p className="m-0 text-sm text-white/80">{fechaLarga(ahora)}</p>
                 <p className="m-0 text-2xl font-bold leading-8">{saludoSegunHora(ahora)}</p>
               </div>
               {sesion?.rol && (

@@ -26,6 +26,8 @@ export interface HorarioSemanalDTO {
 }
 
 export interface CursoMatriculadoDTO {
+  /** Asignación vigente de la sección (con ella se pide la ruta); `null` si aún no tiene aula. */
+  asignacionId?: string | null;
   codigoCurso: string;
   nombreCurso: string;
   codigoSeccion: string;

@@ -53,6 +53,25 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     expect(screen.getByRole('button', { name: 'Guía y plantillas' })).toBeInTheDocument();
   });
 
+  it('no muestra «Sin cargar» junto a una fecha de última carga (Issue 4.55)', () => {
+    localStorage.setItem(
+      'saie.carga.ultima.horarios',
+      JSON.stringify({ fecha: '2026-10-10T10:00:00Z', estado: 'con-errores' }),
+    );
+    // Formato antiguo: solo la fecha, se lee como carga correcta.
+    localStorage.setItem('saie.carga.ultima.docentes', '2026-10-09T10:00:00Z');
+    montar();
+
+    const horarios = regionDe('2. Horarios');
+    expect(within(horarios).getByText('Con errores')).toBeInTheDocument();
+    expect(within(horarios).getByText(/Última carga en este navegador:/)).toBeInTheDocument();
+    expect(within(regionDe('4. Docentes')).getByText('Cargado')).toBeInTheDocument();
+    // Sin fecha guardada, sí corresponde «Sin cargar» y no hay fecha.
+    const cursos = regionDe('1. Cursos y secciones');
+    expect(within(cursos).getByText('Sin cargar')).toBeInTheDocument();
+    expect(within(cursos).queryByText(/Última carga/)).toBeNull();
+  });
+
   it('muestra nombre y tamaño del archivo elegido', () => {
     montar();
     elegirArchivo('horarios');
@@ -71,7 +90,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     expect(await screen.findByText('Carga completada sin errores')).toBeInTheDocument();
     expect(importar).toHaveBeenCalledWith('horarios', 'x,y');
     expect(screen.getByText('Cargado')).toBeInTheDocument();
-    expect(screen.getByText(/Última carga:/)).toBeInTheDocument();
+    expect(screen.getByText(/Última carga en este navegador:/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
     const dialogo = screen.getByRole('dialog', { name: /Resultado de la carga.*2. Horarios/ });
@@ -157,7 +176,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     const dialogo = screen.getByRole('dialog', {
       name: /Resultado de la carga.*1. Cursos y secciones/,
     });
-    expect(within(dialogo).getByText('CONFORME')).toBeInTheDocument();
+    expect(within(dialogo).getByText('Conforme')).toBeInTheDocument();
     expect(within(dialogo).getByText('Sin doble reserva')).toBeInTheDocument();
   });
 

@@ -177,7 +177,7 @@ export const InicioDocentePage: React.FC<{ ahora?: Date }> = ({ ahora }) => {
           className="flex min-w-0 flex-col gap-3 rounded-2xl bg-gradient-to-br from-saie-primary to-saie-primary-dark p-4 text-white lg:col-span-7"
         >
           <div className="min-w-0">
-            <p className="m-0 text-xs text-white/80">{fechaLarga(referencia)}</p>
+            <p className="m-0 text-sm text-white/80">{fechaLarga(referencia)}</p>
             <p className="m-0 text-2xl font-bold leading-8">{saludoSegunHora(referencia)}</p>
           </div>
           {error ? (

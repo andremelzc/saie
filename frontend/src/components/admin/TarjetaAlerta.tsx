@@ -6,6 +6,8 @@ import { BadgeEstado } from '../ui/BadgeEstado';
 import { Boton } from '../ui/Boton';
 import { DialogoConfirmacion } from '../ui/DialogoConfirmacion';
 import { ICONOS } from '../ui/iconos';
+import { DetalleTecnico } from '../ui/DetalleTecnico';
+import { fraseDeMotivoAlerta, tieneDetalleTecnico } from '../../utils/textoMotor';
 
 /** Issue 4.9 — fila/tarjeta de alerta. Cada tipo tiene color, ícono y etiqueta propios. */
 
@@ -56,6 +58,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
   const [confirmando, setConfirmando] = useState(false);
   const [mostrarTodos, setMostrarTodos] = useState(false);
 
+  const motivo = fraseDeMotivoAlerta(alerta.motivo);
   const cursos = alerta.asignacionesAfectadas;
   const visibles = mostrarTodos ? cursos : cursos.slice(0, MAX_CURSOS_VISIBLES);
   const ocultos = cursos.length - visibles.length;
@@ -88,13 +91,13 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
             <h3 className="m-0 text-base font-bold text-saie-text">
               {alerta.espacio.identificador}
             </h3>
-            <p className="m-0 text-xs text-saie-muted">
+            <p className="m-0 text-sm text-saie-muted">
               {alerta.espacio.pabellon} · Piso {alerta.espacio.piso}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${estilo.chip}`}>
+          <span className={`rounded-full px-2.5 py-1 text-sm font-semibold ${estilo.chip}`}>
             {estilo.etiqueta}
           </span>
           <BadgeEstado tono={resuelta ? 'exito' : 'peligro'}>
@@ -103,10 +106,13 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
         </div>
       </header>
 
-      <p className="m-0 text-sm text-saie-text">{alerta.motivo}</p>
+      <div className="flex flex-col gap-1">
+        <p className="m-0 text-sm text-saie-text">{motivo}</p>
+        {tieneDetalleTecnico(motivo, alerta.motivo) && <DetalleTecnico texto={alerta.motivo} />}
+      </div>
 
       <div>
-        <p className="m-0 mb-1 text-xs font-semibold uppercase tracking-wide text-saie-muted">
+        <p className="m-0 mb-1 text-xs font-semibold text-saie-muted">
           Cursos afectados ({cursos.length})
         </p>
         {cursos.length === 0 ? (
@@ -117,7 +123,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
               {visibles.map((a) => (
                 <li
                   key={a.asignacionId}
-                  className="rounded-md bg-saie-canvas px-2 py-1 text-xs text-saie-text"
+                  className="rounded-md bg-saie-canvas px-2 py-1 text-sm text-saie-text"
                 >
                   {a.codigoCurso} · {a.codigoSeccion} — {a.nombreCurso}
                 </li>
@@ -139,7 +145,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
       </div>
 
       <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-saie-divider pt-3">
-        <time dateTime={alerta.fechaDeteccion} className="text-xs text-saie-muted">
+        <time dateTime={alerta.fechaDeteccion} className="text-sm text-saie-muted">
           Detectada el {formatearFechaAlerta(alerta.fechaDeteccion)}
         </time>
         {!resuelta && onResolver && (
@@ -158,7 +164,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
               abierto={confirmando}
               titulo="¿Marcar como resuelta?"
               descripcion={`La alerta de ${alerta.espacio.identificador} dejará de aparecer en la lista de pendientes.`}
-              textoConfirmar="Sí, resolver"
+              textoConfirmar="Sí, marcar como resuelta"
               onConfirmar={() => {
                 setConfirmando(false);
                 onResolver(alerta.id);
