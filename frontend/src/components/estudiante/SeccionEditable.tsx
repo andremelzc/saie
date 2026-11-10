@@ -147,9 +147,7 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
           const texto = campo.tipo === 'checkbox' ? (valor === 'true' ? 'Sí' : 'No') : valor;
           return (
             <div key={campo.clave} className="min-w-0">
-              <dt className="text-xs font-medium uppercase tracking-wide text-saie-muted">
-                {campo.etiqueta}
-              </dt>
+              <dt className="text-xs font-medium text-saie-muted">{campo.etiqueta}</dt>
               <dd className="m-0 mt-1 break-words text-base text-saie-text">
                 {texto ? (
                   campo.formatoLectura ? (

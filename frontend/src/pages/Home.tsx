@@ -26,7 +26,7 @@ const PortalCard: React.FC<{ portal: Portal; indice: number }> = ({ portal: p, i
   }, []);
 
   return (
-    <li className="saie-rise" style={{ animationDelay: `${0.15 + indice * 0.1}s` }}>
+    <li className="saie-rise" style={{ animationDelay: `${indice * 0.04}s` }}>
       <Link
         to={p.loginPath}
         data-testid={`portal-${p.id}`}
@@ -180,7 +180,9 @@ export const Home: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
           <img src={logoHorizontal} alt="" aria-hidden="true" className="h-7 w-auto self-start" />
           <div className="text-xs text-saie-muted sm:text-right">
-            <p className="m-0">SAIE &copy; {new Date().getFullYear()} · UNMSM · Grupo 6</p>
+            <p className="m-0">
+              SAIE &copy; {new Date().getFullYear()} · Universidad Nacional Mayor de San Marcos
+            </p>
             <p className="m-0">Facultad de Ingeniería de Sistemas e Informática</p>
           </div>
         </div>

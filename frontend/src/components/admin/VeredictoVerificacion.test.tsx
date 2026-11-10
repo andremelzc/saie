@@ -66,8 +66,8 @@ describe('VeredictoVerificacion (Issue 2.17)', () => {
   it('muestra el veredicto conforme con el detalle de cada regla', () => {
     render(<VeredictoVerificacion verificacion={conforme} />);
 
-    expect(screen.getByRole('heading', { name: 'Veredicto del verificador' })).toBeTruthy();
-    expect(screen.getByText('CONFORME')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Comprobación de la asignación' })).toBeTruthy();
+    expect(screen.getByText('Conforme')).toBeTruthy();
     expect(screen.getByText('Conforme: la asignación cumple las 7 reglas.')).toBeTruthy();
     expect(screen.getByText('12 asignaciones revisadas · 0 incumplimientos')).toBeTruthy();
     expect(screen.getByText('Sin doble reserva')).toBeTruthy();
@@ -78,7 +78,7 @@ describe('VeredictoVerificacion (Issue 2.17)', () => {
   it('marca el veredicto no conforme y despliega las violaciones', () => {
     render(<VeredictoVerificacion verificacion={noConforme} />);
 
-    expect(screen.getByText('NO CONFORME')).toBeTruthy();
+    expect(screen.getByText('No conforme')).toBeTruthy();
     expect(screen.getByText('No conforme: 2 incumplimientos en 1 regla.')).toBeTruthy();
     expect(screen.getByText('10/12 cumplen')).toBeTruthy();
 

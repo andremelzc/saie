@@ -84,18 +84,9 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
         aria-busy="true"
         className={`w-full max-w-xl mx-auto p-4 sm:p-6 bg-white border border-saie-divider rounded-xl shadow-sm flex flex-col gap-3 ${className}`}
       >
-        <div
-          aria-hidden="true"
-          className="h-5 w-1/3 rounded bg-saie-divider animate-pulse motion-reduce:animate-none"
-        />
-        <div
-          aria-hidden="true"
-          className="h-6 w-2/3 rounded bg-saie-divider animate-pulse motion-reduce:animate-none"
-        />
-        <div
-          aria-hidden="true"
-          className="h-16 w-full rounded-xl bg-saie-canvas animate-pulse motion-reduce:animate-none"
-        />
+        <div aria-hidden="true" className="h-5 w-1/3 rounded saie-esqueleto" />
+        <div aria-hidden="true" className="h-6 w-2/3 rounded saie-esqueleto" />
+        <div aria-hidden="true" className="h-16 w-full rounded-xl saie-esqueleto" />
         <span className="text-sm text-saie-muted">Consultando espacios…</span>
       </div>
     );
@@ -232,9 +223,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
             />
           </svg>
           <div>
-            <p className="font-semibold text-sm uppercase tracking-wide text-amber-800">
-              Tu clase está en revisión
-            </p>
+            <p className="font-semibold text-sm text-amber-800">Tu clase está en revisión</p>
             <p className="text-sm text-amber-900 mt-0.5">
               Coordinación Académica está revisando el aula o laboratorio de esta sección. Cuando se
               confirme, aparecerá aquí.
@@ -279,7 +268,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
         {/* Campo 1, 2, 3, 4: Ubicación y Espacio(s) */}
         {tieneEspacios && (
           <div className="sm:col-span-2 p-3.5 rounded-xl bg-saie-canvas border border-saie-divider flex flex-col gap-2">
-            <span className="text-sm font-semibold text-saie-muted uppercase tracking-wider flex items-center gap-1.5">
+            <span className="text-sm font-semibold text-saie-muted flex items-center gap-1.5">
               <svg
                 className="w-4 h-4 text-saie-primary shrink-0"
                 fill="none"
@@ -358,9 +347,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
             </svg>
           </div>
           <div className="min-w-0">
-            <span className="text-sm font-semibold text-saie-muted block uppercase tracking-wider">
-              Horario
-            </span>
+            <span className="text-sm font-semibold text-saie-muted block">Horario</span>
             {horarios.length > 0 ? (
               <ul className="mt-0.5 flex flex-col gap-0.5" aria-label="Horarios programados">
                 {horarios.map((h, idx) => (
@@ -399,9 +386,7 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
             </svg>
           </div>
           <div className="min-w-0">
-            <span className="text-sm font-semibold text-saie-muted block uppercase tracking-wider">
-              Docente
-            </span>
+            <span className="text-sm font-semibold text-saie-muted block">Docente</span>
             {docenteNombre ? (
               <span className="font-semibold text-saie-text text-sm mt-0.5 block break-words">
                 {docenteNombre}

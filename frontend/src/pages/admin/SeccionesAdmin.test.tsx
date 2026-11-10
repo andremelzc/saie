@@ -149,7 +149,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
       limite: 50,
     });
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     const bloques = within(panel).getAllByRole('listitem');
     expect(bloques.map((b) => b.textContent)).toEqual(
@@ -170,7 +170,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
 
   it('abre el detalle de una sección y permite editarla', async () => {
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
 
     const panel = await screen.findByRole('dialog');
     expect(within(panel).getByText(/Dra\. García/)).toBeInTheDocument();
@@ -189,7 +189,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
       alertas: [],
     });
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
 
@@ -212,7 +212,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
       alertas: [{ id: 'al1', tipo: 'SOFTWARE', motivo: 'Lab 03 no tiene Docker' }],
     });
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
     fireEvent.click(await within(panel).findByRole('checkbox', { name: /Docker/ }));
@@ -243,7 +243,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
       limit: 100,
     });
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
 
@@ -264,7 +264,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
       expect(listar).toHaveBeenCalledWith(expect.objectContaining({ periodo: '2026-1' })),
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
 
@@ -285,7 +285,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
   it('desmarcar el software lo quita de la lista a guardar', async () => {
     editar.mockResolvedValue({ seccion: seccion({}), alertas: [] });
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
 
@@ -302,7 +302,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
   it('avisa si el backend rechaza el cambio y deja el formulario abierto', async () => {
     editar.mockRejectedValue(new Error('El laboratorio no tiene ese software'));
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
     fireEvent.click(await within(panel).findByRole('checkbox', { name: /Docker/ }));
@@ -315,7 +315,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
 
   it('cerrar el detalle deja de editar y hides la sección', async () => {
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
     fireEvent.click(within(panel).getByRole('button', { name: 'Cancelar' }));
@@ -333,7 +333,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
 
   it('cerrar el panel de detalle lo oculta', async () => {
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Cerrar' }));
 

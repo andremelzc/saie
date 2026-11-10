@@ -71,7 +71,7 @@ describe('TelegramAlumnoPage', () => {
       screen.getByRole('alertdialog', { name: /Dejar de recibir avisos/ }),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sí, desvincular' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, desvincular Telegram' }));
 
     await waitFor(() => expect(baja).toHaveBeenCalledTimes(1));
     expect(await screen.findByText('Sin vincular')).toBeInTheDocument();
@@ -107,7 +107,7 @@ describe('TelegramAlumnoPage', () => {
     montar();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Desvincular mi Telegram' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Sí, desvincular' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, desvincular Telegram' }));
 
     const aviso = await screen.findByRole('alert');
     expect(aviso).toHaveTextContent('Inténtalo de nuevo en unos minutos.');

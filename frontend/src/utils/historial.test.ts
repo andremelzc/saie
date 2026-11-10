@@ -39,7 +39,7 @@ describe('historial por corrida (Issue 4.47)', () => {
   it('el título es legible y no contiene el identificador de la corrida', () => {
     const [primero, , individual] = agruparPorCorrida(items);
     expect(tituloDeCorrida(primero)).toMatch(
-      /^Corrida del 20 oct.*10:32.* · 1 asignada · 1 en revisión$/,
+      /^Asignación automática del 20 oct.*10:32.* · 1 asignada · 1 en revisión$/,
     );
     expect(tituloDeCorrida(primero)).not.toContain('c2');
     expect(tituloDeCorrida(individual)).toMatch(/^Asignación individual del 10 oct/);

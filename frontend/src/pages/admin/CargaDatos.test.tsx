@@ -176,7 +176,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     const dialogo = screen.getByRole('dialog', {
       name: /Resultado de la carga.*1. Cursos y secciones/,
     });
-    expect(within(dialogo).getByText('CONFORME')).toBeInTheDocument();
+    expect(within(dialogo).getByText('Conforme')).toBeInTheDocument();
     expect(within(dialogo).getByText('Sin doble reserva')).toBeInTheDocument();
   });
 

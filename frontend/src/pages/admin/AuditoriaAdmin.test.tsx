@@ -109,7 +109,7 @@ describe('Auditoria e historial (Issue 4.32)', () => {
     await screen.findAllByText('IS101 · 1');
 
     expect(
-      screen.getByRole('heading', { level: 3, name: /^Corrida del .* · 1 asignada/ }),
+      screen.getByRole('heading', { level: 3, name: /^Asignación automática del .* · 1 asignada/ }),
     ).toBeVisible();
     expect(screen.queryByText('c1')).not.toBeInTheDocument();
   });
@@ -184,7 +184,7 @@ describe('Auditoria e historial (Issue 4.32)', () => {
 
     const frases = await screen.findAllByText('CC-101 · 1 pasó a Aula 102 (Pabellón C, piso 3)');
     expect(frases.length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/^Corrida del /).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^Asignación automática del /).length).toBeGreaterThan(0);
     // El UUID solo existe dentro del bloque plegable «Detalle técnico».
     for (const nodo of screen.queryAllByText(new RegExp(UUID_AULA))) {
       expect(nodo.closest('details')).not.toBeNull();

@@ -1,4 +1,5 @@
 import type { RegistroAuditoriaDTO } from '../types/admin';
+import { TEXTOS_ASIGNACION } from '../config/textos';
 import { describirMotivoEscalamiento } from './admin';
 import { etiquetaReglaVerificacion } from './diccionarios';
 import { formatearFechaCorta } from './fechas';
@@ -96,7 +97,7 @@ function nombreSeccion(r: RegistroAuditoriaDTO): string {
 export interface FraseRegistro {
   /** Lo que se muestra en la tabla o la tarjeta. */
   frase: string;
-  /** Contexto corto: «Corrida del 12 oct, 10:32» o `null` si no viene de una corrida. */
+  /** Contexto corto: «Asignación automática del 12 oct, 10:32» o `null` si no viene de una corrida. */
   contexto: string | null;
   /** El texto del motor tal cual, para el bloque «Detalle técnico». */
   tecnico: string;
@@ -115,7 +116,9 @@ export interface FraseRegistro {
 export function fraseDeRegistro(r: RegistroAuditoriaDTO, espacios: EspaciosPorId): FraseRegistro {
   const texto = r.detalle.trim();
   const tecnico = r.detalle;
-  const corrida = /corrida/i.test(texto) ? `Corrida del ${formatearFechaCorta(r.fechaHora)}` : null;
+  const corrida = /corrida/i.test(texto)
+    ? TEXTOS_ASIGNACION.asignacionDel(formatearFechaCorta(r.fechaHora))
+    : null;
   const seccion = nombreSeccion(r);
 
   const asignadaIndividual = texto.match(

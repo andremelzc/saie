@@ -143,7 +143,7 @@ export const AlertasAdmin: React.FC = () => {
           cargando={cargando}
           textoCargando="Actualizando…"
         >
-          Actualizar
+          Actualizar datos
         </Boton>
       }
     >
@@ -173,7 +173,7 @@ export const AlertasAdmin: React.FC = () => {
                   {/* El número va entre paréntesis para que el texto visible sea el mismo que
                       el nombre accesible del botón (regla label-content-name-mismatch). */}
                   <span
-                    className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${
+                    className={`rounded-full px-1.5 py-0.5 text-sm font-bold ${
                       activo ? 'bg-white/20 text-white' : 'bg-saie-canvas text-saie-text'
                     }`}
                   >
@@ -199,7 +199,7 @@ export const AlertasAdmin: React.FC = () => {
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
 
       {cargando && !datos ? (
-        <EsqueletoCarga texto="Cargando alertas…" />
+        <EsqueletoCarga texto="Cargando alertas…" forma="tarjeta" />
       ) : (
         <ListaAlertas
           hayAlertas={base.length > 0}

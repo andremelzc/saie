@@ -53,7 +53,7 @@ describe('frases del motor (Issue 4.49)', () => {
       espacios,
     );
     expect(enCorrida.frase).toBe('CC-101 · 1 pasó a Aula 102 y Aula 103 (Pabellón C, piso 3)');
-    expect(enCorrida.contexto).toMatch(/^Corrida del /);
+    expect(enCorrida.contexto).toMatch(/^Asignación automática del /);
     expect(enCorrida.tecnico).toContain(CORRIDA);
   });
 

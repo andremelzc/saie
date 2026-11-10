@@ -57,7 +57,7 @@ export const ReporteSalones: React.FC = () => {
       acciones={
         <div className="flex flex-wrap gap-2 saie-no-imprimir">
           <Boton variante="secundario" onClick={recargar} cargando={cargando}>
-            Actualizar
+            Actualizar datos
           </Boton>
           <Boton variante="primario" onClick={imprimir} disabled={!datos || sinSecciones}>
             Imprimir o guardar como PDF
@@ -173,9 +173,9 @@ export const ReporteSalones: React.FC = () => {
                     className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-4 text-sm"
                   >
                     <p className="m-0 font-semibold">
-                      <span className="font-mono text-xs">{s.codigoCurso}</span> · Sección{' '}
+                      <span className="font-mono text-sm">{s.codigoCurso}</span> · Sección{' '}
                       {s.codigoSeccion}
-                      <span className="block text-xs font-normal text-saie-muted">
+                      <span className="block text-sm font-normal text-saie-muted">
                         {s.nombreCurso}
                       </span>
                     </p>
@@ -184,7 +184,7 @@ export const ReporteSalones: React.FC = () => {
                       {s.aula ? (
                         <span>
                           <span className="font-semibold">{s.aula.identificador}</span>
-                          <span className="block text-xs text-saie-muted">
+                          <span className="block text-sm text-saie-muted">
                             {s.aula.pabellon} · piso {s.aula.piso}
                           </span>
                         </span>
@@ -192,7 +192,7 @@ export const ReporteSalones: React.FC = () => {
                         <BadgeEstado tono="advertencia">Sin aula asignada</BadgeEstado>
                       )}
                     </div>
-                    <dl className="m-0 grid grid-cols-1 gap-1 text-xs">
+                    <dl className="m-0 grid grid-cols-1 gap-1 text-sm">
                       <div>
                         <dt className="inline text-saie-muted">Horario: </dt>
                         <dd className="m-0 inline">{s.horarios.join(' · ') || '—'}</dd>
@@ -238,14 +238,14 @@ export const ReporteSalones: React.FC = () => {
                         key={`${s.codigoCurso}-${s.codigoSeccion}`}
                         className="border-t border-saie-divider"
                       >
-                        <td className="px-3 py-2 font-mono text-xs">{s.codigoCurso}</td>
+                        <td className="px-3 py-2 font-mono text-sm">{s.codigoCurso}</td>
                         <td className="px-3 py-2">{s.nombreCurso}</td>
                         <td className="px-3 py-2 font-semibold">{s.codigoSeccion}</td>
                         <td className="px-3 py-2">
                           {s.aula ? (
                             <span>
                               <span className="font-semibold">{s.aula.identificador}</span>
-                              <span className="block text-xs text-saie-muted">
+                              <span className="block text-sm text-saie-muted">
                                 {s.aula.pabellon} · piso {s.aula.piso}
                               </span>
                             </span>
@@ -253,12 +253,12 @@ export const ReporteSalones: React.FC = () => {
                             <BadgeEstado tono="advertencia">Sin aula asignada</BadgeEstado>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-xs">{s.horarios.join(' · ') || '—'}</td>
-                        <td className="px-3 py-2 text-xs">{s.docente ?? '—'}</td>
+                        <td className="px-3 py-2 text-sm">{s.horarios.join(' · ') || '—'}</td>
+                        <td className="px-3 py-2 text-sm">{s.docente ?? '—'}</td>
                         <td className="px-3 py-2 text-center tabular-nums">
                           {s.alumnosMatriculados}
                         </td>
-                        <td className="px-3 py-2 text-xs">
+                        <td className="px-3 py-2 text-sm">
                           {s.softwareRequerido.join(', ') || '—'}
                         </td>
                       </tr>

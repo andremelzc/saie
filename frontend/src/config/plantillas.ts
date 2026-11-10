@@ -122,7 +122,7 @@ export const PLANTILLAS: PlantillaCSV[] = [
       columna('correo', 'Correo institucional del alumno.', 'alumno.ejemplo@unmsm.edu.pe'),
       columna(
         'movilidadReducida',
-        'true/false (también 1/0 o si/no). Marca la necesidad de accesibilidad: el motor prioriza los espacios de Piso 1.',
+        'true/false (también 1/0 o si/no). Marca la necesidad de accesibilidad: la asignación automática prioriza los espacios del piso 1.',
         'false',
         false,
       ),

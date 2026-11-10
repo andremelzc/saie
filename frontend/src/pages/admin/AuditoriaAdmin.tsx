@@ -163,7 +163,7 @@ const GrupoHistorial: React.FC<{
         {tituloDeCorrida(grupo)}
       </h3>
       <div className="hidden lg:block">
-        <TablaDatos etiqueta={`Asignaciones de la corrida ${indice + 1}`}>
+        <TablaDatos etiqueta={`Asignaciones: ${tituloDeCorrida(grupo)}`}>
           <CabeceraTabla columnas={['Sección', 'Aula', 'Estado', 'Fecha']} />
           <tbody>
             {grupo.items.map((a) => (
@@ -587,7 +587,7 @@ export const AuditoriaAdmin: React.FC = () => {
       subtitulo="Qué pasó con cada sección y cuándo"
       acciones={
         <Boton variante="secundario" onClick={() => setVersion((v) => v + 1)}>
-          Actualizar
+          Actualizar datos
         </Boton>
       }
     >
