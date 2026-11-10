@@ -123,18 +123,62 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
   });
 
   describe('pantallas en desarrollo', () => {
+    it.each([['COORDINACION_ACADEMICA', '/admin/proximamente', 'Hoja de ruta']] as const)(
+      '%s autorizado ve "%s"',
+      async (rol, ruta, titulo) => {
+        iniciarSesionDePrueba(rol);
+        renderizar(ruta);
+
+        expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument();
+        expect(screen.getByRole('status')).toHaveTextContent(/próximamente/i);
+      },
+    );
+
+    // Altas y claves ya no están «en desarrollo» (Issues 4.17, 4.18, 4.21 y 4.26): se comprueba el acceso.
     it.each([
-      ['COORDINACION_ACADEMICA', '/admin/proximamente', 'Hoja de ruta'],
       ['COORDINACION_ACADEMICA', '/admin/alumnos/nuevo', 'Alta de alumnos'],
       ['COORDINACION_ACADEMICA', '/admin/docentes/nuevo', 'Alta de docentes'],
       ['COORDINACION_ACADEMICA', '/admin/claves', 'Claves y contraseñas'],
       ['JEFATURA_LABORATORIOS', '/admin/claves', 'Claves y contraseñas'],
-    ] as const)('%s autorizado ve "%s"', async (rol, ruta, titulo) => {
+    ] as const)('%s entra a "%s"', async (rol, ruta, titulo) => {
       iniciarSesionDePrueba(rol);
       renderizar(ruta);
 
       expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument();
-      expect(screen.getByRole('status')).toHaveTextContent(/próximamente/i);
+    });
+
+    it('Jefatura no entra a las altas de Coordinación', async () => {
+      iniciarSesionDePrueba('JEFATURA_LABORATORIOS');
+      renderizar('/admin/alumnos/nuevo');
+
+      expect(
+        await screen.findByRole('heading', { name: 'Acceso no autorizado' }),
+      ).toBeInTheDocument();
+    });
+
+    it.each(['ALUMNO', 'DOCENTE', 'COORDINACION_ACADEMICA', 'JEFATURA_LABORATORIOS'] as const)(
+      '%s con la clave inicial pendiente ve la pantalla de cambio de clave (Issues 4.21 y 4.45)',
+      async (rol) => {
+        iniciarSesionDePrueba(rol, 3600, true);
+        renderizar('/cambiar-clave');
+
+        expect(await screen.findByRole('heading', { name: 'Cambia tu clave' })).toBeInTheDocument();
+      },
+    );
+
+    it('con la clave inicial pendiente, el resto de las rutas llevan al cambio de clave', async () => {
+      iniciarSesionDePrueba('ALUMNO', 3600, true);
+      renderizar('/estudiante');
+
+      expect(await screen.findByRole('heading', { name: 'Cambia tu clave' })).toBeInTheDocument();
+    });
+
+    it('sin sesión, el cambio de clave lleva al login', async () => {
+      renderizar('/cambiar-clave');
+
+      expect(
+        await screen.findByRole('heading', { name: 'Portal del Estudiante' }),
+      ).toBeInTheDocument();
     });
 
     it('Coordinación entra al mapa de ocupación por piso', async () => {

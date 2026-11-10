@@ -1,4 +1,5 @@
 import type { DiaSemana } from './consulta';
+import type { RolCuenta } from './auth';
 
 /** Contratos del panel administrativo (espejo de backend/src/types/*). */
 
@@ -363,4 +364,42 @@ export interface ReporteAsignacionesDTO {
     aulasDistintas: number;
     alumnos: number;
   };
+}
+
+/** POST /v1/admin/alumnos (Issue 4.17). Los datos opcionales se omiten si están vacíos. */
+export interface NuevoAlumnoDTO {
+  codigo: string;
+  nombre: string;
+  correo: string;
+  dni?: string;
+  telefono?: string;
+  direccion?: string;
+  /** Fecha ISO `AAAA-MM-DD`. */
+  fechaNacimiento?: string;
+}
+
+/** POST /v1/admin/docentes (Issue 4.18). */
+export interface NuevoDocenteDTO {
+  codigoDocente: string;
+  nombre: string;
+  correoInstitucional: string;
+  departamento: string;
+}
+
+/** Cuenta creada por un alta individual: la clave inicial es el propio código. */
+export interface UsuarioCreadoDTO {
+  id: string;
+  codigo: string;
+  nombre: string;
+  rol: RolCuenta;
+  debeCambiarClave: true;
+}
+
+/** POST /v1/admin/usuarios/restablecer-clave (Issue 4.26). La clave inicial se muestra una vez. */
+export interface ClaveRestablecidaDTO {
+  codigo: string;
+  nombre: string;
+  rol: RolCuenta;
+  claveInicial: string;
+  debeCambiarClave: true;
 }

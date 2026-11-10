@@ -15,26 +15,16 @@ interface Pendiente {
 /** Capacidades de Coordinación Académica que se construyen en la siguiente entrega. */
 const COORDINACION: Pendiente[] = [
   {
-    titulo: 'Alta de alumnos y docentes',
-    descripcion: 'Registro individual fuera de la carga masiva.',
-  },
-  {
-    titulo: 'Claves y contraseñas',
-    descripcion: 'Cambio de tu clave y restablecimiento de claves de usuarios.',
-  },
-  {
     titulo: 'Catálogo y solicitudes de software',
     descripcion: 'Alta del software disponible y revisión de lo que solicitan los docentes.',
   },
 ];
 
-/** Capacidades de Jefatura de Laboratorios que se construyen en la siguiente entrega. */
-const JEFATURA: Pendiente[] = [
-  {
-    titulo: 'Claves y contraseñas',
-    descripcion: 'Cambio de tu clave de acceso al panel.',
-  },
-];
+/**
+ * Capacidades de Jefatura de Laboratorios que se construyen en la siguiente entrega. Hoy no queda
+ * ninguna: la revisión de incidencias (Issue 7.11) y el cambio de clave (Issue 4.21) ya funcionan.
+ */
+const JEFATURA: Pendiente[] = [];
 
 /**
  * Hoja de ruta del panel. Es informativa: no enlaza a pantallas vacías ni muestra números
@@ -61,20 +51,27 @@ export const ProximamenteAdminPage: React.FC = () => {
         <h2 id="titulo-pendientes" className="m-0 text-lg font-bold text-saie-text">
           Lo que viene
         </h2>
-        <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2">
-          {pendientes.map((pendiente) => (
-            <li
-              key={pendiente.titulo}
-              className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-5"
-            >
-              <span className="flex flex-wrap items-start justify-between gap-2">
-                <span className="text-base font-bold text-saie-text">{pendiente.titulo}</span>
-                <BadgeEstado tono="neutro">En desarrollo</BadgeEstado>
-              </span>
-              <span className="text-sm text-saie-muted">{pendiente.descripcion}</span>
-            </li>
-          ))}
-        </ul>
+        {pendientes.length === 0 ? (
+          <p className="m-0 rounded-xl border border-saie-divider bg-white p-5 text-sm text-saie-muted">
+            Por ahora no hay nada más en desarrollo para tu rol: todo lo que ya funciona está en el
+            inicio.
+          </p>
+        ) : (
+          <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2">
+            {pendientes.map((pendiente) => (
+              <li
+                key={pendiente.titulo}
+                className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-5"
+              >
+                <span className="flex flex-wrap items-start justify-between gap-2">
+                  <span className="text-base font-bold text-saie-text">{pendiente.titulo}</span>
+                  <BadgeEstado tono="neutro">En desarrollo</BadgeEstado>
+                </span>
+                <span className="text-sm text-saie-muted">{pendiente.descripcion}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </LayoutAdmin>
   );

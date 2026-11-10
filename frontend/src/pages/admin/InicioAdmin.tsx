@@ -360,6 +360,12 @@ const InicioJefatura: React.FC = () => {
                 descripcion="Software instalado y PCs malogradas o reparadas."
                 trazo={ICONOS.ajustes}
               />
+              <Acceso
+                to={RUTAS.clavesAdmin}
+                titulo="Cambiar mi clave"
+                descripcion="Actualiza la clave de acceso a tu cuenta."
+                trazo={ICONOS.escudo}
+              />
             </nav>
           </div>
 
@@ -711,6 +717,13 @@ const InicioCoordinacion: React.FC = () => {
                 titulo="Informe de salones"
                 trazo={ICONOS.documento}
               />
+              <Atajo
+                to={RUTAS.altaAlumnoAdmin}
+                titulo="Alta de alumnos"
+                trazo={ICONOS.graduacion}
+              />
+              <Atajo to={RUTAS.altaDocenteAdmin} titulo="Alta de docentes" trazo={ICONOS.pizarra} />
+              <Atajo to={RUTAS.clavesAdmin} titulo="Claves" trazo={ICONOS.escudo} />
               <Atajo to={RUTAS.alertasAdmin} titulo="Alertas" trazo={ICONOS.alerta} />
               <Atajo
                 to={RUTAS.softwareAdmin}
