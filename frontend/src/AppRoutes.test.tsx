@@ -195,7 +195,11 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
       });
       renderizar('/admin/mapa');
       expect(
-        await screen.findByRole('heading', { name: 'Mapa de ocupación por piso' }),
+        await screen.findByRole(
+          'heading',
+          { name: 'Mapa de ocupación por piso' },
+          { timeout: 5000 },
+        ),
       ).toBeInTheDocument();
       // El mapa pide seis consultas y dibuja los planos: con la máquina cargada pasa de 1 s.
       expect(
