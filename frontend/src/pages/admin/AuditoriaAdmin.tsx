@@ -14,7 +14,8 @@ import { Campo } from '../../components/ui/Campo';
 import { CLASE_CAMPO } from '../../components/ui/campos';
 import { useCarga } from '../../hooks/useCarga';
 import { usePaginacion } from '../../hooks/usePaginacion';
-import { useValorDiferido } from '../../hooks/useValorDiferido';
+import { usePeriodoFiltro } from '../../hooks/usePeriodoFiltro';
+import SelectorPeriodo from '../../components/admin/SelectorPeriodo';
 import { obtenerAuditoria, obtenerEspacios, obtenerHistorial } from '../../services/admin';
 import type {
   EstadoAsignacion,
@@ -235,32 +236,40 @@ const VistaHistorial: React.FC<PropsVista & { onAbrir: (a: HistorialAsignacionDT
   limpiarComunes,
   onAbrir,
 }) => {
-  const [periodo, setPeriodo] = useState('');
+  const filtroPeriodo = usePeriodoFiltro();
+  const periodo = filtroPeriodo.periodo;
   const [estado, setEstado] = useState<'TODOS' | EstadoAsignacion>('TODOS');
-  // Una sola petición tras una pausa al escribir el periodo (Issue 4.41).
-  const periodoDiferido = useValorDiferido(periodo);
   const seccionId = comunes.seccion?.id;
   const rango = rangoIso(comunes);
   const { pagina, tamano, setPagina, cambiarTamano } = usePaginacion(
     'saie:historial:tamanoPagina',
-    `${periodoDiferido.trim()}|${estado}|${seccionId ?? ''}|${rango?.desde ?? ''}|${rango?.hasta ?? ''}`,
+    `${filtroPeriodo.valor}|${estado}|${seccionId ?? ''}|${rango?.desde ?? ''}|${rango?.hasta ?? ''}`,
   );
 
   const cargar = useCallback(
     () =>
       obtenerHistorial({
-        periodo: periodoDiferido.trim() || undefined,
+        periodo: periodo || undefined,
         estado: estado === 'TODOS' ? undefined : estado,
         seccionId,
         pagina,
         limite: tamano,
       }),
-    [periodoDiferido, estado, seccionId, pagina, tamano],
+    [periodo, estado, seccionId, pagina, tamano],
   );
 
-  const { datos, cargando, error, recargar } = useCarga(cargar, {
-    clave: `historial:${periodoDiferido.trim()}|${estado}|${seccionId ?? ''}|${pagina}|${tamano}`,
+  const {
+    datos,
+    cargando: cargandoDatos,
+    error,
+    recargar,
+  } = useCarga(cargar, {
+    clave: `historial:${periodo}|${estado}|${seccionId ?? ''}|${pagina}|${tamano}`,
+    // Se espera a saber cuál es el vigente para no pedir el historial dos veces.
+    habilitado: filtroPeriodo.listo,
   });
+  // Mientras no se sabe el periodo vigente tampoco hay datos: es carga, no «sin resultados».
+  const cargando = cargandoDatos || !filtroPeriodo.listo;
   useRecargarAl(version, recargar);
   // El historial no filtra por fecha en el servidor: el rango se aplica a lo recibido.
   const items = useMemo(
@@ -268,9 +277,9 @@ const VistaHistorial: React.FC<PropsVista & { onAbrir: (a: HistorialAsignacionDT
     [datos, rango],
   );
   const grupos = useMemo(() => agruparPorCorrida(items), [items]);
-  const hayFiltros = chipsComunes.length > 0 || periodo.trim() !== '' || estado !== 'TODOS';
+  const hayFiltros = chipsComunes.length > 0 || filtroPeriodo.cambiado || estado !== 'TODOS';
   const limpiar = () => {
-    setPeriodo('');
+    filtroPeriodo.restablecer();
     setEstado('TODOS');
     limpiarComunes();
   };
@@ -278,15 +287,7 @@ const VistaHistorial: React.FC<PropsVista & { onAbrir: (a: HistorialAsignacionDT
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Campo etiqueta="Periodo">
-          <input
-            type="text"
-            placeholder="Ej. 2026-2"
-            value={periodo}
-            onChange={(e) => setPeriodo(e.target.value)}
-            className={CLASE_CAMPO}
-          />
-        </Campo>
+        <SelectorPeriodo filtro={filtroPeriodo} permitirTodos />
         <Campo etiqueta="Estado">
           <select
             value={estado}
@@ -305,13 +306,13 @@ const VistaHistorial: React.FC<PropsVista & { onAbrir: (a: HistorialAsignacionDT
       <FiltrosActivos
         filtros={[
           ...chipsComunes,
-          ...(periodo.trim()
+          ...(filtroPeriodo.cambiado
             ? [
                 {
                   id: 'periodo',
                   etiqueta: 'Periodo',
-                  valor: periodo.trim(),
-                  onQuitar: () => setPeriodo(''),
+                  valor: filtroPeriodo.todos ? 'Todos los periodos' : filtroPeriodo.valor,
+                  onQuitar: filtroPeriodo.restablecer,
                 },
               ]
             : []),

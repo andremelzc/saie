@@ -22,6 +22,8 @@ import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
 import { useAccion } from '../../hooks/useAccion';
 import { useDetalleEnUrl } from '../../hooks/useDetalleEnUrl';
 import { useCarga } from '../../hooks/useCarga';
+import { usePeriodoFiltro } from '../../hooks/usePeriodoFiltro';
+import SelectorPeriodo from '../../components/admin/SelectorPeriodo';
 import { useValorDiferido } from '../../hooks/useValorDiferido';
 import {
   editarSeccion,
@@ -415,7 +417,8 @@ const FormularioSeccion: React.FC<{
 export const SeccionesAdmin: React.FC = () => {
   const [texto, setTexto] = useState('');
   const [tipo, setTipo] = useState<'TODOS' | TipoEspacio>('TODOS');
-  const [periodo, setPeriodo] = useState('');
+  const filtroPeriodo = usePeriodoFiltro();
+  const periodo = filtroPeriodo.periodo;
   const [pagina, setPagina] = useState(1);
   const [tamanoPagina, setTamanoPagina] = useState(leerTamanoPagina);
   // El detalle abierto vive en la URL (`?seccion=<id>`): «Atrás» lo cierra y el enlace se comparte (Issue 4.51).
@@ -427,21 +430,29 @@ export const SeccionesAdmin: React.FC = () => {
 
   // Se espera una pausa al escribir para no pedir al servidor una vez por tecla (Issue 4.41).
   const textoDiferido = useValorDiferido(texto);
-  const periodoDiferido = useValorDiferido(periodo);
 
   const cargar = useCallback(async () => {
     return obtenerSecciones({
       q: textoDiferido.trim() || undefined,
       tipo: tipo === 'TODOS' ? undefined : tipo,
-      periodo: periodoDiferido.trim() || undefined,
+      periodo: periodo || undefined,
       pagina,
       limite: tamanoPagina,
     });
-  }, [textoDiferido, tipo, periodoDiferido, pagina, tamanoPagina]);
+  }, [textoDiferido, tipo, periodo, pagina, tamanoPagina]);
 
-  const { datos, cargando, error, recargar } = useCarga(cargar, {
-    clave: `secciones:${textoDiferido.trim()}|${tipo}|${periodoDiferido.trim()}|${pagina}|${tamanoPagina}`,
+  const {
+    datos,
+    cargando: cargandoDatos,
+    error,
+    recargar,
+  } = useCarga(cargar, {
+    clave: `secciones:${textoDiferido.trim()}|${tipo}|${periodo}|${pagina}|${tamanoPagina}`,
+    // Se espera a saber cuál es el vigente para no pedir el listado dos veces.
+    habilitado: filtroPeriodo.listo,
   });
+  // Mientras no se sabe el periodo vigente tampoco hay datos: es carga, no «sin resultados».
+  const cargando = cargandoDatos || !filtroPeriodo.listo;
   // Docentes y catálogo solo hacen falta al editar: no se piden hasta abrir la edición (Issue 3.49).
   const docentes = useCarga(obtenerDocentes, { clave: 'docentes', habilitado: editando });
   const catalogo = useCarga(obtenerCatalogoActivo, {
@@ -463,14 +474,14 @@ export const SeccionesAdmin: React.FC = () => {
     setTipo(valor);
     setPagina(1);
   };
-  const cambiarPeriodo = (valor: string) => {
-    setPeriodo(valor);
+  const restablecerPeriodo = () => {
+    filtroPeriodo.restablecer();
     setPagina(1);
   };
   const limpiarFiltros = () => {
     setTexto('');
     setTipo('TODOS');
-    setPeriodo('');
+    filtroPeriodo.restablecer();
     setPagina(1);
   };
   const filtrosActivos: FiltroActivo[] = [
@@ -487,13 +498,13 @@ export const SeccionesAdmin: React.FC = () => {
           },
         ]
       : []),
-    ...(periodo.trim()
+    ...(filtroPeriodo.cambiado
       ? [
           {
             id: 'periodo',
             etiqueta: 'Periodo',
-            valor: periodo.trim(),
-            onQuitar: () => cambiarPeriodo(''),
+            valor: filtroPeriodo.valor,
+            onQuitar: restablecerPeriodo,
           },
         ]
       : []),
@@ -520,7 +531,7 @@ export const SeccionesAdmin: React.FC = () => {
 
   // Un enlace con una sección que no existe (o ya no está en el periodo) se explica, no rompe la pantalla.
   // Con filtros activos no se avisa: la sección puede existir y solo estar fuera de la búsqueda.
-  const sinFiltros = texto === '' && tipo === 'TODOS' && periodo === '';
+  const sinFiltros = texto === '' && tipo === 'TODOS' && !filtroPeriodo.cambiado;
   // Solo se afirma que no existe si el listado completo cabe en la página cargada: si hay más
   // páginas, la sección puede estar en otra.
   const detalleNoEncontrado =
@@ -621,15 +632,15 @@ export const SeccionesAdmin: React.FC = () => {
               <option value="LABORATORIO">Laboratorios</option>
             </select>
           </Campo>
-          <Campo etiqueta="Periodo">
-            <input
-              type="text"
-              placeholder="Ej. 2026-2"
-              value={periodo}
-              onChange={(e) => cambiarPeriodo(e.target.value)}
-              className={CLASE_CAMPO}
-            />
-          </Campo>
+          <SelectorPeriodo
+            filtro={{
+              ...filtroPeriodo,
+              elegir: (valor) => {
+                filtroPeriodo.elegir(valor);
+                setPagina(1);
+              },
+            }}
+          />
         </div>
         <FiltrosActivos filtros={filtrosActivos} onLimpiar={limpiarFiltros} />
         <p className="m-0 text-sm text-saie-muted" aria-live="polite">

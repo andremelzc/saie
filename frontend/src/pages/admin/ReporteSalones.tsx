@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { isAxiosError } from 'axios';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
@@ -9,10 +9,9 @@ import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
 import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
 import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
-import { Campo } from '../../components/ui/Campo';
-import { CLASE_CAMPO } from '../../components/ui/campos';
 import { useCarga } from '../../hooks/useCarga';
-import { useValorDiferido } from '../../hooks/useValorDiferido';
+import { usePeriodoFiltro } from '../../hooks/usePeriodoFiltro';
+import SelectorPeriodo from '../../components/admin/SelectorPeriodo';
 import { obtenerReporteAsignaciones } from '../../services/admin';
 import { formatearFechaCorta } from '../../utils/fechas';
 import { FiltrosActivos } from '../../components/ui/FiltrosActivos';
@@ -26,23 +25,31 @@ import { FiltrosActivos } from '../../components/ui/FiltrosActivos';
  * presentar el cuadro.
  */
 export const ReporteSalones: React.FC = () => {
-  const [periodo, setPeriodo] = useState('');
-  // Una sola petición tras una pausa al escribir el periodo (Issue 4.41).
-  const periodoDiferido = useValorDiferido(periodo);
+  const filtroPeriodo = usePeriodoFiltro();
+  const periodo = filtroPeriodo.periodo;
 
   const cargar = useCallback(async () => {
     try {
-      return await obtenerReporteAsignaciones(periodoDiferido.trim() || undefined);
+      return await obtenerReporteAsignaciones(periodo || undefined);
     } catch (error) {
       // 404: no hay ningún periodo con secciones. No es un fallo: es el estado vacío (Issue 4.57).
       if (isAxiosError(error) && error.response?.status === 404) return null;
       throw error;
     }
-  }, [periodoDiferido]);
+  }, [periodo]);
 
-  const { datos, cargando, error, recargar } = useCarga(cargar, {
-    clave: `reporte:${periodoDiferido.trim()}`,
+  const {
+    datos,
+    cargando: cargandoDatos,
+    error,
+    recargar,
+  } = useCarga(cargar, {
+    clave: `reporte:${periodo}`,
+    // Se espera a saber cuál es el vigente para no pedir el informe dos veces.
+    habilitado: filtroPeriodo.listo,
   });
+  // Mientras no se sabe el periodo vigente tampoco hay datos: es carga, no «sin resultados».
+  const cargando = cargandoDatos || !filtroPeriodo.listo;
   // `datos` es `null` mientras carga y también si no hay periodo: lo distingue `cargando`.
   const sinSecciones = !cargando && !error && (datos === null || datos.secciones.length === 0);
 
@@ -66,29 +73,21 @@ export const ReporteSalones: React.FC = () => {
       }
     >
       <div className="flex flex-col gap-4">
-        <Campo etiqueta="Periodo" className="flex max-w-xs flex-col gap-1 saie-no-imprimir">
-          <input
-            type="text"
-            placeholder="Ej. 2026-2 (vacío = vigente)"
-            value={periodo}
-            onChange={(e) => setPeriodo(e.target.value)}
-            className={CLASE_CAMPO}
-          />
-        </Campo>
+        <SelectorPeriodo filtro={filtroPeriodo} className="max-w-xs saie-no-imprimir" />
         <FiltrosActivos
           filtros={
-            periodo.trim()
+            filtroPeriodo.cambiado
               ? [
                   {
                     id: 'periodo',
                     etiqueta: 'Periodo',
-                    valor: periodo.trim(),
-                    onQuitar: () => setPeriodo(''),
+                    valor: filtroPeriodo.valor,
+                    onQuitar: filtroPeriodo.restablecer,
                   },
                 ]
               : []
           }
-          onLimpiar={() => setPeriodo('')}
+          onLimpiar={filtroPeriodo.restablecer}
         />
 
         {error && (
@@ -105,8 +104,8 @@ export const ReporteSalones: React.FC = () => {
               titulo="No hay secciones en este periodo"
               icono={ICONOS.documento}
               descripcion={
-                periodo.trim()
-                  ? `El periodo ${periodo.trim()} no tiene secciones cargadas. Revisa el periodo o carga los cursos y secciones.`
+                filtroPeriodo.cambiado
+                  ? `El periodo ${periodo} no tiene secciones cargadas. Revisa el periodo o carga los cursos y secciones.`
                   : 'Todavía no hay secciones cargadas. Carga los cursos y secciones para armar el informe.'
               }
               accion={

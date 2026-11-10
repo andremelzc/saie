@@ -353,6 +353,14 @@ export interface ReporteSeccionDTO {
   softwareRequerido: string[];
 }
 
+/** GET /v1/admin/periodos (Issue 4.42): los periodos con secciones y el vigente. */
+export interface PeriodosDTO {
+  /** El periodo vigente, o `null` si todavía no hay secciones. */
+  vigente: string | null;
+  /** Del más reciente al más antiguo. */
+  periodos: string[];
+}
+
 export interface ReporteAsignacionesDTO {
   periodo: string;
   generadoEn: string;
