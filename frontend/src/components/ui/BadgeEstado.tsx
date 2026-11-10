@@ -27,6 +27,8 @@ export interface BadgeEstadoProps {
   conIcono?: boolean;
   /** `md` (14 px, por defecto: el estado es un dato principal, Issue 3.44); `sm` solo para metadatos. */
   tamano?: 'sm' | 'md';
+  /** Trazo SVG propio (viewBox 24) para cuando el ícono del tono no describe el dato, p. ej. el tipo de espacio. */
+  icono?: string;
 }
 
 const TAMANOS = { sm: 'text-xs', md: 'text-sm' } as const;
@@ -38,6 +40,7 @@ export const BadgeEstado: React.FC<BadgeEstadoProps> = ({
   className = '',
   conIcono = true,
   tamano = 'md',
+  icono,
 }) => (
   <span
     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 ${TAMANOS[tamano]} font-semibold ${ESTILOS[tono] ?? ESTILOS.neutro} ${className}`}
@@ -53,7 +56,7 @@ export const BadgeEstado: React.FC<BadgeEstadoProps> = ({
         strokeLinejoin="round"
         className="h-3.5 w-3.5 shrink-0"
       >
-        <path d={TRAZOS[tono] ?? TRAZOS.neutro} />
+        <path d={icono ?? TRAZOS[tono] ?? TRAZOS.neutro} />
       </svg>
     )}
     <span>{children}</span>
