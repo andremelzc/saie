@@ -4,7 +4,7 @@ import { obtenerHistorial } from '../../services/admin';
 import { describirEstadoAsignacion } from '../../utils/diccionarios';
 import { formatearFechaAlerta } from '../../utils/fechas';
 import { lineaTiempoDeSeccion } from '../../utils/lineaTiempo';
-import { EsqueletoCarga } from '../estudiante/ElementosHorario';
+import { EsqueletoCarga } from '../ui/EstadosCarga';
 import { BadgeEstado } from '../ui/BadgeEstado';
 import { AvisoError } from './LayoutAdmin';
 

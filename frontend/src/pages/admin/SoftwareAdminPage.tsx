@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { FormularioSoftware } from '../../components/admin/FormularioSoftware';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
 import { BotonEnlace } from '../../components/ui/BotonEnlace';

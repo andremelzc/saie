@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { isAxiosError } from 'axios';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
 import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import { ICONOS } from '../../components/ui/iconos';
 import { RUTAS } from '../../config/rutas';

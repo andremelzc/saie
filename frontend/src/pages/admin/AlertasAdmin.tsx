@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import TarjetaAlerta from '../../components/admin/TarjetaAlerta';
 import { ICONOS } from '../../components/ui/iconos';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
+import { SelectorSegmentado } from '../../components/ui/SelectorSegmentado';
 import { Boton } from '../../components/ui/Boton';
 import { useAuth } from '../../context/useAuth';
 import { useAccion } from '../../hooks/useAccion';
@@ -149,40 +150,15 @@ export const AlertasAdmin: React.FC = () => {
     >
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div
-            role="group"
-            aria-label="Filtrar por tipo"
-            className="inline-flex flex-wrap gap-1 rounded-xl border border-saie-border bg-white p-1"
-          >
-            {(['TODAS', 'SOFTWARE', 'CAPACIDAD'] as Filtro[]).map((f) => {
-              const activo = filtro === f;
-              return (
-                <button
-                  key={f}
-                  type="button"
-                  aria-pressed={activo}
-                  aria-label={`${ETIQUETAS_FILTRO[f]} (${conteos[f]})`}
-                  onClick={() => setFiltro(f)}
-                  className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors ${
-                    activo
-                      ? 'bg-saie-primary text-white'
-                      : 'text-saie-muted hover:bg-saie-primary/5 hover:text-saie-primary'
-                  }`}
-                >
-                  <span>{ETIQUETAS_FILTRO[f]}</span>
-                  {/* El número va entre paréntesis para que el texto visible sea el mismo que
-                      el nombre accesible del botón (regla label-content-name-mismatch). */}
-                  <span
-                    className={`rounded-full px-1.5 py-0.5 text-sm font-bold ${
-                      activo ? 'bg-white/20 text-white' : 'bg-saie-canvas text-saie-text'
-                    }`}
-                  >
-                    ({conteos[f]})
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          <SelectorSegmentado<Filtro>
+            opciones={(['TODAS', 'SOFTWARE', 'CAPACIDAD'] as Filtro[]).map((f) => ({
+              valor: f,
+              etiqueta: `${ETIQUETAS_FILTRO[f]} (${conteos[f]})`,
+            }))}
+            valor={filtro}
+            onCambiar={setFiltro}
+            etiquetaGrupo="Filtrar por tipo"
+          />
           {datos && (
             <p className="m-0 text-sm text-saie-muted" aria-live="polite">
               <strong className="text-saie-text">{pendientes}</strong>{' '}

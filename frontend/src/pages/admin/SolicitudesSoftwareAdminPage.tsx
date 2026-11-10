@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
-import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
+import { SelectorSegmentado } from '../../components/ui/SelectorSegmentado';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';

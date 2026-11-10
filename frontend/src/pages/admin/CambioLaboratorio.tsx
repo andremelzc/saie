@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
-import { EsqueletoCarga } from '../../components/estudiante/ElementosHorario';
-import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
-import { idPanelPestana, idPestana } from '../../components/estudiante/idsPestanas';
+import { EsqueletoCarga } from '../../components/ui/EstadosCarga';
+import { SelectorSegmentado } from '../../components/ui/SelectorSegmentado';
+import { idPanelPestana, idPestana } from '../../components/ui/idsPestanas';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';

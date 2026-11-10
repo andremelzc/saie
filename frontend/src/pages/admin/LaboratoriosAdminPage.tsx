@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import type { TonoBadge } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';

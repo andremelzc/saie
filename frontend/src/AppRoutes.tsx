@@ -4,7 +4,7 @@ import Home from './pages/Home';
 import NoEncontrada from './pages/NoEncontrada';
 import LoginRoute from './components/auth/LoginRoute';
 import RutaProtegida from './components/auth/RutaProtegida';
-import { EsqueletoCarga } from './components/estudiante/ElementosHorario';
+import { EsqueletoCarga } from './components/ui/EstadosCarga';
 import { ProveedorAvisos } from './components/ui/Avisos';
 import { ROLES_ADMIN, RUTAS } from './config/rutas';
 

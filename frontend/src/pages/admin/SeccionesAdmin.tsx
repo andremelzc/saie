@@ -3,7 +3,7 @@ import { RUTAS } from '../../config/rutas';
 import { ICONOS } from '../../components/ui/iconos';
 import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { EstadoAsignacion } from '../../components/ui/EstadoAsignacion';

@@ -5,9 +5,9 @@ import { EsqueletoCarga, EstadoVacio } from '../components/estudiante/ElementosH
 import GridHorarioSemanal from '../components/estudiante/GridHorarioSemanal';
 import HorarioDia from '../components/estudiante/HorarioDia';
 import ListaMisCursos from '../components/estudiante/ListaMisCursos';
-import SelectorSegmentado from '../components/estudiante/SelectorSegmentado';
-import { idPanelPestana, idPestana } from '../components/estudiante/idsPestanas';
-import type { OpcionSegmentada } from '../components/estudiante/SelectorSegmentado';
+import SelectorSegmentado from '../components/ui/SelectorSegmentado';
+import { idPanelPestana, idPestana } from '../components/ui/idsPestanas';
+import type { OpcionSegmentada } from '../components/ui/SelectorSegmentado';
 import type { DiaSemana } from '../types/consulta';
 import type { CursoMatriculadoDTO, HorarioSemanalDTO, VistaHorario } from '../types/horario';
 import {
