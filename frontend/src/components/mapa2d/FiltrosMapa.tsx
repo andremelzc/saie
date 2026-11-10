@@ -1,5 +1,7 @@
 import React from 'react';
 import type { EstadoOcupacion } from '../mapa3d/tipos';
+import { clasesBoton } from '../ui/clasesBoton';
+import { claseBotonMapa, CLASE_ROTULO_MAPA } from './controles';
 import { ESTADO_TEXTO, TIPO_TEXTO } from './etiquetas';
 import {
   alternar,
@@ -27,11 +29,8 @@ const Chip: React.FC<{ activo: boolean; onClick: () => void; children: React.Rea
     type="button"
     aria-pressed={activo}
     onClick={onClick}
-    className={`min-h-9 cursor-pointer rounded-full border px-3 text-sm ${
-      activo
-        ? 'border-saie-primary bg-saie-primary text-white'
-        : 'border-saie-divider bg-white text-saie-muted line-through'
-    }`}
+    // Lo que se oculta queda tachado además de apagado: el estado no depende solo del color.
+    className={`${claseBotonMapa(activo)} ${activo ? '' : 'text-saie-muted line-through'}`}
   >
     {children}
   </button>
@@ -45,38 +44,41 @@ export const FiltrosMapa: React.FC<FiltrosMapaProps> = ({
   className = '',
 }) => (
   <fieldset className={`m-0 flex min-w-0 flex-col gap-2 border-0 p-0 ${className}`}>
-    <legend className="mb-1 p-0 text-sm font-medium text-saie-text">Mostrar</legend>
-    <div role="group" aria-label="Estado" className="flex flex-wrap gap-2">
-      {estados.map((e) => (
-        <Chip
-          key={e}
-          activo={filtro.estados.includes(e)}
-          onClick={() => onCambiar({ ...filtro, estados: alternar(filtro.estados, e) })}
+    <legend className={CLASE_ROTULO_MAPA}>Mostrar</legend>
+    <div className="flex flex-wrap items-center gap-2">
+      <div role="group" aria-label="Estado" className="flex flex-wrap gap-2">
+        {estados.map((e) => (
+          <Chip
+            key={e}
+            activo={filtro.estados.includes(e)}
+            onClick={() => onCambiar({ ...filtro, estados: alternar(filtro.estados, e) })}
+          >
+            {ESTADO_TEXTO[e]}
+          </Chip>
+        ))}
+      </div>
+      <span aria-hidden="true" className="hidden h-6 w-px bg-saie-divider sm:block" />
+      <div role="group" aria-label="Tipo" className="flex flex-wrap gap-2">
+        {TODOS_LOS_TIPOS.map((t) => (
+          <Chip
+            key={t}
+            activo={filtro.tipos.includes(t)}
+            onClick={() => onCambiar({ ...filtro, tipos: alternar(filtro.tipos, t) })}
+          >
+            {`${TIPO_TEXTO[t]}s`}
+          </Chip>
+        ))}
+      </div>
+      {hayFiltro(filtro, estados) && (
+        <button
+          type="button"
+          onClick={() => onCambiar(FILTRO_TODO)}
+          className={clasesBoton('fantasma', 'sm')}
         >
-          {ESTADO_TEXTO[e]}
-        </Chip>
-      ))}
+          Mostrar todo
+        </button>
+      )}
     </div>
-    <div role="group" aria-label="Tipo" className="flex flex-wrap gap-2">
-      {TODOS_LOS_TIPOS.map((t) => (
-        <Chip
-          key={t}
-          activo={filtro.tipos.includes(t)}
-          onClick={() => onCambiar({ ...filtro, tipos: alternar(filtro.tipos, t) })}
-        >
-          {`${TIPO_TEXTO[t]}s`}
-        </Chip>
-      ))}
-    </div>
-    {hayFiltro(filtro, estados) && (
-      <button
-        type="button"
-        onClick={() => onCambiar(FILTRO_TODO)}
-        className="min-h-9 cursor-pointer self-start rounded-lg px-2 text-sm font-medium text-saie-primary hover:bg-saie-primary/5"
-      >
-        Mostrar todo
-      </button>
-    )}
   </fieldset>
 );
 

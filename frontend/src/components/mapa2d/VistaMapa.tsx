@@ -3,6 +3,7 @@ import { SelectorSegmentado } from '../estudiante/SelectorSegmentado';
 import Mapa3DLazy from '../mapa3d/Mapa3DLazy';
 import type { EstadoOcupacion } from '../mapa3d/tipos';
 import BuscadorEspacios from './BuscadorEspacios';
+import { claseBotonMapa } from './controles';
 import FiltrosMapa from './FiltrosMapa';
 import FranjaMapa from './FranjaMapa';
 import ListaEspacios from './ListaEspacios';
@@ -96,10 +97,15 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
         espacios={espacios}
         pisoDe={(id) => figuras.get(id)?.piso}
         onElegir={irAEspacio}
-        className="w-full sm:w-72"
+        className="w-full"
       />
       {onFranjaCambiada && <FranjaMapa franja={franja} onCambiar={onFranjaCambiada} />}
-      <FiltrosMapa filtro={filtro} onCambiar={setFiltro} estados={estadosLeyenda} />
+      <FiltrosMapa
+        filtro={filtro}
+        onCambiar={setFiltro}
+        estados={estadosLeyenda}
+        className="sm:col-span-2"
+      />
     </>
   );
 
@@ -150,7 +156,7 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
           enVentana ? (
             <>
               {selector('vertical')}
-              {herramientas}
+              <div className="flex flex-col gap-3">{herramientas}</div>
             </>
           ) : undefined
         }
@@ -200,7 +206,7 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
         <button
           type="button"
           onClick={() => setAmpliado(true)}
-          className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-saie-divider bg-white px-4 text-sm font-medium text-saie-text hover:bg-saie-primary/5"
+          className={claseBotonMapa('accion')}
         >
           <svg
             className="h-5 w-5"
@@ -219,7 +225,10 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
       </div>
 
       {!ampliado && (
-        <div className="flex flex-wrap items-start gap-x-6 gap-y-3">{herramientas}</div>
+        // Buscador y día/hora comparten fila; los filtros ocupan la de abajo, a todo el ancho.
+        <div className="grid grid-cols-1 items-start gap-x-6 gap-y-3 rounded-xl border border-saie-divider bg-white p-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          {herramientas}
+        </div>
       )}
 
       {ampliado ? (
@@ -239,7 +248,7 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
                   className="order-1 flex flex-col gap-4 lg:order-2 lg:w-60 lg:shrink-0"
                 >
                   {selector('vertical')}
-                  {herramientas}
+                  <div className="flex flex-col gap-3">{herramientas}</div>
                   <LeyendaMapa estados={estadosLeyenda} vertical />
                   {descripcion}
                   {lista}

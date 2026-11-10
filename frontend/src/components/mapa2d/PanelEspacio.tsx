@@ -1,3 +1,4 @@
+import { clasesBoton } from '../ui/clasesBoton';
 import React from 'react';
 import { BadgeEstado, type TonoBadge } from '../ui/BadgeEstado';
 import type { EstadoOcupacion } from '../mapa3d/tipos';
@@ -54,7 +55,7 @@ export const PanelEspacio: React.FC<PanelEspacioProps> = ({
               <button
                 type="button"
                 onClick={onCerrar}
-                className="min-h-11 shrink-0 rounded-lg px-3 text-sm font-medium text-saie-primary hover:bg-saie-primary/5"
+                className={`${clasesBoton('fantasma', 'sm')} shrink-0`}
               >
                 Cerrar detalle
               </button>

@@ -1,4 +1,5 @@
 import React, { useId, useMemo, useState } from 'react';
+import { CLASE_CAMPO_MAPA, CLASE_ROTULO_MAPA } from './controles';
 import { ESTADO_TEXTO, PABELLON_TEXTO, type EspacioMapa2D } from './etiquetas';
 import { normalizar } from './indice';
 import { pabellonDe } from './plano';
@@ -60,7 +61,7 @@ export const BuscadorEspacios: React.FC<BuscadorEspaciosProps> = ({
 
   return (
     <div className={`relative ${className}`}>
-      <label htmlFor={`${id}-entrada`} className="mb-1 block text-sm font-medium text-saie-text">
+      <label htmlFor={`${id}-entrada`} className={CLASE_ROTULO_MAPA}>
         Buscar aula o laboratorio
       </label>
       <input
@@ -96,7 +97,7 @@ export const BuscadorEspacios: React.FC<BuscadorEspaciosProps> = ({
             setAbierto(false);
           }
         }}
-        className="min-h-11 w-full rounded-lg border border-saie-divider bg-white px-3 text-sm text-saie-text placeholder:text-saie-muted"
+        className={`${CLASE_CAMPO_MAPA} w-full placeholder:text-saie-muted`}
       />
       <ul
         id={`${id}-lista`}
