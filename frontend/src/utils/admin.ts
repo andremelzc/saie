@@ -77,25 +77,17 @@ const T_REPORTE = ICONOS.documento;
 const T_MAPA = ICONOS.mapa;
 
 /**
- * Puntos de corte del panel (Issue 4.35): móvil < 768 px y escritorio ≥ 1024 px (`lg`), con una
- * zona intermedia explícita de 768 a 1023 px.
- *
- * - Móvil y zona intermedia: barra inferior fija con las pestañas principales y, si el rol tiene
- *   secundarias, una pestaña «Más» que abre un menú con ellas. Las listas y tablas ya usan
- *   tarjetas por debajo de `lg` (`usePantallaAncha`), así que la navegación hace lo mismo.
- * - Escritorio: barra completa bajo la cabecera, con todas las pestañas en una fila.
- *
- * Antes la barra completa aparecía desde `md` (768 px) y las siete pestañas no cabían: la
- * página desbordaba a 826 px.
+ * Pestañas del panel. La barra va abajo por debajo de `lg` y arriba desde `lg`; en ambos casos
+ * mide el ancho disponible y manda a «Más» solo las que no caben (`BarraPestanas`), sin
+ * depender de un ancho en píxeles. Las listas y tablas usan tarjetas por debajo de `lg`.
  */
 export interface Pestana {
   to: string;
   etiqueta: string;
   trazo: string;
   /**
-   * Pestaña secundaria: por debajo de `lg` se llega desde el menú «Más» y no desde la barra.
-   * A 320 px la barra inferior no cabe con las siete secciones, y una barra con scroll
-   * horizontal es peor que una de cuatro destinos más «Más».
+   * Pestaña secundaria: cuando la barra no cabe, es la primera que pasa al menú «Más» (de la
+   * última a la primera); después siguen las principales, de la última a la primera.
    */
   secundaria?: boolean;
 }

@@ -16,7 +16,16 @@ export interface EnlaceMas {
   trazo: string;
 }
 
-export const MenuMas: React.FC<{ pestanas: EnlaceMas[] }> = ({ pestanas }) => {
+export const MenuMas: React.FC<{
+  pestanas: EnlaceMas[];
+  /**
+   * `barra` (por defecto): pestaña de igual ancho de una barra inferior que desaparece desde `lg`.
+   * `adaptable`: botón de ancho natural que se muestra en cualquier ancho; en `lg` la barra va
+   * arriba y el menú se despliega hacia abajo.
+   */
+  variante?: 'barra' | 'adaptable';
+}> = ({ pestanas, variante = 'barra' }) => {
+  const adaptable = variante === 'adaptable';
   const [abierto, setAbierto] = useState(false);
   const contenedor = useRef<HTMLDivElement>(null);
   const boton = useRef<HTMLButtonElement>(null);
@@ -46,7 +55,7 @@ export const MenuMas: React.FC<{ pestanas: EnlaceMas[] }> = ({ pestanas }) => {
   return (
     <div
       ref={contenedor}
-      className="relative flex flex-1"
+      className={`relative flex ${adaptable ? '' : 'flex-1'}`}
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setAbierto(false);
       }}
@@ -57,7 +66,11 @@ export const MenuMas: React.FC<{ pestanas: EnlaceMas[] }> = ({ pestanas }) => {
         aria-expanded={abierto}
         aria-controls={idMenu}
         onClick={() => setAbierto((a) => !a)}
-        className={`flex min-h-14 flex-1 cursor-pointer flex-col items-center gap-0.5 border-0 bg-transparent px-2 py-2 text-xs transition-colors ${
+        className={`flex min-h-14 cursor-pointer flex-col items-center gap-0.5 border-0 bg-transparent py-2 text-xs transition-colors ${
+          adaptable
+            ? 'min-w-16 px-3 lg:min-h-0 lg:min-w-0 lg:flex-row lg:gap-2 lg:rounded-lg lg:px-4 lg:text-sm'
+            : 'flex-1 px-2'
+        } ${
           activa || abierto
             ? 'bg-saie-primary/10 font-bold text-saie-primary'
             : 'font-medium text-saie-muted hover:text-saie-primary'
@@ -80,7 +93,11 @@ export const MenuMas: React.FC<{ pestanas: EnlaceMas[] }> = ({ pestanas }) => {
       {abierto && (
         <ul
           id={idMenu}
-          className="absolute bottom-full right-0 m-0 mb-2 min-w-48 list-none rounded-xl border border-saie-border bg-white p-1 shadow-lg"
+          className={`absolute right-0 z-40 m-0 min-w-48 list-none rounded-xl border border-saie-border bg-white p-1 shadow-lg ${
+            adaptable
+              ? 'bottom-full mb-2 lg:bottom-auto lg:top-full lg:mb-0 lg:mt-2'
+              : 'bottom-full mb-2'
+          }`}
         >
           {pestanas.map((p) => (
             <li key={p.to}>

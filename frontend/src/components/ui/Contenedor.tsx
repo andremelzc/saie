@@ -20,6 +20,8 @@ export interface ContenedorProps extends React.HTMLAttributes<HTMLElement> {
   ancho?: AnchoContenedor;
   /** Elemento HTML a dibujar (por defecto `div`). */
   como?: Etiqueta;
+  /** Referencia al elemento dibujado. */
+  ref?: React.Ref<HTMLElement>;
 }
 
 /**
