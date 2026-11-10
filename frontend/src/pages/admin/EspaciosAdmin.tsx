@@ -8,6 +8,8 @@ import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/Element
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
+import { FiltrosActivos } from '../../components/ui/FiltrosActivos';
+import type { FiltroActivo } from '../../components/ui/FiltrosActivos';
 import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
 import { Drawer } from '../../components/ui/Drawer';
 import { useAvisos } from '../../components/ui/useAvisos';
@@ -20,7 +22,6 @@ import { useDetalleEnUrl } from '../../hooks/useDetalleEnUrl';
 import { obtenerEspacios } from '../../services/admin';
 import type { EspacioAdminDTO, ResultadoEdicionEspacioDTO, TipoEspacio } from '../../types/admin';
 import { etiquetaCampoEspacio, etiquetaTipoEspacio } from '../../utils/diccionarios';
-import { plural } from '../../utils/texto';
 
 type Filtro = 'TODOS' | TipoEspacio;
 
@@ -360,12 +361,48 @@ export const EspaciosAdmin: React.FC = () => {
     .filter((e) => e.identificador.toLowerCase().includes(texto.trim().toLowerCase()))
     .sort((a, b) => a.identificador.localeCompare(b.identificador, 'es', { numeric: true }));
 
-  const hayFiltros =
-    filtro !== 'TODOS' ||
-    pabellon !== 'TODOS' ||
-    piso !== 'TODOS' ||
-    soloDeshabilitados ||
-    texto.trim() !== '';
+  const nombreTipo: Record<Exclude<Filtro, 'TODOS'>, string> = {
+    AULA_TEORICA: 'Aulas teóricas',
+    LABORATORIO: 'Laboratorios',
+  };
+  const filtrosActivos: FiltroActivo[] = [
+    ...(texto.trim()
+      ? [{ id: 'q', etiqueta: 'Búsqueda', valor: texto.trim(), onQuitar: () => setTexto('') }]
+      : []),
+    ...(filtro !== 'TODOS'
+      ? [
+          {
+            id: 'tipo',
+            etiqueta: 'Tipo de espacio',
+            valor: nombreTipo[filtro],
+            onQuitar: () => setFiltro('TODOS'),
+          },
+        ]
+      : []),
+    ...(pabellon !== 'TODOS'
+      ? [
+          {
+            id: 'pabellon',
+            etiqueta: 'Pabellón',
+            valor: pabellon,
+            onQuitar: () => setPabellon('TODOS'),
+          },
+        ]
+      : []),
+    ...(piso !== 'TODOS'
+      ? [{ id: 'piso', etiqueta: 'Piso', valor: `Piso ${piso}`, onQuitar: () => setPiso('TODOS') }]
+      : []),
+    ...(soloDeshabilitados
+      ? [
+          {
+            id: 'deshabilitados',
+            etiqueta: 'Estado',
+            valor: 'Fuera de servicio',
+            onQuitar: () => setSoloDeshabilitados(false),
+          },
+        ]
+      : []),
+  ];
 
   function limpiarFiltros() {
     setFiltro('TODOS');
@@ -530,9 +567,10 @@ export const EspaciosAdmin: React.FC = () => {
               onChange={(e) => setFiltro(e.target.value as Filtro)}
               className={CLASE_CAMPO}
             >
-              <option value="TODOS">Todos</option>
-              <option value="AULA_TEORICA">Aulas teóricas</option>
-              <option value="LABORATORIO">Laboratorios</option>
+              {/* Los totales por tipo viven solo aquí, en el filtro (Issue 4.40, DEN-09). */}
+              <option value="TODOS">Todos{datos ? ` (${base.length})` : ''}</option>
+              <option value="AULA_TEORICA">Aulas teóricas{datos ? ` (${aulas})` : ''}</option>
+              <option value="LABORATORIO">Laboratorios{datos ? ` (${laboratorios})` : ''}</option>
             </select>
           </Campo>
           <Campo etiqueta="Pabellón">
@@ -566,6 +604,14 @@ export const EspaciosAdmin: React.FC = () => {
             <p className="m-0 text-sm text-saie-muted" aria-live="polite">
               <strong className="text-saie-text">{espacios.length}</strong> de {base.length}{' '}
               coinciden
+              {fueraDeServicio > 0 && (
+                <>
+                  {' · '}
+                  <span className="font-semibold text-saie-danger-strong">
+                    {fueraDeServicio} fuera de servicio
+                  </span>
+                </>
+              )}
             </p>
           )}
           <div className="flex flex-wrap items-center gap-3">
@@ -578,33 +624,10 @@ export const EspaciosAdmin: React.FC = () => {
               />
               <span>Solo fuera de servicio</span>
             </label>
-            {hayFiltros && (
-              <Boton variante="secundario" tamano="sm" onClick={limpiarFiltros}>
-                Limpiar filtros
-              </Boton>
-            )}
           </div>
         </div>
+        <FiltrosActivos filtros={filtrosActivos} onLimpiar={limpiarFiltros} />
       </section>
-
-      {datos && (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded-full border border-saie-divider bg-white px-2.5 py-1 font-semibold text-saie-text">
-            {plural(datos.length, 'espacio', 'espacios')}
-          </span>
-          <span className="rounded-full border border-saie-divider bg-white px-2.5 py-1 text-saie-muted">
-            {plural(aulas, 'aula teórica', 'aulas teóricas')}
-          </span>
-          <span className="rounded-full border border-saie-divider bg-white px-2.5 py-1 text-saie-muted">
-            {plural(laboratorios, 'laboratorio', 'laboratorios')}
-          </span>
-          {fueraDeServicio > 0 && (
-            <span className="rounded-full bg-saie-danger-soft px-2.5 py-1 font-semibold text-saie-danger-strong">
-              {fueraDeServicio} fuera de servicio
-            </span>
-          )}
-        </div>
-      )}
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
       {detalleNoEncontrado && (

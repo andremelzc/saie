@@ -2,14 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { MENSAJE_EN_DESARROLLO, PREVISION_EN_DESARROLLO } from '../components/PantallaEnDesarrollo';
-import InicioDocentePage from './docente/InicioDocentePage';
-import HorarioDocentePage from './docente/HorarioDocentePage';
-import EspaciosDocentePage from './docente/EspaciosDocentePage';
-import IncidenciasDocentePage from './docente/IncidenciasDocentePage';
 import MapaAdminPage from './admin/MapaAdminPage';
 import LaboratoriosAdminPage from './admin/LaboratoriosAdminPage';
 import SoftwareAdminPage from './admin/SoftwareAdminPage';
-import IncidenciasAdminPage from './admin/IncidenciasAdminPage';
 import ProximamenteAdminPage from './admin/ProximamenteAdminPage';
 
 const auth = vi.hoisted(() => ({
@@ -29,21 +24,6 @@ function montar(nodo: React.ReactNode) {
 }
 
 const PANTALLAS = [
-  {
-    nombre: 'Horario del docente',
-    Page: HorarioDocentePage,
-    titulo: 'Mi horario y asignaciones',
-  },
-  {
-    nombre: 'Espacios del docente',
-    Page: EspaciosDocentePage,
-    titulo: 'Explorar espacios y equipos',
-  },
-  {
-    nombre: 'Incidencias del docente',
-    Page: IncidenciasDocentePage,
-    titulo: 'Reportar una incidencia',
-  },
   { nombre: 'Mapa del panel', Page: MapaAdminPage, titulo: 'Mapa de ocupación por piso' },
   {
     nombre: 'Laboratorios del panel',
@@ -51,11 +31,6 @@ const PANTALLAS = [
     titulo: 'Laboratorios y equipos',
   },
   { nombre: 'Catálogo de software', Page: SoftwareAdminPage, titulo: 'Catálogo de software' },
-  {
-    nombre: 'Revisión de incidencias',
-    Page: IncidenciasAdminPage,
-    titulo: 'Revisión de incidencias',
-  },
 ];
 
 describe('pantallas en desarrollo', () => {
@@ -69,23 +44,6 @@ describe('pantallas en desarrollo', () => {
     expect(screen.getByRole('heading', { name: titulo })).toBeVisible();
     expect(screen.getByRole('status')).toHaveTextContent(MENSAJE_EN_DESARROLLO);
     expect(screen.getByText(PREVISION_EN_DESARROLLO)).toBeVisible();
-  });
-});
-
-describe('InicioDocentePage', () => {
-  it('explica que el portal estará disponible y ofrece salidas claras', () => {
-    auth.sesion = { rol: 'DOCENTE' };
-    montar(<InicioDocentePage />);
-
-    expect(screen.getByRole('heading', { name: 'Portal del docente' })).toBeVisible();
-    expect(screen.getByRole('status')).toHaveTextContent(MENSAJE_EN_DESARROLLO);
-    expect(screen.getByText(PREVISION_EN_DESARROLLO)).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Volver al inicio' })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('link', { name: 'Consultar espacios' })).toHaveAttribute(
-      'href',
-      '/consulta',
-    );
-    expect(screen.queryByRole('link', { name: /Mi horario y asignaciones/ })).toBeNull();
   });
 });
 
@@ -103,13 +61,14 @@ describe('ProximamenteAdminPage', () => {
     expect(screen.queryByRole('link', { name: /Mapa de ocupación por piso/ })).toBeNull();
   });
 
-  it('Jefatura ve solo sus pendientes', () => {
+  it('Jefatura ya no tiene pendientes y la hoja lo dice', () => {
     auth.sesion = { rol: 'JEFATURA_LABORATORIOS' };
     montar(<ProximamenteAdminPage />);
 
-    expect(screen.getByText('Revisión de incidencias')).toBeVisible();
+    // La revisión de incidencias (Issue 7.11) y el cambio de clave (Issue 4.21) ya funcionan.
+    expect(screen.getByText(/no hay nada más en desarrollo para tu rol/)).toBeVisible();
+    expect(screen.queryByText('Revisión de incidencias')).toBeNull();
     expect(screen.queryByText('Claves y contraseñas')).toBeNull();
     expect(screen.queryByText('Mapa de ocupación por piso')).toBeNull();
-    expect(screen.queryByRole('link', { name: /Revisión de incidencias/ })).toBeNull();
   });
 });

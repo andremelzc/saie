@@ -133,6 +133,41 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     );
   });
 
+  it('muestra cada bloque horario en su propia línea (Issue 4.44)', async () => {
+    listar.mockResolvedValue({
+      items: [
+        seccion({
+          horarios: [
+            { diaSemana: 'LUNES', horaInicio: '08:00', horaFin: '10:00' },
+            { diaSemana: 'MIERCOLES', horaInicio: '14:00', horaFin: '16:00' },
+            { diaSemana: 'VIERNES', horaInicio: '10:00', horaFin: '12:00' },
+          ],
+        }),
+      ],
+      total: 1,
+      pagina: 1,
+      limite: 50,
+    });
+    montar();
+    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    const panel = await screen.findByRole('dialog');
+    const bloques = within(panel).getAllByRole('listitem');
+    expect(bloques.map((b) => b.textContent)).toEqual(
+      expect.arrayContaining([
+        'Lunes 08:00 – 10:00',
+        'Miércoles 14:00 – 16:00',
+        'Viernes 10:00 – 12:00',
+      ]),
+    );
+  });
+
+  it('la tarjeta móvil muestra docente y tipo (Issue 4.44)', async () => {
+    montar();
+    const tarjeta = (await screen.findAllByRole('article', { name: 'IS101 · 1' }))[0];
+    expect(within(tarjeta).getByText('Dra. García')).toBeInTheDocument();
+    expect(within(tarjeta).getByText('Laboratorio')).toBeInTheDocument();
+  });
+
   it('abre el detalle de una sección y permite editarla', async () => {
     montar();
     fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
@@ -303,5 +338,63 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     fireEvent.click(within(panel).getByRole('button', { name: 'Cerrar' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('muestra los filtros activos como chips y los limpia (Issue 4.40)', async () => {
+    montar();
+    await screen.findAllByText('IS101 · 1');
+    fireEvent.change(screen.getByLabelText('Tipo de espacio'), {
+      target: { value: 'LABORATORIO' },
+    });
+    const chips = screen.getByRole('group', { name: 'Filtros activos' });
+    expect(within(chips).getByText('Laboratorio')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+    expect(screen.queryByRole('group', { name: 'Filtros activos' })).toBeNull();
+    expect(screen.getByLabelText('Tipo de espacio')).toHaveValue('TODOS');
+  });
+
+  describe('Paginación (Issue 4.38)', () => {
+    beforeEach(() => {
+      window.localStorage.clear();
+      listar.mockImplementation(async (filtros = {}) => ({
+        items: [seccion({ id: `s-${filtros.pagina}`, codigoCurso: `P${filtros.pagina}` })],
+        total: 312,
+        pagina: filtros.pagina ?? 1,
+        limite: filtros.limite ?? 50,
+      }));
+    });
+
+    it('pide 50 por página y muestra el total real', async () => {
+      montar();
+      const nav = await screen.findByRole('navigation', { name: 'Paginación de secciones' });
+      expect(listar).toHaveBeenCalledWith(expect.objectContaining({ pagina: 1, limite: 50 }));
+      expect(nav).toHaveTextContent('Mostrando 1–50 de 312 secciones');
+      expect(screen.getByText('312 secciones')).toBeInTheDocument();
+    });
+
+    it('navega de página y vuelve a la 1 al filtrar', async () => {
+      montar();
+      fireEvent.click(await screen.findByRole('button', { name: 'Página siguiente' }));
+      await waitFor(() =>
+        expect(listar).toHaveBeenLastCalledWith(expect.objectContaining({ pagina: 2 })),
+      );
+      fireEvent.change(screen.getByLabelText('Tipo de espacio'), {
+        target: { value: 'LABORATORIO' },
+      });
+      await waitFor(() =>
+        expect(listar).toHaveBeenLastCalledWith(
+          expect.objectContaining({ pagina: 1, tipo: 'LABORATORIO' }),
+        ),
+      );
+    });
+
+    it('recuerda el tamaño de página elegido', async () => {
+      montar();
+      fireEvent.change(await screen.findByLabelText('Por página'), { target: { value: '100' } });
+      await waitFor(() =>
+        expect(listar).toHaveBeenLastCalledWith(expect.objectContaining({ limite: 100 })),
+      );
+      expect(window.localStorage.getItem('saie:secciones:tamanoPagina')).toBe('100');
+    });
   });
 });

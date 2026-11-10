@@ -11,6 +11,7 @@ import { useCarga } from '../../hooks/useCarga';
 import { useValorDiferido } from '../../hooks/useValorDiferido';
 import { obtenerReporteAsignaciones } from '../../services/admin';
 import { formatearFechaCorta } from '../../utils/fechas';
+import { FiltrosActivos } from '../../components/ui/FiltrosActivos';
 
 /**
  * Issue 4.33 — informe de salones.
@@ -63,6 +64,21 @@ export const ReporteSalones: React.FC = () => {
             className={CLASE_CAMPO}
           />
         </Campo>
+        <FiltrosActivos
+          filtros={
+            periodo.trim()
+              ? [
+                  {
+                    id: 'periodo',
+                    etiqueta: 'Periodo',
+                    valor: periodo.trim(),
+                    onQuitar: () => setPeriodo(''),
+                  },
+                ]
+              : []
+          }
+          onLimpiar={() => setPeriodo('')}
+        />
 
         {error && (
           <div className="saie-no-imprimir">

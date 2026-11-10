@@ -1,4 +1,5 @@
 import api from './api';
+import type { CierreIncidenciaDTO, FiltrosIncidencias, IncidenciaAdminDTO } from '../types/docente';
 import type {
   AlertaDTO,
   ClaveRestablecidaDTO,
@@ -286,6 +287,31 @@ export async function restablecerClave(usuario: string): Promise<ClaveRestableci
   const { data } = await api.post<Respuesta<ClaveRestablecidaDTO>>(
     '/v1/admin/usuarios/restablecer-clave',
     { usuario },
+  );
+  return data.data;
+}
+
+/**
+ * GET /v1/admin/incidencias[?estado=&prioridad=] (Issue 7.6). Por defecto el backend devuelve
+ * las pendientes; Jefatura solo ve las de los laboratorios a su cargo.
+ */
+export async function obtenerIncidencias(
+  filtros: FiltrosIncidencias = {},
+): Promise<IncidenciaAdminDTO[]> {
+  const { data } = await api.get<Respuesta<IncidenciaAdminDTO[]>>('/v1/admin/incidencias', {
+    params: filtros,
+  });
+  return data.data;
+}
+
+/** PATCH /v1/admin/incidencias/:id/resolver (Issue 7.6): resuelve o descarta con un comentario. */
+export async function cerrarIncidencia(
+  id: string,
+  cierre: CierreIncidenciaDTO,
+): Promise<IncidenciaAdminDTO> {
+  const { data } = await api.patch<Respuesta<IncidenciaAdminDTO>>(
+    `/v1/admin/incidencias/${encodeURIComponent(id)}/resolver`,
+    cierre,
   );
   return data.data;
 }

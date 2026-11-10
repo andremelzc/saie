@@ -25,6 +25,7 @@ import { formatearFechaAlerta } from '../../utils/fechas';
 import { agruparPorCorrida, tituloDeCorrida, ubicacionDeEspacios } from '../../utils/historial';
 import type { GrupoCorrida } from '../../utils/historial';
 import { describirEstadoAsignacion, describirEventoAuditoria } from '../../utils/diccionarios';
+import { FiltrosActivos } from '../../components/ui/FiltrosActivos';
 
 /** Vuelve a pedir los datos cuando cambia `version` (botón «Actualizar»), sin tocar los filtros. */
 function useRecargarAl(version: number, recargar: () => void): void {
@@ -205,6 +206,34 @@ const VistaHistorial: React.FC<{ version: number }> = ({ version }) => {
           </select>
         </Campo>
       </div>
+      <FiltrosActivos
+        filtros={[
+          ...(periodo.trim()
+            ? [
+                {
+                  id: 'periodo',
+                  etiqueta: 'Periodo',
+                  valor: periodo.trim(),
+                  onQuitar: () => setPeriodo(''),
+                },
+              ]
+            : []),
+          ...(estado !== 'TODOS'
+            ? [
+                {
+                  id: 'estado',
+                  etiqueta: 'Estado',
+                  valor: describirEstadoAsignacion(estado).etiqueta,
+                  onQuitar: () => setEstado('TODOS'),
+                },
+              ]
+            : []),
+        ]}
+        onLimpiar={() => {
+          setPeriodo('');
+          setEstado('TODOS');
+        }}
+      />
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
       <ZonaActualizable actualizando={cargando && datos !== null}>
@@ -265,6 +294,21 @@ const VistaAuditoria: React.FC<{ version: number }> = ({ version }) => {
           ))}
         </select>
       </Campo>
+      <FiltrosActivos
+        filtros={
+          tipo !== 'TODOS'
+            ? [
+                {
+                  id: 'tipo',
+                  etiqueta: 'Tipo de evento',
+                  valor: describirEventoAuditoria(tipo).etiqueta,
+                  onQuitar: () => setTipo('TODOS'),
+                },
+              ]
+            : []
+        }
+        onLimpiar={() => setTipo('TODOS')}
+      />
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
       <ZonaActualizable actualizando={cargando && datos !== null}>

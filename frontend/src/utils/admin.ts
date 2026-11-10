@@ -104,6 +104,8 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
     return [
       { to: RUTAS.inicioAdmin, etiqueta: 'Inicio', trazo: T_INICIO },
       { to: RUTAS.alertasAdmin, etiqueta: 'Alertas', trazo: T_ALERTA },
+      // Issue 7.11: bandeja de incidencias que reportan los docentes.
+      { to: RUTAS.incidenciasAdmin, etiqueta: 'Incidencias', trazo: T_AUDITORIA },
       { to: RUTAS.cambioLaboratorio, etiqueta: 'Laboratorio', trazo: T_LAB },
     ];
   }
