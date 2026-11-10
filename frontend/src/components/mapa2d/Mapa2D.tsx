@@ -55,6 +55,12 @@ export interface Mapa2DProps {
   /** Se emite al cambiar de piso. */
   onPisoCambiado?: (piso: number) => void;
   /**
+   * El selector de piso lo dibuja quien usa el mapa (para ponerlo en su propia barra de
+   * herramientas) y pasa aquí el `idBase` de sus pestañas, para que el plano siga siendo el panel
+   * de la pestaña elegida. Solo vale con `disposicion="arriba"`.
+   */
+  selectorDePisoExterno?: { idBase: string };
+  /**
    * `arriba` (por defecto) pone los controles sobre el plano; `lateral` los pone en una columna a
    * un lado, para usar mejor el espacio en una ventana ancha.
    */
@@ -621,6 +627,7 @@ export const Mapa2D: React.FC<Mapa2DProps> = ({
   resaltados = [],
   pisoInicial,
   piso: pisoControlado,
+  selectorDePisoExterno,
   onSeleccionar,
   onPisoCambiado,
   disposicion = 'arriba',
@@ -637,7 +644,7 @@ export const Mapa2D: React.FC<Mapa2DProps> = ({
 }) => {
   const uid = useId().replace(/:/g, '');
   const idPatron = `mapa2d-alerta-${uid}`;
-  const idBase = `mapa2d-${uid}`;
+  const idBase = selectorDePisoExterno?.idBase ?? `mapa2d-${uid}`;
   const idAyuda = `${idBase}-ayuda`;
   const lateral = disposicion === 'lateral';
   const ruedaEfectiva = rueda ?? (lateral ? 'siempre' : 'con-ctrl');
@@ -857,7 +864,9 @@ export const Mapa2D: React.FC<Mapa2DProps> = ({
       aria-label="Mapa de ocupación"
       className={`flex gap-4 ${lateral ? 'flex-col lg:flex-row lg:items-start' : 'flex-col'} ${className}`}
     >
-      {!lateral && <div className="flex flex-wrap items-center gap-3">{selectorPiso}</div>}
+      {!lateral && !selectorDePisoExterno && (
+        <div className="flex flex-wrap items-center gap-3">{selectorPiso}</div>
+      )}
 
       <div
         ref={contenedorRef}

@@ -125,6 +125,15 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
   const elegido = espacios.find((e) => e.id === seleccionado);
 
   const figuras = useMemo(() => indiceFiguras(PLANOS_SVG), []);
+  const pisos = useMemo(
+    () =>
+      Object.keys(PLANOS_SVG)
+        .map(Number)
+        .sort((a, b) => a - b),
+    [],
+  );
+  const pisoMostrado = typeof piso === 'number' && pisos.includes(piso) ? piso : pisos[0];
+  const idPisos = `${idBase}-pisos`;
   const visibles = useMemo(() => espacios.filter((e) => pasaFiltro(e, filtro)), [espacios, filtro]);
 
   // Elegir en el buscador lleva al piso del espacio, lo selecciona y acerca la vista (2D o 3D).
@@ -193,6 +202,7 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
         pisoInicial={typeof piso === 'number' ? piso : undefined}
         piso={typeof piso === 'number' ? piso : undefined}
         onPisoCambiado={setPiso}
+        selectorDePisoExterno={enVentana ? undefined : { idBase: idPisos }}
         filtro={filtro}
         enfocar={enfoque}
         disposicion={enVentana ? 'lateral' : 'arriba'}
@@ -245,12 +255,22 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Una sola barra: la vista (2D o 3D), el piso del plano 2D y «Ampliar mapa». */}
+      <div className="flex flex-wrap items-center gap-3">
         {selector('horizontal')}
+        {vista === '2d' && !ampliado && (
+          <SelectorSegmentado
+            etiquetaGrupo="Piso"
+            idBase={idPisos}
+            opciones={pisos.map((p) => ({ valor: String(p), etiqueta: `Piso ${p}` }))}
+            valor={String(pisoMostrado)}
+            onCambiar={(v) => setPiso(Number(v))}
+          />
+        )}
         <button
           type="button"
           onClick={() => setAmpliado(true)}
-          className={claseBotonMapa('accion')}
+          className={`${claseBotonMapa('accion')} ml-auto`}
         >
           <svg
             className="h-5 w-5"
