@@ -164,7 +164,7 @@ describe('RutaAlumnoPage', () => {
     expect(screen.getByText('Entras por la entrada principal')).toBeInTheDocument();
   });
 
-  it('«otro lugar» se busca por nombre y no ofrece la puerta del patio', async () => {
+  it('«otro lugar» se busca por nombre, incluye baños y no ofrece las puertas', async () => {
     vi.mocked(obtenerCursos).mockResolvedValue({
       periodo: '2026-2',
       cursos: [curso('asig-aula', 'Cálculo', [AULA])] as never,
@@ -174,8 +174,13 @@ describe('RutaAlumnoPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Otro lugar' }));
     const campo = screen.getByRole('combobox', { name: 'Busca el aula o lugar donde estás' });
-    fireEvent.change(campo, { target: { value: 'patio' } });
+    fireEvent.change(campo, { target: { value: 'puerta' } });
     expect(screen.queryByRole('option')).toBeNull();
+
+    // Un baño se busca como cualquier otro lugar; los de cada pabellón y piso se distinguen.
+    fireEvent.change(campo, { target: { value: 'baño' } });
+    expect(screen.getAllByRole('option').length).toBeGreaterThan(1);
+    expect(screen.getAllByRole('option', { name: /Baño.*piso 2/i }).length).toBeGreaterThan(0);
 
     fireEvent.change(campo, { target: { value: 'antiguo 108' } });
     expect(screen.getByRole('option', { name: /Aula 108.*antiguo/i })).toBeInTheDocument();

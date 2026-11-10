@@ -21,7 +21,10 @@ import {
 import type { RutaReferencia, TramoRuta } from './tipos';
 
 /** De dónde sale la persona: la entrada principal de la facultad o un espacio que elige. */
-export type OrigenRuta = { tipo: 'entrada' } | { tipo: 'espacio'; id: string };
+export type OrigenRuta =
+  | { tipo: 'entrada' }
+  /** `piso` hace falta en las figuras que se repiten en cada piso (baños, oficinas, escaleras…). */
+  | { tipo: 'espacio'; id: string; piso?: number };
 
 export const ORIGEN_ENTRADA: OrigenRuta = { tipo: 'entrada' };
 
@@ -186,14 +189,22 @@ export function calcularTrazado(
     ? indice.get(destinosTramos[0].espacioId)
     : undefined;
   if (!primero) return vacio;
-  const entradaOrigen =
-    origen.tipo === 'entrada' ? indice.get(ENTRADA_PRINCIPAL) : indice.get(origen.id);
-  if (!entradaOrigen) return vacio;
-
   const pisos = Object.keys(planos)
     .map(Number)
     .sort((a, b) => a - b);
   const leido = (piso: number) => leerPiso(planos[piso], piso === PISO_DEL_PATIO);
+
+  // El punto de partida: la entrada principal o una figura (en su piso, si se repite en varios).
+  let entradaOrigen: EntradaIndice | undefined;
+  if (origen.tipo === 'entrada') {
+    entradaOrigen = indice.get(ENTRADA_PRINCIPAL);
+  } else if (origen.piso !== undefined) {
+    const figura = leido(origen.piso)?.plano.figuras.find((f) => f.id === origen.id);
+    entradaOrigen = figura ? { piso: origen.piso, figura } : undefined;
+  } else {
+    entradaOrigen = indice.get(origen.id);
+  }
+  if (!entradaOrigen) return vacio;
   const mallaDe = (piso: number) => leido(piso)?.malla ?? null;
   /** La misma figura (escalera, ascensor, puerta) en el plano de otro piso. */
   const figuraEn = (piso: number, id: string) =>
@@ -207,7 +218,7 @@ export function calcularTrazado(
   const pisoOrigen = entradaOrigen.piso;
   const figuraDestino = primero.figura;
   const pisoDestino = primero.piso;
-  if (figuraOrigen.id === figuraDestino.id) return vacio;
+  if (figuraOrigen.id === figuraDestino.id && pisoOrigen === pisoDestino) return vacio;
 
   // --- Conectores -------------------------------------------------------------------------------
   const conectores = new Map<string, Conector>();

@@ -5,7 +5,7 @@ import { ENLACE_PLANOS } from '../components/mapa2d/ocupacionReal';
 import { rutaConIdsDePlano } from '../components/mapa2d/enlacePlano';
 import { PLANOS_SVG } from '../components/mapa2d/planos';
 import { ordenarPorProxima } from '../components/ruta/clases';
-import { origenesDeRuta } from '../components/ruta/origenes';
+import { leerOrigen, origenesDeRuta } from '../components/ruta/origenes';
 import { fechaActual } from '../utils/horario';
 import { ORIGEN_ENTRADA, type OrigenRuta } from '../components/ruta/trazado';
 import {
@@ -51,7 +51,7 @@ export const RutaAlumnoPage: React.FC = () => {
     conAula[0]?.asignacionId ??
     null;
   const origen: OrigenRuta = useMemo(
-    () => (desde === VALOR_ENTRADA ? ORIGEN_ENTRADA : { tipo: 'espacio', id: desde }),
+    () => (desde === VALOR_ENTRADA ? ORIGEN_ENTRADA : { tipo: 'espacio', ...leerOrigen(desde) }),
     [desde],
   );
 
@@ -70,7 +70,7 @@ export const RutaAlumnoPage: React.FC = () => {
   const yEstasAlli =
     desde !== VALOR_ENTRADA &&
     (rutaCarga.datos?.tramos ?? []).some(
-      (t) => t.tipo === 'ESPACIO_ASIGNADO' && t.espacioId === desde,
+      (t) => t.tipo === 'ESPACIO_ASIGNADO' && t.espacioId === leerOrigen(desde).id,
     );
 
   return (
