@@ -2,7 +2,21 @@ import { EstadoAsignacion, TipoEspacio, PrismaClient } from '@prisma/client';
 import {
   obtenerAsignacionPorAlumno,
   obtenerAsignacionPorCurso,
+  soloNombreDePila,
 } from '../../../src/services/consulta.service';
+
+describe('soloNombreDePila (Issue 3.37)', () => {
+  it.each([
+    ['Juan Pérez García', 'Juan'],
+    ['  María  José López ', 'María'],
+    ['Pérez García, Juan Carlos', 'Juan'],
+    ['Ana', 'Ana'],
+    ['', ''],
+    ['   ', ''],
+  ])('%j → %j', (entrada, esperado) => {
+    expect(soloNombreDePila(entrada)).toBe(esperado);
+  });
+});
 
 describe('Servicio de Consulta Pública (#3.2 y #3.4)', () => {
   let mockPrisma: any;
@@ -91,8 +105,9 @@ describe('Servicio de Consulta Pública (#3.2 y #3.4)', () => {
 
       expect(resultado).not.toBeNull();
       expect(resultado?.alumno.codigo).toBe('20200001');
-      expect(resultado?.alumno.nombre).toBe('Juan Pérez');
-      expect(resultado?.alumno.movilidadReducida).toBe(false);
+      expect(resultado?.alumno.nombre).toBe('Juan');
+      // Issue 3.37: ni correo ni datos de salud en la respuesta pública (RNF-09).
+      expect(Object.keys(resultado!.alumno).sort()).toEqual(['codigo', 'nombre']);
       expect(resultado?.asignaciones).toHaveLength(1);
 
       const item = resultado!.asignaciones[0];
@@ -112,7 +127,7 @@ describe('Servicio de Consulta Pública (#3.2 y #3.4)', () => {
       ]);
     });
 
-    it('marca movilidadReducida como true si al menos una matrícula la tiene activa', async () => {
+    it('no expone movilidadReducida aunque alguna matrícula la tenga activa (Issue 3.37)', async () => {
       mockPrisma.alumno.findUnique.mockResolvedValue({
         id: 'alu-2',
         codigo: '20200002',
@@ -150,7 +165,8 @@ describe('Servicio de Consulta Pública (#3.2 y #3.4)', () => {
       );
 
       expect(resultado).not.toBeNull();
-      expect(resultado?.alumno.movilidadReducida).toBe(true);
+      expect(resultado?.alumno).toEqual({ codigo: '20200002', nombre: 'Maria' });
+      expect(JSON.stringify(resultado)).not.toMatch(/movilidadReducida|correo|maria.gomez/);
     });
 
     it('ordena las asignaciones por cercanía a la hora actual', async () => {

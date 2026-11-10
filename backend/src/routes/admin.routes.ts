@@ -13,6 +13,7 @@ import {
   listarEspaciosAdmin,
   listarHistorial,
   listarIncidenciasReportadas,
+  listarPeriodosAdmin,
   listarRegistrosAuditoria,
   listarDocentes,
   listarSeccionesAdmin,
@@ -58,6 +59,9 @@ router.patch('/alertas/:id/resolver', resolverAlertaPendiente);
 
 // GET /api/v1/admin/mapa-ocupacion (Issue 4.12)
 router.get('/mapa-ocupacion', consultarMapaOcupacion);
+
+// GET /api/v1/admin/periodos (Issue 4.42)
+router.get('/periodos', listarPeriodosAdmin);
 
 // GET /api/v1/admin/secciones-escaladas (Issue 4.22)
 router.get('/secciones-escaladas', listarEscaladas);

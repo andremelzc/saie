@@ -13,6 +13,7 @@ import { responderError } from '../lib/http';
 import { filtrosDeMapa, MapaOcupacionQuerySchema } from '../lib/franja';
 import { obtenerOcupacionPorPiso } from '../services/ocupacion.service';
 import { listarSeccionesEscaladas } from '../services/revision.service';
+import { listarPeriodos } from '../services/periodo.service';
 import {
   actualizarEspacio,
   ActualizarEspacioSchema,
@@ -145,6 +146,16 @@ export async function consultarMapaOcupacion(req: Request, res: Response): Promi
   try {
     const q = MapaOcupacionQuerySchema.parse(req.query);
     const data = await obtenerOcupacionPorPiso(filtrosDeMapa(q), prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.42 — GET /api/v1/admin/periodos → { vigente, periodos[] } */
+export async function listarPeriodosAdmin(_req: Request, res: Response): Promise<void> {
+  try {
+    const data = await listarPeriodos(prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);

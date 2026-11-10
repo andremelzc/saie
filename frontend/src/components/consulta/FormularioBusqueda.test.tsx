@@ -129,9 +129,7 @@ describe('FormularioBusqueda (Issue #134 / 3.5)', () => {
     const mockAlumnoData: ConsultaAlumnoResponseDTO = {
       alumno: {
         codigo: '20200001',
-        nombre: 'Valeria López',
-        correo: 'valeria.lopez@unmsm.edu.pe',
-        movilidadReducida: false,
+        nombre: 'Valeria',
       },
       asignaciones: [],
     };

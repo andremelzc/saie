@@ -19,3 +19,27 @@ export async function obtenerPeriodoVigente(
   });
   return reciente ? reciente.periodo : null;
 }
+
+export interface ListadoPeriodosDTO {
+  vigente: string | null;
+  periodos: string[];
+}
+
+/**
+ * Issue 4.42 — Periodos con secciones cargadas (del más reciente al más antiguo) y el vigente.
+ * Solo lectura: sin secciones, `periodos` es `[]` y `vigente` es `null` (salvo que
+ * `PERIODO_VIGENTE` esté configurado).
+ */
+export async function listarPeriodos(
+  prisma: Pick<PrismaClient, 'seccion'>,
+): Promise<ListadoPeriodosDTO> {
+  const filas = await prisma.seccion.findMany({
+    distinct: ['periodo'],
+    orderBy: { periodo: 'desc' },
+    select: { periodo: true },
+  });
+  return {
+    vigente: await obtenerPeriodoVigente(prisma),
+    periodos: filas.map((f) => f.periodo),
+  };
+}

@@ -116,6 +116,29 @@ describe('LoginAlumno (Issue #151 / 3.22)', () => {
     expect(onLoginExitosoMock).toHaveBeenCalledWith(mockRespuesta);
   });
 
+  it('muestra un mensaje claro cuando el backend responde 429 por demasiados intentos', async () => {
+    vi.mocked(api.post).mockRejectedValueOnce({
+      response: { status: 429, data: { success: false, message: 'otro texto' } },
+    });
+
+    renderizar(<LoginAlumno />);
+
+    fireEvent.change(screen.getByLabelText(/Código de alumno/i), {
+      target: { value: '20200001' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Contraseña/i, { selector: 'input' }), {
+      target: { value: 'claveErronea' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Iniciar sesión/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText('Demasiados intentos. Espera un momento e inténtalo de nuevo.'),
+    ).toBeInTheDocument();
+  });
+
   it('muestra mensaje claro cuando el backend responde 401 indicando gestión por Coordinación', async () => {
     vi.mocked(api.post).mockRejectedValueOnce({
       response: {

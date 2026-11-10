@@ -1,5 +1,6 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { healthRouter } from './routes/health.routes.js';
 import consultaRouter from './routes/consulta.routes.js';
 import authRouter from './routes/auth.routes.js';
@@ -13,7 +14,17 @@ import telegramRouter from './routes/telegram.routes.js';
 export const createApp = (): Application => {
   const app = express();
 
+  // Detrás del proxy de Render la IP real llega en X-Forwarded-For; sin esto el límite de
+  // intentos vería a todos los clientes como una sola IP (Issue 1.12).
+  const proxies = Number(
+    process.env.TRUST_PROXY ?? (process.env.NODE_ENV === 'production' ? 1 : 0),
+  );
+  if (proxies > 0) app.set('trust proxy', proxies);
+
   // Middlewares globales
+  // Cabeceras de seguridad. Es una API JSON consumida desde otro origen (Vercel → Render), por eso
+  // la política de recursos es cross-origin; CORS sigue decidiendo quién puede leer las respuestas.
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(
     cors({
       origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
