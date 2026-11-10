@@ -53,7 +53,7 @@ describe('historial por corrida (Issue 4.47)', () => {
       ]),
     ).toBe('Pabellón C · piso 3');
     expect(
-      ubicacionDeEspacios([{ id: 'a', identificador: 'x', pabellon: 'Pabellón A', piso: 1 }]),
-    ).toBe('Pabellón A · piso 1');
+      ubicacionDeEspacios([{ id: 'a', identificador: 'x', pabellon: 'Nuevo Pabellón', piso: 1 }]),
+    ).toBe('Nuevo Pabellón · piso 1');
   });
 });

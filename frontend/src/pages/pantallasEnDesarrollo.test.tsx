@@ -2,8 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { MENSAJE_EN_DESARROLLO, PREVISION_EN_DESARROLLO } from '../components/PantallaEnDesarrollo';
-import MapaAdminPage from './admin/MapaAdminPage';
-import LaboratoriosAdminPage from './admin/LaboratoriosAdminPage';
 import AltaAlumnoPage from './admin/AltaAlumnoPage';
 import AltaDocentePage from './admin/AltaDocentePage';
 import ClavesAdminPage from './admin/ClavesAdminPage';
@@ -27,12 +25,6 @@ function montar(nodo: React.ReactNode) {
 }
 
 const PANTALLAS = [
-  { nombre: 'Mapa del panel', Page: MapaAdminPage, titulo: 'Mapa de ocupación por piso' },
-  {
-    nombre: 'Laboratorios del panel',
-    Page: LaboratoriosAdminPage,
-    titulo: 'Laboratorios y equipos',
-  },
   { nombre: 'Alta de alumnos', Page: AltaAlumnoPage, titulo: 'Alta de alumnos' },
   { nombre: 'Alta de docentes', Page: AltaDocentePage, titulo: 'Alta de docentes' },
   { nombre: 'Claves del panel', Page: ClavesAdminPage, titulo: 'Claves y contraseñas' },
@@ -60,8 +52,11 @@ describe('ProximamenteAdminPage', () => {
     expect(screen.getByRole('heading', { name: 'Hoja de ruta' })).toBeVisible();
     expect(screen.getByRole('status')).toHaveTextContent(MENSAJE_EN_DESARROLLO);
     expect(screen.getByText(PREVISION_EN_DESARROLLO)).toBeVisible();
-    expect(screen.getByText('Mapa de ocupación por piso')).toBeVisible();
+    // El mapa de ocupación ya funciona con datos reales (Issue 4.14): sale de la hoja de ruta.
+    expect(screen.queryByText('Mapa de ocupación por piso')).toBeNull();
     expect(screen.getByText('Alta de alumnos y docentes')).toBeVisible();
+    // El listado de laboratorios ya funciona (Issue 4.16): sale de la hoja de ruta.
+    expect(screen.queryByText('Laboratorios y equipos')).toBeNull();
     expect(screen.queryByText('Revisión de incidencias')).toBeNull();
     expect(screen.queryByRole('link', { name: /Mapa de ocupación por piso/ })).toBeNull();
   });

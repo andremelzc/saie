@@ -195,7 +195,8 @@ export async function leerPlantilla(ruta: string): Promise<ResultadoLectura> {
       errores.push(`${ref}: habilitado debe ser SI o NO ('${v.habilitado}')`);
     if (piso === null || aforo === null || aforo < 0 || habilitado === null) continue;
 
-    // Columna opcional: distancia (metros) hasta el ascensor; base de la accesibilidad (R-07).
+    // Columna opcional: distancia caminando hasta el ascensor, en unidades del plano (no hay escala
+    // en metros); base de la accesibilidad (R-07). La calcula tools/planos/calcular-espacios.ts.
     let distancia: number | null = null;
     if (v.distancia_ascensor) {
       distancia = entero(v.distancia_ascensor);
@@ -573,6 +574,35 @@ export async function cargarPlantilla(
 
   log('[1/6] Espacios y contigüidades...');
   const resEspacios = await sembrarEspaciosYContiguedades(prisma, datos.espacios, datos.contiguos);
+
+  // El Excel es la fuente de verdad de la contigüidad: los pares que ya no están en la hoja
+  // «Contiguos» (p. ej. tras recalcularla desde los planos) se quitan de la base.
+  const espaciosDb = await prisma.espacio.findMany({
+    select: { id: true, pabellon: true, identificador: true },
+  });
+  const idDe = new Map(espaciosDb.map((e) => [`${e.pabellon}::${e.identificador}`, e.id]));
+  const vigentes = new Set<string>();
+  for (const c of datos.contiguos) {
+    const a = idDe.get(`${c.pabellon}::${c.identificadorA}`);
+    const b = idDe.get(`${c.pabellon}::${c.identificadorB}`);
+    if (a && b) {
+      vigentes.add(`${a}|${b}`);
+      vigentes.add(`${b}|${a}`);
+    }
+  }
+  const sobrantes = (await prisma.espacioContiguo.findMany()).filter(
+    (r) => !vigentes.has(`${r.espacioIdA}|${r.espacioIdB}`),
+  );
+  if (sobrantes.length > 0) {
+    await prisma.espacioContiguo.deleteMany({
+      where: {
+        OR: sobrantes.map((r) => ({ espacioIdA: r.espacioIdA, espacioIdB: r.espacioIdB })),
+      },
+    });
+    log(
+      `      ${sobrantes.length} relaciones de contigüidad que ya no están en el Excel se quitaron.`,
+    );
+  }
 
   log('[2/6] Docentes...');
   const resDocentes = await importarDocentes(datos.docentes, prisma);

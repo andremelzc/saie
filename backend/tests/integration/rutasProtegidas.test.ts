@@ -370,7 +370,7 @@ describe('Portal del alumno: solo rol ALUMNO (Issues 3.10–3.12)', () => {
           espacio: {
             id: 'esp-1',
             identificador: 'Aula 201',
-            pabellon: 'Pabellon A',
+            pabellon: 'Nuevo Pabellón',
             piso: 2,
             tipo: 'AULA_TEORICA',
           },

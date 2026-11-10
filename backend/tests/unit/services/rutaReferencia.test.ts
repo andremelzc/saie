@@ -31,7 +31,7 @@ describe('Algoritmo de Ruta de Referencia (Issue 3.14)', () => {
           {
             id: 'lab-201',
             identificador: 'Lab 201',
-            pabellon: 'Pabellon A',
+            pabellon: 'Nuevo Pabellón',
             piso: 2,
             tipo: TipoEspacio.LABORATORIO,
           },
@@ -41,7 +41,7 @@ describe('Algoritmo de Ruta de Referencia (Issue 3.14)', () => {
       });
 
       expect(ruta.estado).toBe('DISPONIBLE');
-      expect(ruta.pabellon).toBe('Pabellon A');
+      expect(ruta.pabellon).toBe('Nuevo Pabellón');
       expect(ruta.pisoDestino).toBe(2);
       expect(ruta.tramos).toHaveLength(3);
 
@@ -80,7 +80,7 @@ describe('Algoritmo de Ruta de Referencia (Issue 3.14)', () => {
           {
             id: 'lab-301',
             identificador: 'Lab 301',
-            pabellon: 'Pabellon B',
+            pabellon: 'Antiguo Pabellón',
             piso: 3,
             tipo: TipoEspacio.LABORATORIO,
           },
@@ -111,7 +111,7 @@ describe('Algoritmo de Ruta de Referencia (Issue 3.14)', () => {
           {
             id: 'aula-101',
             identificador: 'Aula 101',
-            pabellon: 'Pabellon A',
+            pabellon: 'Nuevo Pabellón',
             piso: 1,
             tipo: TipoEspacio.AULA_TEORICA,
           },
@@ -136,7 +136,9 @@ describe('Algoritmo de Ruta de Referencia (Issue 3.14)', () => {
       expect(sinPabellon.tramos).toHaveLength(0);
 
       const sinPiso = calcularRutaReferencia({
-        espacios: [{ id: 'esp-y', identificador: 'Aula Y', pabellon: 'Pabellon A', piso: null }],
+        espacios: [
+          { id: 'esp-y', identificador: 'Aula Y', pabellon: 'Nuevo Pabellón', piso: null },
+        ],
       });
       expect(sinPiso.estado).toBe('RUTA_NO_DISPONIBLE');
       expect(sinPiso.tramos).toHaveLength(0);

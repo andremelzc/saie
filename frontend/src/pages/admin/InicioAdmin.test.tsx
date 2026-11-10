@@ -5,9 +5,12 @@ import InicioAdmin from './InicioAdmin';
 import {
   ejecutarCorrida,
   obtenerAlertas,
+  obtenerLaboratoriosConEstado,
+  obtenerMapaOcupacionAdmin,
   obtenerEscaladas,
   reintentarSeccion,
 } from '../../services/admin';
+import type { LaboratorioConEstadoDTO } from '../../services/admin';
 import type {
   AlertaDTO,
   ReglaVerificacion,
@@ -21,6 +24,9 @@ vi.mock('../../context/useAuth', () => ({
   useAuth: () => ({ sesion: { rol }, cerrarSesion: vi.fn() }),
 }));
 vi.mock('../../services/admin', () => ({
+  CLAVE_LABORATORIOS_ESTADO: 'laboratorios-estado',
+  obtenerLaboratoriosConEstado: vi.fn(),
+  obtenerMapaOcupacionAdmin: vi.fn(),
   obtenerAlertas: vi.fn(),
   obtenerEscaladas: vi.fn(),
   ejecutarCorrida: vi.fn(),
@@ -28,6 +34,8 @@ vi.mock('../../services/admin', () => ({
 }));
 
 const alertas = vi.mocked(obtenerAlertas);
+const laboratorios = vi.mocked(obtenerLaboratoriosConEstado);
+const mapaAdmin = vi.mocked(obtenerMapaOcupacionAdmin);
 const escaladas = vi.mocked(obtenerEscaladas);
 const corrida = vi.mocked(ejecutarCorrida);
 const reintento = vi.mocked(reintentarSeccion);
@@ -409,40 +417,102 @@ describe('Inicio del panel administrativo', () => {
     });
   });
 
-  describe('Jefatura (Issue 4.19)', () => {
-    beforeEach(() => {
-      rol = 'JEFATURA_LABORATORIOS';
+  describe('Jefatura (Issue 4.16)', () => {
+    const lab = (o: Partial<LaboratorioConEstadoDTO>): LaboratorioConEstadoDTO => ({
+      id: 'l1',
+      identificador: 'Lab 04',
+      tipo: 'LABORATORIO',
+      pabellon: 'Nuevo Pabellón',
+      piso: 2,
+      aforoNominal: 30,
+      softwareInstalado: [],
+      pcsMalogradas: 3,
+      habilitado: true,
+      descripcionUso: null,
+      contiguos: [],
+      camposEditables: [],
+      estado: 'DISPONIBLE',
+      capacidadReal: 27,
+      asignacion: null,
+      alertas: [],
+      ...o,
     });
 
-    it('resume las alertas por estado y tipo', async () => {
+    beforeEach(() => {
+      rol = 'JEFATURA_LABORATORIOS';
+      mapaAdmin.mockImplementation(async (pabellon: string, piso: number) => ({
+        pabellon,
+        piso,
+        espacios: [],
+      }));
+      laboratorios.mockResolvedValue([
+        lab({}),
+        lab({
+          id: 'l2',
+          identificador: 'Lab 02',
+          pcsMalogradas: 0,
+          capacidadReal: 25,
+          aforoNominal: 25,
+        }),
+        lab({ id: 'l3', identificador: 'Lab 06', habilitado: false, pcsMalogradas: 5 }),
+      ]);
+    });
+
+    it('muestra labs activos y PCs operativas e inoperativas', async () => {
+      alertas.mockResolvedValue([]);
+      montar();
+      expect(await screen.findByText('Laboratorios activos')).toBeInTheDocument();
+      expect(screen.getByText('Laboratorios activos').previousSibling).toHaveTextContent('2/3');
+      // Solo cuentan los laboratorios habilitados: 27 + 25 operativas, 3 + 0 inoperativas.
+      expect(screen.getByText('PCs operativas').previousSibling).toHaveTextContent('52');
+      expect(screen.getByText('PCs inoperativas').previousSibling).toHaveTextContent('3');
+      expect(escaladas).not.toHaveBeenCalled();
+    });
+
+    it('destaca la alerta pendiente más reciente', async () => {
       alertas.mockResolvedValue([
-        alerta({ id: '1' }),
-        alerta({ id: '2', tipo: 'CAPACIDAD' }),
-        alerta({ id: '3', tipo: 'CAPACIDAD', estado: 'RESUELTA' }),
+        alerta({
+          id: '1',
+          motivo: 'Falta Docker',
+          espacio: { id: 'l1', identificador: 'Lab 04', pabellon: 'N', piso: 2 },
+        }),
+        alerta({ id: '2', tipo: 'CAPACIDAD', motivo: 'Antigua' }),
+        alerta({ id: '3', estado: 'RESUELTA' }),
       ]);
       montar();
-      expect(await screen.findByText('Alertas pendientes')).toBeInTheDocument();
-      expect(screen.getByText('De software').previousSibling).toHaveTextContent('1');
-      expect(screen.getByText('De capacidad').previousSibling).toHaveTextContent('2');
+      const seccion = await screen.findByRole('region', { name: 'Alerta más reciente' });
+      expect(within(seccion).getByText('Falta Docker')).toBeInTheDocument();
       expect(screen.getByText('Alertas pendientes').previousSibling).toHaveTextContent('2');
+    });
+
+    it('ofrece el listado de laboratorios, las alertas y el cambio de laboratorio', async () => {
+      alertas.mockResolvedValue([]);
+      montar();
+      expect(
+        await screen.findByRole('link', { name: /Ver todos mis laboratorios/ }),
+      ).toHaveAttribute('href', '/admin/laboratorios');
       expect(screen.getByRole('link', { name: /Reportar cambio de laboratorio/ })).toBeTruthy();
-      expect(escaladas).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole('link', { name: /Alertas de mis laboratorios/ }),
+      ).not.toHaveTextContent(/\d/);
     });
 
     it('muestra el error de carga con opción de reintentar', async () => {
       alertas.mockRejectedValueOnce(new Error('x'));
+      alertas.mockResolvedValue([]);
       montar();
       fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }));
       expect(await screen.findByText('Alertas pendientes')).toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByRole('button', { name: 'Reintentar' })).toBeNull());
     });
 
-    it('no muestra contador si no hay alertas pendientes', async () => {
+    it('muestra el mapa de ocupación con sus laboratorios', async () => {
       alertas.mockResolvedValue([]);
       montar();
-      await screen.findByText('Alertas pendientes');
       expect(
-        screen.getByRole('link', { name: /Alertas de mis laboratorios/ }),
-      ).not.toHaveTextContent(/\d/);
+        await screen.findByRole('heading', { name: 'Tus laboratorios en el mapa de ocupación' }),
+      ).toBeInTheDocument();
+      await waitFor(() => expect(mapaAdmin).toHaveBeenCalled());
     });
   });
 });

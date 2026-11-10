@@ -100,13 +100,15 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
     });
   });
 
-  describe('portal docente y revisión de incidencias (Issues 7.8 a 7.12)', () => {
+  describe('portal docente, incidencias y laboratorios (Issues 7.8 a 7.12 y 4.16)', () => {
     it.each([
       ['DOCENTE', '/docente', 'Portal del docente'],
       ['DOCENTE', '/docente/horario', 'Mi horario y asignaciones'],
       ['DOCENTE', '/docente/espacios', 'Explorar espacios y equipos'],
       ['DOCENTE', '/docente/incidencias', 'Reportar una incidencia'],
       ['JEFATURA_LABORATORIOS', '/admin/incidencias', 'Revisión de incidencias'],
+      ['COORDINACION_ACADEMICA', '/admin/laboratorios', 'Laboratorios y equipos'],
+      ['JEFATURA_LABORATORIOS', '/admin/laboratorios', 'Laboratorios y equipos'],
     ] as const)('%s autorizado ve "%s"', async (rol, ruta, titulo) => {
       iniciarSesionDePrueba(rol);
       renderizar(ruta);
@@ -121,8 +123,6 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
   describe('pantallas en desarrollo', () => {
     it.each([
       ['COORDINACION_ACADEMICA', '/admin/proximamente', 'Hoja de ruta'],
-      ['COORDINACION_ACADEMICA', '/admin/mapa', 'Mapa de ocupación por piso'],
-      ['COORDINACION_ACADEMICA', '/admin/laboratorios', 'Laboratorios y equipos'],
       ['COORDINACION_ACADEMICA', '/admin/alumnos/nuevo', 'Alta de alumnos'],
       ['COORDINACION_ACADEMICA', '/admin/docentes/nuevo', 'Alta de docentes'],
       ['COORDINACION_ACADEMICA', '/admin/claves', 'Claves y contraseñas'],
@@ -135,6 +135,28 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
       expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument();
       expect(screen.getByRole('status')).toHaveTextContent(/próximamente/i);
     });
+
+    it('Coordinación entra al mapa de ocupación por piso', async () => {
+      iniciarSesionDePrueba('COORDINACION_ACADEMICA');
+      // El mapa pide la ocupación real de cada pabellón y piso: se responde un piso vacío.
+      api.defaults.adapter = async (
+        config: InternalAxiosRequestConfig,
+      ): Promise<AxiosResponse> => ({
+        data: { success: true, data: { ...config.params, espacios: [] } },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      });
+      renderizar('/admin/mapa');
+      expect(
+        await screen.findByRole('heading', { name: 'Mapa de ocupación por piso' }),
+      ).toBeInTheDocument();
+      // El mapa pide seis consultas y dibuja los planos: con la máquina cargada pasa de 1 s.
+      expect(
+        await screen.findByRole('group', { name: /Plano del piso 1/ }, { timeout: 5000 }),
+      ).toBeInTheDocument();
+    }, 10000);
 
     // Estas dos pantallas ya no están «en desarrollo» (Issue 4.29): se comprueba el acceso por rol.
     it('Coordinación entra a la bandeja de solicitudes de software', async () => {

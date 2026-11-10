@@ -12,7 +12,7 @@ import { BloqueCandidato, EspacioConexo } from '../../../src/rules/buscarBloqueC
 // Helpers de fixtures
 // ---------------------------------------------------------------------------
 
-function crearBloqueAula(piso: number, pabellon = 'Pabellon A'): BloqueCandidato {
+function crearBloqueAula(piso: number, pabellon = 'Nuevo Pabellón'): BloqueCandidato {
   const espacio: EspacioConexo = {
     id: `aula-p${piso}`,
     identificador: `Aula ${piso}01`,
@@ -32,7 +32,7 @@ function crearBloqueAula(piso: number, pabellon = 'Pabellon A'): BloqueCandidato
   };
 }
 
-function crearBloqueLab(piso: number, pabellon = 'Pabellon A'): BloqueCandidato {
+function crearBloqueLab(piso: number, pabellon = 'Nuevo Pabellón'): BloqueCandidato {
   const espacio: EspacioConexo = {
     id: `lab-p${piso}`,
     identificador: `Lab ${piso}01`,
@@ -71,24 +71,24 @@ describe('Issue 2.13 / 5.16 — Pruebas de cercanía entre secciones paralelas',
   // -------------------------------------------------------------------------
   describe('Función auxiliar: calcularPuntajeDistancia', () => {
     test('mismo pabellón y mismo piso otorga la máxima puntuación (100 pts)', () => {
-      expect(calcularPuntajeDistancia('Pabellon A', 1, 'Pabellon A', 1)).toBe(100);
+      expect(calcularPuntajeDistancia('Nuevo Pabellón', 1, 'Nuevo Pabellón', 1)).toBe(100);
       expect(calcularPuntajeDistancia('Pab A', 2, 'pab a ', 2)).toBe(100); // normalización case/trim
     });
 
     test('mismo pabellón y piso adyacente (|Δpiso| = 1) otorga puntuación intermedia (70 pts)', () => {
-      expect(calcularPuntajeDistancia('Pabellon A', 1, 'Pabellon A', 2)).toBe(70);
-      expect(calcularPuntajeDistancia('Pabellon A', 3, 'Pabellon A', 2)).toBe(70);
+      expect(calcularPuntajeDistancia('Nuevo Pabellón', 1, 'Nuevo Pabellón', 2)).toBe(70);
+      expect(calcularPuntajeDistancia('Nuevo Pabellón', 3, 'Nuevo Pabellón', 2)).toBe(70);
     });
 
     test('mismo pabellón y piso distante (|Δpiso| ≥ 2) otorga baja puntuación (30 pts)', () => {
-      expect(calcularPuntajeDistancia('Pabellon A', 1, 'Pabellon A', 3)).toBe(30);
-      expect(calcularPuntajeDistancia('Pabellon A', 1, 'Pabellon A', 4)).toBe(30);
+      expect(calcularPuntajeDistancia('Nuevo Pabellón', 1, 'Nuevo Pabellón', 3)).toBe(30);
+      expect(calcularPuntajeDistancia('Nuevo Pabellón', 1, 'Nuevo Pabellón', 4)).toBe(30);
     });
 
     test('distinto pabellón otorga la mínima puntuación (10 pts), independiente del piso', () => {
-      expect(calcularPuntajeDistancia('Pabellon A', 1, 'Pabellon B', 1)).toBe(10);
-      expect(calcularPuntajeDistancia('Pabellon A', 1, 'Pabellon B', 2)).toBe(10);
-      expect(calcularPuntajeDistancia('Pabellon A', 3, 'Pabellon C', 1)).toBe(10);
+      expect(calcularPuntajeDistancia('Nuevo Pabellón', 1, 'Antiguo Pabellón', 1)).toBe(10);
+      expect(calcularPuntajeDistancia('Nuevo Pabellón', 1, 'Antiguo Pabellón', 2)).toBe(10);
+      expect(calcularPuntajeDistancia('Nuevo Pabellón', 3, 'Antiguo Pabellón', 1)).toBe(10);
     });
   });
 
@@ -105,29 +105,29 @@ describe('Issue 2.13 / 5.16 — Pruebas de cercanía entre secciones paralelas',
     });
 
     test('sección paralela en el mismo pabellón y piso → 100 pts (máxima cercanía)', () => {
-      const paralelas = [crearParalela('sec-2', 'Pabellon A', 1)];
+      const paralelas = [crearParalela('sec-2', 'Nuevo Pabellón', 1)];
       expect(evaluarCercaniaParalelas(bloquePiso1, paralelas)).toBe(100);
     });
 
     test('sección paralela en piso adyacente (|Δpiso| = 1) → 70 pts', () => {
-      const paralelas = [crearParalela('sec-2', 'Pabellon A', 2)];
+      const paralelas = [crearParalela('sec-2', 'Nuevo Pabellón', 2)];
       expect(evaluarCercaniaParalelas(bloquePiso1, paralelas)).toBe(70);
     });
 
     test('sección paralela en piso no adyacente (|Δpiso| ≥ 2) → 30 pts', () => {
-      const paralelas = [crearParalela('sec-2', 'Pabellon A', 3)]; // piso 1 vs piso 3 = delta 2
+      const paralelas = [crearParalela('sec-2', 'Nuevo Pabellón', 3)]; // piso 1 vs piso 3 = delta 2
       expect(evaluarCercaniaParalelas(bloquePiso1, paralelas)).toBe(30);
     });
 
     test('sección paralela en distinto pabellón → 10 pts (mínima cercanía)', () => {
-      const paralelas = [crearParalela('sec-2', 'Pabellon B', 1)];
+      const paralelas = [crearParalela('sec-2', 'Antiguo Pabellón', 1)];
       expect(evaluarCercaniaParalelas(bloquePiso1, paralelas)).toBe(10);
     });
 
     test('con múltiples secciones paralelas retorna el promedio de cercanía', () => {
       const paralelas: AsignacionParalelaUbicacion[] = [
-        crearParalela('sec-2', 'Pabellon A', 1), // 100 pts
-        crearParalela('sec-3', 'Pabellon A', 2), // 70 pts
+        crearParalela('sec-2', 'Nuevo Pabellón', 1), // 100 pts
+        crearParalela('sec-3', 'Nuevo Pabellón', 2), // 70 pts
       ];
       // Promedio: (100 + 70) / 2 = 85
       expect(evaluarCercaniaParalelas(bloquePiso1, paralelas)).toBe(85);
@@ -152,7 +152,7 @@ describe('Issue 2.13 / 5.16 — Pruebas de cercanía entre secciones paralelas',
           codigoSeccion: '1',
           espacios: [], // debe ignorarse
         },
-        crearParalela('sec-3', 'Pabellon A', 1), // 100 pts
+        crearParalela('sec-3', 'Nuevo Pabellón', 1), // 100 pts
       ];
       expect(evaluarCercaniaParalelas(bloquePiso1, paralelas)).toBe(100);
     });
@@ -163,36 +163,36 @@ describe('Issue 2.13 / 5.16 — Pruebas de cercanía entre secciones paralelas',
   // Plan maestro §1.1: repetir escenarios para laboratorios
   // -------------------------------------------------------------------------
   describe('Función pura: evaluarCercaniaParalelas — Laboratorios', () => {
-    const bloqueLab1 = crearBloqueLab(1); // Lab en Piso 1, Pabellon A
+    const bloqueLab1 = crearBloqueLab(1); // Lab en Piso 1, Nuevo Pabellón
 
     test('sin secciones paralelas, laboratorio retorna puntuación neutra (50 pts)', () => {
       expect(evaluarCercaniaParalelas(bloqueLab1, [])).toBe(PUNTAJE_CERCANIA_NEUTRO);
     });
 
     test('laboratorio paralelo en mismo piso → 100 pts', () => {
-      const paralelas = [crearParalela('lab-sec-2', 'Pabellon A', 1)];
+      const paralelas = [crearParalela('lab-sec-2', 'Nuevo Pabellón', 1)];
       expect(evaluarCercaniaParalelas(bloqueLab1, paralelas)).toBe(100);
     });
 
     test('laboratorio paralelo en piso adyacente (|Δpiso| = 1) → 70 pts', () => {
-      const paralelas = [crearParalela('lab-sec-2', 'Pabellon A', 2)];
+      const paralelas = [crearParalela('lab-sec-2', 'Nuevo Pabellón', 2)];
       expect(evaluarCercaniaParalelas(bloqueLab1, paralelas)).toBe(70);
     });
 
     test('laboratorio paralelo en piso no adyacente (|Δpiso| ≥ 2) → 30 pts', () => {
-      const paralelas = [crearParalela('lab-sec-2', 'Pabellon A', 3)];
+      const paralelas = [crearParalela('lab-sec-2', 'Nuevo Pabellón', 3)];
       expect(evaluarCercaniaParalelas(bloqueLab1, paralelas)).toBe(30);
     });
 
     test('laboratorio paralelo en distinto pabellón → 10 pts', () => {
-      const paralelas = [crearParalela('lab-sec-2', 'Pabellon B', 1)];
+      const paralelas = [crearParalela('lab-sec-2', 'Antiguo Pabellón', 1)];
       expect(evaluarCercaniaParalelas(bloqueLab1, paralelas)).toBe(10);
     });
 
     test('laboratorio con múltiples secciones paralelas: retorna promedio', () => {
       const paralelas: AsignacionParalelaUbicacion[] = [
-        crearParalela('lab-2', 'Pabellon A', 2), // 70 pts
-        crearParalela('lab-3', 'Pabellon A', 3), // 30 pts
+        crearParalela('lab-2', 'Nuevo Pabellón', 2), // 70 pts
+        crearParalela('lab-3', 'Nuevo Pabellón', 3), // 30 pts
       ];
       // Promedio: (70 + 30) / 2 = 50
       expect(evaluarCercaniaParalelas(bloqueLab1, paralelas)).toBe(50);
@@ -236,19 +236,19 @@ describe('Issue 2.13 / 5.16 — Pruebas de cercanía entre secciones paralelas',
       {
         descripcion: 'AULA — sección paralela en mismo piso → 100 pts',
         tipo: TipoEspacio.AULA_TEORICA,
-        paralelas: [crearParalela('sec-a', 'Pabellon A', 1)],
+        paralelas: [crearParalela('sec-a', 'Nuevo Pabellón', 1)],
         puntuacionEsperada: 100,
       },
       {
         descripcion: 'AULA — sección paralela en piso adyacente → 70 pts',
         tipo: TipoEspacio.AULA_TEORICA,
-        paralelas: [crearParalela('sec-a', 'Pabellon A', 2)],
+        paralelas: [crearParalela('sec-a', 'Nuevo Pabellón', 2)],
         puntuacionEsperada: 70,
       },
       {
         descripcion: 'AULA — sección paralela en piso no adyacente → 30 pts',
         tipo: TipoEspacio.AULA_TEORICA,
-        paralelas: [crearParalela('sec-a', 'Pabellon A', 3)],
+        paralelas: [crearParalela('sec-a', 'Nuevo Pabellón', 3)],
         puntuacionEsperada: 30,
       },
       // LABORATORIOS
@@ -261,19 +261,19 @@ describe('Issue 2.13 / 5.16 — Pruebas de cercanía entre secciones paralelas',
       {
         descripcion: 'LAB — sección paralela en mismo piso → 100 pts',
         tipo: TipoEspacio.LABORATORIO,
-        paralelas: [crearParalela('sec-b', 'Pabellon A', 1)],
+        paralelas: [crearParalela('sec-b', 'Nuevo Pabellón', 1)],
         puntuacionEsperada: 100,
       },
       {
         descripcion: 'LAB — sección paralela en piso adyacente → 70 pts',
         tipo: TipoEspacio.LABORATORIO,
-        paralelas: [crearParalela('sec-b', 'Pabellon A', 2)],
+        paralelas: [crearParalela('sec-b', 'Nuevo Pabellón', 2)],
         puntuacionEsperada: 70,
       },
       {
         descripcion: 'LAB — sección paralela en piso no adyacente → 30 pts',
         tipo: TipoEspacio.LABORATORIO,
-        paralelas: [crearParalela('sec-b', 'Pabellon A', 3)],
+        paralelas: [crearParalela('sec-b', 'Nuevo Pabellón', 3)],
         puntuacionEsperada: 30,
       },
     ];
@@ -297,7 +297,7 @@ describe('Issue 2.13 / 5.16 — Pruebas de cercanía entre secciones paralelas',
               seccion: { codigoSeccion: '2' },
               espacios: [
                 {
-                  espacio: { pabellon: 'Pabellon A', piso: 1 },
+                  espacio: { pabellon: 'Nuevo Pabellón', piso: 1 },
                 },
               ],
             },
@@ -316,7 +316,7 @@ describe('Issue 2.13 / 5.16 — Pruebas de cercanía entre secciones paralelas',
       expect(resultado[0]).toEqual({
         seccionId: 'sec-paralela',
         codigoSeccion: '2',
-        espacios: [{ pabellon: 'Pabellon A', piso: 1 }],
+        espacios: [{ pabellon: 'Nuevo Pabellón', piso: 1 }],
       });
       expect(mockPrisma.asignacion.findMany).toHaveBeenCalled();
     });

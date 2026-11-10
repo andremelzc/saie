@@ -276,10 +276,7 @@ export const AppRoutes: React.FC = () => {
           <Route
             path={RUTAS.laboratoriosAdmin}
             element={
-              <RutaProtegida
-                rolesPermitidos={['COORDINACION_ACADEMICA']}
-                rutaLogin={RUTAS.loginAdmin}
-              >
+              <RutaProtegida rolesPermitidos={ROLES_ADMIN} rutaLogin={RUTAS.loginAdmin}>
                 <LaboratoriosAdminPage />
               </RutaProtegida>
             }
