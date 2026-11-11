@@ -1,5 +1,5 @@
 import React, { useId, useMemo, useState } from 'react';
-import { SelectorSegmentado } from '../estudiante/SelectorSegmentado';
+import { SelectorSegmentado } from '../ui/SelectorSegmentado';
 import Mapa3DLazy from '../mapa3d/Mapa3DLazy';
 import type { EstadoOcupacion } from '../mapa3d/tipos';
 import BuscadorEspacios from './BuscadorEspacios';

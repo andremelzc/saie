@@ -86,7 +86,9 @@ describe('Catálogo de software (Issue 4.30)', () => {
   it('dar de baja avisa cuántos laboratorios y secciones lo usan', async () => {
     cambiarEstado.mockResolvedValue(sw({ activo: false }));
     montar();
-    fireEvent.click((await screen.findAllByRole('button', { name: /Dar de baja Python 3.12/ }))[0]);
+    // Dar de baja vive dentro del panel de edición, no en cada fila.
+    fireEvent.click((await screen.findAllByRole('button', { name: /Editar Python 3.12/ }))[0]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Dar de baja este software' }));
 
     const dialogo = screen.getByRole('alertdialog');
     expect(dialogo).toHaveTextContent('2 laboratorios · 5 secciones');
@@ -191,7 +193,8 @@ describe('Catálogo de software (Issue 4.30)', () => {
     listar.mockResolvedValue({ items: [sw({ activo: false })], total: 1, page: 1, limit: 50 });
     cambiarEstado.mockResolvedValue(sw());
     montar();
-    fireEvent.click((await screen.findAllByRole('button', { name: /Reactivar Python 3.12/ }))[0]);
+    fireEvent.click((await screen.findAllByRole('button', { name: /Editar Python 3.12/ }))[0]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Reactivar este software' }));
     const dialogo = screen.getByRole('alertdialog');
     expect(dialogo).toHaveTextContent('Se podrá volver a elegir');
     fireEvent.click(within(dialogo).getByRole('button', { name: 'Sí, reactivar' }));

@@ -1,8 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { PLANOS_SVG } from '../mapa2d/planos';
 import { leerOrigen, origenesDeRuta } from './origenes';
 import { ASIGNACIONES_EJEMPLO, rutaDeEjemplo } from './rutaEjemplo';
 import { calcularTrazado } from './trazado';
+
+// La primera ruta arma las mallas de los tres pisos (~1 s): con la suite completa y la cobertura
+// hace falta más margen que los 5 s por defecto.
+vi.setConfig({ testTimeout: 20_000 });
 
 const opciones = origenesDeRuta(PLANOS_SVG).flatMap((g) => g.opciones);
 const nombres = (titulo: RegExp) =>

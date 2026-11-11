@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { isAxiosError } from 'axios';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
 import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import { ICONOS } from '../../components/ui/iconos';
 import { RUTAS } from '../../config/rutas';
@@ -43,6 +43,7 @@ export const ReporteSalones: React.FC = () => {
     cargando: cargandoDatos,
     error,
     recargar,
+    deOtraConsulta,
   } = useCarga(cargar, {
     clave: `reporte:${periodo}`,
     // Se espera a saber cuál es el vigente para no pedir el informe dos veces.
@@ -63,10 +64,19 @@ export const ReporteSalones: React.FC = () => {
       subtitulo="Las secciones del periodo con el aula que tienen asignada, listo para presentar."
       acciones={
         <div className="flex flex-wrap gap-2 saie-no-imprimir">
-          <Boton variante="secundario" onClick={recargar} cargando={cargando}>
+          <Boton
+            variante="secundario"
+            onClick={recargar}
+            cargando={cargando}
+            textoCargando="Actualizando…"
+          >
             Actualizar datos
           </Boton>
-          <Boton variante="primario" onClick={imprimir} disabled={!datos || sinSecciones}>
+          <Boton
+            variante="primario"
+            onClick={imprimir}
+            disabled={!datos || sinSecciones || (cargando && deOtraConsulta)}
+          >
             Imprimir o guardar como PDF
           </Boton>
         </div>
@@ -96,8 +106,8 @@ export const ReporteSalones: React.FC = () => {
           </div>
         )}
 
-        <ZonaActualizable actualizando={cargando && datos !== null}>
-          {cargando && !datos ? (
+        <ZonaActualizable actualizando={cargando && datos !== null && !deOtraConsulta}>
+          {cargando && (!datos || deOtraConsulta) ? (
             <EsqueletoCarga texto="Preparando el informe…" forma="tabla" />
           ) : sinSecciones ? (
             <EstadoVacio
@@ -127,25 +137,25 @@ export const ReporteSalones: React.FC = () => {
                 </div>
                 <dl className="m-0 flex flex-wrap gap-4 text-sm">
                   <div>
-                    <dt className="text-xs text-saie-muted">Secciones</dt>
+                    <dt className="text-sm text-saie-muted">Secciones</dt>
                     <dd className="m-0 text-lg font-bold text-saie-text">
                       {datos.totales.secciones}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-saie-muted">Con aula</dt>
+                    <dt className="text-sm text-saie-muted">Con aula</dt>
                     <dd className="m-0 text-lg font-bold text-saie-text">
                       {datos.totales.asignadas}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-saie-muted">Sin aula</dt>
+                    <dt className="text-sm text-saie-muted">Sin aula</dt>
                     <dd className="m-0 text-lg font-bold text-saie-danger-strong">
                       {datos.totales.sinAula}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-saie-muted">Aulas usadas</dt>
+                    <dt className="text-sm text-saie-muted">Aulas usadas</dt>
                     <dd className="m-0 text-lg font-bold text-saie-text">
                       {datos.totales.aulasDistintas}
                     </dd>
@@ -179,7 +189,7 @@ export const ReporteSalones: React.FC = () => {
                       </span>
                     </p>
                     <div>
-                      <span className="block text-xs text-saie-muted">Aula</span>
+                      <span className="block text-sm text-saie-muted">Aula</span>
                       {s.aula ? (
                         <span>
                           <span className="font-semibold">{s.aula.identificador}</span>
@@ -266,7 +276,7 @@ export const ReporteSalones: React.FC = () => {
                 </TablaDatos>
               </div>
 
-              <footer className="border-t border-saie-divider pt-3 text-xs text-saie-muted">
+              <footer className="border-t border-saie-divider pt-3 text-sm text-saie-muted">
                 <p className="m-0">
                   Total de alumnos matriculados: {datos.totales.alumnos}. Documento generado por el
                   SAIE; los horarios están en hora de Lima.

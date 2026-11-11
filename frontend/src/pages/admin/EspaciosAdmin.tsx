@@ -4,7 +4,8 @@ import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import { Link } from 'react-router-dom';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import FormularioEspacio from '../../components/admin/FormularioEspacio';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
+import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
@@ -30,7 +31,7 @@ const Dato: React.FC<{ etiqueta: string; children: React.ReactNode }> = ({
   children,
 }) => (
   <div className="flex flex-col gap-0.5 border-b border-saie-divider py-2 last:border-b-0">
-    <dt className="text-xs font-semibold text-saie-muted">{etiqueta}</dt>
+    <dt className="text-sm font-semibold text-saie-muted">{etiqueta}</dt>
     <dd className="m-0 text-sm text-saie-text">{children}</dd>
   </div>
 );
@@ -141,11 +142,11 @@ const ListadoEspacios: React.FC<{
             </header>
             <dl className="m-0 grid grid-cols-2 gap-2 text-sm">
               <div>
-                <dt className="text-xs text-saie-muted">Capacidad</dt>
+                <dt className="text-sm text-saie-muted">Capacidad</dt>
                 <dd className="m-0 font-medium text-saie-text">{celdaCapacidad(e)}</dd>
               </div>
               <div>
-                <dt className="text-xs text-saie-muted">PCs malogradas</dt>
+                <dt className="text-sm text-saie-muted">PCs malogradas</dt>
                 <dd className="m-0 font-medium text-saie-text">{celdaPcs(e)}</dd>
               </div>
             </dl>
@@ -541,8 +542,8 @@ export const EspaciosAdmin: React.FC = () => {
       }
     >
       <section aria-label="Filtros de espacios" className="flex flex-col gap-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Campo etiqueta="Buscar espacio">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Campo etiqueta="Buscar espacio" className="col-span-2 lg:col-span-1">
             <input
               type="search"
               placeholder="Ej. AULA-101"
@@ -551,7 +552,7 @@ export const EspaciosAdmin: React.FC = () => {
               className={CLASE_CAMPO}
             />
           </Campo>
-          <Campo etiqueta="Tipo de espacio">
+          <Campo etiqueta="Tipo de espacio" className="col-span-2 sm:col-span-1">
             <select
               value={filtro}
               onChange={(e) => setFiltro(e.target.value as Filtro)}
@@ -632,7 +633,9 @@ export const EspaciosAdmin: React.FC = () => {
         </Aviso>
       )}
 
-      {contenidoListado}
+      <ZonaActualizable actualizando={cargando && datos !== null}>
+        {contenidoListado}
+      </ZonaActualizable>
 
       <Drawer
         abierto={seleccionado !== null || creando}

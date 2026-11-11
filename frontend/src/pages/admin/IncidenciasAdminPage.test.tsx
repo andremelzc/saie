@@ -151,7 +151,7 @@ describe('Revisión de incidencias por Jefatura (Issues 7.11 y 7.12)', () => {
     montar();
     await screen.findByRole('list', { name: 'Incidencias' });
     listar.mockResolvedValue([]);
-    fireEvent.change(screen.getByLabelText('Estado'), { target: { value: 'RESUELTA' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Resueltas' }));
     fireEvent.change(screen.getByLabelText('Prioridad'), { target: { value: 'ALTA' } });
     await waitFor(() =>
       expect(listar).toHaveBeenLastCalledWith({ estado: 'RESUELTA', prioridad: 'ALTA' }),

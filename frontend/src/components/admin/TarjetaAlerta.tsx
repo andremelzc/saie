@@ -18,21 +18,18 @@ function textoCursosOcultos(cantidad: number): string {
   return cantidad === 1 ? 'curso' : 'cursos';
 }
 
-const ESTILO_TIPO: Record<
-  TipoAlerta,
-  { etiqueta: string; borde: string; chip: string; trazo: string }
-> = {
+// El tipo se distingue por ícono y texto, no por color: la guía reserva los colores de estado
+// para estados, y un azul de «info» no forma parte de la paleta.
+const ESTILO_TIPO: Record<TipoAlerta, { etiqueta: string; chip: string; trazo: string }> = {
   SOFTWARE: {
     etiqueta: 'Software',
-    borde: 'border-l-saie-info',
-    chip: 'bg-saie-info-soft text-saie-info',
+    chip: 'bg-saie-canvas text-saie-text',
     // Monitor
     trazo: ICONOS.monitor,
   },
   CAPACIDAD: {
     etiqueta: 'Capacidad',
-    borde: 'border-l-saie-warning-strong',
-    chip: 'bg-saie-warning-soft text-saie-warning-strong',
+    chip: 'bg-saie-canvas text-saie-text',
     // Personas
     trazo:
       'M17 20h5v-2a3 3 0 00-5.36-1.86M17 20H7m10 0v-2c0-.66-.13-1.28-.36-1.86M7 20H2v-2a3 3 0 015.36-1.86M7 20v-2c0-.66.13-1.28.36-1.86m0 0a5 5 0 019.28 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
@@ -67,7 +64,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
     <article
       aria-label={`Alerta de ${estilo.etiqueta.toLowerCase()} en ${alerta.espacio.identificador}`}
       data-tipo={alerta.tipo}
-      className={`flex flex-col gap-3 rounded-xl border border-saie-divider border-l-4 ${estilo.borde} bg-white p-4 shadow-sm ${resuelta ? 'opacity-70' : ''}`}
+      className={`flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4 shadow-sm ${resuelta ? 'opacity-70' : ''}`}
     >
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-3">
@@ -112,7 +109,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
       </div>
 
       <div>
-        <p className="m-0 mb-1 text-xs font-semibold text-saie-muted">
+        <p className="m-0 mb-1 text-sm font-semibold text-saie-muted">
           Cursos afectados ({cursos.length})
         </p>
         {cursos.length === 0 ? (
@@ -151,7 +148,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
         {!resuelta && onResolver && (
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Boton
-              variante="primario"
+              variante="secundario"
               tamano="sm"
               onClick={() => setConfirmando(true)}
               disabled={resolviendo}

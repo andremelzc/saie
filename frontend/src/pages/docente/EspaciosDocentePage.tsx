@@ -1,9 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import PaginaDocente from '../../components/docente/PaginaDocente';
-import SelectorSegmentado from '../../components/estudiante/SelectorSegmentado';
-import type { OpcionSegmentada } from '../../components/estudiante/SelectorSegmentado';
+import SelectorSegmentado from '../../components/ui/SelectorSegmentado';
+import type { OpcionSegmentada } from '../../components/ui/SelectorSegmentado';
 import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
-import { idPanelPestana, idPestana } from '../../components/estudiante/idsPestanas';
+import { idPanelPestana, idPestana } from '../../components/ui/idsPestanas';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Campo } from '../../components/ui/Campo';
 import { CLASE_CAMPO } from '../../components/ui/campos';

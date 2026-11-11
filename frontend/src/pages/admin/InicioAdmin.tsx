@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
@@ -81,7 +81,7 @@ const Acceso: React.FC<{ to: string; titulo: string; descripcion: string; trazo:
     </span>
     <span className="min-w-0 flex-1">
       <span className="block text-sm font-bold text-saie-text">{titulo}</span>
-      <span className="block text-xs text-saie-muted">{descripcion}</span>
+      <span className="block text-sm text-saie-muted">{descripcion}</span>
     </span>
   </Link>
 );
@@ -170,9 +170,9 @@ const FilaEscalada: React.FC<{
           lenguaje llano y solo abra el código si necesita pasarlo a soporte técnico.
         */}
         {motivo.codigo && (
-          <details className="w-fit text-xs text-saie-muted">
+          <details className="w-fit text-sm text-saie-muted">
             <summary className="cursor-pointer py-3.5">Código de soporte</summary>
-            <span className="font-mono text-xs">{motivo.codigo}</span>
+            <span className="font-mono text-sm">{motivo.codigo}</span>
           </details>
         )}
       </div>
@@ -269,7 +269,7 @@ const InicioJefatura: React.FC = () => {
   const cargandoTodo = (alertas.cargando && !alertas.datos) || (labs.cargando && !labs.datos);
 
   return (
-    <LayoutAdmin titulo="Área administrativa" subtitulo="Jefatura de Laboratorios">
+    <LayoutAdmin titulo="Inicio" subtitulo="Jefatura de Laboratorios">
       <TiraMetricas etiqueta="Resumen de laboratorios" className="grid-cols-2 lg:grid-cols-4">
         <Metrica
           etiqueta="Alertas pendientes"
@@ -315,7 +315,7 @@ const InicioJefatura: React.FC = () => {
               aria-labelledby="titulo-alerta-destacada"
               className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-4"
             >
-              <h2 id="titulo-alerta-destacada" className="m-0 text-sm font-bold">
+              <h2 id="titulo-alerta-destacada" className="m-0 text-base font-bold">
                 Alerta más reciente
               </h2>
               {destacada ? (
@@ -330,9 +330,14 @@ const InicioJefatura: React.FC = () => {
                     </span>
                   </div>
                   <p className="m-0 text-sm">{fraseDeMotivoAlerta(destacada.motivo)}</p>
-                  <Link to={RUTAS.alertasAdmin} className="text-sm font-medium text-saie-primary">
+                  <BotonEnlace
+                    to={RUTAS.alertasAdmin}
+                    variante="fantasma"
+                    tamano="sm"
+                    className="self-start"
+                  >
                     Ver todas las alertas →
-                  </Link>
+                  </BotonEnlace>
                 </>
               ) : (
                 <p className="m-0 text-sm text-saie-muted">
@@ -361,6 +366,12 @@ const InicioJefatura: React.FC = () => {
                 trazo={ICONOS.ajustes}
               />
               <Acceso
+                to={RUTAS.softwareAdmin}
+                titulo="Catálogo de software"
+                descripcion="Consulta qué software pueden tener los laboratorios."
+                trazo={ICONOS.libro}
+              />
+              <Acceso
                 to={RUTAS.clavesAdmin}
                 titulo="Cambiar mi clave"
                 descripcion="Actualiza la clave de acceso a tu cuenta."
@@ -373,7 +384,7 @@ const InicioJefatura: React.FC = () => {
             aria-labelledby="titulo-vista-mapa"
             className="flex min-w-0 flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4 lg:col-span-7"
           >
-            <h2 id="titulo-vista-mapa" className="m-0 text-sm font-bold">
+            <h2 id="titulo-vista-mapa" className="m-0 text-base font-bold">
               Tus laboratorios en el mapa de ocupación
             </h2>
             {mapa.error ? (
@@ -500,7 +511,7 @@ const InicioCoordinacion: React.FC = () => {
   }
 
   return (
-    <LayoutAdmin dashboard titulo="Área administrativa">
+    <LayoutAdmin dashboard titulo="Inicio" subtitulo="Coordinación Académica">
       {/*
         El tablero ocupa lo que queda del `main` (que es una columna flex) una vez descontados
         el título y los espacios. Antes iba con `lg:h-full`, que sumaba el 100 % de `main` al
@@ -587,18 +598,17 @@ const InicioCoordinacion: React.FC = () => {
             <div className="flex flex-col gap-3">
               <div className="flex flex-wrap items-center justify-start gap-2">
                 <Boton
-                  variante="secundario"
+                  variante="claro"
                   onClick={() => setConfirmandoCorrida(true)}
                   disabled={corriendo || otraCorrida}
                   aria-describedby="motivo-corrida"
                   cargando={corriendo}
                   textoCargando="Asignando…"
-                  className="border-white! bg-white! text-saie-primary! hover:bg-saie-canvas!"
                 >
                   Asignar aulas del periodo
                 </Boton>
               </div>
-              <p id="motivo-corrida" className="m-0 text-right text-xs text-white/85">
+              <p id="motivo-corrida" className="m-0 text-sm text-white/85">
                 {corriendo
                   ? 'Esto puede tardar hasta 1 min. No cierres esta pantalla.'
                   : otraCorrida
@@ -612,7 +622,7 @@ const InicioCoordinacion: React.FC = () => {
             aria-label={TEXTOS_ASIGNACION.tituloComprobacion}
             className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-4"
           >
-            <h2 className="m-0 text-sm font-bold text-saie-text">
+            <h2 className="m-0 text-base font-bold text-saie-text">
               {TEXTOS_ASIGNACION.tituloComprobacion}
             </h2>
             {resumenCorrida ? (
@@ -640,7 +650,7 @@ const InicioCoordinacion: React.FC = () => {
                 </Boton>
               </>
             ) : (
-              <p className="m-0 text-xs text-saie-muted">
+              <p className="m-0 text-sm text-saie-muted">
                 Corre la asignación para ver el veredicto: comprueba que no haya doble reservas, que
                 el aula tenga capacidad y el software necesario.
               </p>
@@ -658,7 +668,7 @@ const InicioCoordinacion: React.FC = () => {
               <h2
                 id="titulo-atencion"
                 tabIndex={-1}
-                className="m-0 scroll-mt-24 text-sm font-bold text-saie-text"
+                className="m-0 scroll-mt-24 text-base font-bold text-saie-text"
               >
                 Secciones que requieren revisión
               </h2>
@@ -704,19 +714,11 @@ const InicioCoordinacion: React.FC = () => {
             aria-labelledby="titulo-accesos"
             className="flex min-h-0 flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-4"
           >
-            <h2 id="titulo-accesos" className="m-0 text-sm font-bold text-saie-text">
+            <h2 id="titulo-accesos" className="m-0 text-base font-bold text-saie-text">
               Accesos
             </h2>
             <div className="grid min-h-0 gap-2 sm:grid-cols-2 lg:grid-cols-2">
-              <Atajo to={RUTAS.cargaAdmin} titulo="Carga de datos" trazo={ICONOS.subir} />
-              <Atajo to={RUTAS.espaciosAdmin} titulo="Espacios" trazo={ICONOS.edificio} />
-              <Atajo to={RUTAS.seccionesAdmin} titulo="Secciones" trazo={ICONOS.libro} />
-              <Atajo to={RUTAS.auditoriaAdmin} titulo="Auditoría" trazo={ICONOS.portapapeles} />
-              <Atajo
-                to={RUTAS.reporteSalonesAdmin}
-                titulo="Informe de salones"
-                trazo={ICONOS.documento}
-              />
+              <Atajo to={RUTAS.laboratoriosAdmin} titulo="Laboratorios" trazo={ICONOS.monitor} />
               <Atajo
                 to={RUTAS.altaAlumnoAdmin}
                 titulo="Alta de alumnos"
@@ -724,7 +726,6 @@ const InicioCoordinacion: React.FC = () => {
               />
               <Atajo to={RUTAS.altaDocenteAdmin} titulo="Alta de docentes" trazo={ICONOS.pizarra} />
               <Atajo to={RUTAS.clavesAdmin} titulo="Claves" trazo={ICONOS.escudo} />
-              <Atajo to={RUTAS.alertasAdmin} titulo="Alertas" trazo={ICONOS.alerta} />
               <Atajo
                 to={RUTAS.softwareAdmin}
                 titulo="Catálogo de software"

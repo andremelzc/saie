@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
+import { SelectorSegmentado } from '../../components/ui/SelectorSegmentado';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
@@ -37,7 +38,7 @@ const ESTADOS: { valor: EstadoIncidencia; etiqueta: string }[] = [
   { valor: 'DESCARTADA', etiqueta: 'Descartadas' },
 ];
 
-const TITULO_DT = 'text-xs font-semibold text-saie-muted';
+const TITULO_DT = 'text-sm font-semibold text-saie-muted';
 
 /** Solo se enlaza la evidencia si es una URL web; si no, se muestra como texto. */
 function esEnlace(texto: string): boolean {
@@ -92,7 +93,7 @@ const TarjetaIncidencia: React.FC<{ inc: IncidenciaAdminDTO; onRevisar: () => vo
 };
 
 /** Detalle técnico del laboratorio de la incidencia: aforo real, PCs inoperativas y software. */
-const DetalleTecnico: React.FC<{ espacioId: string }> = ({ espacioId }) => {
+const DetalleTecnicoEspacio: React.FC<{ espacioId: string }> = ({ espacioId }) => {
   const cargar = useCallback(() => obtenerEspacio(espacioId), [espacioId]);
   const { datos, cargando, error, recargar } = useCarga(cargar, {
     clave: `incidencias:espacio:${espacioId}`,
@@ -251,7 +252,7 @@ export const IncidenciasAdminPage: React.FC = () => {
       }),
     [estado, prioridad],
   );
-  const { datos, cargando, error, recargar } = useCarga(cargar, {
+  const { datos, cargando, error, recargar, deOtraConsulta } = useCarga(cargar, {
     clave: `${CLAVE_INCIDENCIAS}:${estado}|${prioridad}`,
   });
 
@@ -288,20 +289,14 @@ export const IncidenciasAdminPage: React.FC = () => {
       }
     >
       <section aria-label="Filtros de incidencias" className="flex flex-col gap-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-2xl">
-          <Campo etiqueta="Estado">
-            <select
-              value={estado}
-              onChange={(e) => setEstado(e.target.value as EstadoIncidencia)}
-              className={CLASE_CAMPO}
-            >
-              {ESTADOS.map((e) => (
-                <option key={e.valor} value={e.valor}>
-                  {e.etiqueta}
-                </option>
-              ))}
-            </select>
-          </Campo>
+        <SelectorSegmentado
+          opciones={ESTADOS.map((e) => ({ valor: e.valor, etiqueta: e.etiqueta }))}
+          valor={estado}
+          onCambiar={setEstado}
+          etiquetaGrupo="Estado de las incidencias"
+          className="self-start"
+        />
+        <div className="max-w-xs">
           <Campo etiqueta="Prioridad">
             <select
               value={prioridad}
@@ -324,8 +319,8 @@ export const IncidenciasAdminPage: React.FC = () => {
       </section>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      <ZonaActualizable actualizando={cargando && datos !== null}>
-        {cargando && !datos ? (
+      <ZonaActualizable actualizando={cargando && datos !== null && !deOtraConsulta}>
+        {cargando && (!datos || deOtraConsulta) ? (
           <EsqueletoCarga texto="Cargando incidencias…" />
         ) : incidencias.length === 0 ? (
           <EstadoVacio
@@ -338,7 +333,10 @@ export const IncidenciasAdminPage: React.FC = () => {
             }
           />
         ) : (
-          <ul className="m-0 flex list-none flex-col gap-3 p-0" aria-label="Incidencias">
+          <ul
+            className="saie-stagger m-0 flex list-none flex-col gap-3 p-0"
+            aria-label="Incidencias"
+          >
             {incidencias.map((inc) => (
               <li key={inc.id}>
                 <TarjetaIncidencia inc={inc} onRevisar={() => detalle.abrir(inc.id)} />
@@ -440,7 +438,7 @@ export const IncidenciasAdminPage: React.FC = () => {
               )}
             </div>
 
-            <DetalleTecnico espacioId={seleccionada.espacio.id} />
+            <DetalleTecnicoEspacio espacioId={seleccionada.espacio.id} />
 
             {seleccionada.estado === 'PENDIENTE' && (
               <CierreIncidencia key={seleccionada.id} inc={seleccionada} onCerrada={alCerrar} />

@@ -5,6 +5,12 @@ export interface EstadoCarga<T> {
   datos: T | null;
   cargando: boolean;
   error: string | null;
+  /**
+   * `true` cuando `datos` pertenecen a otra consulta (cambió un filtro y la nueva aún no llega ni
+   * está en caché). Quien muestre listas con acciones debe tratarlo como «cargando», no como
+   * resultado: esos datos no corresponden a lo que la persona acaba de pedir.
+   */
+  deOtraConsulta: boolean;
   recargar: () => void;
 }
 
@@ -107,6 +113,8 @@ export function useCarga<T>(
   // que se vio (así un cambio de filtro conserva la lista anterior en vez de vaciarla).
   const enCache = leerCache<T>(clave);
   const datos = actual && resultado ? resultado.datos : (enCache ?? resultado?.datos ?? null);
+  const deOtraConsulta =
+    !actual && enCache === null && resultado !== null && resultado.cargador !== cargador;
 
   const recargar = useCallback(() => setIntento((n) => n + 1), []);
 
@@ -114,6 +122,7 @@ export function useCarga<T>(
     datos,
     cargando,
     error: cargando ? null : (resultado?.error ?? null),
+    deOtraConsulta,
     recargar,
   };
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import CampoFormulario from '../../components/admin/CampoFormulario';
+import { RUTAS } from '../../config/rutas';
 import LayoutAdmin from '../../components/admin/LayoutAdmin';
 import FormularioCambioClave from '../../components/auth/FormularioCambioClave';
 import { Aviso } from '../../components/ui/Aviso';
@@ -174,7 +175,11 @@ export const ClavesAdminPage: React.FC = () => {
   const esCoordinacion = sesion?.rol === 'COORDINACION_ACADEMICA';
 
   return (
-    <LayoutAdmin titulo="Claves y contraseñas" subtitulo={sesion ? ROL[sesion.rol] : undefined}>
+    <LayoutAdmin
+      volverA={{ to: RUTAS.inicioAdmin, etiqueta: 'Volver al inicio' }}
+      titulo="Claves y contraseñas"
+      subtitulo={sesion ? ROL[sesion.rol] : undefined}
+    >
       <section
         aria-labelledby="titulo-cambiar"
         className="flex max-w-xl flex-col gap-4 rounded-2xl border border-saie-divider bg-white p-5"

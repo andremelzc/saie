@@ -1,7 +1,8 @@
 import React, { useCallback, useState } from 'react';
+import { RUTAS } from '../../config/rutas';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
-import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
+import { SelectorSegmentado } from '../../components/ui/SelectorSegmentado';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
@@ -51,14 +52,14 @@ const TarjetaSolicitud: React.FC<{
 
       <dl className="m-0 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
         <div>
-          <dt className="text-xs text-saie-muted">Docente</dt>
+          <dt className="text-sm text-saie-muted">Docente</dt>
           <dd className="m-0">
             {s.docente.nombre}{' '}
             <span className="text-sm text-saie-muted">({s.docente.codigoDocente})</span>
           </dd>
         </div>
         <div>
-          <dt className="text-xs text-saie-muted">Sección</dt>
+          <dt className="text-sm text-saie-muted">Sección</dt>
           <dd className="m-0">
             {s.seccion
               ? `${s.seccion.codigoCurso} · ${s.seccion.codigoSeccion} — ${s.seccion.nombreCurso}`
@@ -68,13 +69,13 @@ const TarjetaSolicitud: React.FC<{
       </dl>
 
       <p className="m-0 text-sm text-saie-text">
-        <span className="block text-xs text-saie-muted">Justificación</span>
+        <span className="block text-sm text-saie-muted">Justificación</span>
         {s.justificacion}
       </p>
 
       {s.estado === 'RECHAZADA' && s.motivoRechazo && (
         <p className="m-0 rounded-lg bg-saie-danger-soft px-3 py-2 text-sm text-saie-danger-strong">
-          <span className="block text-xs font-semibold">Motivo del rechazo</span>
+          <span className="block text-sm font-semibold">Motivo del rechazo</span>
           {s.motivoRechazo}
         </p>
       )}
@@ -115,7 +116,9 @@ export const SolicitudesSoftwareAdminPage: React.FC = () => {
     () => obtenerSolicitudes(filtro === 'TODAS' ? undefined : filtro),
     [filtro],
   );
-  const { datos, cargando, error, recargar } = useCarga(cargar, { clave: `solicitudes:${filtro}` });
+  const { datos, cargando, error, recargar, deOtraConsulta } = useCarga(cargar, {
+    clave: `solicitudes:${filtro}`,
+  });
   const solicitudes = datos?.items ?? [];
 
   function abrirAprobacion(s: SolicitudSoftwareDTO) {
@@ -166,6 +169,7 @@ export const SolicitudesSoftwareAdminPage: React.FC = () => {
 
   return (
     <LayoutAdmin
+      volverA={{ to: RUTAS.softwareAdmin, etiqueta: 'Volver al catálogo' }}
       titulo="Solicitudes de software"
       subtitulo="Qué software piden los docentes y qué se resolvió"
       acciones={
@@ -188,8 +192,8 @@ export const SolicitudesSoftwareAdminPage: React.FC = () => {
       />
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      <ZonaActualizable actualizando={cargando && datos !== null}>
-        {cargando && !datos ? (
+      <ZonaActualizable actualizando={cargando && datos !== null && !deOtraConsulta}>
+        {cargando && (!datos || deOtraConsulta) ? (
           <EsqueletoCarga texto="Cargando solicitudes…" />
         ) : solicitudes.length === 0 ? (
           <EstadoVacio
@@ -202,7 +206,7 @@ export const SolicitudesSoftwareAdminPage: React.FC = () => {
             }
           />
         ) : (
-          <ul className="m-0 flex list-none flex-col gap-3 p-0">
+          <ul className="saie-stagger m-0 flex list-none flex-col gap-3 p-0">
             {solicitudes.map((s) => (
               <TarjetaSolicitud
                 key={s.id}

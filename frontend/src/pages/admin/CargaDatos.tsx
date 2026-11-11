@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import LayoutAdmin from '../../components/admin/LayoutAdmin';
 import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
-import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
-import { idPanelPestana, idPestana } from '../../components/estudiante/idsPestanas';
+import { SelectorSegmentado } from '../../components/ui/SelectorSegmentado';
+import { idPanelPestana, idPestana } from '../../components/ui/idsPestanas';
 import { Acordeon } from '../../components/ui/Acordeon';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
@@ -195,7 +195,7 @@ const ZonaArchivo: React.FC<{
           <span className="max-w-full break-all font-semibold text-saie-primary">
             {archivo.name}
           </span>
-          <span className="text-xs text-saie-muted">
+          <span className="text-sm text-saie-muted">
             {(archivo.size / 1024).toFixed(1)} KB · listo para importar
           </span>
         </>
@@ -204,7 +204,6 @@ const ZonaArchivo: React.FC<{
           <span className="font-semibold text-saie-primary">
             Arrastra tu CSV o elige un archivo
           </span>
-          <span className="text-xs text-saie-muted">Máx. 10 MB · solo archivos .csv</span>
         </>
       )}
       <input
@@ -217,7 +216,7 @@ const ZonaArchivo: React.FC<{
         onChange={(e) => onSeleccionar(e.target.files?.[0] ?? null)}
       />
     </label>
-    <p id={idAyuda} className="m-0 text-xs text-saie-muted">
+    <p id={idAyuda} className="m-0 text-sm text-saie-muted">
       Se aceptan archivos .csv de hasta 10 MB. La primera fila debe tener los nombres de las
       columnas.
     </p>
@@ -256,7 +255,7 @@ const PanelResultado: React.FC<{
         <dl className="m-0 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
           {Object.entries(resultado.procesados).map(([clave, valor]) => (
             <div key={clave} className="rounded-lg bg-white px-3 py-2">
-              <dt className="text-xs text-saie-muted">
+              <dt className="text-sm text-saie-muted">
                 {ETIQUETAS_PROCESADOS[clave] ?? humanizar(clave)}
               </dt>
               <dd className="m-0 text-lg font-bold text-saie-text">{valor}</dd>
@@ -320,7 +319,7 @@ const ErroresAgrupados: React.FC<{ errores: string[] }> = ({ errores }) => {
             ))}
           </ul>
           {grupo.errores.length > FILAS_POR_GRUPO && (
-            <p className="m-0 mt-2 text-xs text-saie-muted">
+            <p className="m-0 mt-2 text-sm text-saie-muted">
               Se muestran las primeras {FILAS_POR_GRUPO} de {grupo.errores.length}. Descarga el CSV
               para ver todas.
             </p>
@@ -518,6 +517,9 @@ export const ZonaCarga: React.FC<{
 
       <div className="mt-auto flex flex-col gap-2">
         <Boton
+          // Solo la zona con archivo elegido tiene el botón principal: las cuatro cargas son
+          // independientes y la vista no debe tener cuatro primarios a la vez.
+          variante={archivo ? 'primario' : 'secundario'}
           onClick={enviar}
           disabled={!archivo || enviando}
           cargando={enviando}
@@ -770,13 +772,13 @@ const TarjetaPlantilla: React.FC<{ plantilla: PlantillaCSV }> = ({ plantilla }) 
             >
               <dt className="font-mono font-semibold text-saie-text">
                 {columna.nombre}{' '}
-                <span className="font-sans text-xs font-normal text-saie-muted">
+                <span className="font-sans text-sm font-normal text-saie-muted">
                   ({columna.obligatorio ? 'obligatoria' : 'opcional'})
                 </span>
               </dt>
               <dd className="m-0 mt-1 text-sm text-saie-text">
                 {columna.descripcion}
-                <span className="mt-1 block font-mono text-xs text-saie-muted">
+                <span className="mt-1 block font-mono text-sm text-saie-muted">
                   Ejemplo: {columna.ejemplo}
                 </span>
               </dd>

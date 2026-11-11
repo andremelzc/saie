@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import { FormularioSoftware } from '../../components/admin/FormularioSoftware';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
 import { BotonEnlace } from '../../components/ui/BotonEnlace';
@@ -42,20 +42,17 @@ const InsigniaEstado: React.FC<{ activo: boolean }> = ({ activo }) => (
   <BadgeEstado tono={activo ? 'exito' : 'neutro'}>{activo ? 'Activo' : 'De baja'}</BadgeEstado>
 );
 
-/** Botones de una fila: solo Coordinación edita y da de baja (Spec 08 §4). */
+/**
+ * Acción de una fila: solo Coordinación edita (Spec 08 §4). Dar de baja o reactivar vive dentro
+ * del panel de edición, para no repetir dos botones en cada fila.
+ */
 const Acciones: React.FC<{
   s: SoftwareCatalogoDTO;
   onEditar: (s: SoftwareCatalogoDTO) => void;
-  onEstado: (s: SoftwareCatalogoDTO) => void;
-}> = ({ s, onEditar, onEstado }) => (
-  <div className="flex flex-wrap gap-2">
-    <Boton variante="secundario" tamano="sm" onClick={() => onEditar(s)}>
-      Editar <span className="sr-only">{nombreSoftware(s)}</span>
-    </Boton>
-    <Boton variante="fantasma" tamano="sm" onClick={() => onEstado(s)}>
-      {s.activo ? 'Dar de baja' : 'Reactivar'} <span className="sr-only">{nombreSoftware(s)}</span>
-    </Boton>
-  </div>
+}> = ({ s, onEditar }) => (
+  <Boton variante="secundario" tamano="sm" onClick={() => onEditar(s)}>
+    Editar <span className="sr-only">{nombreSoftware(s)}</span>
+  </Boton>
 );
 
 /** Chips de los filtros que no están en su valor por defecto (Issue 4.40). */
@@ -166,8 +163,7 @@ const ListaCatalogo: React.FC<{
   items: SoftwareCatalogoDTO[];
   puedeEditar: boolean;
   onEditar: (s: SoftwareCatalogoDTO) => void;
-  onEstado: (s: SoftwareCatalogoDTO) => void;
-}> = ({ items, puedeEditar, onEditar, onEstado }) => (
+}> = ({ items, puedeEditar, onEditar }) => (
   <>
     <div className="hidden lg:block">
       <TablaDatos etiqueta="Software del catálogo">
@@ -198,7 +194,7 @@ const ListaCatalogo: React.FC<{
               </td>
               {puedeEditar && (
                 <td className="px-4 py-3">
-                  <Acciones s={s} onEditar={onEditar} onEstado={onEstado} />
+                  <Acciones s={s} onEditar={onEditar} />
                 </td>
               )}
             </tr>
@@ -222,7 +218,7 @@ const ListaCatalogo: React.FC<{
             <InsigniaEstado activo={s.activo} />
           </div>
           <p className="m-0 text-sm">En uso: {textoUso(s.uso)}</p>
-          {puedeEditar && <Acciones s={s} onEditar={onEditar} onEstado={onEstado} />}
+          {puedeEditar && <Acciones s={s} onEditar={onEditar} />}
         </li>
       ))}
     </ul>
@@ -260,7 +256,7 @@ export const SoftwareAdminPage: React.FC = () => {
       }),
     [textoDiferido, categoria, estado, pagina, tamano],
   );
-  const { datos, cargando, error, recargar } = useCarga(cargar, {
+  const { datos, cargando, error, recargar, deOtraConsulta } = useCarga(cargar, {
     clave: `${CLAVE_CATALOGO}:${textoDiferido}|${categoria}|${estado}|${pagina}|${tamano}`,
   });
   const items = datos?.items ?? [];
@@ -311,12 +307,7 @@ export const SoftwareAdminPage: React.FC = () => {
     }
     return (
       <div className="flex flex-col gap-3">
-        <ListaCatalogo
-          items={items}
-          puedeEditar={puedeEditar}
-          onEditar={setEditando}
-          onEstado={setCambiandoEstado}
-        />
+        <ListaCatalogo items={items} puedeEditar={puedeEditar} onEditar={setEditando} />
         <Paginador
           pagina={pagina}
           tamano={tamano}
@@ -346,6 +337,7 @@ export const SoftwareAdminPage: React.FC = () => {
 
   return (
     <LayoutAdmin
+      volverA={{ to: RUTAS.inicioAdmin, etiqueta: 'Volver al inicio' }}
       titulo="Catálogo de software"
       subtitulo={
         puedeEditar
@@ -410,7 +402,9 @@ export const SoftwareAdminPage: React.FC = () => {
       </section>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      <ZonaActualizable actualizando={cargando && datos !== null}>{contenido()}</ZonaActualizable>
+      <ZonaActualizable actualizando={cargando && datos !== null} inerte={deOtraConsulta}>
+        {contenido()}
+      </ZonaActualizable>
 
       <Drawer
         abierto={editando !== null}
@@ -423,19 +417,56 @@ export const SoftwareAdminPage: React.FC = () => {
         hayCambios={hayCambios}
       >
         {editando !== null && (
-          <FormularioSoftware
-            software={softwareEditado}
-            onCambiosPendientes={setHayCambios}
-            onCancelar={() => {
-              setEditando(null);
-              setHayCambios(false);
-            }}
-            onGuardado={() => {
-              setEditando(null);
-              setHayCambios(false);
-              refrescar();
-            }}
-          />
+          <div className="flex flex-col gap-6">
+            <FormularioSoftware
+              software={softwareEditado}
+              onCambiosPendientes={setHayCambios}
+              onCancelar={() => {
+                setEditando(null);
+                setHayCambios(false);
+              }}
+              onGuardado={() => {
+                setEditando(null);
+                setHayCambios(false);
+                refrescar();
+              }}
+            />
+            {softwareEditado && (
+              <section
+                aria-labelledby="titulo-estado-software"
+                className="flex flex-col gap-2 border-t border-saie-divider pt-4"
+              >
+                <h3 id="titulo-estado-software" className="m-0 text-base font-bold text-saie-text">
+                  {softwareEditado.activo ? 'Dar de baja' : 'Reactivar'}
+                </h3>
+                <p className="m-0 text-sm text-saie-muted">
+                  {softwareEditado.activo
+                    ? 'Seguirá registrado donde ya está, pero no se podrá elegir en laboratorios ni secciones nuevos.'
+                    : 'Se podrá volver a elegir en laboratorios y secciones.'}
+                </p>
+                <div>
+                  <Boton
+                    variante={softwareEditado.activo ? 'cancelar' : 'secundario'}
+                    tamano="sm"
+                    disabled={hayCambios}
+                    motivoDeshabilitado={
+                      hayCambios ? 'Guarda o descarta los cambios antes de continuar.' : undefined
+                    }
+                    onClick={() => {
+                      const elegido = softwareEditado;
+                      setEditando(null);
+                      setHayCambios(false);
+                      setCambiandoEstado(elegido);
+                    }}
+                  >
+                    {softwareEditado.activo
+                      ? 'Dar de baja este software'
+                      : 'Reactivar este software'}
+                  </Boton>
+                </div>
+              </section>
+            )}
+          </div>
         )}
       </Drawer>
 

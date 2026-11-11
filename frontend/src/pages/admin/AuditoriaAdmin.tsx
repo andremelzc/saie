@@ -3,9 +3,10 @@ import { RUTAS } from '../../config/rutas';
 import { ICONOS } from '../../components/ui/iconos';
 import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
-import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
-import { idPanelPestana, idPestana } from '../../components/estudiante/idsPestanas';
+import { Aviso } from '../../components/ui/Aviso';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
+import { SelectorSegmentado } from '../../components/ui/SelectorSegmentado';
+import { idPanelPestana, idPestana } from '../../components/ui/idsPestanas';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
 import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
@@ -263,6 +264,7 @@ const VistaHistorial: React.FC<PropsVista & { onAbrir: (a: HistorialAsignacionDT
     cargando: cargandoDatos,
     error,
     recargar,
+    deOtraConsulta,
   } = useCarga(cargar, {
     clave: `historial:${periodo}|${estado}|${seccionId ?? ''}|${pagina}|${tamano}`,
     // Se espera a saber cuál es el vigente para no pedir el historial dos veces.
@@ -331,7 +333,13 @@ const VistaHistorial: React.FC<PropsVista & { onAbrir: (a: HistorialAsignacionDT
       />
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      <ZonaActualizable actualizando={cargando && datos !== null}>
+      {(comunes.desde || comunes.hasta) && datos && datos.total > datos.items.length && (
+        <Aviso tono="info">
+          El filtro de fechas se aplica solo a las {datos.items.length} asignaciones de esta página.
+          Cambia de página para ver las demás.
+        </Aviso>
+      )}
+      <ZonaActualizable actualizando={cargando && datos !== null} inerte={deOtraConsulta}>
         {cargando && !datos ? (
           <EsqueletoCarga texto="Cargando historial…" forma="tabla" />
         ) : items.length === 0 ? (
@@ -430,7 +438,7 @@ const VistaAuditoria: React.FC<PropsVista & { espacios: EspaciosPorId }> = ({
     [tipo, desde, hasta, pagina, tamano],
   );
 
-  const { datos, cargando, error, recargar } = useCarga(cargar, {
+  const { datos, cargando, error, recargar, deOtraConsulta } = useCarga(cargar, {
     clave: `auditoria:${tipo}|${desde ?? ''}|${hasta ?? ''}|${pagina}|${tamano}`,
   });
   useRecargarAl(version, recargar);
@@ -445,20 +453,22 @@ const VistaAuditoria: React.FC<PropsVista & { espacios: EspaciosPorId }> = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <Campo etiqueta="Tipo de evento" className="flex max-w-xs flex-col gap-1">
-        <select
-          value={tipo}
-          onChange={(e) => setTipo(e.target.value as 'TODOS' | TipoEventoAuditoria)}
-          className={CLASE_CAMPO}
-        >
-          <option value="TODOS">Todos</option>
-          {EVENTOS_FILTRO.map((e) => (
-            <option key={e} value={e}>
-              {describirEventoAuditoria(e).etiqueta}
-            </option>
-          ))}
-        </select>
-      </Campo>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Campo etiqueta="Tipo de evento">
+          <select
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value as 'TODOS' | TipoEventoAuditoria)}
+            className={CLASE_CAMPO}
+          >
+            <option value="TODOS">Todos</option>
+            {EVENTOS_FILTRO.map((e) => (
+              <option key={e} value={e}>
+                {describirEventoAuditoria(e).etiqueta}
+              </option>
+            ))}
+          </select>
+        </Campo>
+      </div>
       <FiltrosActivos
         filtros={[
           ...chipsComunes,
@@ -477,7 +487,13 @@ const VistaAuditoria: React.FC<PropsVista & { espacios: EspaciosPorId }> = ({
       />
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      <ZonaActualizable actualizando={cargando && datos !== null}>
+      {seccionId && datos && datos.total > datos.items.length && (
+        <Aviso tono="info">
+          El filtro de sección se aplica solo a los {datos.items.length} registros de esta página.
+          Cambia de página para ver los demás.
+        </Aviso>
+      )}
+      <ZonaActualizable actualizando={cargando && datos !== null} inerte={deOtraConsulta}>
         {cargando && !datos ? (
           <EsqueletoCarga texto="Cargando auditoría…" forma="tabla" />
         ) : items.length === 0 ? (

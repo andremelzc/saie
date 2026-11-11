@@ -3,26 +3,30 @@ import { Link } from 'react-router-dom';
 
 export type TonoMetrica = 'neutro' | 'exito' | 'advertencia' | 'peligro';
 
-const TONOS: Record<TonoMetrica, { cifra: string; icono: string; caja: string }> = {
+const TONOS: Record<TonoMetrica, { cifra: string; icono: string; caja: string; anillo: string }> = {
   neutro: {
     cifra: 'text-saie-text',
     icono: 'bg-saie-canvas text-saie-muted',
     caja: 'border-saie-divider bg-white',
+    anillo: 'border-saie-primary/50 ring-1 ring-saie-primary/30',
   },
   exito: {
     cifra: 'text-saie-success-strong',
     icono: 'bg-saie-success-soft text-saie-success-strong',
     caja: 'border-saie-divider bg-white',
+    anillo: 'border-saie-success/50 ring-1 ring-saie-success/30',
   },
   advertencia: {
     cifra: 'text-saie-warning-strong',
     icono: 'bg-saie-warning-soft text-saie-warning-strong',
     caja: 'border-saie-divider bg-white',
+    anillo: 'border-saie-warning-strong/50 ring-1 ring-saie-warning-strong/30',
   },
   peligro: {
     cifra: 'text-saie-danger-strong',
     icono: 'bg-saie-danger-soft text-saie-danger-strong',
     caja: 'border-saie-divider bg-white',
+    anillo: 'border-saie-danger/50 ring-1 ring-saie-danger/30',
   },
 };
 
@@ -77,7 +81,7 @@ export const Metrica: React.FC<MetricaProps> = ({
   return (
     <div
       className={`relative flex flex-col gap-1 rounded-xl border p-3 transition-colors ${estilo.caja} ${
-        principal ? 'border-saie-warning-strong/50 ring-1 ring-saie-warning-strong/30' : ''
+        principal ? estilo.anillo : ''
       } ${to ? 'hover:border-saie-primary focus-within:ring-2 focus-within:ring-saie-primary' : ''} ${className}`}
     >
       <dt className="flex items-center gap-2 text-sm font-medium text-saie-muted">
@@ -149,7 +153,7 @@ export const TiraMetricas: React.FC<{
   children: React.ReactNode;
   className?: string;
 }> = ({ etiqueta, children, className = '' }) => (
-  <dl aria-label={etiqueta} className={`m-0 grid gap-3 ${className}`}>
+  <dl aria-label={etiqueta} className={`saie-stagger m-0 grid gap-3 ${className}`}>
     {children}
   </dl>
 );

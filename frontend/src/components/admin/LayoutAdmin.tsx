@@ -1,5 +1,4 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
 import BotonCerrarSesion from '../auth/BotonCerrarSesion';
 import logoBlanco from '../../assets/logo-blanco.svg';
 import { useAuth } from '../../context/useAuth';
@@ -7,7 +6,8 @@ import { useTituloPagina } from '../../hooks/useTituloPagina';
 import { etiquetaRol, pestanasDeRol } from '../../utils/admin';
 
 import { Contenedor } from '../ui/Contenedor';
-import { MenuMas } from '../ui/MenuMas';
+import { BotonEnlace } from '../ui/BotonEnlace';
+import BarraPestanas from './BarraPestanas';
 import { EnlaceSaltar, ID_CONTENIDO } from '../ui/EnlaceSaltar';
 import { EstadoError } from '../ui/EstadoError';
 
@@ -16,32 +16,20 @@ import { EstadoError } from '../ui/EstadoError';
  *
  * Decisión de navegación (Issue 4.20): el inicio de Coordinación SÍ lleva la misma barra de
  * pestañas que el resto del panel, por consistencia. La barra va abajo en móvil y arriba,
- * bajo la cabecera, en escritorio. Jefatura ve solo sus pestañas (Inicio, Alertas, Laboratorio).
+ * bajo la cabecera, en escritorio. Jefatura ve solo sus pestañas (Inicio, Alertas, Incidencias, Laboratorios).
  *
- * Puntos de corte (Issue 4.35): barra inferior con «Más» por debajo de `lg` (1024 px) y barra
- * completa desde `lg`; la definición está junto a las pestañas, en `utils/admin.ts`.
+ * Barra de pestañas (Issue 4.35): abajo por debajo de `lg` y arriba desde `lg`; en ambos casos
+ * mide el ancho disponible y manda a «Más» solo lo que no cabe (ver `BarraPestanas`). Las
+ * pestañas se definen en `utils/admin.ts`.
  */
-
-const Icono: React.FC<{ trazo: string }> = ({ trazo }) => (
-  <svg
-    className="h-5 w-5"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    viewBox="0 0 24 24"
-    aria-hidden="true"
-  >
-    <path d={trazo} />
-  </svg>
-);
 
 export interface LayoutAdminProps {
   titulo: string;
   subtitulo?: string;
   /** Acciones de la pantalla (p. ej. «Actualizar» o «Guía y plantillas»). */
   acciones?: React.ReactNode;
+  /** Pantalla que no es pestaña: enlace para regresar a la que la abrió. */
+  volverA?: { to: string; etiqueta: string };
   /**
    * Modo tablero: la pantalla ocupa exactamente el alto de la ventana y no hace scroll;
    * los paneles largos llevan su propio scroll interno. Es el modo de las pantallas que
@@ -56,24 +44,17 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
   titulo,
   subtitulo,
   acciones,
+  volverA,
   dashboard = false,
   children,
 }) => {
   const { sesion } = useAuth();
   const pestanas = pestanasDeRol(sesion?.rol);
-  const secundarias = pestanas.filter((p) => p.secundaria);
   useTituloPagina(titulo);
-
-  const claseLink = ({ isActive }: { isActive: boolean }) =>
-    `flex flex-1 flex-col items-center gap-0.5 px-2 py-2 text-xs transition-colors lg:flex-none lg:flex-row lg:gap-2 lg:rounded-lg lg:px-4 lg:text-sm ${
-      isActive
-        ? 'bg-saie-primary/10 font-bold text-saie-primary lg:bg-saie-primary lg:font-medium lg:text-white'
-        : 'font-medium text-saie-muted hover:text-saie-primary'
-    }`;
 
   return (
     <div
-      className={`flex min-h-screen flex-col bg-saie-canvas pb-20 md:pb-0 ${
+      className={`flex min-h-screen flex-col bg-saie-canvas pb-[var(--saie-barra-inferior)] ${
         dashboard ? 'saie-tablero' : ''
       }`}
     >
@@ -82,7 +63,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
         <Contenedor className="flex min-h-18 items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-4">
             <img src={logoBlanco} alt="SAIE" className="h-9 w-auto shrink-0" />
-            <span className="inline-flex min-w-0 items-center truncate rounded-full bg-white/15 px-3 py-1 text-xs font-medium sm:text-sm">
+            <span className="inline-flex min-w-0 items-center truncate rounded-full bg-white/15 px-3 py-1 text-sm font-medium">
               {etiquetaRol(sesion?.rol)}
             </span>
           </div>
@@ -98,24 +79,7 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
         data-barra-inferior
         className="saie-no-imprimir fixed inset-x-0 bottom-0 z-30 border-t border-saie-divider bg-white lg:static lg:border-b lg:border-t-0"
       >
-        <Contenedor como="ul" className="m-0 flex list-none gap-1 py-0 lg:py-2">
-          {pestanas.map((p) => (
-            <li
-              key={p.to}
-              className={`flex flex-1 lg:flex-none ${p.secundaria ? 'hidden lg:flex' : ''}`}
-            >
-              <NavLink to={p.to} end className={claseLink}>
-                <Icono trazo={p.trazo} />
-                {p.etiqueta}
-              </NavLink>
-            </li>
-          ))}
-          {secundarias.length > 0 && (
-            <li className="flex flex-1 lg:hidden">
-              <MenuMas pestanas={secundarias} />
-            </li>
-          )}
-        </Contenedor>
+        <BarraPestanas pestanas={pestanas} />
       </nav>
 
       <Contenedor
@@ -126,6 +90,13 @@ export const LayoutAdmin: React.FC<LayoutAdminProps> = ({
           dashboard ? 'saie-tablero-main' : ''
         }`}
       >
+        {volverA && (
+          <div className="saie-no-imprimir -mb-2">
+            <BotonEnlace to={volverA.to} variante="fantasma" tamano="sm">
+              <span aria-hidden="true">←</span> {volverA.etiqueta}
+            </BotonEnlace>
+          </div>
+        )}
         <div className="saie-no-imprimir flex flex-wrap items-start justify-between gap-3">
           {/* El título cede ancho (basis y flex-1) para que las acciones queden en su misma fila. */}
           <div className="min-w-0 flex-1 basis-48">

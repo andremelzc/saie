@@ -315,6 +315,19 @@ describe('Auditoria e historial (Issue 4.32)', () => {
     expect(await screen.findByText(/posterior a «Hasta»/)).toBeInTheDocument();
   });
 
+  it('avisa que el filtro de fechas solo alcanza a la página visible cuando hay más páginas', async () => {
+    const unaPagina = await historial();
+    historial.mockResolvedValue({ ...unaPagina, total: 120, limite: 50 });
+    montar(<AuditoriaAdmin />);
+    await screen.findAllByText('IS101 · 1');
+    expect(screen.queryByText(/El filtro de fechas se aplica solo/)).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '2026-09-01' } });
+    expect(
+      await screen.findByText(/El filtro de fechas se aplica solo a las 1 asignaciones/),
+    ).toBeVisible();
+  });
+
   it('abre la línea de tiempo de la sección al pulsar una fila (Issue 4.46)', async () => {
     historial.mockImplementation(async (filtros) =>
       filtros?.seccionId

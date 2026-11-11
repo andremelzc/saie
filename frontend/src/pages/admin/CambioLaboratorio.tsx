@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
-import { EsqueletoCarga } from '../../components/estudiante/ElementosHorario';
-import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
-import { idPanelPestana, idPestana } from '../../components/estudiante/idsPestanas';
+import { EsqueletoCarga } from '../../components/ui/EstadosCarga';
+import { SelectorSegmentado } from '../../components/ui/SelectorSegmentado';
+import { idPanelPestana, idPestana } from '../../components/ui/idsPestanas';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
@@ -216,6 +217,8 @@ const PanelPcs: React.FC<{
 
 export const CambioLaboratorio: React.FC = () => {
   const labs = useCarga(obtenerLaboratorios);
+  const [params] = useSearchParams();
+  const [urlAplicada, setUrlAplicada] = useState(false);
   const catalogo = useCarga(obtenerCatalogoActivo);
   const [labId, setLabId] = useState('');
   const [pestana, setPestana] = useState<Pestana>('software');
@@ -269,6 +272,14 @@ export const CambioLaboratorio: React.FC = () => {
     setMensaje(null);
     setUltimaGuardado(null);
     setPestana('software');
+  }
+
+  // «Reportar cambio» desde la lista de laboratorios llega con `?lab=<id>`: se elige ese laboratorio
+  // una sola vez, en cuanto llega el listado.
+  if (!urlAplicada && labs.datos) {
+    setUrlAplicada(true);
+    const deUrl = params.get('lab');
+    if (deUrl && labs.datos.some((l) => l.id === deUrl)) elegirLab(deUrl);
   }
 
   function alternar(id: string) {
@@ -372,7 +383,7 @@ export const CambioLaboratorio: React.FC = () => {
           </Aviso>
         )}
         {labs.datos && labs.datos.length === 0 && (
-          <p className="m-0 text-xs font-medium text-saie-danger">
+          <p className="m-0 text-sm font-medium text-saie-danger">
             No hay laboratorios registrados todavía.
           </p>
         )}

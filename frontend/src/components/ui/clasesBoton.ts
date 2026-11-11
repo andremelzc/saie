@@ -1,4 +1,5 @@
-export type VarianteBoton = 'primario' | 'secundario' | 'peligro' | 'cancelar' | 'fantasma';
+export type VarianteBoton =
+  'primario' | 'secundario' | 'peligro' | 'cancelar' | 'fantasma' | 'claro';
 export type TamanoBoton = 'md' | 'sm';
 
 const VARIANTES: Record<VarianteBoton, string> = {
@@ -9,6 +10,8 @@ const VARIANTES: Record<VarianteBoton, string> = {
   cancelar:
     'border border-saie-border bg-white text-saie-text hover:bg-saie-text/5 active:bg-saie-text/10',
   fantasma: 'bg-transparent text-saie-primary hover:bg-saie-primary/5 active:bg-saie-primary/10',
+  /** Acción principal sobre una superficie guinda (tarjeta destacada): blanco con texto guinda. */
+  claro: 'bg-white text-saie-primary hover:bg-saie-canvas active:bg-saie-canvas',
 };
 
 /** Guía §4.6: 48 px como altura de referencia; 44 px es el mínimo absoluto. */

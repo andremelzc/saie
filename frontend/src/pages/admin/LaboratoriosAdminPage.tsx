@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import type { TonoBadge } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
@@ -82,6 +82,9 @@ const TarjetaLaboratorio: React.FC<{ lab: LaboratorioConEstadoDTO; esJefatura: b
         <p className="m-0 text-sm">
           Aforo real <strong className="font-semibold tabular-nums">{lab.capacidadReal}</strong> de{' '}
           <span className="tabular-nums">{lab.aforoNominal}</span> nominal
+          {porcentaje < 80 && lab.aforoNominal > 0 && (
+            <span className="font-semibold text-saie-warning-strong"> · aforo reducido</span>
+          )}
         </p>
         <div
           role="meter"
@@ -100,7 +103,7 @@ const TarjetaLaboratorio: React.FC<{ lab: LaboratorioConEstadoDTO; esJefatura: b
 
       <dl className="m-0 grid grid-cols-2 gap-2 text-sm">
         <div>
-          <dt className="text-xs text-saie-muted">PCs inoperativas</dt>
+          <dt className="text-sm text-saie-muted">PCs inoperativas</dt>
           <dd
             className={`m-0 font-semibold tabular-nums ${inoperativas > 0 ? 'text-saie-danger-strong' : ''}`}
           >
@@ -108,7 +111,7 @@ const TarjetaLaboratorio: React.FC<{ lab: LaboratorioConEstadoDTO; esJefatura: b
           </dd>
         </div>
         <div>
-          <dt className="text-xs text-saie-muted">Software</dt>
+          <dt className="text-sm text-saie-muted">Software</dt>
           <dd className="m-0 font-semibold">{plural(software.length, 'programa', 'programas')}</dd>
         </div>
       </dl>
@@ -128,7 +131,11 @@ const TarjetaLaboratorio: React.FC<{ lab: LaboratorioConEstadoDTO; esJefatura: b
 
       {esJefatura && (
         <div className="mt-auto flex flex-wrap gap-2">
-          <BotonEnlace to={RUTAS.cambioLaboratorio} variante="secundario" tamano="sm">
+          <BotonEnlace
+            to={`${RUTAS.cambioLaboratorio}?lab=${encodeURIComponent(lab.id)}`}
+            variante="secundario"
+            tamano="sm"
+          >
             Reportar cambio <span className="sr-only">de {lab.identificador}</span>
           </BotonEnlace>
         </div>
@@ -170,6 +177,7 @@ export const LaboratoriosAdminPage: React.FC = () => {
 
   return (
     <LayoutAdmin
+      volverA={esJefatura ? undefined : { to: RUTAS.inicioAdmin, etiqueta: 'Volver al inicio' }}
       titulo="Laboratorios y equipos"
       subtitulo={
         esJefatura
@@ -261,7 +269,7 @@ export const LaboratoriosAdminPage: React.FC = () => {
         ) : (
           <ul
             aria-label="Laboratorios"
-            className="m-0 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3"
+            className="saie-stagger m-0 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3"
           >
             {laboratorios.map((lab) => (
               <li key={lab.id} className="flex">

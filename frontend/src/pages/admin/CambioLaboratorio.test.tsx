@@ -234,4 +234,26 @@ describe('Formulario de cambio de laboratorio (Issue 4.19)', () => {
     expect(await screen.findByText('No hay laboratorios registrados todavía.')).toBeInTheDocument();
     expect(await screen.findByText(/No hay software activo en el catálogo/)).toBeInTheDocument();
   });
+
+  it('llega con el laboratorio elegido cuando la URL trae ?lab=', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/laboratorio?lab=l1']}>
+        <CambioLaboratorio />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('option', { name: /LAB-301/ });
+    await waitFor(() => expect(screen.getByLabelText('Laboratorio')).toHaveValue('l1'));
+    // Sin tocar nada no hay cambios que guardar.
+    expect(botonGuardar()).toBeDisabled();
+  });
+
+  it('ignora un ?lab= que no existe', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/laboratorio?lab=otro']}>
+        <CambioLaboratorio />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('option', { name: /LAB-301/ });
+    expect(screen.getByLabelText('Laboratorio')).toHaveValue('');
+  });
 });

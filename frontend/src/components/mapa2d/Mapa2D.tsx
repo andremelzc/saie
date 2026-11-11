@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { SelectorSegmentado } from '../estudiante/SelectorSegmentado';
-import { idPanelPestana, idPestana } from '../estudiante/idsPestanas';
+import { SelectorSegmentado } from '../ui/SelectorSegmentado';
+import { idPanelPestana, idPestana } from '../ui/idsPestanas';
 import {
   CLASES_RESERVABLES,
   COLOR_ACENTO_LABORATORIO,

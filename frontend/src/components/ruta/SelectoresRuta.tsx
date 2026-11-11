@@ -1,5 +1,5 @@
 import React, { useId, useMemo, useState } from 'react';
-import { SelectorSegmentado } from '../estudiante/SelectorSegmentado';
+import { SelectorSegmentado } from '../ui/SelectorSegmentado';
 import BuscadorEspacios from '../mapa2d/BuscadorEspacios';
 import type { EspacioMapa2D } from '../mapa2d/etiquetas';
 import { pabellonDe } from '../mapa2d/plano';
