@@ -37,7 +37,7 @@ export const LayoutEstudiante: React.FC<LayoutEstudianteProps> = ({
 
   return (
     <div
-      className={`flex min-h-screen flex-col bg-saie-canvas pb-6 md:pb-0 ${
+      className={`flex min-h-screen flex-col bg-saie-canvas pb-[var(--saie-barra-inferior)] text-saie-text ${
         dashboard ? 'saie-tablero' : ''
       }`}
     >
@@ -51,8 +51,8 @@ export const LayoutEstudiante: React.FC<LayoutEstudianteProps> = ({
         ancho="normal"
         id={ID_CONTENIDO}
         tabIndex={-1}
-        className={`flex flex-1 flex-col gap-4 py-4 focus:outline-none ${
-          dashboard ? 'saie-tablero-main' : ''
+        className={`flex flex-1 flex-col focus:outline-none ${
+          dashboard ? 'saie-tablero-main gap-4 py-4' : 'gap-6 py-6'
         }`}
       >
         <div className="flex flex-wrap items-end justify-between gap-3">

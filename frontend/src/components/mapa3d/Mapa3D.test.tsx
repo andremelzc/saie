@@ -21,11 +21,13 @@ vi.mock('./Escena', () => ({
   default: ({
     onConector,
     onSeleccionar,
+    orden,
   }: {
     onConector: (id: string) => void;
     onSeleccionar: (id: string | null) => void;
+    orden?: unknown;
   }) => (
-    <div data-testid="escena-3d-mock">
+    <div data-testid="escena-3d-mock" data-orden={JSON.stringify(orden ?? null)}>
       <button data-testid="btn-disparar-conector" onClick={() => onConector('NUE-ESC-1')}>
         Conectar Escalera
       </button>
@@ -267,6 +269,80 @@ describe('Mapa3D (Mapa3D.tsx) - Issue #269 / 5.23', () => {
 
       fireEvent.click(screen.getByTestId('btn-disparar-seleccion'));
       expect(onSeleccionarMock).toHaveBeenCalledWith('NUE-101');
+    });
+
+    describe('Teclado (Issue 4.24)', () => {
+      const montarConPlano = async () => {
+        globalThis.fetch = vi.fn().mockResolvedValue({
+          ok: true,
+          text: async () => SVG_MOCK_PISO_1,
+        } as unknown as Response);
+        render(
+          <Mapa3D
+            planos={{ 1: '/planos/piso-1.svg' }}
+            espacios={[]}
+            fallback={<div>Fallback</div>}
+          />,
+        );
+        await screen.findByTestId('escena-3d-mock');
+        return screen.getByRole('group', { name: 'Maqueta 3D interactiva' });
+      };
+      const orden = () =>
+        JSON.parse(screen.getByTestId('escena-3d-mock').getAttribute('data-orden') as string);
+
+      it('el lienzo se alcanza con Tab y tiene su ayuda para lectores de pantalla', async () => {
+        const lienzo = await montarConPlano();
+        expect(lienzo).toHaveAttribute('tabindex', '0');
+        expect(lienzo).toHaveAccessibleDescription(/flechas para girar e inclinar/i);
+      });
+
+      it('las flechas giran e inclinan la cámara y Mayús con flechas la desplaza', async () => {
+        const lienzo = await montarConPlano();
+
+        fireEvent.keyDown(lienzo, { key: 'ArrowRight' });
+        expect(orden()).toMatchObject({ tipo: 'mover', movimiento: { girar: expect.any(Number) } });
+        expect(orden().movimiento.girar).toBeGreaterThan(0);
+
+        fireEvent.keyDown(lienzo, { key: 'ArrowUp' });
+        expect(orden().movimiento.inclinar).toBeLessThan(0);
+
+        fireEvent.keyDown(lienzo, { key: 'ArrowLeft', shiftKey: true });
+        expect(orden().movimiento.derecha).toBeLessThan(0);
+      });
+
+      it('más y menos acercan y alejan; cero reinicia la vista', async () => {
+        const lienzo = await montarConPlano();
+
+        fireEvent.keyDown(lienzo, { key: '+' });
+        expect(orden().movimiento.zoom).toBeLessThan(1);
+        fireEvent.keyDown(lienzo, { key: '-' });
+        expect(orden().movimiento.zoom).toBeGreaterThan(1);
+        fireEvent.keyDown(lienzo, { key: '0' });
+        expect(orden()).toMatchObject({ tipo: 'reiniciar' });
+      });
+
+      it('dos pulsaciones seguidas son dos órdenes distintas', async () => {
+        const lienzo = await montarConPlano();
+
+        fireEvent.keyDown(lienzo, { key: 'ArrowRight' });
+        const primera = orden().n;
+        fireEvent.keyDown(lienzo, { key: 'ArrowRight' });
+        expect(orden().n).toBeGreaterThan(primera);
+      });
+
+      it('no se mueve con las teclas de los botones ni con atajos del navegador', async () => {
+        const lienzo = await montarConPlano();
+
+        // Una tecla pulsada sobre un botón de piso es del botón, no de la cámara.
+        fireEvent.keyDown(screen.getByRole('button', { name: 'Piso 1' }), { key: 'ArrowRight' });
+        expect(orden()).toBeNull();
+        // Ctrl y «+» es el zoom de la página.
+        fireEvent.keyDown(lienzo, { key: '+', ctrlKey: true });
+        expect(orden()).toBeNull();
+        // Otras teclas no hacen nada.
+        fireEvent.keyDown(lienzo, { key: 'a' });
+        expect(orden()).toBeNull();
+      });
     });
   });
 });

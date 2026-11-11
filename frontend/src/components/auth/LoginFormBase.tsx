@@ -186,7 +186,7 @@ export const LoginFormBase: React.FC<LoginFormBaseProps> = ({
         <div
           role="alert"
           aria-live="polite"
-          className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-saie-danger flex items-start gap-2.5 font-medium"
+          className="p-3 bg-saie-danger-soft border border-saie-danger/30 rounded-xl text-sm text-saie-danger-strong flex items-start gap-2.5 font-medium"
         >
           <svg
             className="w-5 h-5 text-saie-danger shrink-0 mt-0.5"

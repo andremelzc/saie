@@ -1,3 +1,4 @@
+import { clasesBoton } from '../ui/clasesBoton';
 import React, { useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useAtraparFoco } from '../../hooks/useAtraparFoco';
@@ -47,7 +48,7 @@ export const VentanaMapa: React.FC<VentanaMapaProps> = ({ titulo, onCerrar, chil
             ref={cerrarRef}
             type="button"
             onClick={onCerrar}
-            className="min-h-11 shrink-0 cursor-pointer rounded-lg border border-saie-divider bg-white px-4 text-sm font-medium text-saie-text hover:bg-saie-primary/5"
+            className={`${clasesBoton('cancelar', 'sm')} shrink-0`}
           >
             Cerrar
           </button>

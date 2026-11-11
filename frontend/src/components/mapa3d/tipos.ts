@@ -11,6 +11,9 @@ export interface EspacioMapa {
   id: string;
   tipo: TipoEspacio;
   estado: EstadoOcupacion;
+  /** Nombre visible (p. ej. «Aula 104 - Laboratorio 08»), para el cuadro que sale al apuntarlo. */
+  nombre?: string;
+  aforo?: number;
 }
 
 export interface Mapa3DProps {

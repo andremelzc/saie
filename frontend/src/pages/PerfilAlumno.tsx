@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
+import LayoutEstudiante from '../components/estudiante/LayoutEstudiante';
 import { EstadoError } from '../components/ui/EstadoError';
-import { Contenedor } from '../components/ui/Contenedor';
-import { ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
 import { Icono } from '../components/estudiante/ElementosHorario';
 import SeccionEditable from '../components/estudiante/SeccionEditable';
 import type { CampoPerfil } from '../components/estudiante/SeccionEditable';
@@ -221,24 +219,9 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-saie-canvas pb-[var(--saie-barra-inferior)] text-saie-text">
-      <CabeceraPantalla
-        titulo="Mi perfil"
-        subtitulo="Tus datos personales y tu ficha médica."
-        trazoIcono={TRAZO_USUARIO}
-        ancho="normal"
-      />
-
-      <Contenedor
-        como="main"
-        ancho="normal"
-        id={ID_CONTENIDO}
-        tabIndex={-1}
-        className="flex flex-col gap-6 py-6 focus:outline-none"
-      >
-        {renderCuerpo()}
-      </Contenedor>
-    </div>
+    <LayoutEstudiante titulo="Mi perfil" subtitulo="Tus datos personales y tu ficha médica.">
+      {renderCuerpo()}
+    </LayoutEstudiante>
   );
 };
 

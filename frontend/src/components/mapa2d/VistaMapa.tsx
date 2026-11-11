@@ -1,15 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 import { SelectorSegmentado } from '../estudiante/SelectorSegmentado';
 import Mapa3DLazy from '../mapa3d/Mapa3DLazy';
 import type { EstadoOcupacion } from '../mapa3d/tipos';
 import BuscadorEspacios from './BuscadorEspacios';
+import { claseBotonMapa } from './controles';
 import FiltrosMapa from './FiltrosMapa';
 import FranjaMapa from './FranjaMapa';
 import ListaEspacios from './ListaEspacios';
 import Mapa2D, { LeyendaMapa } from './Mapa2D';
 import VentanaMapa from './VentanaMapa';
 import { ESTADO_TEXTO, type EspacioMapa2D } from './etiquetas';
-import { FILTRO_TODO, pasaFiltro, type FiltroMapa } from './filtros';
+import { FILTRO_TODO, hayFiltro, pasaFiltro, type FiltroMapa } from './filtros';
 import type { Franja } from './franja';
 import { indiceFiguras } from './indice';
 import { PLANOS_SVG, PLANOS_URL } from './planos';
@@ -24,6 +25,39 @@ const OPCIONES: { valor: Vista; etiqueta: string }[] = [
 ];
 
 const TRAZO_AMPLIAR = 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5';
+
+/**
+ * Botón que abre o cierra el panel de filtros (día y hora, estado y tipo). Lleva el número de
+ * filtros que se apartan de lo normal, para que se sepa que hay algo activo sin abrirlo.
+ */
+const BotonFiltros: React.FC<{
+  abierto: boolean;
+  idPanel: string;
+  activos: number;
+  onAlternar: () => void;
+}> = ({ abierto, idPanel, activos, onAlternar }) => (
+  <button
+    type="button"
+    aria-expanded={abierto}
+    aria-controls={idPanel}
+    onClick={onAlternar}
+    className={`${claseBotonMapa(abierto)} shrink-0`}
+  >
+    <svg
+      className="h-4 w-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M4 6h16M7 12h10M10 18h4" />
+    </svg>
+    {activos > 0 ? `Filtros (${activos})` : 'Filtros'}
+  </button>
+);
 
 export interface VistaMapaProps {
   espacios: EspacioMapa2D[];
@@ -66,6 +100,9 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
   const [pisoInterno, setPisoInterno] = useState<Piso | undefined>(undefined);
   const [ampliado, setAmpliado] = useState(false);
   const [filtro, setFiltro] = useState<FiltroMapa>(FILTRO_TODO);
+  // Panel de filtros (día y hora, estado y tipo): cerrado hasta que se pide.
+  const [abiertoFiltros, setAbiertoFiltros] = useState(false);
+  const idBase = useId();
   const [enfoque, setEnfoque] = useState<{ id: string; n: number } | null>(null);
   const vista = vistaControlada ?? vistaInterna;
   const piso = pisoControlado ?? pisoInterno;
@@ -80,6 +117,15 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
   const elegido = espacios.find((e) => e.id === seleccionado);
 
   const figuras = useMemo(() => indiceFiguras(PLANOS_SVG), []);
+  const pisos = useMemo(
+    () =>
+      Object.keys(PLANOS_SVG)
+        .map(Number)
+        .sort((a, b) => a - b),
+    [],
+  );
+  const pisoMostrado = typeof piso === 'number' && pisos.includes(piso) ? piso : pisos[0];
+  const idPisos = `${idBase}-pisos`;
   const visibles = useMemo(() => espacios.filter((e) => pasaFiltro(e, filtro)), [espacios, filtro]);
 
   // Elegir en el buscador lleva al piso del espacio, lo selecciona y acerca la vista (2D o 3D).
@@ -90,17 +136,41 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
     setEnfoque({ id, n: Date.now() });
   };
 
-  const herramientas = (
-    <>
-      <BuscadorEspacios
-        espacios={espacios}
-        pisoDe={(id) => figuras.get(id)?.piso}
-        onElegir={irAEspacio}
-        className="w-full sm:w-72"
-      />
-      {onFranjaCambiada && <FranjaMapa franja={franja} onCambiar={onFranjaCambiada} />}
-      <FiltrosMapa filtro={filtro} onCambiar={setFiltro} estados={estadosLeyenda} />
-    </>
+  const filtrosActivos = (franja ? 1 : 0) + (hayFiltro(filtro, estadosLeyenda) ? 1 : 0);
+  const idFiltros = `${idBase}-filtros`;
+
+  /** Día y hora, estado y tipo: lo que se abre con «Filtros». */
+  const panelDeFiltros = (enColumna: boolean) => (
+    <div
+      id={idFiltros}
+      className={`rounded-xl border border-saie-divider bg-white p-4 ${abiertoFiltros ? '' : 'hidden'}`}
+    >
+      <div className={`flex flex-col gap-4 ${enColumna ? '' : 'md:flex-row md:gap-8'}`}>
+        {onFranjaCambiada && <FranjaMapa franja={franja} onCambiar={onFranjaCambiada} />}
+        <FiltrosMapa filtro={filtro} onCambiar={setFiltro} estados={estadosLeyenda} />
+      </div>
+    </div>
+  );
+
+  /** El buscador y, al lado, el botón de filtros: una sola fila para todo lo que acota el mapa. */
+  const busqueda = (enColumna: boolean) => (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-end gap-2">
+        <BuscadorEspacios
+          espacios={espacios}
+          pisoDe={(id) => figuras.get(id)?.piso}
+          onElegir={irAEspacio}
+          className="min-w-0 flex-1"
+        />
+        <BotonFiltros
+          abierto={abiertoFiltros}
+          idPanel={idFiltros}
+          activos={filtrosActivos}
+          onAlternar={() => setAbiertoFiltros((a) => !a)}
+        />
+      </div>
+      {panelDeFiltros(enColumna)}
+    </div>
   );
 
   const selector = (orientacion: 'horizontal' | 'vertical') => (
@@ -121,14 +191,26 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
     </p>
   );
 
+  /**
+   * La lista de espacios es la alternativa para quien no puede apuntar a la maqueta (teclado y
+   * lectores de pantalla). Va plegada: no compite con el mapa ni con el buscador.
+   */
   const lista = (
-    <ListaEspacios
-      espacios={visibles}
-      pisoDe={(id) => figuras.get(id)?.piso}
-      piso={piso}
-      seleccionado={seleccionado}
-      onElegir={irAEspacio}
-    />
+    <details className="rounded-xl border border-saie-divider bg-white">
+      <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-sm font-medium text-saie-text">
+        Lista de espacios
+        <span className="font-normal text-saie-muted">(para teclado y lectores de pantalla)</span>
+      </summary>
+      <div className="p-3 pt-0">
+        <ListaEspacios
+          espacios={visibles}
+          pisoDe={(id) => figuras.get(id)?.piso}
+          piso={piso}
+          seleccionado={seleccionado}
+          onElegir={irAEspacio}
+        />
+      </div>
+    </details>
   );
 
   const mapa = (enVentana: boolean) =>
@@ -143,14 +225,15 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
         pisoInicial={typeof piso === 'number' ? piso : undefined}
         piso={typeof piso === 'number' ? piso : undefined}
         onPisoCambiado={setPiso}
+        selectorDePisoExterno={enVentana ? undefined : { idBase: idPisos }}
         filtro={filtro}
         enfocar={enfoque}
         disposicion={enVentana ? 'lateral' : 'arriba'}
         barraLateral={
           enVentana ? (
             <>
-              {selector('vertical')}
-              {herramientas}
+              {selector('horizontal')}
+              {busqueda(true)}
             </>
           ) : undefined
         }
@@ -189,38 +272,54 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
             }
           />
         </div>
-        {!enVentana && <div className="mt-3">{lista}</div>}
+        {!enVentana && (
+          <div className="mt-3 flex flex-col gap-3">
+            <LeyendaMapa estados={estadosLeyenda} />
+            {lista}
+          </div>
+        )}
       </>
     );
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Una sola barra: la vista (2D o 3D), el piso del plano 2D y, en pantallas anchas, «Ampliar». */}
+      <div className="flex flex-wrap items-center gap-3">
         {selector('horizontal')}
-        <button
-          type="button"
-          onClick={() => setAmpliado(true)}
-          className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-saie-divider bg-white px-4 text-sm font-medium text-saie-text hover:bg-saie-primary/5"
-        >
-          <svg
-            className="h-5 w-5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
+        {vista === '2d' && !ampliado && (
+          <SelectorSegmentado
+            etiquetaGrupo="Piso"
+            idBase={idPisos}
+            opciones={pisos.map((p) => ({ valor: String(p), etiqueta: `Piso ${p}` }))}
+            valor={String(pisoMostrado)}
+            onCambiar={(v) => setPiso(Number(v))}
+          />
+        )}
+        {/* En el celular el mapa ya ocupa la pantalla: ampliarlo no aporta y sí estorba. */}
+        <div className="ml-auto hidden lg:block">
+          <button
+            type="button"
+            onClick={() => setAmpliado(true)}
+            className={claseBotonMapa('accion')}
           >
-            <path d={TRAZO_AMPLIAR} />
-          </svg>
-          Ampliar mapa
-        </button>
+            <svg
+              className="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d={TRAZO_AMPLIAR} />
+            </svg>
+            Ampliar mapa
+          </button>
+        </div>
       </div>
 
-      {!ampliado && (
-        <div className="flex flex-wrap items-start gap-x-6 gap-y-3">{herramientas}</div>
-      )}
+      {!ampliado && busqueda(false)}
 
       {ampliado ? (
         <>
@@ -231,17 +330,18 @@ export const VistaMapa: React.FC<VistaMapaProps> = ({
             {vista === '2d' ? (
               mapa(true)
             ) : (
-              // La maqueta ocupa la altura de la ventana y los controles quedan a un lado.
+              // La maqueta ocupa la altura de la ventana. A un lado, en este orden: la vista, el
+              // buscador y los filtros, el espacio elegido, la leyenda y, plegada, la lista.
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-                <div className="order-2 min-w-0 flex-1 lg:order-1">{mapa(true)}</div>
+                <div className="min-w-0 flex-1">{mapa(true)}</div>
                 <aside
                   aria-label="Controles del mapa"
-                  className="order-1 flex flex-col gap-4 lg:order-2 lg:w-60 lg:shrink-0"
+                  className="flex flex-col gap-4 lg:w-72 lg:shrink-0"
                 >
-                  {selector('vertical')}
-                  {herramientas}
-                  <LeyendaMapa estados={estadosLeyenda} vertical />
+                  {selector('horizontal')}
+                  {busqueda(true)}
                   {descripcion}
+                  <LeyendaMapa estados={estadosLeyenda} vertical />
                   {lista}
                 </aside>
               </div>

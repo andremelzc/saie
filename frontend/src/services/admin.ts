@@ -21,6 +21,7 @@ import type {
   NuevoAlumnoDTO,
   NuevoDocenteDTO,
   NuevoEspacioDTO,
+  PeriodosDTO,
   ReporteAsignacionesDTO,
   ResultadoEdicionEspacioDTO,
   ResultadoEdicionSeccionDTO,
@@ -270,6 +271,12 @@ export async function obtenerHistorial(
       params: filtros,
     },
   );
+  return data.data;
+}
+
+/** GET /v1/admin/periodos (Issue 4.42): alimenta el selector de periodo del panel. */
+export async function obtenerPeriodos(): Promise<PeriodosDTO> {
+  const { data } = await api.get<Respuesta<PeriodosDTO>>('/v1/admin/periodos');
   return data.data;
 }
 

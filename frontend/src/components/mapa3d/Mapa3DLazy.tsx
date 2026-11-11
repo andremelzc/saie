@@ -10,7 +10,7 @@ export default function Mapa3DLazy(props: Mapa3DProps) {
       fallback={
         <p
           role="status"
-          className="flex h-full min-h-80 items-center justify-center text-slate-600"
+          className="flex h-full min-h-80 items-center justify-center text-saie-muted"
         >
           Cargando el mapa 3D…
         </p>

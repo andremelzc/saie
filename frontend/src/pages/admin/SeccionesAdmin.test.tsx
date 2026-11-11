@@ -3,9 +3,11 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom';
 import SeccionesAdmin from './SeccionesAdmin';
 import { ProveedorAvisos } from '../../components/ui/Avisos';
+import { vaciarCacheCarga } from '../../hooks/useCarga';
 import {
   editarSeccion,
   obtenerCatalogoActivo,
+  obtenerPeriodos,
   obtenerDocentes,
   obtenerSecciones,
 } from '../../services/admin';
@@ -19,12 +21,14 @@ vi.mock('../../services/admin', () => ({
   editarSeccion: vi.fn(),
   obtenerDocentes: vi.fn(),
   obtenerCatalogoActivo: vi.fn(),
+  obtenerPeriodos: vi.fn(),
 }));
 
 const listar = vi.mocked(obtenerSecciones);
 const editar = vi.mocked(editarSeccion);
 const docentes = vi.mocked(obtenerDocentes);
 const catalogo = vi.mocked(obtenerCatalogoActivo);
+const periodos = vi.mocked(obtenerPeriodos);
 
 const seccion = (o: Partial<SeccionAdminDTO>): SeccionAdminDTO => ({
   id: 's1',
@@ -61,6 +65,9 @@ const montar = () =>
 describe('Gestión individual de secciones (Issue 4.31)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Sin caché entre pruebas: cada una debe pedir sus datos.
+    vaciarCacheCarga();
+    periodos.mockResolvedValue({ vigente: '2026-2', periodos: ['2026-2', '2026-1'] });
     listar.mockResolvedValue({
       items: [
         seccion({
@@ -296,9 +303,22 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     expect(within(panel).queryByRole('checkbox', { name: /Docker/ })).toBeNull();
   });
 
+  it('el periodo es una lista con el vigente preseleccionado, no texto libre (Issue 4.43)', async () => {
+    montar();
+
+    const lista = (await screen.findByLabelText('Periodo')) as HTMLSelectElement;
+    expect(lista.tagName).toBe('SELECT');
+    await waitFor(() => expect(lista.value).toBe('2026-2'));
+    expect(within(lista).getByRole('option', { name: '2026-2 (vigente)' })).toBeInTheDocument();
+    // La primera petición ya lleva el periodo vigente, no un listado sin filtro.
+    expect(listar).toHaveBeenCalledWith(expect.objectContaining({ periodo: '2026-2' }));
+    expect(listar).not.toHaveBeenCalledWith(expect.objectContaining({ periodo: undefined }));
+  });
+
   it('envía el tipo de aula, el docente y el periodo filtrado', async () => {
     editar.mockResolvedValue({ seccion: seccion({}), alertas: [] });
     montar();
+    await screen.findByRole('option', { name: '2026-1' });
     fireEvent.change(screen.getByLabelText('Periodo'), { target: { value: '2026-1' } });
     await waitFor(() =>
       expect(listar).toHaveBeenCalledWith(expect.objectContaining({ periodo: '2026-1' })),
@@ -358,7 +378,8 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
-    fireEvent.click(within(panel).getByRole('button', { name: 'Cancelar' }));
+    // Docentes y catálogo se piden al abrir la edición: el formulario aparece al llegar.
+    fireEvent.click(await within(panel).findByRole('button', { name: 'Cancelar' }));
 
     expect(within(panel).getByRole('button', { name: 'Editar sección' })).toBeInTheDocument();
   });

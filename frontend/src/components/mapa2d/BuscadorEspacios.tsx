@@ -1,4 +1,5 @@
 import React, { useId, useMemo, useState } from 'react';
+import { CLASE_CAMPO_MAPA, CLASE_ROTULO_MAPA } from './controles';
 import { ESTADO_TEXTO, PABELLON_TEXTO, type EspacioMapa2D } from './etiquetas';
 import { normalizar } from './indice';
 import { pabellonDe } from './plano';
@@ -9,6 +10,11 @@ export interface BuscadorEspaciosProps {
   pisoDe: (id: string) => number | undefined;
   /** Se elige un resultado: el mapa debe ir a su piso, centrarlo y seleccionarlo. */
   onElegir: (id: string) => void;
+  /** Rótulo del campo. */
+  etiqueta?: string;
+  placeholder?: string;
+  /** Muestra el estado (disponible, ocupado…) en cada resultado. No aplica a la ruta. */
+  mostrarEstado?: boolean;
   className?: string;
 }
 
@@ -22,6 +28,9 @@ export const BuscadorEspacios: React.FC<BuscadorEspaciosProps> = ({
   espacios,
   pisoDe,
   onElegir,
+  etiqueta = 'Buscar aula o laboratorio',
+  placeholder = 'Ej.: 204 o laboratorio',
+  mostrarEstado = true,
   className = '',
 }) => {
   const id = useId();
@@ -60,8 +69,8 @@ export const BuscadorEspacios: React.FC<BuscadorEspaciosProps> = ({
 
   return (
     <div className={`relative ${className}`}>
-      <label htmlFor={`${id}-entrada`} className="mb-1 block text-sm font-medium text-saie-text">
-        Buscar aula o laboratorio
+      <label htmlFor={`${id}-entrada`} className={CLASE_ROTULO_MAPA}>
+        {etiqueta}
       </label>
       <input
         id={`${id}-entrada`}
@@ -72,7 +81,7 @@ export const BuscadorEspacios: React.FC<BuscadorEspaciosProps> = ({
         aria-autocomplete="list"
         aria-activedescendant={lista && resultados.length > 0 ? idOpcion(activo) : undefined}
         autoComplete="off"
-        placeholder="Ej.: 204 o laboratorio"
+        placeholder={placeholder}
         value={texto}
         onChange={(ev) => {
           setTexto(ev.target.value);
@@ -96,7 +105,7 @@ export const BuscadorEspacios: React.FC<BuscadorEspaciosProps> = ({
             setAbierto(false);
           }
         }}
-        className="min-h-11 w-full rounded-lg border border-saie-divider bg-white px-3 text-sm text-saie-text placeholder:text-saie-muted"
+        className={`${CLASE_CAMPO_MAPA} w-full placeholder:text-saie-muted`}
       />
       <ul
         id={`${id}-lista`}
@@ -132,7 +141,7 @@ export const BuscadorEspacios: React.FC<BuscadorEspaciosProps> = ({
                   {[
                     pab ? PABELLON_TEXTO[pab] : null,
                     piso ? `Piso ${piso}` : null,
-                    ESTADO_TEXTO[e.estado],
+                    mostrarEstado ? ESTADO_TEXTO[e.estado] : null,
                   ]
                     .filter(Boolean)
                     .join(' · ')}

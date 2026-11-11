@@ -184,10 +184,10 @@ export const GridHorarioSemanal: React.FC<GridHorarioSemanalProps> = ({
                         <button
                           type="button"
                           onClick={() => setAbierta(sesion)}
-                          className="flex h-full w-full flex-col overflow-hidden rounded-lg border-l-4 px-2 py-1 text-left text-saie-text shadow-sm hover:brightness-95 focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-saie-primary"
+                          className="flex h-full w-full flex-col overflow-hidden rounded-lg border px-2 py-1 text-left text-saie-text hover:brightness-95 focus-visible:outline-3 focus-visible:outline-offset-1 focus-visible:outline-saie-primary"
                           style={{
                             backgroundColor: color.fondo,
-                            borderLeftColor: color.borde,
+                            borderColor: color.borde,
                           }}
                         >
                           <span className="block truncate text-sm font-bold leading-5">

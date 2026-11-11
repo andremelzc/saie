@@ -3,6 +3,7 @@ import type { ItemConsultaAsignacion, TipoEspacio } from '../../types/consulta';
 import { etiquetaTipoEspacio } from '../../utils/diccionarios';
 import { ETIQUETA_DIA, estadoAMostrar } from '../../utils/horario';
 import { ICONOS } from '../ui/iconos';
+import { BadgeEstado } from '../ui/BadgeEstado';
 import { EstadoAsignacion } from '../ui/EstadoAsignacion';
 
 export interface TarjetaResultadoProps {
@@ -21,50 +22,24 @@ export interface TarjetaResultadoProps {
   className?: string;
 }
 
-/**
- * Renderiza el ícono y etiqueta correspondiente al tipo de espacio
- * garantizando distinción visual accesible mediante forma, ícono y texto (no solo color).
- */
-const BadgeTipoEspacio: React.FC<{ tipo: TipoEspacio }> = ({ tipo }) => {
-  if (tipo === 'LABORATORIO') {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-semibold bg-teal-50 text-teal-800 border border-teal-200">
-        {/* Ícono de monitor / laboratorio de cómputo */}
-        <svg
-          className="w-3.5 h-3.5 text-teal-700"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={ICONOS.monitor} />
-        </svg>
-        <span>{etiquetaTipoEspacio('LABORATORIO')}</span>
-      </span>
-    );
-  }
+/** Libro abierto: el aula teórica es un espacio de pizarra, no de equipos. */
+const ICONO_AULA_TEORICA =
+  'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253';
 
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-semibold bg-indigo-50 text-indigo-900 border border-indigo-200">
-      {/* Ícono de aula teórica / pizarra */}
-      <svg
-        className="w-3.5 h-3.5 text-indigo-700"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-        />
-      </svg>
-      <span>{etiquetaTipoEspacio('AULA_TEORICA')}</span>
-    </span>
+/**
+ * Tipo de espacio con forma, ícono y texto (no solo color): reutiliza `BadgeEstado` en lugar de
+ * una insignia propia (Issue 3.56).
+ */
+const BadgeTipoEspacio: React.FC<{ tipo: TipoEspacio }> = ({ tipo }) =>
+  tipo === 'LABORATORIO' ? (
+    <BadgeEstado tono="info" icono={ICONOS.monitor}>
+      {etiquetaTipoEspacio('LABORATORIO')}
+    </BadgeEstado>
+  ) : (
+    <BadgeEstado tono="neutro" icono={ICONO_AULA_TEORICA}>
+      {etiquetaTipoEspacio('AULA_TEORICA')}
+    </BadgeEstado>
   );
-};
 
 export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
   asignacion,
@@ -100,9 +75,9 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
       <div
         role="alert"
         aria-label="Error de consulta"
-        className={`w-full max-w-xl mx-auto p-4 sm:p-5 bg-white border border-rose-200 border-l-4 border-l-saie-danger rounded-xl shadow-sm flex items-start gap-3.5 ${className}`}
+        className={`w-full max-w-xl mx-auto p-4 sm:p-5 bg-white border border-saie-danger/30 border-l-4 border-l-saie-danger rounded-xl shadow-sm flex items-start gap-3.5 ${className}`}
       >
-        <div className="w-10 h-10 shrink-0 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center text-saie-danger">
+        <div className="w-10 h-10 shrink-0 rounded-full bg-saie-danger-soft border border-saie-danger/30 flex items-center justify-center text-saie-danger">
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
             <path fillRule="evenodd" d={ICONOS.errorCirculo} clipRule="evenodd" />
           </svg>
@@ -206,10 +181,10 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
         <div
           role="note"
           aria-label="Detalle de la revisión de esta clase"
-          className="p-3 bg-amber-50 border-l-4 border-amber-500 rounded-r-md text-sm text-amber-900 flex items-start gap-2"
+          className="p-3 bg-saie-warning-soft border-l-4 border-saie-warning-strong rounded-r-md text-sm text-saie-warning-strong flex items-start gap-2"
         >
           <svg
-            className="w-5 h-5 text-amber-600 shrink-0 mt-0.5"
+            className="w-5 h-5 text-saie-warning-strong shrink-0 mt-0.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -223,8 +198,10 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
             />
           </svg>
           <div>
-            <p className="font-semibold text-sm text-amber-800">Tu clase está en revisión</p>
-            <p className="text-sm text-amber-900 mt-0.5">
+            <p className="font-semibold text-sm text-saie-warning-strong">
+              Tu clase está en revisión
+            </p>
+            <p className="text-sm text-saie-warning-strong mt-0.5">
               Coordinación Académica está revisando el aula o laboratorio de esta sección. Cuando se
               confirme, aparecerá aquí.
             </p>
@@ -237,10 +214,10 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
         <div
           role="note"
           aria-label="Aviso de aula sin asignar"
-          className="p-3.5 bg-rose-50 border border-rose-200 rounded-lg text-sm text-rose-900 flex items-center gap-2.5"
+          className="p-3.5 bg-saie-danger-soft border border-saie-danger/30 rounded-lg text-sm text-saie-danger-strong flex items-center gap-2.5"
         >
           <svg
-            className="w-5 h-5 text-rose-600 shrink-0"
+            className="w-5 h-5 text-saie-danger shrink-0"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -254,8 +231,10 @@ export const TarjetaResultado: React.FC<TarjetaResultadoProps> = ({
             />
           </svg>
           <div>
-            <p className="font-semibold text-sm text-rose-800">Aún no hay aula asignada</p>
-            <p className="text-sm text-rose-700">
+            <p className="font-semibold text-sm text-saie-danger-strong">
+              Aún no hay aula asignada
+            </p>
+            <p className="text-sm text-saie-danger-strong">
               La facultad todavía no confirma el aula o laboratorio de esta sección. Vuelve a
               consultar más tarde.
             </p>

@@ -18,7 +18,15 @@ export interface Malla {
   alto: number;
   /** 1 = transitable, 0 = muro o figura. Una celda mide una unidad del plano. */
   libre: Uint8Array;
+  /** 1 = celda al aire libre (el patio). Solo existe en las mallas creadas con `conPatio`. */
+  exterior?: Uint8Array;
 }
+
+/**
+ * Cuánto «cuesta» más caminar al aire libre que por dentro: a igualdad aproximada se prefiere el
+ * pasadizo interior al patio (sol, lluvia), pero un atajo claro por el patio sí se toma.
+ */
+export const PENALIZACION_EXTERIOR = 1.25;
 
 /** Figuras que se ocupan con algo y por tanto no se camina por encima. */
 const OBSTACULOS = new Set([
@@ -64,21 +72,90 @@ function dentroDe(poligono: number[][], x: number, y: number): boolean {
   return dentro;
 }
 
+export interface OpcionesMalla {
+  /**
+   * Incluye el patio (lo que la losa cubre y el techo no) como transitable. El borde del techo
+   * pasa a ser muro, con un hueco en cada puerta del plano: solo se sale al patio por ellas.
+   * Es lo que permite una ruta de un pabellón a otro; el cálculo de contiguos y de distancias al
+   * ascensor no lo usa.
+   */
+  conPatio?: boolean;
+}
+
+/** Grosor, a cada lado del borde del techo, que se cierra como muro al incluir el patio. */
+const MITAD_MURO = 0.8;
+
 /** Malla de un piso, o `null` si su plano no trae la figura `techo` (la parte construida). */
-export function crearMalla(plano: Plano2D): Malla | null {
+export function crearMalla(plano: Plano2D, opciones: OpcionesMalla = {}): Malla | null {
   const techo = plano.figuras.find((f) => f.clase === 'techo');
   const contorno = techo ? poligonoDe(techo) : null;
   if (!techo || !contorno) return null;
 
-  const x0 = Math.floor(techo.caja.x);
-  const y0 = Math.floor(techo.caja.y);
-  const ancho = Math.ceil(techo.caja.x + techo.caja.ancho) - x0;
-  const alto = Math.ceil(techo.caja.y + techo.caja.alto) - y0;
+  const losa = opciones.conPatio ? plano.figuras.find((f) => f.clase === 'losa') : undefined;
+  const contornoLosa = losa ? poligonoDe(losa) : null;
+  const patio = Boolean(contornoLosa);
+  const puertas = patio ? plano.figuras.filter((f) => f.clase === 'puerta') : [];
+
+  // Caja de la malla: el techo y, con patio, también la losa y las puertas (que sobresalen).
+  const cajas = [techo.caja, ...(losa ? [losa.caja] : []), ...puertas.map((f) => f.caja)];
+  const xMin = Math.min(...cajas.map((c) => c.x));
+  const yMin = Math.min(...cajas.map((c) => c.y));
+  const xMax = Math.max(...cajas.map((c) => c.x + c.ancho));
+  const yMax = Math.max(...cajas.map((c) => c.y + c.alto));
+  const x0 = Math.floor(xMin);
+  const y0 = Math.floor(yMin);
+  const ancho = Math.ceil(xMax) - x0;
+  const alto = Math.ceil(yMax) - y0;
   const libre = new Uint8Array(ancho * alto);
+  const exterior = patio ? new Uint8Array(ancho * alto) : undefined;
 
   for (let j = 0; j < alto; j++) {
     for (let i = 0; i < ancho; i++) {
-      if (dentroDe(contorno, x0 + i + 0.5, y0 + j + 0.5)) libre[j * ancho + i] = 1;
+      const cx = x0 + i + 0.5;
+      const cy = y0 + j + 0.5;
+      if (dentroDe(contorno, cx, cy)) {
+        libre[j * ancho + i] = 1;
+      } else if (contornoLosa !== null && dentroDe(contornoLosa, cx, cy)) {
+        // Lo que la losa cubre y el techo no es el patio: se camina, pero al aire libre.
+        libre[j * ancho + i] = 1;
+        if (exterior) exterior[j * ancho + i] = 1;
+      }
+    }
+  }
+
+  if (patio) {
+    // El borde del techo es muro: cada tramo cierra las celdas que quedan a menos de `MITAD_MURO`.
+    for (let k = 0; k < contorno.length; k++) {
+      const [ax, ay] = contorno[k];
+      const [bx, by] = contorno[(k + 1) % contorno.length];
+      const iMin = Math.max(0, Math.floor(Math.min(ax, bx)) - x0 - 1);
+      const iMax = Math.min(ancho - 1, Math.ceil(Math.max(ax, bx)) - x0 + 1);
+      const jMin = Math.max(0, Math.floor(Math.min(ay, by)) - y0 - 1);
+      const jMax = Math.min(alto - 1, Math.ceil(Math.max(ay, by)) - y0 + 1);
+      for (let j = jMin; j <= jMax; j++) {
+        for (let i = iMin; i <= iMax; i++) {
+          const dx = bx - ax;
+          const dy = by - ay;
+          const largo2 = dx * dx + dy * dy;
+          const px = x0 + i + 0.5;
+          const py = y0 + j + 0.5;
+          const t =
+            largo2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / largo2));
+          if (Math.hypot(px - (ax + t * dx), py - (ay + t * dy)) <= MITAD_MURO) {
+            libre[j * ancho + i] = 0;
+          }
+        }
+      }
+    }
+    // Cada puerta abre un hueco en el muro, de un lado al otro.
+    for (const f of puertas) {
+      const iMin = Math.max(0, Math.floor(f.caja.x) - x0);
+      const iMax = Math.min(ancho - 1, Math.ceil(f.caja.x + f.caja.ancho) - x0);
+      const jMin = Math.max(0, Math.floor(f.caja.y) - y0);
+      const jMax = Math.min(alto - 1, Math.ceil(f.caja.y + f.caja.alto) - y0);
+      for (let j = jMin; j <= jMax; j++) {
+        for (let i = iMin; i <= iMax; i++) libre[j * ancho + i] = 1;
+      }
     }
   }
 
@@ -96,7 +173,7 @@ export function crearMalla(plano: Plano2D): Malla | null {
       }
     }
   }
-  return { x0, y0, ancho, alto, libre };
+  return { x0, y0, ancho, alto, libre, exterior };
 }
 
 const centroDeCelda = (m: Malla, k: number): Punto => ({
@@ -240,7 +317,7 @@ function dijkstra(m: Malla, origenes: number[], destinos?: Set<number>): Resulta
       // En diagonal no se corta una esquina: las dos celdas laterales también deben estar libres.
       if (di !== 0 && dj !== 0 && (!m.libre[j * m.ancho + ni] || !m.libre[nj * m.ancho + i]))
         continue;
-      const nd = d + costo;
+      const nd = d + costo * (m.exterior?.[nk] ? PENALIZACION_EXTERIOR : 1);
       if (nd < distancia[nk]) {
         distancia[nk] = nd;
         anterior[nk] = k;

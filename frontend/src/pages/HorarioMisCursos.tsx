@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
+import LayoutEstudiante from '../components/estudiante/LayoutEstudiante';
 import { EstadoError } from '../components/ui/EstadoError';
-import { Contenedor } from '../components/ui/Contenedor';
-import { ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
 import { EsqueletoCarga, EstadoVacio } from '../components/estudiante/ElementosHorario';
 import GridHorarioSemanal from '../components/estudiante/GridHorarioSemanal';
 import HorarioDia from '../components/estudiante/HorarioDia';
@@ -12,7 +10,6 @@ import { idPanelPestana, idPestana } from '../components/estudiante/idsPestanas'
 import type { OpcionSegmentada } from '../components/estudiante/SelectorSegmentado';
 import type { DiaSemana } from '../types/consulta';
 import type { CursoMatriculadoDTO, HorarioSemanalDTO, VistaHorario } from '../types/horario';
-import { ICONOS } from '../components/ui/iconos';
 import {
   asignarColoresCursos,
   diaDeFecha,
@@ -38,7 +35,6 @@ const OPCIONES_VISTA: OpcionSegmentada<VistaHorario>[] = [
   { valor: 'semana', etiqueta: 'Semana' },
 ];
 
-const TRAZO_CALENDARIO = ICONOS.calendario;
 const UN_MINUTO_MS = 60_000;
 
 export interface HorarioMisCursosProps {
@@ -125,13 +121,6 @@ export const HorarioMisCursos: React.FC<HorarioMisCursosProps> = ({
 
     return (
       <div className="flex flex-col gap-5">
-        <SelectorSegmentado
-          opciones={OPCIONES_VISTA}
-          valor={vista}
-          onCambiar={setVista}
-          etiquetaGrupo="Tipo de vista del horario"
-          className="self-start"
-        />
         {vista === 'dia' ? (
           <HorarioDia
             horario={horario}
@@ -149,42 +138,41 @@ export const HorarioMisCursos: React.FC<HorarioMisCursosProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-saie-canvas pb-[var(--saie-barra-inferior)] text-saie-text">
-      <CabeceraPantalla
-        titulo="Mi horario y mis cursos"
-        subtitulo={horario.periodo ? `Periodo ${horario.periodo}` : 'Periodo académico sin definir'}
-        trazoIcono={TRAZO_CALENDARIO}
-      />
-
-      <Contenedor
-        como="main"
-        ancho="normal"
-        id={ID_CONTENIDO}
-        tabIndex={-1}
-        className="flex flex-col gap-5 py-6 focus:outline-none"
-      >
+    <LayoutEstudiante
+      titulo="Mi horario y mis cursos"
+      subtitulo={horario.periodo ? `Periodo ${horario.periodo}` : 'Periodo académico sin definir'}
+    >
+      {/* Los dos selectores comparten fila: la sección a la izquierda y, si hay horario, día o semana. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <SelectorSegmentado
           opciones={OPCIONES_SECCION}
           valor={seccion}
           onCambiar={setSeccion}
           etiquetaGrupo="Secciones de la pantalla"
           idBase="mis-cursos"
-          className="self-start"
         />
-        <section
-          role="tabpanel"
-          id={idPanelPestana('mis-cursos', seccion)}
-          aria-labelledby={idPestana('mis-cursos', seccion)}
-        >
-          <h2 id="titulo-seccion" className="sr-only">
-            {seccion === 'horario' ? 'Mi horario' : 'Mis cursos matriculados'}
-          </h2>
-          <div key={seccion} className="saie-fundido">
-            {renderCuerpo()}
-          </div>
-        </section>
-      </Contenedor>
-    </div>
+        {seccion === 'horario' && hayHorario && !cargando && !error && (
+          <SelectorSegmentado
+            opciones={OPCIONES_VISTA}
+            valor={vista}
+            onCambiar={setVista}
+            etiquetaGrupo="Tipo de vista del horario"
+          />
+        )}
+      </div>
+      <section
+        role="tabpanel"
+        id={idPanelPestana('mis-cursos', seccion)}
+        aria-labelledby={idPestana('mis-cursos', seccion)}
+      >
+        <h2 id="titulo-seccion" className="sr-only">
+          {seccion === 'horario' ? 'Mi horario' : 'Mis cursos matriculados'}
+        </h2>
+        <div key={seccion} className="saie-fundido">
+          {renderCuerpo()}
+        </div>
+      </section>
+    </LayoutEstudiante>
   );
 };
 

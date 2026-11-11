@@ -120,10 +120,9 @@ export const HorarioDia: React.FC<HorarioDiaProps> = ({
             return (
               <li
                 key={`${sesion.seccionId}-${sesion.horaInicio}`}
-                className={`flex gap-3 rounded-xl border border-l-4 border-saie-divider bg-white p-4 shadow-sm ${
+                className={`flex gap-3 rounded-xl border border-saie-divider bg-white p-4 ${
                   indice === indiceDestacada ? 'ring-2 ring-saie-primary' : ''
                 } ${estadoClase === 'EN_CURSO' ? 'saie-respira' : ''}`}
-                style={{ borderLeftColor: color.borde }}
               >
                 <div className="w-14 shrink-0 text-center">
                   <p className="m-0 text-base font-bold text-saie-text">
@@ -133,7 +132,14 @@ export const HorarioDia: React.FC<HorarioDiaProps> = ({
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h4 className="m-0 text-base font-bold text-saie-text">{sesion.nombreCurso}</h4>
+                    <h4 className="m-0 flex items-center gap-2 text-base font-bold text-saie-text">
+                      <span
+                        aria-hidden="true"
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: color.borde }}
+                      />
+                      {sesion.nombreCurso}
+                    </h4>
                     {estadoClase && <BadgeEstadoClase estado={estadoClase} />}
                   </div>
                   <p className="m-0 text-sm text-saie-muted">

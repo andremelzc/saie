@@ -8,6 +8,7 @@ import {
   obtenerAuditoria,
   obtenerEspacios,
   obtenerHistorial,
+  obtenerPeriodos,
   obtenerReporteAsignaciones,
   obtenerSecciones,
 } from '../../services/admin';
@@ -23,6 +24,7 @@ vi.mock('../../services/admin', () => ({
   obtenerAuditoria: vi.fn(),
   obtenerHistorial: vi.fn(),
   obtenerReporteAsignaciones: vi.fn(),
+  obtenerPeriodos: vi.fn(),
 }));
 
 const auditoria = vi.mocked(obtenerAuditoria);
@@ -30,6 +32,7 @@ const historial = vi.mocked(obtenerHistorial);
 const reporte = vi.mocked(obtenerReporteAsignaciones);
 const espacios = vi.mocked(obtenerEspacios);
 const secciones = vi.mocked(obtenerSecciones);
+const periodos = vi.mocked(obtenerPeriodos);
 
 const UUID_AULA = '6f1c2a3b-4d5e-4f60-8a71-9b8c7d6e5f40';
 const UUID_CORRIDA = '11111111-2222-4333-8444-555555555555';
@@ -44,6 +47,7 @@ const montar = (pantalla: React.ReactElement) =>
 describe('Auditoria e historial (Issue 4.32)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    periodos.mockResolvedValue({ vigente: '2026-2', periodos: ['2026-2', '2026-1'] });
     vaciarCacheCarga();
     espacios.mockResolvedValue([
       {
@@ -114,6 +118,24 @@ describe('Auditoria e historial (Issue 4.32)', () => {
     expect(screen.queryByText('c1')).not.toBeInTheDocument();
   });
 
+  it('el historial parte del periodo vigente y deja elegir «todos» diciéndolo (Issue 4.43)', async () => {
+    montar(<AuditoriaAdmin />);
+    await screen.findAllByText('IS101 · 1');
+
+    const lista = screen.getByLabelText('Periodo') as HTMLSelectElement;
+    expect(lista.value).toBe('2026-2');
+    expect(historial).toHaveBeenCalledWith(expect.objectContaining({ periodo: '2026-2' }));
+
+    fireEvent.change(lista, { target: { value: '__todos__' } });
+    await waitFor(() =>
+      expect(historial).toHaveBeenLastCalledWith(expect.objectContaining({ periodo: undefined })),
+    );
+    expect(screen.getByText('Se muestran los registros de todos los periodos.')).toBeVisible();
+    expect(screen.getByRole('group', { name: 'Filtros activos' })).toHaveTextContent(
+      'Todos los periodos',
+    );
+  });
+
   it('filtra el historial por periodo y estado', async () => {
     montar(<AuditoriaAdmin />);
     await screen.findAllByText('IS101 · 1');
@@ -127,6 +149,53 @@ describe('Auditoria e historial (Issue 4.32)', () => {
     await waitFor(() =>
       expect(historial).toHaveBeenCalledWith(
         expect.objectContaining({ periodo: '2026-1', estado: 'ESCALADA' }),
+      ),
+    );
+  });
+
+  it('pagina el historial de a 50 con el total real y vuelve a la página 1 al filtrar (Issue 4.39)', async () => {
+    historial.mockResolvedValue({
+      items: [],
+      total: 120,
+      pagina: 1,
+      limite: 50,
+    });
+    montar(<AuditoriaAdmin />);
+    await waitFor(() =>
+      expect(historial).toHaveBeenCalledWith(expect.objectContaining({ pagina: 1, limite: 50 })),
+    );
+    expect(await screen.findByText(/120/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Página siguiente' }));
+    await waitFor(() =>
+      expect(historial).toHaveBeenCalledWith(expect.objectContaining({ pagina: 2, limite: 50 })),
+    );
+
+    fireEvent.change(screen.getByLabelText('Estado'), { target: { value: 'ESCALADA' } });
+    await waitFor(() =>
+      expect(historial).toHaveBeenLastCalledWith(
+        expect.objectContaining({ pagina: 1, estado: 'ESCALADA' }),
+      ),
+    );
+  });
+
+  it('pagina el registro de actividad y reinicia la página al cambiar el filtro (Issue 4.39)', async () => {
+    auditoria.mockResolvedValue({ items: [], total: 75, pagina: 1, limite: 50 });
+    montar(<AuditoriaAdmin />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Registro de actividad' }));
+    await waitFor(() =>
+      expect(auditoria).toHaveBeenCalledWith(expect.objectContaining({ pagina: 1, limite: 50 })),
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Página siguiente' }));
+    await waitFor(() =>
+      expect(auditoria).toHaveBeenCalledWith(expect.objectContaining({ pagina: 2, limite: 50 })),
+    );
+
+    fireEvent.change(screen.getByLabelText('Tipo de evento'), { target: { value: 'ALERTA' } });
+    await waitFor(() =>
+      expect(auditoria).toHaveBeenLastCalledWith(
+        expect.objectContaining({ pagina: 1, tipo: 'ALERTA' }),
       ),
     );
   });
@@ -328,6 +397,7 @@ describe('Auditoria e historial (Issue 4.32)', () => {
 describe('Informe de salones (Issue 4.33)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    periodos.mockResolvedValue({ vigente: '2026-2', periodos: ['2026-2', '2026-1'] });
     vaciarCacheCarga();
     reporte.mockResolvedValue({
       periodo: '2026-2',

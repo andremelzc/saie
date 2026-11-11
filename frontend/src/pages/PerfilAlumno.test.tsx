@@ -34,14 +34,15 @@ function renderizar(props: Props = {}) {
 const seccion = (nombre: RegExp) => screen.getByRole('region', { name: nombre });
 
 describe('PerfilAlumno (Issue 3.17)', () => {
-  it('muestra el título, los datos institucionales y el enlace para volver', () => {
+  it('muestra el título, los datos institucionales y la navegación al inicio', () => {
     renderizar();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Mi perfil' })).toBeVisible();
-    expect(screen.getByRole('link', { name: /Volver al inicio/i })).toHaveAttribute(
-      'href',
-      '/estudiante',
-    );
+    expect(
+      within(
+        screen.getByRole('navigation', { name: 'Navegación del área del estudiante' }),
+      ).getByRole('link', { name: 'Inicio' }),
+    ).toHaveAttribute('href', '/estudiante');
     const institucional = seccion(/Datos institucionales/i);
     expect(within(institucional).getByText('Ana Lucía Quispe Ramos')).toBeVisible();
     expect(within(institucional).getByText('22200001')).toBeVisible();

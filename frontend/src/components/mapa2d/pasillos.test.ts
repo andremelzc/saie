@@ -18,6 +18,41 @@ const figura = (piso: number, id: string) => {
   return f;
 };
 
+describe('malla con patio', () => {
+  const malla = crearMalla(plano(1), { conPatio: true })!;
+
+  it('el patio es transitable pero al aire libre, y la malla sin patio no lo incluye', () => {
+    const sinPatio = crearMalla(plano(1))!;
+    const libres = (m: typeof malla) => m.libre.reduce((n, c) => n + c, 0);
+    expect(libres(malla)).toBeGreaterThan(libres(sinPatio));
+    expect(malla.exterior?.some((c) => c === 1)).toBe(true);
+    expect(sinPatio.exterior).toBeUndefined();
+  });
+
+  it('las dos puertas al patio se comunican por el patio', () => {
+    const desdeAntiguo = distanciasDesde(malla, celdasDePuerta(malla, figura(1, 'entrada-3')));
+    expect(
+      Number.isFinite(distanciaMinima(desdeAntiguo, celdasDePuerta(malla, figura(1, 'entrada-2')))),
+    ).toBe(true);
+  });
+
+  it('el borde del techo es muro: del patio solo se entra por las puertas', () => {
+    // Un punto de la pared de la planta baja, lejos de toda puerta, no es transitable.
+    const k = (x: number, y: number) =>
+      (Math.floor(y) - malla.y0) * malla.ancho + (Math.floor(x) - malla.x0);
+    expect(malla.libre[k(104.7, 100)]).toBe(0);
+    // En cambio, en el hueco de la puerta del antiguo sí se pasa.
+    expect(malla.libre[k(115, 217)]).toBe(1);
+  });
+
+  it('desde la entrada principal se llega a la puerta del patio del pabellón nuevo', () => {
+    const d = distanciasDesde(malla, celdasDePuerta(malla, figura(1, 'entrada-1')));
+    expect(Number.isFinite(distanciaMinima(d, celdasDePuerta(malla, figura(1, 'entrada-2'))))).toBe(
+      true,
+    );
+  });
+});
+
 describe('malla de pasillos', () => {
   it.each([1, 2, 3])(
     'el piso %i tiene malla y toda aula, laboratorio, escalera y ascensor da a un pasillo',

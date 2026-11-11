@@ -14,7 +14,7 @@ import {
 } from '../mapa3d/config';
 import type { EstadoOcupacion } from '../mapa3d/tipos';
 import type { TrazoPiso } from './capaRuta';
-import { ENTRADA_PABELLON, IDS_ENTRADAS, NORTE_GRADOS } from './entradas';
+import { ETIQUETA_PUERTA, IDS_ENTRADAS, NORTE_GRADOS } from './entradas';
 import { ESTADO_TEXTO, PABELLON_TEXTO, TIPO_TEXTO, type EspacioMapa2D } from './etiquetas';
 import { pasaFiltro, type FiltroMapa } from './filtros';
 import {
@@ -55,6 +55,12 @@ export interface Mapa2DProps {
   /** Se emite al cambiar de piso. */
   onPisoCambiado?: (piso: number) => void;
   /**
+   * El selector de piso lo dibuja quien usa el mapa (para ponerlo en su propia barra de
+   * herramientas) y pasa aquí el `idBase` de sus pestañas, para que el plano siga siendo el panel
+   * de la pestaña elegida. Solo vale con `disposicion="arriba"`.
+   */
+  selectorDePisoExterno?: { idBase: string };
+  /**
    * `arriba` (por defecto) pone los controles sobre el plano; `lateral` los pone en una columna a
    * un lado, para usar mejor el espacio en una ventana ancha.
    */
@@ -73,6 +79,8 @@ export interface Mapa2DProps {
   enfocar?: { id: string; n: number } | null;
   /** Recorrido a dibujar sobre cada piso (pantalla de ruta). */
   capaRuta?: Record<number, TrazoPiso>;
+  /** Número del paso de la ruta elegido: su punto lleva un anillo, sin mover la vista. */
+  marcaActiva?: number | null;
   /** Con la rueda: `siempre` o solo con Ctrl/⌘ (para no atrapar el desplazamiento de la página). */
   rueda?: 'siempre' | 'con-ctrl';
   /** Muestra la leyenda de estados (por defecto, sí). La pantalla de ruta pone la suya. */
@@ -82,9 +90,15 @@ export interface Mapa2DProps {
 
 const ESTADOS_TODOS: EstadoOcupacion[] = ['DISPONIBLE', 'OCUPADO', 'ALERTA_ACTIVA'];
 const COLOR_FONDO_CONTEXTO = '#e2e8f0';
-const COLOR_RUTA = '#4f46e5';
+/** Colores de la ruta, de la guía: línea y puntos en guinda, destino en tinta, puertas en azul. */
+const COLOR_RUTA = '#7b1113';
+const COLOR_DESTINO = '#222222';
+const COLOR_PUERTA = '#1f5fa8';
 const ABREVIATURAS: Record<string, string> = { escalera: 'Esc.', ascensor: 'Asc.' };
 const UMBRAL_ARRASTRE = 5;
+/** Si el espacio está a menos de esto (px) del borde de arriba, la tarjeta va debajo. */
+const TIP_ALTO_MINIMO = 84;
+const TIP_SEPARACION_ABAJO = 30;
 const ZOOM_AL_ENFOCAR = 3;
 const DIRECCION_TECLA: Record<string, Direccion> = {
   ArrowUp: 'arriba',
@@ -256,7 +270,7 @@ const FiguraMapa: React.FC<FiguraMapaProps> = ({
       data-id={f.id}
       aria-label={`${nombre}, ${pabellonTexto}${ESTADO_TEXTO[espacio.estado].toLowerCase()}`}
       aria-pressed={seleccionada}
-      className="cursor-pointer outline-none [&:focus-visible>:first-child]:stroke-[#312e81] [&:focus-visible>:first-child]:stroke-[2.6]"
+      className="cursor-pointer outline-none [&:focus-visible>:first-child]:stroke-[#5c0d0e] [&:focus-visible>:first-child]:stroke-[2.6]"
       onClick={(e) => {
         e.stopPropagation();
         onSeleccionar(f.id);
@@ -312,7 +326,7 @@ const ContornoSuperpuesto: React.FC<{ figura: FiguraPlano2D; seleccionada: boole
   );
 };
 
-/** Marca de la entrada del pabellón sobre su puerta. */
+/** Marca de una entrada o puerta al patio, sobre su puerta. */
 const MarcadorEntrada: React.FC<{ figura: FiguraPlano2D; etiqueta: string }> = ({
   figura,
   etiqueta,
@@ -320,7 +334,7 @@ const MarcadorEntrada: React.FC<{ figura: FiguraPlano2D; etiqueta: string }> = (
   const c = centroDe(figura);
   return (
     <g aria-hidden="true" pointerEvents="none">
-      <circle cx={c.x} cy={c.y} r={5.2} fill="#1e3a8a" stroke="#ffffff" strokeWidth={1.2} />
+      <circle cx={c.x} cy={c.y} r={5.2} fill={COLOR_PUERTA} stroke="#ffffff" strokeWidth={1.2} />
       <path
         d={`M${c.x} ${c.y - 2.6} V${c.y + 2.2} M${c.x - 1.9} ${c.y + 0.4} L${c.x} ${c.y + 2.4} L${c.x + 1.9} ${c.y + 0.4}`}
         fill="none"
@@ -336,7 +350,7 @@ const MarcadorEntrada: React.FC<{ figura: FiguraPlano2D; etiqueta: string }> = (
         fontFamily="sans-serif"
         fontWeight={700}
         textAnchor="middle"
-        fill="#1e3a8a"
+        fill={COLOR_PUERTA}
         stroke="#ffffff"
         strokeWidth={0.9}
         paintOrder="stroke"
@@ -348,7 +362,10 @@ const MarcadorEntrada: React.FC<{ figura: FiguraPlano2D; etiqueta: string }> = (
 };
 
 /** Recorrido de la ruta: línea discontinua con halo y puntos numerados. */
-const RutaSobrePlano: React.FC<{ trazo: TrazoPiso }> = ({ trazo }) => {
+const RutaSobrePlano: React.FC<{ trazo: TrazoPiso; marcaActiva?: number | null }> = ({
+  trazo,
+  marcaActiva = null,
+}) => {
   const puntos = trazo.puntos.map((p) => `${p.x},${p.y}`).join(' ');
   return (
     <g aria-hidden="true" pointerEvents="none">
@@ -375,11 +392,32 @@ const RutaSobrePlano: React.FC<{ trazo: TrazoPiso }> = ({ trazo }) => {
       )}
       {trazo.marcas.map((m) => (
         <g key={`${m.numero}-${m.tipo}`}>
+          {/* El paso elegido lleva un anillo: se ve sin acercar ni mover el plano. */}
+          {m.numero === marcaActiva && (
+            <>
+              <circle
+                cx={m.punto.x}
+                cy={m.punto.y}
+                r={11}
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth={4.4}
+              />
+              <circle
+                cx={m.punto.x}
+                cy={m.punto.y}
+                r={11}
+                fill="none"
+                stroke={m.tipo === 'destino' ? COLOR_DESTINO : COLOR_RUTA}
+                strokeWidth={2}
+              />
+            </>
+          )}
           <circle
             cx={m.punto.x}
             cy={m.punto.y}
             r={m.tipo === 'destino' ? 6.4 : 5.4}
-            fill={m.tipo === 'destino' ? '#be123c' : COLOR_RUTA}
+            fill={m.tipo === 'destino' ? COLOR_DESTINO : COLOR_RUTA}
             stroke="#ffffff"
             strokeWidth={1.4}
           />
@@ -402,7 +440,7 @@ const RutaSobrePlano: React.FC<{ trazo: TrazoPiso }> = ({ trazo }) => {
             fontWeight={700}
             fontFamily="sans-serif"
             textAnchor="middle"
-            fill="#1e1b4b"
+            fill="#222222"
             stroke="#ffffff"
             strokeWidth={1}
             paintOrder="stroke"
@@ -500,18 +538,18 @@ export const LeyendaMapa: React.FC<{
       </li>
       <li className="flex items-center gap-2">
         <Muestra fill={COLOR_CONTEXTO.administrativo} />
-        No reservable (baños, oficinas…)
+        No reservable
       </li>
       <li className="flex items-center gap-2">
         <Muestra fill="#ffffff" stroke={COLOR_ACENTO_LABORATORIO} grosor={2} />
-        Laboratorio (borde turquesa y «LAB»)
+        Laboratorio
       </li>
       {entradas && (
         <li className="flex items-center gap-2">
           <svg width="22" height="14" viewBox="0 0 22 14" aria-hidden="true" className="shrink-0">
-            <circle cx="11" cy="7" r="6" fill="#1e3a8a" />
+            <circle cx="11" cy="7" r="6" fill={COLOR_PUERTA} />
           </svg>
-          Entrada del pabellón
+          Entrada o puerta
         </li>
       )}
     </ul>
@@ -569,7 +607,7 @@ const BotonZoom: React.FC<{
       e.stopPropagation();
       onClick();
     }}
-    className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-saie-divider bg-white text-lg font-semibold text-saie-text shadow-sm hover:bg-saie-primary/5 disabled:cursor-default disabled:opacity-40"
+    className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-xl border border-saie-border bg-white text-lg font-semibold text-saie-text hover:bg-saie-text/5 disabled:cursor-not-allowed disabled:opacity-50"
   >
     {children}
   </button>
@@ -581,7 +619,7 @@ const BotonZoom: React.FC<{
  * comparte con ella el contrato de `espacios`, `seleccionado`, `resaltados` y `onSeleccionar`.
  *
  * Cada figura se enlaza con su espacio por el `id` del plano (`NUE-101`). El estado se distingue
- * por color y por patrón (la alerta va rayada), el laboratorio por su borde turquesa y el texto
+ * por color y por patrón (la alerta va rayada), el laboratorio por su borde azul y el texto
  * «LAB», y cada espacio es un botón operable con el teclado (Tab, y las flechas para pasar al
  * espacio vecino). El plano se acerca y desplaza con rueda, gestos, botones o teclado.
  */
@@ -592,6 +630,7 @@ export const Mapa2D: React.FC<Mapa2DProps> = ({
   resaltados = [],
   pisoInicial,
   piso: pisoControlado,
+  selectorDePisoExterno,
   onSeleccionar,
   onPisoCambiado,
   disposicion = 'arriba',
@@ -601,13 +640,14 @@ export const Mapa2D: React.FC<Mapa2DProps> = ({
   filtro,
   enfocar,
   capaRuta,
+  marcaActiva,
   rueda,
   leyenda = true,
   className = '',
 }) => {
   const uid = useId().replace(/:/g, '');
   const idPatron = `mapa2d-alerta-${uid}`;
-  const idBase = `mapa2d-${uid}`;
+  const idBase = selectorDePisoExterno?.idBase ?? `mapa2d-${uid}`;
   const idAyuda = `${idBase}-ayuda`;
   const lateral = disposicion === 'lateral';
   const ruedaEfectiva = rueda ?? (lateral ? 'siempre' : 'con-ctrl');
@@ -827,7 +867,9 @@ export const Mapa2D: React.FC<Mapa2DProps> = ({
       aria-label="Mapa de ocupación"
       className={`flex gap-4 ${lateral ? 'flex-col lg:flex-row lg:items-start' : 'flex-col'} ${className}`}
     >
-      {!lateral && <div className="flex flex-wrap items-center gap-3">{selectorPiso}</div>}
+      {!lateral && !selectorDePisoExterno && (
+        <div className="flex flex-wrap items-center gap-3">{selectorPiso}</div>
+      )}
 
       <div
         ref={contenedorRef}
@@ -908,10 +950,10 @@ export const Mapa2D: React.FC<Mapa2DProps> = ({
                 <MarcadorEntrada
                   key={f.id}
                   figura={f}
-                  etiqueta={f.id === ENTRADA_PABELLON.NUE ? 'Entrada nuevo' : 'Entrada antiguo'}
+                  etiqueta={ETIQUETA_PUERTA[f.id] ?? 'Puerta'}
                 />
               ))}
-            {trazo && <RutaSobrePlano trazo={trazo} />}
+            {trazo && <RutaSobrePlano trazo={trazo} marcaActiva={marcaActiva} />}
             <Norte vista={vista} />
           </svg>
         )}
@@ -959,8 +1001,15 @@ export const Mapa2D: React.FC<Mapa2DProps> = ({
         {tip && espacioTip && (
           <div
             role="tooltip"
-            style={{ left: tip.x, top: tip.y }}
-            className="pointer-events-none absolute z-20 max-w-56 -translate-x-1/2 -translate-y-full rounded-lg bg-saie-text px-3 py-2 text-xs text-white shadow-lg"
+            // Se queda dentro del plano: el centro no baja de media tarjeta (14 rem) del borde y,
+            // si no cabe encima del espacio, pasa a ponerse debajo.
+            style={{
+              left: `clamp(7.25rem, ${tip.x}px, calc(100% - 7.25rem))`,
+              top: tip.y < TIP_ALTO_MINIMO ? tip.y + TIP_SEPARACION_ABAJO : tip.y,
+            }}
+            className={`pointer-events-none absolute z-20 w-max max-w-56 -translate-x-1/2 rounded-lg bg-saie-text px-3 py-2 text-xs text-white shadow-lg ${
+              tip.y < TIP_ALTO_MINIMO ? '' : '-translate-y-full'
+            }`}
           >
             <strong className="block text-sm">{espacioTip.nombre ?? espacioTip.id}</strong>
             {ESTADO_TEXTO[espacioTip.estado]} · {TIPO_TEXTO[espacioTip.tipo]}

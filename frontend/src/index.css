@@ -345,6 +345,17 @@ html.saie-sin-movimiento path.saie-trazo {
   animation: saie-brillo 1.6s linear infinite;
 }
 
+/* Esqueleto sobre una superficie de color (la tarjeta guinda): late en vez de barrer un brillo
+   claro, que no se vería. */
+@keyframes saie-pulso {
+  50% {
+    opacity: 0.45;
+  }
+}
+.saie-pulso {
+  animation: saie-pulso 1.6s ease-in-out infinite;
+}
+
 /* Icono de los estados vacíos: ya no flota (Issue 3.48). */
 .saie-flota {
   animation: none;
@@ -362,6 +373,11 @@ html.saie-sin-movimiento path.saie-trazo {
   }
 }
 .saie-fundido {
+  animation: saie-fundido 0.2s ease-out both;
+}
+
+/* Acordeón (<details>): al abrirlo, la respuesta entra con un fundido corto. */
+.saie-acordeon[open] > :not(summary) {
   animation: saie-fundido 0.2s ease-out both;
 }
 

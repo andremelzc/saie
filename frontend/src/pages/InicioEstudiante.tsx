@@ -3,24 +3,20 @@ import { Link } from 'react-router-dom';
 import {
   BadgeEstadoClase,
   BarraProgresoClase,
+  EsqueletoCarga,
   EstadoVacio,
-  Icono,
   PuntoEnVivo,
 } from '../components/estudiante/ElementosHorario';
 import LayoutEstudiante from '../components/estudiante/LayoutEstudiante';
 import { BotonEnlace } from '../components/ui/BotonEnlace';
 import { EstadoError } from '../components/ui/EstadoError';
 import { RUTAS } from '../config/rutas';
-import { useAuth } from '../context/useAuth';
 import { obtenerHorario } from '../services/estudiante';
 import { mensajeDeError } from '../services/estudiante';
 import type { DiaSemana } from '../types/consulta';
 import type { HorarioSemanalDTO, SesionDTO } from '../types/horario';
-import { etiquetaRol } from '../utils/admin';
 import { fechaLarga } from '../utils/fechas';
-import { ICONOS } from '../components/ui/iconos';
 import {
-  ABREVIATURA_DIA,
   DIAS_LECTIVOS,
   ETIQUETA_DIA,
   PALETA_CURSOS,
@@ -41,14 +37,6 @@ import {
   todasLasSesiones,
 } from '../utils/horario';
 
-const TRAZO_CALENDARIO = ICONOS.calendario;
-const TRAZO_PERFIL = ICONOS.usuario;
-const TRAZO_MAPA = ICONOS.mapa;
-const TRAZO_RUTA = ICONOS.ruta;
-const TRAZO_TELEGRAM = ICONOS.enviar;
-const TRAZO_AYUDA = ICONOS.ayuda;
-const TRAZO_AJUSTES = ICONOS.ajustes;
-
 const UN_MINUTO_MS = 60_000;
 
 /** Clase en curso o, si ninguna ha empezado, la próxima de hoy. */
@@ -61,13 +49,44 @@ interface ProximoDia {
   sesiones: SesionDTO[];
 }
 
-/** Saludo y la clase en curso o la próxima, en una sola banda. */
+/** Barra gris translúcida sobre la tarjeta guinda (el esqueleto claro no se vería). */
+const BARRA_SOBRE_GUINDA = 'rounded bg-white/20';
+
+/**
+ * Saludo y la clase en curso o la próxima, en una sola banda.
+ *
+ * Mientras llega el horario no se sabe si hay clases: decir «Hoy no tienes clases» sería falso.
+ * Se muestra un esqueleto, y si el horario no se pudo cargar, un texto neutro.
+ */
 const TarjetaProxima: React.FC<{
   sesion: SesionDTO | null;
   hayClasesHoy: boolean;
   proximoDia: ProximoDia | null;
   ahora: number;
-}> = ({ sesion, hayClasesHoy, proximoDia, ahora }) => {
+  carga: 'cargando' | 'error' | 'listo';
+}> = ({ sesion, hayClasesHoy, proximoDia, ahora, carga }) => {
+  if (carga === 'cargando') {
+    return (
+      <div role="status" aria-busy="true" className="flex flex-col gap-3">
+        <span className="sr-only">Cargando tu horario…</span>
+        <div aria-hidden="true" className="flex flex-col gap-3">
+          <span className={`${BARRA_SOBRE_GUINDA} saie-pulso h-4 w-1/3`} />
+          <span className={`${BARRA_SOBRE_GUINDA} saie-pulso h-7 w-2/3`} />
+          <span className={`${BARRA_SOBRE_GUINDA} saie-pulso h-4 w-1/2`} />
+        </div>
+      </div>
+    );
+  }
+  if (carga === 'error') {
+    return (
+      <div className="flex h-full flex-col justify-center gap-2">
+        <h2 className="m-0 font-serif text-xl font-bold">No pudimos mostrar tu clase</h2>
+        <p className="m-0 text-sm text-white/85">
+          Tu horario no se cargó. Reintenta abajo o consúltalo en «Horario».
+        </p>
+      </div>
+    );
+  }
   if (!sesion) {
     const primera = proximoDia?.sesiones[0] ?? null;
     return (
@@ -118,41 +137,29 @@ const TarjetaProxima: React.FC<{
   );
 };
 
-interface DatoResumen {
-  valor: string;
-  etiqueta: string;
-}
-
-/**
- * Issue 3.38: solo las cifras que mueven una decisión. Antes eran cuatro (clases, cursos, días y
- * minutos por semana) con el mismo peso; ahora, lo que te queda hoy y la carga de la semana.
- */
-function datosResumen(horario: HorarioSemanalDTO, quedanHoy: number): DatoResumen[] {
+/** «6 clases esta semana, en 3 días»: la carga de la semana en una frase. */
+function resumenDeSemana(horario: HorarioSemanalDTO): string {
   const r = resumenSemana(horario);
-  return [
-    {
-      valor: String(quedanHoy),
-      etiqueta: quedanHoy === 1 ? 'clase te queda hoy' : 'clases te quedan hoy',
-    },
-    {
-      valor: String(r.clases),
-      etiqueta: `${r.clases === 1 ? 'clase' : 'clases'} esta semana, en ${
-        r.diasConClase === 1 ? '1 día' : `${r.diasConClase} días`
-      }`,
-    },
-  ];
+  const dias = r.diasConClase === 1 ? '1 día' : `${r.diasConClase} días`;
+  return `${r.clases} ${r.clases === 1 ? 'clase' : 'clases'} esta semana, en ${dias}`;
 }
 
-/** Tira de lunes a sábado: cuántas clases hay cada día y cuál es hoy. */
+/** La semana de lunes a sábado, un día por fila: cuántas clases hay y cuál es hoy. */
 const SemanaDeUnVistazo: React.FC<{ horario: HorarioSemanalDTO; hoy: DiaSemana }> = ({
   horario,
   hoy,
 }) => (
-  <section aria-labelledby="titulo-semana" className="flex min-w-0 flex-col gap-2">
-    <h2 id="titulo-semana" className="m-0 text-sm font-bold text-saie-text">
-      Tu semana de un vistazo
-    </h2>
-    <ul className="saie-stagger m-0 grid list-none grid-cols-6 gap-2 p-0">
+  <section
+    aria-labelledby="titulo-semana"
+    className="flex min-w-0 flex-col gap-3 rounded-2xl border border-saie-divider bg-white p-4"
+  >
+    <div>
+      <h2 id="titulo-semana" className="m-0 text-base font-bold text-saie-text">
+        Tu semana de un vistazo
+      </h2>
+      <p className="m-0 mt-0.5 text-sm text-saie-muted">{resumenDeSemana(horario)}</p>
+    </div>
+    <ul className="m-0 flex list-none flex-col gap-1 p-0">
       {DIAS_LECTIVOS.map((d) => {
         const cantidad = (horario.dias[d] ?? []).length;
         const esHoy = d === hoy;
@@ -163,25 +170,20 @@ const SemanaDeUnVistazo: React.FC<{ horario: HorarioSemanalDTO; hoy: DiaSemana }
               aria-label={`${ETIQUETA_DIA[d]}${esHoy ? ', hoy' : ''}, ${
                 cantidad === 1 ? '1 clase' : `${cantidad} clases`
               }`}
-              className={`flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-center no-underline transition-colors duration-200 ${
+              className={`flex min-h-11 items-center justify-between gap-3 rounded-lg px-3 text-sm no-underline transition-colors duration-200 ${
                 esHoy
-                  ? 'border-saie-primary bg-saie-primary text-white'
+                  ? 'bg-saie-primary font-bold text-white'
                   : cantidad === 0
-                    ? 'border-dashed border-saie-divider bg-transparent text-saie-muted'
-                    : 'border-saie-divider bg-white text-saie-text hover:border-saie-primary'
+                    ? 'text-saie-muted hover:bg-saie-primary/5'
+                    : 'font-medium text-saie-text hover:bg-saie-primary/5'
               }`}
             >
-              <span aria-hidden="true" className="text-xs font-bold">
-                {ABREVIATURA_DIA[d]}
+              <span aria-hidden="true">
+                {ETIQUETA_DIA[d]}
+                {esHoy && <span className="ml-2 text-xs font-medium opacity-85">hoy</span>}
               </span>
-              {/* Un día sin clases no compite con los que sí tienen (Issue 3.38). */}
-              <span
-                aria-hidden="true"
-                className={`leading-none tabular-nums ${
-                  cantidad === 0 ? 'text-base font-medium' : 'text-xl font-bold'
-                }`}
-              >
-                {cantidad === 0 ? '—' : cantidad}
+              <span aria-hidden="true" className="tabular-nums">
+                {cantidad === 0 ? 'Sin clases' : cantidad === 1 ? '1 clase' : `${cantidad} clases`}
               </span>
             </Link>
           </li>
@@ -191,17 +193,44 @@ const SemanaDeUnVistazo: React.FC<{ horario: HorarioSemanalDTO; hoy: DiaSemana }
   </section>
 );
 
+/** Esqueleto de «El resto de tu día» mientras llega el horario. */
+const EsqueletoDelDia: React.FC = () => (
+  <section aria-label="Cargando tus clases" className="flex flex-col gap-2">
+    <EsqueletoCarga texto="Cargando tus clases del día…" filas={3} />
+  </section>
+);
+
+/** Esqueleto del panel de la semana: mismas seis filas que el real, para que nada salte. */
+const EsqueletoSemana: React.FC = () => (
+  <section
+    aria-hidden="true"
+    className="flex min-w-0 flex-col gap-3 rounded-2xl border border-saie-divider bg-white p-4"
+  >
+    <div className="flex flex-col gap-2">
+      <span className="saie-esqueleto h-4 w-2/3 rounded" />
+      <span className="saie-esqueleto h-3 w-1/2 rounded" />
+    </div>
+    <div className="flex flex-col gap-1">
+      {DIAS_LECTIVOS.map((d) => (
+        <span key={d} className="saie-esqueleto block h-11 rounded-lg" />
+      ))}
+    </div>
+  </section>
+);
+
 /** Cuántas clases se listan antes de indicar que hay más (el resto está en «Mi horario»). */
 const MAX_CLASES_VISIBLES = 4;
 
 /** Las clases del día, en una lista vertical con su estado (Issue 3.38). */
 const ListaDeClases: React.FC<{
   titulo: string;
+  /** Texto breve a la derecha del título, p. ej. cuántas clases quedan. */
+  nota?: string;
   sesiones: SesionDTO[];
   horario: HorarioSemanalDTO;
   /** Minutos desde las 00:00; si es null las clases son de otro día y no llevan estado. */
   ahora: number | null;
-}> = ({ titulo, sesiones, horario, ahora }) => {
+}> = ({ titulo, nota, sesiones, horario, ahora }) => {
   const visibles = sesiones.slice(0, MAX_CLASES_VISIBLES);
   const ocultas = sesiones.length - visibles.length;
   const colores = useMemo(
@@ -211,9 +240,12 @@ const ListaDeClases: React.FC<{
   if (sesiones.length === 0) return null;
   return (
     <section aria-labelledby="titulo-hoy" className="flex min-h-0 flex-col gap-2">
-      <h2 id="titulo-hoy" className="m-0 text-sm font-bold text-saie-text">
-        {titulo}
-      </h2>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+        <h2 id="titulo-hoy" className="m-0 text-base font-bold text-saie-text">
+          {titulo}
+        </h2>
+        {nota && <p className="m-0 text-sm text-saie-muted">{nota}</p>}
+      </div>
       <ol className="saie-stagger m-0 flex min-h-0 list-none flex-col gap-2 p-0 pb-1">
         {visibles.map((s) => {
           const estado = ahora === null ? null : estadoDeClase(s, ahora);
@@ -221,16 +253,23 @@ const ListaDeClases: React.FC<{
           return (
             <li
               key={`${s.seccionId}-${s.horaInicio}`}
-              className={`flex w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-l-4 border-saie-divider bg-white px-3 py-2 shadow-sm ${
+              className={`flex w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-saie-divider bg-white px-4 py-3 ${
                 estado === 'FINALIZADA' ? 'opacity-60' : ''
               }`}
-              style={{ borderLeftColor: color.borde }}
             >
               <span className="w-28 shrink-0 text-sm font-bold tabular-nums text-saie-muted">
                 {formatearRango(s.horaInicio, s.horaFin)}
               </span>
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-sm font-bold leading-5">{s.nombreCurso}</span>
+                <span className="flex items-center gap-2 text-sm font-bold leading-5">
+                  {/* El color del curso es el mismo en todas las pantallas (Issue 3.40). */}
+                  <span
+                    aria-hidden="true"
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: color.borde }}
+                  />
+                  {s.nombreCurso}
+                </span>
                 <span className="text-sm text-saie-muted">{resumenUbicacion(s.espacios)}</span>
               </span>
               {estado && (
@@ -254,61 +293,14 @@ const ListaDeClases: React.FC<{
   );
 };
 
-/** Acceso rápido a cada sección del portal: es lo que evita volver al inicio. */
-const ACCESOS = [
-  {
-    to: RUTAS.horarioAlumno,
-    titulo: 'Mi horario',
-    descripcion: 'Tu semana completa',
-    trazo: TRAZO_CALENDARIO,
-  },
-  {
-    to: RUTAS.perfilAlumno,
-    titulo: 'Mi perfil',
-    descripcion: 'Datos y ficha médica',
-    trazo: TRAZO_PERFIL,
-  },
-  {
-    to: RUTAS.mapaAlumno,
-    titulo: 'Mapa',
-    descripcion: 'Ubica tus aulas',
-    trazo: TRAZO_MAPA,
-  },
-  {
-    to: RUTAS.rutaAlumno,
-    titulo: 'Ruta',
-    descripcion: 'Cómo llegar a tu aula',
-    trazo: TRAZO_RUTA,
-  },
-  {
-    to: RUTAS.telegramAlumno,
-    titulo: 'Telegram',
-    descripcion: 'Avisos de cambios',
-    trazo: TRAZO_TELEGRAM,
-  },
-  {
-    to: RUTAS.ayudaAlumno,
-    titulo: 'Ayuda',
-    descripcion: 'Preguntas frecuentes',
-    trazo: TRAZO_AYUDA,
-  },
-  {
-    to: RUTAS.configuracionAlumno,
-    titulo: 'Configuración',
-    descripcion: 'Texto grande y animaciones',
-    trazo: TRAZO_AJUSTES,
-  },
-];
-
 /**
  * Issue 3.29 — inicio del área del estudiante, en modo tablero.
  *
- * Todo lo importante cabe en una pantalla: la clase en curso o la próxima, las cifras de la
- * semana, las clases de hoy y el acceso a cada sección. Lo demás vive en sus propias
- * pantallas, a un clic desde la barra de navegación.
+ * Todo lo importante cabe en una pantalla: la clase en curso o la próxima, el resto del día y la
+ * semana de un vistazo. Las demás secciones están a un clic en la barra de navegación, que ya las
+ * lista todas: el inicio no las repite.
  */
 export const InicioEstudiante: React.FC = () => {
-  const { sesion } = useAuth();
   const [horario, setHorario] = useState<HorarioSemanalDTO | null>(null);
   const [cargandoHorario, setCargandoHorario] = useState(true);
   const [errorHorario, setErrorHorario] = useState<string | null>(null);
@@ -379,8 +371,16 @@ export const InicioEstudiante: React.FC = () => {
     (s) => `${s.seccionId}-${s.horaInicio}` !== claveDestacada,
   );
   const quedanHoy = sesionesHoy.filter((s) => estadoDeClase(s, minutos) !== 'FINALIZADA').length;
-  const resumen = horario ? datosResumen(horario, quedanHoy) : [];
-  const mostrarSemana = Boolean(horario && hayClases);
+  // Sin horario todavía no se sabe si hay clases: se muestra un esqueleto, nunca «no tienes clases».
+  const cargando = cargandoHorario && !horario && !errorHorario;
+  const estadoTarjeta = cargando
+    ? 'cargando'
+    : horario
+      ? 'listo'
+      : errorHorario
+        ? 'error'
+        : 'listo';
+  const mostrarSemana = cargando || Boolean(horario && hayClases);
 
   return (
     <LayoutEstudiante
@@ -389,150 +389,89 @@ export const InicioEstudiante: React.FC = () => {
       subtitulo={horario?.periodo ? `Periodo lectivo ${horario.periodo}` : undefined}
     >
       {/*
-        El tablero ocupa lo que queda del `main` (columna flex) tras el título. De arriba abajo:
-        la clase destacada con las cifras, la semana de un vistazo y, al final, las clases del
-        día junto a los accesos.
+        El tablero ocupa lo que queda del `main` tras el título. Una columna principal, en el orden
+        en que se decide (qué toca ahora, qué sigue hoy), y la semana al costado como referencia.
       */}
       <div
-        className={`grid grid-cols-1 gap-4 lg:min-h-0 lg:flex-1 ${
-          mostrarSemana ? 'lg:grid-rows-[auto_auto_1fr]' : 'lg:grid-rows-[auto_1fr]'
+        className={`grid grid-cols-1 gap-6 lg:min-h-0 lg:flex-1 lg:items-start ${
+          mostrarSemana ? 'lg:grid-cols-12' : ''
         }`}
       >
-        {/* FILA 1 — la clase en curso o la próxima y las cifras de la semana */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <div
+          className={`flex min-h-0 min-w-0 flex-col gap-6 ${mostrarSemana ? 'lg:col-span-8' : ''}`}
+        >
           <section
             aria-label="Tu próxima clase"
-            className="flex min-w-0 flex-col gap-3 rounded-2xl bg-gradient-to-br from-saie-primary to-saie-primary-dark p-4 text-white lg:col-span-7"
+            className="flex min-w-0 flex-col gap-3 rounded-2xl bg-gradient-to-br from-saie-primary to-saie-primary-dark p-5 text-white"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="m-0 text-sm text-white/80">{fechaLarga(ahora)}</p>
-                <p className="m-0 text-2xl font-bold leading-8">{saludoSegunHora(ahora)}</p>
-              </div>
-              {sesion?.rol && (
-                <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">
-                  {etiquetaRol(sesion.rol)}
-                </span>
-              )}
-            </div>
+            <p className="m-0 text-sm text-white/80">
+              {saludoSegunHora(ahora)} · {fechaLarga(ahora)}
+            </p>
             <TarjetaProxima
               sesion={destacada}
               hayClasesHoy={sesionesHoy.length > 0}
               proximoDia={proximoDia}
               ahora={minutos}
+              carga={estadoTarjeta}
             />
           </section>
 
-          <div className="grid min-w-0 grid-cols-2 content-start gap-3 lg:col-span-5">
-            {cargandoHorario && !horario ? (
-              [0, 1].map((n) => (
-                <div
-                  key={n}
-                  aria-hidden="true"
-                  className="saie-esqueleto h-[68px] rounded-xl border border-saie-divider"
-                />
-              ))
-            ) : hayClases ? (
-              resumen.map((d) => (
-                <div
-                  key={d.etiqueta}
-                  className="rounded-xl border border-saie-divider bg-white p-3 shadow-sm"
-                >
-                  <p className="m-0 text-2xl font-bold leading-none tabular-nums">{d.valor}</p>
-                  <p className="m-0 mt-1 text-xs font-medium text-saie-muted">{d.etiqueta}</p>
-                </div>
-              ))
-            ) : (
-              <div className="col-span-2 rounded-xl border border-dashed border-saie-divider bg-white p-3">
-                <p className="m-0 text-sm font-bold text-saie-text">Sin clases todavía</p>
-                <p className="m-0 mt-0.5 text-xs text-saie-muted">
-                  Cuando se asignen las aulas de tus cursos, aquí verás tus cifras de la semana.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
+          {errorHorario && (
+            <EstadoError
+              mensaje={`No pudimos cargar tu horario. ${errorHorario}`}
+              onReintentar={reintentarHorario}
+            />
+          )}
 
-        {/* FILA 2 — la semana completa, a la vista desde el principio */}
-        {horario && hayClases && <SemanaDeUnVistazo horario={horario} hoy={hoy} />}
-
-        {/* FILA 3 — las clases del día y los accesos a cada sección */}
-        <div className="grid min-h-0 grid-cols-1 gap-4 lg:grid-cols-12">
-          <div className="flex min-h-0 min-w-0 flex-col gap-3 lg:col-span-8">
-            {errorHorario && (
-              <EstadoError
-                mensaje={`No pudimos cargar tu horario. ${errorHorario}`}
-                onReintentar={reintentarHorario}
-              />
-            )}
-
-            {horario && hayClases ? (
-              sesionesHoy.length > 0 ? (
-                siguientesHoy.length > 0 ? (
-                  <ListaDeClases
-                    titulo={destacada ? 'El resto de tu día' : 'Tu día de hoy'}
-                    sesiones={siguientesHoy}
-                    horario={horario}
-                    ahora={minutos}
-                  />
-                ) : (
-                  <p className="m-0 rounded-xl border border-dashed border-saie-divider bg-white p-3 text-sm text-saie-muted">
-                    Después de esta, no tienes más clases hoy.
-                  </p>
-                )
-              ) : (
-                proximoDia && (
-                  <ListaDeClases
-                    titulo={`Lo que viene el ${ETIQUETA_DIA[proximoDia.dia].toLowerCase()}`}
-                    sesiones={proximoDia.sesiones}
-                    horario={horario}
-                    ahora={null}
-                  />
-                )
-              )
-            ) : (
-              !cargandoHorario && (
-                <EstadoVacio
-                  titulo="Sin clases todavía"
-                  descripcion="Cuando se asignen las aulas de tus cursos, aquí verás tus clases del día."
-                  accion={
-                    <BotonEnlace to={RUTAS.horarioAlumno} variante="secundario" tamano="sm">
-                      Ver mi horario
-                    </BotonEnlace>
+          {cargando ? (
+            <EsqueletoDelDia />
+          ) : horario && hayClases ? (
+            sesionesHoy.length > 0 ? (
+              siguientesHoy.length > 0 ? (
+                <ListaDeClases
+                  titulo={destacada ? 'El resto de tu día' : 'Tu día de hoy'}
+                  nota={
+                    quedanHoy === 1 ? 'Te queda 1 clase hoy' : `Te quedan ${quedanHoy} clases hoy`
                   }
+                  sesiones={siguientesHoy}
+                  horario={horario}
+                  ahora={minutos}
+                />
+              ) : (
+                <p className="m-0 rounded-xl border border-dashed border-saie-divider bg-white p-3 text-sm text-saie-muted">
+                  Después de esta, no tienes más clases hoy.
+                </p>
+              )
+            ) : (
+              proximoDia && (
+                <ListaDeClases
+                  titulo={`Lo que viene el ${ETIQUETA_DIA[proximoDia.dia].toLowerCase()}`}
+                  sesiones={proximoDia.sesiones}
+                  horario={horario}
+                  ahora={null}
                 />
               )
-            )}
-          </div>
-
-          <nav
-            aria-label="Secciones del portal del estudiante"
-            className="flex min-h-0 min-w-0 flex-col gap-3 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-4 lg:overflow-y-auto"
-          >
-            <h2 className="m-0 text-sm font-bold text-saie-text">Ir a</h2>
-            <ul className="m-0 grid list-none grid-cols-2 gap-2 p-0">
-              {ACCESOS.map((a) => (
-                <li key={a.to} className="min-w-0 last:odd:col-span-2">
-                  <Link
-                    to={a.to}
-                    className="flex min-h-11 items-center gap-2.5 rounded-xl border border-saie-divider bg-white p-2 text-saie-text no-underline transition-colors hover:border-saie-primary"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-saie-primary/10 text-saie-primary"
-                    >
-                      <Icono trazo={a.trazo} className="h-4 w-4" />
-                    </span>
-                    <span className="min-w-0 text-sm font-semibold leading-tight">
-                      {a.titulo}
-                      <span className="sr-only"> — {a.descripcion}</span>
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
+            )
+          ) : (
+            !cargandoHorario && (
+              <EstadoVacio
+                titulo="Sin clases todavía"
+                descripcion="Cuando se asignen las aulas de tus cursos, aquí verás tus clases del día."
+                accion={
+                  <BotonEnlace to={RUTAS.horarioAlumno} variante="secundario" tamano="sm">
+                    Ver mi horario
+                  </BotonEnlace>
+                }
+              />
+            )
+          )}
         </div>
+
+        {mostrarSemana && (
+          <div className="min-w-0 lg:col-span-4">
+            {horario ? <SemanaDeUnVistazo horario={horario} hoy={hoy} /> : <EsqueletoSemana />}
+          </div>
+        )}
       </div>
     </LayoutEstudiante>
   );

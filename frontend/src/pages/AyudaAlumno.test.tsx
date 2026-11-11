@@ -45,7 +45,7 @@ describe('AyudaAlumno (Issue 3.17)', () => {
     expect(within(detalle).getByText(/Solo tú, dentro de tu sesión/)).toBeInTheDocument();
   });
 
-  it('enlaza a las otras pantallas del alumno y permite volver al inicio', () => {
+  it('enlaza a las otras pantallas del alumno y permite volver al inicio por la barra de navegación', () => {
     renderizar();
 
     expect(screen.getByRole('link', { name: 'Mi perfil' })).toHaveAttribute(
@@ -56,9 +56,11 @@ describe('AyudaAlumno (Issue 3.17)', () => {
     expect(
       within(screen.getByRole('main')).getByRole('link', { name: 'Configuración' }),
     ).toHaveAttribute('href', '/estudiante/configuracion');
-    expect(screen.getByRole('link', { name: /Volver al inicio/ })).toHaveAttribute(
-      'href',
-      '/estudiante',
-    );
+    // Volver al inicio es la pestaña «Inicio» de la barra de navegación (ya no hay un enlace aparte).
+    expect(
+      within(
+        screen.getByRole('navigation', { name: 'Navegación del área del estudiante' }),
+      ).getByRole('link', { name: 'Inicio' }),
+    ).toHaveAttribute('href', '/estudiante');
   });
 });

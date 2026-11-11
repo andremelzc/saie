@@ -15,8 +15,9 @@ export const CLASES_RESERVABLES: ReadonlySet<string> = new Set(['aula', 'laborat
 export const CLASES_CONEXION: ReadonlySet<string> = new Set(['escalera', 'ascensor']);
 
 /**
- * Clases que son una marca del dibujo y no un volumen: en el plano se ve la abertura (blanca),
- * pero la maqueta 3D no las extruye (las puertas están fuera de su alcance).
+ * Clases que no se extruyen como un volumen propio. Las puertas son una marca del plano: la
+ * maqueta 3D no las levanta como figura, sino que abre el hueco en el muro y pone su hoja (ver
+ * `Puertas` y `construirParedes` en `Escena.tsx`).
  */
 export const CLASES_SIN_VOLUMEN: ReadonlySet<string> = new Set(['puerta']);
 
@@ -46,7 +47,26 @@ export const EDIFICIO = {
   ascensor: 11,
   /** Altura de la escalera en su punto más alto. */
   escalera: 9,
+  /** Altura del hueco de una puerta en el muro. */
+  puerta: 9.5,
 } as const;
+
+/** Hacia dónde sube el primer tramo de cada escalera (puntos cardinales del plano, norte arriba). */
+export type DireccionEscalera = 'N' | 'S' | 'E' | 'O';
+
+/**
+ * Orientación de cada escalera. Todas son de dos tramos con un descanso en el medio: se sube por
+ * un lado hasta el descanso y se da la vuelta para subir por el otro. `dir` es hacia dónde sube
+ * el primer tramo, y el descanso queda en ese extremo. El tramo de ida va por el lado izquierdo
+ * de quien sube. Una escalera que no está aquí sube hacia el este.
+ */
+export const ORIENTACION_ESCALERA: Record<string, DireccionEscalera> = {
+  'ANT-escalera-1': 'O',
+  'ANT-escalera-2': 'S',
+  'ANT-escalera-3': 'S',
+  'NUE-escalera-1': 'N',
+  'NUE-escalera-2': 'N',
+};
 
 /** Colores de estado, de la guía de estilos (spec 07). */
 export const COLOR_ESTADO: Record<EstadoOcupacion, string> = {
@@ -68,10 +88,14 @@ export const COLOR_MURO_EXTERIOR = '#e9ebee';
 export const COLOR_MURO_INTERIOR = '#f5f6f7';
 export const COLOR_MURO = '#475569';
 export const COLOR_BORDE = '#334155';
-export const COLOR_ACENTO_LABORATORIO = '#0d9488';
-export const COLOR_RESALTE = '#312e81';
+/** Hoja de las puertas: el mismo naranja con que el plano 2D marca las entradas. */
+export const COLOR_PUERTA = '#e8782a';
+/** Borde del laboratorio: el azul de información de la guía (`--color-saie-info`). */
+export const COLOR_ACENTO_LABORATORIO = '#1f5fa8';
+/** Lo resaltado o seleccionado: guinda profundo (`--color-saie-primary-dark`). */
+export const COLOR_RESALTE = '#5c0d0e';
 /** Contorno del espacio elegido: más vivo que el resalte para que se vea sobre cualquier fondo. */
-export const COLOR_CONTORNO = '#4f46e5';
+export const COLOR_CONTORNO = '#7b1113';
 
 /**
  * Color de las figuras de contexto (no reservables), por clase. Son tonos apagados a propósito:
