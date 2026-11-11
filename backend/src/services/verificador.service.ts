@@ -87,6 +87,7 @@ async function registrarVerificacionEnAuditoria(
   await prisma.registroAuditoria.create({
     data: {
       tipoEvento: TipoEventoAuditoria.VERIFICACION,
+      corridaId: corridaId ?? null,
       detalle,
     },
   });

@@ -227,6 +227,7 @@ export async function resolverAlerta(
       data: {
         tipoEvento: TipoEventoAuditoria.ALERTA,
         alertaId: alerta.id,
+        cuentaId: auth.sub,
         detalle: `Alerta ${alerta.tipo} resuelta por la cuenta ${auth.sub}`,
       },
     });

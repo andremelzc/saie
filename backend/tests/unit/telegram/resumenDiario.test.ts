@@ -7,6 +7,7 @@ import {
   fechaEnLima,
   formatearResumenDiario,
 } from '../../../src/telegram/resumenDiario.service';
+import { logger } from '../../../src/lib/logger';
 
 describe('fechaEnLima y formatearResumenDiario (Issue 3.27)', () => {
   it('fechaEnLima devuelve AAAA-MM-DD en hora de Lima', () => {
@@ -200,7 +201,7 @@ describe('enviarResumenesDiarios (Issue 3.27)', () => {
   });
 
   it('si el alumno bloqueó el bot (403), desactiva la vinculación', async () => {
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => {});
     const ahora = new Date('2026-03-23T15:00:00.000Z');
 
     const prisma = {
@@ -246,7 +247,7 @@ describe('enviarResumenesDiarios (Issue 3.27)', () => {
   });
 
   it('si el envío falla, restaura fechaUltimoResumen para permitir reintento posterior', async () => {
-    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const errSpy = jest.spyOn(logger, 'error').mockImplementation(() => {});
     const ahora = new Date('2026-03-23T15:00:00.000Z');
     const fechaPrevia = new Date('2026-03-20T00:00:00.000Z');
 

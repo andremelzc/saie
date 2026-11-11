@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { DiaSemana, PrismaClient } from '@prisma/client';
 import { AsignacionCambiadaEvento } from '../events/tipos';
 import { ClienteTelegram, ErrorTelegram } from './cliente';
@@ -120,12 +121,13 @@ export async function avisarCambioDeAsignacion(
         data: { activo: false, fechaBaja: new Date() },
       });
       resumen.desactivados++;
-      console.warn(
-        `[telegram] Vinculación ${vinculacion.id} desactivada: el alumno bloqueó el bot`,
+      logger.warn(
+        { vinculacionId: vinculacion.id },
+        'Vinculación de Telegram desactivada: el alumno bloqueó el bot',
       );
     } else {
       resumen.fallidos++;
-      console.error(`[telegram] No se pudo avisar a la vinculación ${vinculacion.id}`);
+      logger.error({ vinculacionId: vinculacion.id }, 'No se pudo avisar por Telegram');
     }
   }
 

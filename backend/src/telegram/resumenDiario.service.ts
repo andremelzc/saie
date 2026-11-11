@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { DiaSemana, EstadoAsignacion, PrismaClient } from '@prisma/client';
 import { diaYMinutosEnLima } from '../lib/horario';
 import { obtenerPeriodoVigente } from '../services/periodo.service';
@@ -186,8 +187,9 @@ export async function enviarResumenesDiarios(
         data: { activo: false, fechaBaja: new Date() },
       });
       resumen.desactivados++;
-      console.warn(
-        `[telegram] Vinculación ${vinculacion.id} desactivada: el alumno bloqueó el bot`,
+      logger.warn(
+        { vinculacionId: vinculacion.id },
+        'Vinculación de Telegram desactivada: el alumno bloqueó el bot',
       );
     } else {
       // No se pudo enviar: se libera el día para que otra ejecución lo reintente.
@@ -196,7 +198,7 @@ export async function enviarResumenesDiarios(
         data: { fechaUltimoResumen: vinculacion.fechaUltimoResumen },
       });
       resumen.fallidos++;
-      console.error(`[telegram] No se pudo enviar el resumen a la vinculación ${vinculacion.id}`);
+      logger.error({ vinculacionId: vinculacion.id }, 'No se pudo enviar el resumen por Telegram');
     }
   }
 

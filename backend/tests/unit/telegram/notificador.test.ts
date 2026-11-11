@@ -7,6 +7,7 @@ import {
   enviarConReintentos,
   formatearAvisoCambioAula,
 } from '../../../src/telegram/notificador';
+import { logger } from '../../../src/lib/logger';
 
 function eventoBase(): AsignacionCambiadaEvento {
   return {
@@ -198,7 +199,7 @@ describe('avisarCambioDeAsignacion (Issue 3.26)', () => {
   });
 
   it('desactiva la vinculación en la BD si el alumno bloqueó el bot (403)', async () => {
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => {});
 
     const prisma = {
       vinculacionTelegram: {
@@ -224,7 +225,7 @@ describe('avisarCambioDeAsignacion (Issue 3.26)', () => {
   });
 
   it('cuenta como fallido si agota reintentos y no propaga la excepción', async () => {
-    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const errSpy = jest.spyOn(logger, 'error').mockImplementation(() => {});
 
     const prisma = {
       vinculacionTelegram: {
