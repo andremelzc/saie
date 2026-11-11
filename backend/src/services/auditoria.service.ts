@@ -2,6 +2,8 @@ import { EstadoAsignacion, Prisma, PrismaClient, TipoEventoAuditoria } from '@pr
 import { HttpError } from '../lib/http';
 import { formatearSoftware } from '../lib/software';
 import {
+  CuentaAuditoriaDTO,
+  EspacioAuditoriaDTO,
   FiltrosAuditoria,
   FiltrosHistorial,
   HistorialAsignacionDTO,
@@ -31,7 +33,7 @@ const INCLUIR_REGISTRO = {
 /** Issue 4.32 — GET /api/v1/admin/auditoria[?tipo=&desde=&hasta=&pagina=] */
 export async function listarAuditoria(
   filtros: FiltrosAuditoria,
-  prisma: Pick<PrismaClient, 'registroAuditoria'>,
+  prisma: Pick<PrismaClient, 'registroAuditoria' | 'espacio' | 'cuenta'>,
 ): Promise<ListadoAuditoriaDTO> {
   const where = {
     ...(filtros.tipo && { tipoEvento: filtros.tipo }),
@@ -56,6 +58,17 @@ export async function listarAuditoria(
     }),
   ]);
 
+  const [espacios, cuentas] = await Promise.all([
+    resolverEspacios(
+      filas.flatMap((r) => r.espaciosIds),
+      prisma,
+    ),
+    resolverCuentas(
+      filas.map((r) => r.cuentaId).filter((id): id is string => id !== null),
+      prisma,
+    ),
+  ]);
+
   const items: RegistroAuditoriaDTO[] = filas.map((r) => ({
     id: r.id,
     tipoEvento: r.tipoEvento,
@@ -63,6 +76,12 @@ export async function listarAuditoria(
     fechaHora: r.fechaHora.toISOString(),
     asignacionId: r.asignacionId,
     alertaId: r.alertaId,
+    corridaId: r.corridaId,
+    origen: r.origen,
+    puntaje: r.puntaje,
+    espaciosIds: r.espaciosIds,
+    espacios: r.espaciosIds.flatMap((id) => espacios.get(id) ?? []),
+    cuenta: r.cuentaId ? (cuentas.get(r.cuentaId) ?? null) : null,
     seccion: r.asignacion
       ? {
           id: r.asignacion.seccion.id,
@@ -76,9 +95,55 @@ export async function listarAuditoria(
   return { items, total, pagina: filtros.pagina, limite: filtros.limite };
 }
 
+/** Espacios por id, en una sola consulta (sin consulta si ningún registro trae espacios). */
+async function resolverEspacios(
+  ids: string[],
+  prisma: Pick<PrismaClient, 'espacio'>,
+): Promise<Map<string, EspacioAuditoriaDTO>> {
+  const unicos = [...new Set(ids)];
+  if (unicos.length === 0) return new Map();
+  const filas = await prisma.espacio.findMany({
+    where: { id: { in: unicos } },
+    select: { id: true, identificador: true, pabellon: true, piso: true },
+  });
+  return new Map(filas.map((e) => [e.id, e]));
+}
+
+/** Nombre de cada cuenta: el de su alumno o docente y, si no tiene ficha, su usuario. */
+async function resolverCuentas(
+  ids: string[],
+  prisma: Pick<PrismaClient, 'cuenta'>,
+): Promise<Map<string, CuentaAuditoriaDTO>> {
+  const unicos = [...new Set(ids)];
+  if (unicos.length === 0) return new Map();
+  const filas = await prisma.cuenta.findMany({
+    where: { id: { in: unicos } },
+    select: {
+      id: true,
+      usuarioLogin: true,
+      alumno: { select: { nombre: true } },
+      docente: { select: { nombre: true } },
+    },
+  });
+  return new Map(
+    filas.map((c) => [
+      c.id,
+      { id: c.id, nombre: c.docente?.nombre ?? c.alumno?.nombre ?? c.usuarioLogin },
+    ]),
+  );
+}
+
 const INCLUIR_ASIGNACION = {
   espacios: { include: { espacio: true } },
   seccion: { include: { curso: true } },
+  // El asiento de la decisión del motor: de ahí salen el origen y el puntaje (Issue 4.48).
+  auditorias: {
+    where: {
+      tipoEvento: { in: [TipoEventoAuditoria.ASIGNACION, TipoEventoAuditoria.ESCALAMIENTO] },
+    },
+    orderBy: { fechaHora: 'desc' },
+    take: 1,
+  },
 } satisfies Prisma.AsignacionInclude;
 
 /**
@@ -118,6 +183,8 @@ export async function listarHistorialAsignaciones(
     estado: a.estado,
     fechaAsignacion: a.fechaAsignacion.toISOString(),
     corridaId: a.corridaId,
+    origen: a.auditorias[0]?.origen ?? null,
+    puntaje: a.auditorias[0]?.puntaje ?? null,
     motivoEscalamiento: a.motivoEscalamiento,
     espacios: a.espacios.map((ae) => ({
       id: ae.espacio.id,

@@ -219,6 +219,9 @@ export async function procesarAsignacionSeccionIndividual(
               ? TipoEventoAuditoria.ASIGNACION
               : TipoEventoAuditoria.ESCALAMIENTO,
           asignacionId: nuevaAsignacion.id,
+          origen: 'SECCION',
+          espaciosIds: resultado.espacioIds,
+          puntaje: resultado.puntajeCercania ?? null,
           detalle:
             resultado.estado === EstadoAsignacion.VIGENTE
               ? `Asignación automática exitosa a espacios: [${resultado.espacioIds.join(', ')}] (Puntaje cercanía: ${resultado.puntajeCercania ?? 'N/A'})`
@@ -369,6 +372,10 @@ export async function procesarCorridaBatchPeriodo(
               ? TipoEventoAuditoria.ASIGNACION
               : TipoEventoAuditoria.ESCALAMIENTO,
           asignacionId: ids[i],
+          corridaId: resultadoBatch.corridaId,
+          origen,
+          espaciosIds: res.espacioIds,
+          puntaje: res.puntajeCercania ?? null,
           detalle: `[Origen: ${origen}] Corrida Batch [${resultadoBatch.corridaId}] - ${
             res.estado === EstadoAsignacion.VIGENTE
               ? `Asignada a: [${res.espacioIds.join(', ')}]`

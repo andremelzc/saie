@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { ZodError } from 'zod';
+import { logger } from './logger';
 
 /**
  * Error de dominio con código HTTP asociado. Los servicios lo lanzan y los controladores
@@ -36,6 +37,14 @@ export function responderError(res: Response, error: unknown): void {
   }
 
   // Nunca se devuelve el detalle del error interno: puede contener datos sensibles (RNF-09).
-  console.error('Error no controlado:', error instanceof Error ? error.name : 'desconocido');
-  res.status(500).json({ success: false, message: 'Error interno del servidor' });
+  const id = res.locals?.requestId as string | undefined;
+  logger.error(
+    { requestId: id, tipo: error instanceof Error ? error.name : 'desconocido' },
+    'Error no controlado',
+  );
+  res.status(500).json({
+    success: false,
+    message: 'Error interno del servidor',
+    ...(id ? { requestId: id } : {}),
+  });
 }

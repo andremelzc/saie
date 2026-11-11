@@ -410,9 +410,20 @@ model RegistroAuditoria {
   detalle      String
   fechaHora    DateTime            @default(now()) @map("fecha_hora")
 
+  // Datos estructurados (Issue 4.48): `detalle` sigue siendo el texto de siempre y estos campos
+  // permiten mostrarlo sin interpretar cadenas. Los registros anteriores los dejan vacíos.
+  // No son claves foráneas a propósito: la bitácora conserva el id aunque la cuenta o el espacio
+  // se eliminen; los nombres se resuelven al leer.
+  corridaId   String?  @map("corrida_id")
+  espaciosIds String[] @default([]) @map("espacios_ids")
+  cuentaId    String?  @map("cuenta_id")
+  puntaje     Float?
+  origen      String?
+
   asignacion Asignacion? @relation(fields: [asignacionId], references: [id], onDelete: SetNull)
   alerta     Alerta?     @relation(fields: [alertaId], references: [id], onDelete: SetNull)
 
+  @@index([corridaId])
   @@map("registros_auditoria")
 }
 

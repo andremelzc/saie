@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { PrismaClient } from '@prisma/client';
 import { HttpError } from '../lib/http';
 import {
@@ -94,7 +95,10 @@ export async function dispararAsignacionSiPeriodoCompleto(
     if (error instanceof HttpError) {
       return { disparada: false, motivo: error.message, resumen: null };
     }
-    console.error('Error al encadenar la asignación:', error instanceof Error ? error.name : '');
+    logger.error(
+      { tipo: error instanceof Error ? error.name : '' },
+      'Error al encadenar la asignación',
+    );
     return {
       disparada: false,
       motivo: 'La asignación falló; puedes reintentarla desde POST /api/v1/asignaciones/batch',

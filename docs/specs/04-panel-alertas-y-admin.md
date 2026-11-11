@@ -110,12 +110,14 @@ Lo que faltaba era poder consultarlos.
 * `GET /api/v1/admin/auditoria[?tipo=&desde=&hasta=&pagina=&limite=]`
   * Lista paginada, de la más reciente a la más antigua. `tipo` ∈ `ASIGNACION`, `ESCALAMIENTO`,
     `ALERTA`, `VERIFICACION`.
-  * Cada asiento: `{ id, tipoEvento, detalle, fechaHora, asignacionId, alertaId,
-    seccion: { id, codigoCurso, codigoSeccion, nombreCurso } | null }`.
+  * Cada asiento: `{ id, tipoEvento, detalle, fechaHora, asignacionId, alertaId, corridaId, origen,
+    puntaje, espaciosIds[], espacios[], cuenta, seccion: { id, codigoCurso, codigoSeccion,
+    nombreCurso } | null }`.
+  * **Datos estructurados (Issue 4.48):** `RegistroAuditoria` guarda además de `detalle` (que se mantiene por compatibilidad) `corridaId`, `espaciosIds` (ids), `cuentaId`, `puntaje` y `origen` (`DEMANDA` y `TIEMPO` en las corridas batch; `SECCION` en la asignación individual). El DTO añade `espacios: [{ id, identificador, pabellon, piso }]` (los espacios eliminados conservan su id en `espaciosIds` pero no aparecen aquí) y `cuenta: { id, nombre } | null`, con el nombre del docente o alumno y, si la cuenta no tiene ficha, su usuario de acceso. Se rellenan así: asignación y escalamiento del motor (`origen`, `espaciosIds`, `puntaje`, y `corridaId` en batch), alerta resuelta (`cuentaId` de quien la resolvió) y verificación (`corridaId`). **Los registros anteriores** quedan con `null` y `[]` y se leen por `detalle`. No hay claves foráneas a propósito: la bitácora conserva el id aunque la cuenta o el espacio se eliminen; los nombres se resuelven al leer con una consulta por tabla. Migración `20261111000000_auditoria_estructurada` (solo columnas nulas o con valor por defecto, sin pérdida de datos).
 * `GET /api/v1/admin/asignaciones/historial[?seccionId=&periodo=&estado=&pagina=]`
   * Historial completo de asignaciones **incluidas las `HISTORICA`**: `{ id, seccionId,
     codigoCurso, nombreCurso, codigoSeccion, periodo, estado, fechaAsignacion, corridaId,
-    motivoEscalamiento, espacios[] }`.
+    origen, puntaje, motivoEscalamiento, espacios[] }` (`origen` y `puntaje` salen del asiento de auditoría de la decisión; `null` en las anteriores al Issue 4.48).
 
 ### 2.6 Informe de salones (Issue 4.33)
 
