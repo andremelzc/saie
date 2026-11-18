@@ -1,6 +1,6 @@
-import { test, expect } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
-import { entrarComoCoordinacion, simularPanel } from './helpers-panel';
+import { test, expect } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+import { entrarComoCoordinacion, simularPanel } from "./helpers-panel";
 
 /**
  * Accesibilidad del panel en un navegador real (Issue 3.23 / spec 03).
@@ -13,46 +13,56 @@ import { entrarComoCoordinacion, simularPanel } from './helpers-panel';
  */
 
 const PANTALLAS = [
-  { nombre: 'Espacios', ruta: '/admin/espacios' },
-  { nombre: 'Alertas', ruta: '/admin/alertas' },
-  { nombre: 'Inicio', ruta: '/admin' },
-  { nombre: 'Carga de datos', ruta: '/admin/carga' },
-  { nombre: 'Cambio de laboratorio', ruta: '/admin/laboratorio' },
+  { nombre: "Espacios", ruta: "/admin/espacios" },
+  { nombre: "Alertas", ruta: "/admin/alertas" },
+  { nombre: "Inicio", ruta: "/admin" },
+  { nombre: "Carga de datos", ruta: "/admin/carga" },
+  { nombre: "Cambio de laboratorio", ruta: "/admin/laboratorio" },
 ];
 
-const IMPACTOS_GRAVES = ['serious', 'critical'];
+const IMPACTOS_GRAVES = ["serious", "critical"];
 
-test.describe('Accesibilidad del panel con axe en navegador real (Issue 3.23)', () => {
+test.describe("Accesibilidad del panel con axe en navegador real (Issue 3.23)", () => {
   test.beforeEach(async ({ page }) => {
     await simularPanel(page);
     await entrarComoCoordinacion(page);
   });
 
   for (const pantalla of PANTALLAS) {
-    test(`${pantalla.nombre} no tiene violaciones de accesibilidad grave`, async ({ page }) => {
+    test(`${pantalla.nombre} no tiene violaciones de accesibilidad grave`, async ({
+      page,
+    }) => {
       await page.goto(pantalla.ruta);
-      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      // Las pantallas del panel tienen transiciones y llamadas mock de inicio que deben
+      // estabilizarse antes de auditar contraste en el navegador (mismo criterio del drawer).
+      await page.waitForTimeout(400);
 
       const resultados = await new AxeBuilder({ page })
-        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
         .analyze();
 
       const graves = resultados.violations.filter((v) =>
-        IMPACTOS_GRAVES.includes(v.impact ?? 'minor'),
+        IMPACTOS_GRAVES.includes(v.impact ?? "minor"),
       );
 
       expect(
-        graves.map((v) => `[${v.impact}] ${v.id}: ${v.help} (${v.nodes.length} nodo/s)`),
+        graves.map(
+          (v) =>
+            `[${v.impact}] ${v.id}: ${v.help} (${v.nodes.length} nodo/s) -> ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`,
+        ),
         `Violaciones de accesibilidad grave en ${pantalla.nombre}`,
       ).toEqual([]);
     });
   }
 
-  test('el formulario de espacio en el drawer no tiene violaciones graves', async ({ page }) => {
-    await page.goto('/admin/espacios');
-    await page.getByRole('button', { name: 'Ver detalle de AULA-101' }).click();
+  test("el formulario de espacio en el drawer no tiene violaciones graves", async ({
+    page,
+  }) => {
+    await page.goto("/admin/espacios");
+    await page.getByRole("button", { name: "Ver detalle de AULA-101" }).click();
 
-    const drawer = page.getByRole('dialog');
+    const drawer = page.getByRole("dialog");
     await expect(drawer).toBeVisible();
     // El drawer entra con una animación: se espera a que se estabilice antes de auditar.
     await page.waitForTimeout(400);
@@ -63,12 +73,14 @@ test.describe('Accesibilidad del panel con axe en navegador real (Issue 3.23)', 
       .include(handle!)
       .analyze();
     const graves = resultados.violations.filter((v) =>
-      IMPACTOS_GRAVES.includes(v.impact ?? 'minor'),
+      IMPACTOS_GRAVES.includes(v.impact ?? "minor"),
     );
 
     expect(
-      graves.map((v) => `[${v.impact}] ${v.id}: ${v.help} (${v.nodes.length} nodo/s)`),
-      'Violaciones de accesibilidad grave en el formulario de espacio',
+      graves.map(
+        (v) => `[${v.impact}] ${v.id}: ${v.help} (${v.nodes.length} nodo/s)`,
+      ),
+      "Violaciones de accesibilidad grave en el formulario de espacio",
     ).toEqual([]);
   });
 });

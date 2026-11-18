@@ -19,7 +19,11 @@ export const CabeceraPortal: React.FC<CabeceraPortalProps> = ({ portal }) => {
     <header className="bg-saie-primary text-white">
       <Contenedor ancho="normal" className="flex h-18 items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-4">
-          <Link to="/" aria-label="Ir al inicio de SAIE" className="shrink-0">
+          <Link
+            to="/"
+            aria-label="SAIE, ir al inicio"
+            className="shrink-0 focus-visible:outline-white"
+          >
             <img src={logoBlanco} alt="SAIE" className="h-10 w-auto" />
           </Link>
           <span className="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-sm font-medium">
