@@ -2,21 +2,26 @@ import { Request, Response } from 'express';
 import {
   crearIncidencia,
   explorarEspaciosDocente,
+  listarIncidenciasDocente,
   obtenerEstadoLaboratorio,
   obtenerHorario,
 } from '../../../src/controllers/docente.controller';
 import {
   explorarEspacios,
+  listarMisIncidencias,
   obtenerEstadoLaboratorioDocente,
   obtenerHorarioDocente,
   registrarIncidencia,
 } from '../../../src/services/docente.service';
+
+import { HttpError } from '../../../src/lib/http';
 
 jest.mock('../../../src/services/docente.service', () => {
   const actual = jest.requireActual('../../../src/services/docente.service');
   return {
     ...actual,
     explorarEspacios: jest.fn(),
+    listarMisIncidencias: jest.fn(),
     obtenerEstadoLaboratorioDocente: jest.fn(),
     obtenerHorarioDocente: jest.fn(),
     registrarIncidencia: jest.fn(),
@@ -245,6 +250,33 @@ describe('Docente Controller (Issues 7.2 - 7.5)', () => {
         'lab-1',
         expect.anything(),
       );
+    });
+  });
+
+  describe('listarIncidenciasDocente (Issue 7.14)', () => {
+    it('debe responder 200 con las incidencias del docente autenticado', async () => {
+      const incidencias = [{ id: 'inc-1', identificadorSeguimiento: 'INC-1A2B3C4D' }];
+      (listarMisIncidencias as jest.Mock).mockResolvedValue(incidencias);
+      const req = { auth: { sub: 'docente-1', rol: 'DOCENTE' } } as unknown as Request;
+      const res = mockResponse();
+
+      await listarIncidenciasDocente(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true, data: incidencias });
+      expect(listarMisIncidencias).toHaveBeenCalledWith('docente-1', expect.anything());
+    });
+
+    it('debe responder con el estado del error si el servicio falla', async () => {
+      (listarMisIncidencias as jest.Mock).mockRejectedValue(
+        new HttpError(404, 'No hay un docente asociado a esta cuenta'),
+      );
+      const req = { auth: { sub: 'docente-1', rol: 'DOCENTE' } } as unknown as Request;
+      const res = mockResponse();
+
+      await listarIncidenciasDocente(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
     });
   });
 });

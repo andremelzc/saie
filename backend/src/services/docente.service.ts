@@ -27,6 +27,7 @@ import {
   HorarioSlot,
 } from './disponibilidad.service';
 import { obtenerPeriodoVigente } from './periodo.service';
+import { IncidenciaDocenteDTO } from '../types/incidencias';
 import {
   AsignacionActivaDocenteDTO,
   EstadoLaboratorioDocenteDTO,
@@ -283,6 +284,57 @@ export async function registrarIncidencia(
 
   // Inalcanzable: el bucle devuelve o lanza.
   throw new HttpError(500, 'No se pudo generar el identificador de seguimiento');
+}
+
+// ---------------------------------------------------------------------------
+// Issue 7.14 — Consultar mis incidencias
+// ---------------------------------------------------------------------------
+
+const INCLUIR_INCIDENCIA_DOCENTE = {
+  espacio: true,
+  asignacion: { include: { seccion: { include: { curso: true } } } },
+} satisfies Prisma.IncidenciaInclude;
+
+/**
+ * Issue 7.14: incidencias reportadas por el docente autenticado, de la más reciente a la más
+ * antigua. El filtro por `docenteId` sale de la cuenta del token: nunca ve las de otra persona.
+ */
+export async function listarMisIncidencias(
+  cuentaId: string,
+  prisma: Pick<PrismaClient, 'docente' | 'incidencia'>,
+): Promise<IncidenciaDocenteDTO[]> {
+  const docente = await obtenerDocenteDeCuenta(cuentaId, prisma);
+
+  const incidencias = await prisma.incidencia.findMany({
+    where: { docenteId: docente.id },
+    include: INCLUIR_INCIDENCIA_DOCENTE,
+    orderBy: { fechaReporte: 'desc' },
+  });
+
+  return incidencias.map((i) => ({
+    id: i.id,
+    identificadorSeguimiento: i.identificadorSeguimiento,
+    tipo: i.tipo,
+    prioridad: i.prioridad,
+    estado: i.estado,
+    descripcion: i.descripcion,
+    evidencia: i.evidencia,
+    fechaReporte: i.fechaReporte,
+    comentarioCierre: i.comentarioCierre,
+    fechaCierre: i.fechaCierre,
+    espacio: {
+      id: i.espacio.id,
+      identificador: i.espacio.identificador,
+      pabellon: i.espacio.pabellon,
+      piso: i.espacio.piso,
+    },
+    asignacion: {
+      id: i.asignacionId,
+      codigoCurso: i.asignacion.seccion.curso.codigo,
+      nombreCurso: i.asignacion.seccion.curso.nombre,
+      codigoSeccion: i.asignacion.seccion.codigoSeccion,
+    },
+  }));
 }
 
 // ---------------------------------------------------------------------------
