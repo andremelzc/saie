@@ -5,6 +5,7 @@
 > Documento de **diagnóstico**. No se ha modificado código de producción. Todos los hallazgos están en estado **Pendiente** hasta que se apruebe la auditoría y se ejecute el plan (§7).
 > Rutas relativas a `frontend/src/` salvo que se indique otra cosa. Los números de línea corresponden al commit `2c22615` de la rama `feature/sprint3-cierre-panel-gestion-individual`.
 > Sustituye a una auditoría previa del mismo nombre (sin versionar). El documento histórico `docs/auditoria_ux_ui_frontend.md` no se toca.
+> **Ampliación del 2026-11-17 (issue #372):** el portal docente, que quedó fuera de esta revisión, se audita en la sección 10, con sus propios conteos y evidencias en `docs/auditoria-docente/`.
 
 ---
 
@@ -75,7 +76,7 @@ La pasada en navegador añadió tres problemas altos de maquetación: `RES-08` (
 ### 2.2 Qué no se revisó a fondo (declarado)
 
 - **Lectura completa de todos los componentes y pantallas del alcance** tras tres pasadas (se leyeron todos los archivos de `components/` salvo `mapa3d`, `pages/` salvo docente y `ProximamenteAdminPage` en detalle, `hooks/`, `config/`, `utils/horario.ts`, `utils/perfil.ts`, `utils/admin.ts`, `services/api.ts`, `services/estudiante.ts`, `main.tsx` y `App.tsx`). **Lectura parcial, sin impacto en UI:** `services/admin.ts`, `services/sesion.ts`, `context/AuthProvider.tsx`, `types/*` y el tramo de lógica de `FormularioEspacio` (contiguos y alta).
-- **Fuera de alcance:** `components/mapa3d/*` (en curso, issue 4.23), las pantallas de docente y los *placeholders* (`PantallaEnDesarrollo`), el backend (no es objeto de esta revisión de UI/UX; si se desea, puede auditarse aparte la forma de los mensajes de error y los códigos HTTP que devuelve) y las pruebas.
+- **Fuera de alcance:** `components/mapa3d/*` (en curso, issue 4.23), las pantallas de docente (auditadas después, en la sección 10) y los *placeholders* (`PantallaEnDesarrollo`), el backend (no es objeto de esta revisión de UI/UX; si se desea, puede auditarse aparte la forma de los mensajes de error y los códigos HTTP que devuelve) y las pruebas.
 - **Verificado ejecutando:** `vite build` (tamaño del bundle) y una **pasada en navegador (2026-10-21)** con Chromium automatizado (Playwright) contra una API simulada propia, sin tocar la base de datos real: 390, 768 y 1280 px, 640×400 (equivale a zoom 200 %) y ventanas bajas (1280×600, 1366×560, 1024×640); 39 capturas de rutas, medición de anchos, fuentes, objetivos táctiles y foco, y pruebas de interacción (drawers, errores públicos, formularios, teclado, 404). Los hallazgos comprobados dicen «Verificado en navegador».
 - **Sigue sin verificarse:** lector de pantalla real (NVDA/VoiceOver), CLS y Lighthouse, el salto de maquetación por la barra de scroll al abrir un drawer (las barras de Chromium sin ventana son superpuestas), el alto contraste de Windows y las respuestas reales del backend (la API simulada respeta el contrato de tipos). Los hallazgos marcados *(por verificar)* dependen de eso. El contraste se calculó con la fórmula WCAG sobre los hex de `index.css`.
 
@@ -678,6 +679,7 @@ Riesgos: (a) los hallazgos marcados *(por verificar)* dependen de lector de pant
 | Etapa 4 — Componentes base (**parcial**, checkpoint) | **Resueltos:** `FDB-05`, `FDB-06`, `FDB-13`, `ACC-14`, `ACC-17`, `ACC-08`, `VIS-20`, `VIS-21`, `DEN-14`, `DEN-15`, `VIS-04`, `VIS-15`. **En progreso:** `FDB-01`, `VIS-03`, `VIS-11`, `VIS-12`. Nuevos: `Drawer` renovado (tamaños, entrada deslizante, subtítulo e insignia, pie fijo, confirmación al cerrar con cambios, foco al primer campo o al título y al cambiar de vista, `scrollbar-gutter`), `DialogoConfirmacion` (usado en asignar aulas, resolver alerta y desvincular Telegram), `BotonEnlace` y `clasesBoton`, `EstadoError` (sustituye 7 bloques), `TablaDatos`/`CabeceraTabla`, `Campo`, `hooks/useAtraparFoco`, `hooks/useAdvertenciaSalida`; avisos con dos regiones vivas (éxito amable, error asertivo) y pausa con cursor o foco. **Falta de esta etapa:** usar `TablaDatos` y `Campo` en las pantallas, migrar los `<button>` sueltos a `Boton`, registro de íconos, esqueletos y estados vacíos, `Paginador` y `FiltrosActivos`, y aplicar `useAdvertenciaSalida` en Cambio de laboratorio. **Pruebas:** 408 de 408 pasan | 2026-10-21 |
 | Etapa 4 — Componentes base (**completa**) | **Resueltos en esta tanda:** `VIS-03`, `VIS-09`, `VIS-10`, `VIS-11`, `VIS-12`, `FDB-01`, `ACC-03`, `ACC-09`, `TXT-06`; **en progreso:** `FDB-08`, `PER-04`. Hecho: barras de desplazamiento con los colores del sistema (pulgar guinda sobre carril crema, en la página, los drawers y cualquier zona con scroll); `TablaDatos`/`CabeceraTabla` en Auditoría (2), Secciones, Espacios e Informe (región enfocable con teclado); `Campo` en los filtros y formularios del panel; `Boton` en lugar de los botones sueltos (Telegram, perfil, horario, alertas, carga, login, consulta, cerrar sesión; quedan nativos solo los interruptores y selectores segmentados, que son controles distintos); `BotonEnlace` en la acción sugerida de cada sección escalada, 404 y acceso denegado; registro único de íconos `components/ui/iconos.ts` (20 trazos que estaban copiados en 15 archivos); `EsqueletoCarga` con forma de tabla y un solo estilo de esqueleto; `EstadoVacio` con ícono propio y sin animación infinita; Cambio de laboratorio avisa antes de cerrar la pestaña o cambiar de laboratorio con cambios sin guardar; el enlace al bot de Telegram avisa que abre una pestaña nueva; cabeceras del Informe sin abreviaturas. **Contenedor responsive:** un `Contenedor` con utilidades estándar de Tailwind (`max-w-4xl/6xl/7xl`, `px-4 sm:px-6 lg:px-8`) que comparten cabecera, barra y contenido; se retiraron los tokens propios de ancho, sombra y radio. **Área del alumno:** todas las pantallas (Inicio, Horario, Perfil, Telegram, Ayuda y Configuración) usan ahora el mismo ancho (`max-w-6xl`), así la barra y el contenido ya no saltan al cambiar de pestaña. **Pruebas:** 408 de 408 pasan | 2026-10-21 |
 | Etapa 2 — Revisión tipográfica | Se restituye Playfair Display (700, autoalojada con `@fontsource/playfair-display`, subconjunto latino) según la guía de estilos §3: `h1` global y `font-serif` en los H2 de sección mayor (Ayuda, Configuración, Consulta, Home, Inicio del alumno, Perfil, Telegram, Informe, Datos personales); los títulos pequeños y todas las cifras siguen en Inter. Afecta a `VIS-17`, `VIS-18` y `PER-05` (una sola fuente externa pasa a dos autoalojadas) | `index.css`, `frontend/package.json`, `package-lock.json`, 9 pantallas | 2026-10-23 |
+| Auditoría del portal docente (issue #372) | Nuevos `VIS-23`, `DEN-24` a `DEN-29`, `MAP-16`, `MAP-17`, `FDB-15` a `FDB-17`, `ACC-18` a `ACC-20`, `RES-12`, `TXT-13` a `TXT-15` (19 hallazgos, 4 de prioridad Alta); 4 descartes. Pasada en navegador con 56 capturas | `docs/AUDITORIA_UI_UX.md` (sección 10), `docs/auditoria-docente/` (nuevo) | 2026-11-17 |
 | Fase 1 — Quick wins | — | — | — |
 | Fase 2 — Transversal | — | — | — |
 | Fase 3 — Por pantalla | — | — | — |
@@ -711,4 +713,193 @@ Rama: `feature/auditoria-ui-ux`. Estado: `tsc`, lint, prettier y las 408 pruebas
 5. **Etapa 9 — verificación final:** nueva pasada en navegador (la API simulada y los scripts de Playwright se pueden rehacer con `vite --port 5199` y `VITE_API_BASE_URL`), checklist de §9.2.
 
 **Criterio fijado por el equipo:** usar las utilidades estándar de Tailwind y diseño responsive (no valores exactos propios); no tocar la lógica de negocio ni los contratos con la API.
+
+---
+
+## 10. Portal docente
+
+**Fecha:** 2026-11-17 | **Issue:** #372 | **Rama:** `docs/372-auditoria-docente` sobre `develop` en `e71fd91` | **Evidencias:** [`docs/auditoria-docente/`](auditoria-docente/README.md)
+
+> Diagnóstico, igual que el resto del documento: no se modificó código de producción. Las rutas son relativas a `frontend/src/` y los números de línea corresponden al commit `e71fd91`. La numeración de los hallazgos continúa la de las secciones 3 a 9.
+
+### 10.1 Resumen ejecutivo
+
+El portal docente nació después de las etapas 1 a 4 de esta auditoría y ya las aprovecha: comparte la cabecera, la barra y el contenedor del área del alumno (`PaginaDocente`), usa `Boton`, `Campo`, `EstadoError`, `BadgeEstado` y los diccionarios, no tiene colores literales ni `<button>` sueltos, y la regla de axe no encuentra violaciones en ninguna de sus 8 vistas. No desborda en ningún ancho.
+
+Lo que falla es sobre todo **veracidad y continuidad**. El historial del laboratorio muestra el JSON crudo con que el backend guarda el software (`MAP-16`). Si una carga falla, dos pantallas muestran a la vez el error y un vacío que lo contradice (`FDB-15`). La confirmación de una incidencia promete un seguimiento que no existe en ninguna pantalla (`DEN-24`, RF-18). En accesibilidad, el foco del logo es casi invisible sobre la cabecera guinda (`ACC-18`, también en el área del alumno), la cuenta regresiva interrumpe al lector de pantalla cada minuto y el foco se pierde tras enviar una incidencia.
+
+### 10.2 Conteo de hallazgos
+
+| Categoría | Alta | Media | Baja | Total |
+| --- | ---: | ---: | ---: | ---: |
+| VIS · Uniformidad visual | 0 | 0 | 1 | 1 |
+| DEN · Densidad de información | 1 | 3 | 2 | 6 |
+| MAP · Mapeo de datos del backend | 1 | 0 | 1 | 2 |
+| FDB · Feedback al usuario | 1 | 2 | 0 | 3 |
+| ACC · Accesibilidad | 1 | 2 | 0 | 3 |
+| RES · Responsive | 0 | 0 | 1 | 1 |
+| PER · Rendimiento percibido | 0 | 0 | 0 | 0 |
+| TXT · UX writing | 0 | 0 | 3 | 3 |
+| **Total** | **4** | **7** | **8** | **19** |
+
+*Además, 4 descartes (§10.9). Varios problemas ya documentados también aparecen en el portal docente y no se cuentan de nuevo: `ACC-06` (texto de 12 px en la barra inferior, las insignias y las etiquetas de cifras), `ACC-10` (el logo se anuncia «SAIE» sin destino), `FDB-07` (al enviar Solicitudes vacío los errores aparecen, pero el foco se queda en el botón) y `FDB-08` (los vacíos no ofrecen acción).*
+
+### 10.3 Los 5 problemas más críticos
+
+| # | ID | Problema | Por qué importa |
+| --- | --- | --- | --- |
+| 1 | `MAP-16` | «Cambios recientes» del laboratorio muestra `Software: ["Visual Studio Code 1.95","Python 3.11"] → [ … ]` | Texto de programación ante el docente, y no dice qué cambió |
+| 2 | `FDB-15` | Con el servidor caído, el explorador sugiere «Prueba con otro tipo, piso o franja horaria» y Solicitudes afirma «Aún no has pedido ningún software» | El vacío contradice al error: se culpa a los filtros o se niega un dato que no se pudo leer |
+| 3 | `DEN-24` | La confirmación dice «Guarda el código para hacerle seguimiento», pero no hay dónde consultarlo | Requisito RF-18 incumplido; el docente no sabe si Jefatura atendió su reporte |
+| 4 | `ACC-18` | El aro de foco del logo tiene 1.46:1 sobre la cabecera guinda | Barrera AA (1.4.11) en el primer control de cada pantalla, en los portales del docente y del alumno |
+| 5 | `ACC-20` + `FDB-17` | Tras enviar una incidencia el foco cae en `body`; salir de un formulario a medio llenar pierde el texto sin avisar | El flujo principal del portal (reportar una falla) se interrumpe para quien usa teclado o se equivoca de pestaña |
+
+### 10.4 Alcance y metodología
+
+**Qué se revisó (lectura completa):** `pages/docente/` (`InicioDocentePage`, `HorarioDocentePage`, `EspaciosDocentePage`, `IncidenciasDocentePage`, `SolicitudesSoftwareDocentePage`), `components/docente/` (`PaginaDocente`, `NavegacionDocente`), `pages/LoginDocente.tsx`, `utils/docente.ts`, `services/docente.ts` y `types/docente.ts`. También, en lo que usa el portal docente: `CabeceraAlumno`, `useTituloPagina`, `services/errores.ts`, `index.css`, y en el backend `routes/docente.routes.ts`, `services/docente.service.ts` y `services/laboratorio.service.ts` (formato de los datos y de los mensajes de error).
+
+**Qué no se revisó a fondo:** `GridHorarioSemanal`, `HorarioDia`, `SelectorSegmentado`, `ElementosHorario` y `LoginFormBase` se comparten con el alumno y ya están en las secciones 3 y 4; aquí solo se miró su uso. La revisión de incidencias de Jefatura (`IncidenciasAdminPage`, #208) pertenece al panel administrativo y queda fuera. **Sigue sin verificarse:** lector de pantalla real (NVDA/VoiceOver), CLS y Lighthouse, el alto contraste de Windows y el backend real (la API simulada respeta los DTO; los mensajes de error se contrastaron leyendo el código del backend).
+
+**Cómo se evaluó:**
+
+| Técnica | Detalle |
+| --- | --- |
+| Lectura de código | Los 10 archivos del alcance, con cita de archivo y línea |
+| Medición por búsqueda | Las mismas búsquedas de §4 sobre el árbol del docente (§10.5) |
+| Contraste | Fórmula WCAG 2.x sobre los tokens de `index.css` y las transparencias reales (§10.6) |
+| Navegador | Chromium con Playwright y API simulada con `page.route`, reloj fijo (martes 17 de noviembre, 10:15, clase en curso). 8 vistas × 4 ventanas (390, 768, 1280 y 640×400), login, axe-core 4.10 (WCAG 2.2 AA), orden de tabulación, foco tras navegar y tras enviar, y 18 estados de carga, vacío y error (401, 403, 404, 409, 422, 500 y tiempo agotado). Método y resultados: [`auditoria-docente/README.md`](auditoria-docente/README.md) y [`mediciones.json`](auditoria-docente/mediciones.json) |
+
+Prioridad y esfuerzo con la misma escala de §2.3.
+
+### 10.5 Inventario y mediciones
+
+Búsqueda sobre los 10 archivos del alcance (sin pruebas):
+
+| Medición | Resultado | Detalle |
+| --- | ---: | --- |
+| Colores hexadecimales fuera de `index.css` | 0 | — |
+| Paleta ajena de Tailwind (`rose`, `emerald`, `amber`, `teal`, `indigo`) | 0 | — |
+| `<button>` nativos | 0 | Todo con `Boton`, `BotonEnlace` o `NavLink` |
+| Tamaños arbitrarios `text-[Npx]` | 0 | — |
+| `text-xs` (12 px) | 10 | `NavegacionDocente.tsx:33` (etiquetas de la barra en móvil), `HorarioDocentePage.tsx:59,73` y `IncidenciasDocentePage.tsx:94,98,104` (`dt`), `InicioDocentePage.tsx:68,128,208`, `SolicitudesSoftwareDocentePage.tsx:51`. Se suma a `ACC-06` |
+| Sombras y radios literales (`shadow-[…]`, `rounded-[…]`) | 0 | Las 4 tarjetas usan `shadow-sm`, la utilidad del sistema |
+| Alturas arbitrarias | 1 | `InicioDocentePage.tsx:198` (`h-[68px]` en el esqueleto de las cifras) |
+| `font-serif` | 2 | `InicioDocentePage.tsx:40,59`: H2 de la tarjeta principal, como en el inicio del alumno (guía §3) |
+| `max-w-*` | 1 | `EspaciosDocentePage.tsx:362` (`max-w-sm` en el selector de laboratorio); el resto usa `Contenedor ancho="normal"` |
+| Bloques de error y de vacío propios | 0 | `EstadoError` (7 usos) y `EstadoVacio` (7 usos) |
+| `catch` | 0 | Las acciones van por `useAccion` y las cargas por `useCarga` |
+| Plurales con «(s)» | 0 | Se usa `plural()`; queda un «1 disponibles» sin plural (`TXT-13`) |
+| Regiones `aria-live` | 2 | Resumen del explorador (correcto) y cuenta regresiva (`ACC-19`) |
+
+En el navegador:
+
+| Medición | Resultado |
+| --- | --- |
+| Scroll horizontal de página | Ninguno en las 32 combinaciones |
+| Objetivos táctiles < 44 px | Ninguno en 390, 768 y 640×400 (salvo «Saltar al contenido», oculto). A 1280 px las pestañas de la barra miden 36 px, uso con puntero |
+| Texto < 14 px a 390 px | De 6 a 26 elementos por vista, todos de 12 px (ver `ACC-06`) |
+| axe (WCAG 2.2 AA) | 0 violaciones en 8 vistas × 2 anchos y en el login |
+| `document.title` y `h1` | Propios en cada ruta |
+| Foco al navegar con la barra | Pasa al `h1` de la pantalla nueva |
+
+### 10.6 Contraste
+
+| Par | Primer plano | Fondo | Contraste | Mínimo | Resultado |
+| --- | --- | --- | ---: | ---: | --- |
+| Aro de foco del logo sobre la cabecera | `#222222` | `#7b1113` | 1.46:1 | 3:1 (1.4.11) | ✗ `ACC-18` |
+| Texto blanco al 85 % («Clase en curso») sobre `primary` | `#ebdbdc` | `#7b1113` | 8.13:1 | 4.5:1 | ✓ |
+| Texto blanco al 80 % (fecha) sobre `primary-dark` | `#decfcf` | `#5c0d0e` | 9.17:1 | 4.5:1 | ✓ |
+| Cuenta regresiva blanca sobre la píldora (blanco al 15 %) | `#ffffff` | `#8f3536` | 7.69:1 | 4.5:1 | ✓ |
+| `muted` sobre blanco (etiquetas, pestañas inactivas) | `#666666` | `#ffffff` | 5.74:1 | 4.5:1 | ✓ |
+| `muted` sobre `canvas` (descripciones) | `#666666` | `#faf6ed` | 5.32:1 | 4.5:1 | ✓ |
+| Pestaña activa en móvil (`primary` sobre `primary/10`) | `#7b1113` | `#f2e7e7` | 8.99:1 | 4.5:1 | ✓ |
+| «Falta: …» (`danger-strong` sobre blanco) | `#b71c1c` | `#ffffff` | 6.57:1 | 4.5:1 | ✓ |
+| Motivo de rechazo (`danger-strong` sobre `danger-soft`) | `#b71c1c` | `#fdecea` | 5.74:1 | 4.5:1 | ✓ |
+| Borde de campo (`border` sobre blanco) | `#8a8578` | `#ffffff` | 3.68:1 | 3:1 | ✓ |
+
+### 10.7 Hallazgos por categoría
+
+#### VIS — Uniformidad visual
+
+| ID | Pantalla/Componente | Archivo(s) | Problema | Impacto | Prioridad | Solución propuesta | Esfuerzo | Estado |
+|----|---------------------|------------|----------|---------|-----------|--------------------|----------|--------|
+| VIS-23 | Explorador de espacios | `pages/docente/EspaciosDocentePage.tsx:54-56` | Un espacio ocupado se marca con `BadgeEstado tono="peligro"` (rojo con ícono de alerta). Estar ocupado es normal en una franja, no una falla; el mismo rojo marca «Falta software» y «PCs inoperativas» en la pestaña de al lado | El rojo deja de significar «algo va mal» y la lista parece llena de problemas | Baja | `tono="neutro"` para «Ocupado» y `peligro` solo para fallas | S | Pendiente |
+
+#### DEN — Densidad de información
+
+| ID | Pantalla/Componente | Archivo(s) | Problema | Impacto | Prioridad | Solución propuesta | Esfuerzo | Estado |
+|----|---------------------|------------|----------|---------|-----------|--------------------|----------|--------|
+| DEN-24 | Reportar incidencia (confirmación) | `pages/docente/IncidenciasDocentePage.tsx:88-90`; `backend/src/routes/docente.routes.ts:20-27` (sin `GET /docente/incidencias`); `docs/02_requisitos.md:57` (RF-18) | La confirmación dice «Guarda el código para hacerle seguimiento», pero no hay pantalla ni endpoint donde el docente consulte el estado de sus incidencias. RF-18 pide «un identificador de seguimiento para consultar su estado». **Verificado en navegador:** el código `INC-3F9A2C1B` solo aparece en la confirmación y desaparece al pulsar «Reportar otra incidencia» (`incidencia-confirmacion-1280.jpg`) | El docente no sabe si Jefatura atendió su reporte; la interfaz promete algo que no existe | Alta | Sección «Mis incidencias» en la misma pantalla (código, espacio, estado con `BadgeEstado`, comentario de cierre) sobre un `GET /api/v1/docente/incidencias` que devuelva solo las propias. Mientras tanto, retirar la frase del seguimiento | M | Pendiente |
+| DEN-25 | Inicio → Horario | `pages/docente/InicioDocentePage.tsx:116-121` (cada día enlaza a `RUTAS.horarioDocente` sin el día); `pages/docente/HorarioDocentePage.tsx:107-108` (vista y día iniciales fijos) | Cada día de la tira se anuncia «Jueves, 1 clase», pero abre el horario en el día de hoy. **Verificado en navegador:** clic en «Jueves» → `/docente/horario` con el martes seleccionado (`interaccion-clic-jueves.jpg`) | El enlace no lleva a donde dice | Media | Pasar el día en la URL (`?dia=JUEVES`) y leerlo como estado inicial en `HorarioDocentePage` | S | Pendiente |
+| DEN-26 | Explorador de espacios (filtros) | `pages/docente/EspaciosDocentePage.tsx:36` (`PISOS = [1, 2, 3]`), `:68-70` (franja inicial lunes 08:00–10:00); `types/docente.ts:50` y `services/docente.ts:36` (la API admite `pabellon`) | El piso está fijo en 1–3, aunque el panel permite espacios en otros pisos (`FormularioEspacio.test.tsx:315` crea uno en el piso 4); no hay filtro de pabellón, aunque la API lo acepta; al marcar «Consultar otro día u hora» se propone el lunes de 08:00 a 10:00, no el día de hoy. **Verificado en navegador:** el selector ofrece solo «Todos, Piso 1, Piso 2, Piso 3» (texto medido en `mediciones.json`, estado `explorador-500`) | Espacios que no se pueden filtrar y búsquedas más largas | Media | Pisos y pabellones a partir de los espacios devueltos; franja inicial = hoy y la hora en punto siguiente | S | Pendiente |
+| DEN-27 | Inicio del docente | `pages/docente/InicioDocentePage.tsx:54-57`, `:84-99`, `:37-45` y `:221-226` | Igual que `DEN-12`: la clase en curso se rotula dos veces («Clase en curso» y la insignia «En curso») y las cuatro cifras no llevan a ninguna acción. Sin clases, la portada muestra cuatro tarjetas en cero y dos vacíos seguidos («No tienes clases programadas» y «Hoy no tienes clases»). **Verificado en navegador** (`estado-vacio-inicio.jpg`) | Ruido en la pantalla que más se abre | Baja | Una sola etiqueta de estado; sin clases, ocultar las cifras y dejar un único vacío con enlace a Horario | S | Pendiente |
+| DEN-28 | Inicio (próxima clase y clases de hoy) | `pages/docente/InicioDocentePage.tsx:76,242`; `utils/horario.ts:160-166` (`resumenUbicacion`) | La ubicación se resume como «Lab. LAB-301» o «Teoría AULA-101»: falta el pabellón y el piso, que la pestaña Asignaciones sí muestra («Laboratorio LAB-301 · Pabellón B, piso 3»). **Verificado en navegador** (`inicio-390.jpg`) | Para saber a dónde ir hay que cambiar de pantalla; el mismo dato se escribe de dos formas | Media | En la portada, el identificador con `ubicacionEspacio` («LAB-301 · Pabellón B, piso 3»), sin el prefijo abreviado | S | Pendiente |
+| DEN-29 | Marco del portal docente | `components/docente/NavegacionDocente.tsx:14-30`; `AppRoutes.tsx:142-153` (Ayuda y Configuración solo para `ALUMNO`) | El portal docente no tiene Ayuda ni Configuración: los ajustes «Texto grande» y «Reducir movimiento» (`ACC-12`) solo existen para el alumno | El docente no puede agrandar el texto ni reducir el movimiento dentro de SAIE | Baja | Hacer compartida la pantalla de Configuración y enlazarla desde la cabecera de ambos portales | S | Pendiente |
+
+#### MAP — Mapeo de datos del backend
+
+| ID | Pantalla/Componente | Archivo(s) | Problema | Impacto | Prioridad | Solución propuesta | Esfuerzo | Estado |
+|----|---------------------|------------|----------|---------|-----------|--------------------|----------|--------|
+| MAP-16 | Mi laboratorio («Cambios recientes») | `pages/docente/EspaciosDocentePage.tsx:317-320`; origen: `backend/src/services/laboratorio.service.ts:115-116` (guarda `JSON.stringify` de la lista) | El historial de software muestra el registro crudo: `Software: ["Visual Studio Code 1.95","Python 3.11"] → ["Visual Studio Code 1.95","Python 3.11","IntelliJ IDEA Community 2024.2"]`, y en vez de decir qué cambió repite las dos listas completas. **Verificado en navegador** (`espacios-laboratorio-390.jpg`) | Corchetes y comillas de programación ante el docente; hay que comparar dos listas a ojo | Alta | Interpretar el JSON y mostrar la diferencia («Se instaló IntelliJ IDEA Community 2024.2», «Se retiró …»), con el texto crudo como respaldo si no se puede leer | S | Pendiente |
+| MAP-17 | Horario → Asignaciones | `pages/docente/HorarioDocentePage.tsx:77-78` («Por asignar») y `:133` | Una sección sin espacio dice «Por asignar», mientras el diccionario usa «Sin aula asignada» (§6.1). El vacío de la pestaña dice «No tienes secciones con aula asignada», pero la lista incluye secciones sin aula. **Verificado en navegador** (`horario-asignaciones-390.jpg`, sección CC-412) | El mismo estado con otra palabra; el vacío describe mal lo que muestra la pestaña | Baja | «Sin aula asignada» del diccionario (igual que `MAP-05`) y vacío «No tienes secciones activas en este periodo» | S | Pendiente |
+
+#### FDB — Feedback al usuario
+
+| ID | Pantalla/Componente | Archivo(s) | Problema | Impacto | Prioridad | Solución propuesta | Esfuerzo | Estado |
+|----|---------------------|------------|----------|---------|-----------|--------------------|----------|--------|
+| FDB-15 | Explorador y Solicitudes (error de carga) | `pages/docente/EspaciosDocentePage.tsx:208-217`; `pages/docente/SolicitudesSoftwareDocentePage.tsx:207-215` | Si la carga falla, se muestran a la vez el error y el estado vacío, porque el vacío se decide con `datos ?? []`. **Verificado en navegador** (500 simulado): el explorador dice «Algo salió mal…» y debajo «Sin espacios que coincidan. Prueba con otro tipo, piso o franja horaria» (`estado-explorador-500.jpg`); Solicitudes dice «Algo salió mal…» y «Aún no has pedido ningún software» (`estado-software-500.jpg`) | Mensajes contradictorios: se sugiere cambiar filtros ante una falla del servidor y se afirma que no hay solicitudes cuando no se pudieron leer | Alta | Con `error` y sin `datos`, solo `EstadoError`; el vacío, solo con datos cargados | S | Pendiente |
+| FDB-16 | Inicio del docente (error de carga) | `pages/docente/InicioDocentePage.tsx:171,183-184,192-211` | Ante un error aparecen dos mensajes: `EstadoError` arriba y «No pudimos cargar tu horario.» en la tarjeta guinda; la columna de cifras queda vacía. **Verificado en navegador** con 403, 404, 500 y tiempo agotado (`estado-inicio-500.jpg`) | Doble aviso del mismo problema y un hueco en la maquetación | Media | Un solo `EstadoError` en lugar de la tarjeta, sin la columna de cifras | S | Pendiente |
+| FDB-17 | Reportar incidencia y Solicitudes de software | `pages/docente/IncidenciasDocentePage.tsx:131-200`; `pages/docente/SolicitudesSoftwareDocentePage.tsx:68-111` | Igual que `FDB-01`, ahora en formularios de página: con la descripción o la justificación escritas, pulsar otra pestaña de la barra navega sin aviso y el texto se pierde. `hooks/useAdvertenciaSalida` no se usa en el portal docente. **Verificado en navegador:** Solicitudes con nombre y justificación llenos → clic en «Inicio» → `/docente` sin diálogo | Pérdida silenciosa del texto, justo cuando el docente describe una falla | Media | `useAdvertenciaSalida` con los cambios del formulario (cierre de pestaña) y confirmación con `DialogoConfirmacion` al cambiar de pestaña de la barra | S | Pendiente |
+
+#### ACC — Accesibilidad (WCAG 2.2 AA)
+
+| ID | Pantalla/Componente | Archivo(s) | Problema | Impacto | Prioridad | Solución propuesta | Esfuerzo | Estado |
+|----|---------------------|------------|----------|---------|-----------|--------------------|----------|--------|
+| ACC-18 | Cabecera del portal docente (compartida con el alumno) | `components/estudiante/CabeceraAlumno.tsx:37` (enlace del logo sin estilo de foco propio); `index.css:150-152` (aro global de 3 px en `--color-saie-text`) | El aro de foco del logo es el global, `#222222`, sobre la cabecera `#7b1113`: **1.46:1** (1.4.11 pide 3:1). «Cerrar sesión», en la misma cabecera, usa un aro blanco. **Verificado en navegador** (`foco-logo-cabecera.jpg`) | Con teclado no se ve el foco en el primer control de cada pantalla, en los portales del docente y del alumno | Alta | Aro blanco en los enlaces de la cabecera (`focus-visible:outline-white`), como el de «Cerrar sesión» | S | Pendiente |
+| ACC-19 | Inicio (cuenta regresiva) | `pages/docente/InicioDocentePage.tsx:66-72` (`aria-live="polite"`; se recalcula cada minuto en `:154-158`) | La cuenta regresiva es una región viva: el lector de pantalla anuncia «Termina en 1 h 44 min» cada minuto mientras la portada esté abierta. El inicio del alumno muestra la misma cuenta sin región viva (`InicioEstudiante.tsx:130`). **Verificado en navegador:** el texto cambia a los 61 s | Interrupciones constantes con lector de pantalla | Media | Quitar `aria-live` de la cuenta regresiva | S | Pendiente |
+| ACC-20 | Reportar incidencia (confirmación) | `pages/docente/IncidenciasDocentePage.tsx:184-190` (la confirmación sustituye al formulario) y `:79-83` | Al enviar, desaparece el botón que tenía el foco y el foco cae en `body`. `role="status"` anuncia el texto, pero el foco no llega al código ni a los botones. **Verificado en navegador** (`document.activeElement` = `body`) | Con teclado hay que recorrer la página otra vez desde el principio | Media | Mover el foco al título de la confirmación (`tabIndex={-1}`), como en `ACC-17` | S | Pendiente |
+
+#### RES — Responsive
+
+| ID | Pantalla/Componente | Archivo(s) | Problema | Impacto | Prioridad | Solución propuesta | Esfuerzo | Estado |
+|----|---------------------|------------|----------|---------|-----------|--------------------|----------|--------|
+| RES-12 | Reportar incidencia a 640 px (zoom 200 %) | `pages/docente/IncidenciasDocentePage.tsx:228,257` (`sm:grid-cols-2`) | Desde `sm` los cuatro desplegables van en dos columnas y a 640×400 «Clase afectada» y «Espacio» cortan el texto («CC-101 · Sección 1 — Algori…», «Aula teórica AULA-101 · Pab…»). **Verificado en navegador** (`incidencias-640x400.jpg`) | Con zoom alto no se ve el nombre completo de la clase ni del espacio | Baja | Una columna hasta `lg`, o la opción elegida completa bajo el desplegable | S | Pendiente |
+
+#### PER — Rendimiento percibido
+
+Sin hallazgos nuevos. Inicio, Horario, Mi laboratorio e Incidencias comparten la respuesta de `GET /docente/horario` (`CLAVE_HORARIO_DOCENTE`), la capacidad mínima del explorador se envía con `useValorDiferido` y las recargas con filtros usan `ZonaActualizable`.
+
+#### TXT — UX writing
+
+| ID | Pantalla/Componente | Archivo(s) | Problema | Impacto | Prioridad | Solución propuesta | Esfuerzo | Estado |
+|----|---------------------|------------|----------|---------|-----------|--------------------|----------|--------|
+| TXT-13 | Explorador de espacios (resumen) | `pages/docente/EspaciosDocentePage.tsx:196-197` | «espacios» usa `plural()`, pero «disponibles» no: con uno sale «1 disponibles» | Error gramatical visible | Baja | `plural(disponibles, 'disponible', 'disponibles')` | S | Pendiente |
+| TXT-14 | Marco y textos del portal | `components/docente/NavegacionDocente.tsx:15-29` frente a los títulos (`InicioDocentePage.tsx:168`, `HorarioDocentePage.tsx:182`, `EspaciosDocentePage.tsx:405`, `IncidenciasDocentePage.tsx:336`, `SolicitudesSoftwareDocentePage.tsx:117`); `InicioDocentePage.tsx:169` frente a `HorarioDocentePage.tsx:183`; `utils/docente.ts:42` | La pestaña y el título no coinciden («Incidencias» → «Reportar una incidencia», «Software» → «Solicitudes de software», «Espacios» → «Explorar espacios y equipos», «Inicio» → «Portal del docente»); el periodo es «Periodo lectivo 2026-2» en la portada y «Periodo 2026-2» en Horario; «Tus clases aquí: CC-310 · 1» omite «Sección» | Cuesta reconocer dónde se está al cambiar de pestaña | Baja | Alinear pestañas y títulos, un solo rótulo de periodo y «CC-310 · Sección 1» | S | Pendiente |
+| TXT-15 | Formularios del docente | `pages/docente/IncidenciasDocentePage.tsx:258,289`; `pages/docente/SolicitudesSoftwareDocentePage.tsx:131,174`; `components/auth/LoginFormBase.tsx` | Tres formas de marcar un campo obligatorio: Incidencias lo escribe en la etiqueta, Solicitudes no lo marca (nombre y justificación lo son) y el login usa «* (obligatorio)» | El docente descubre que un campo era obligatorio al enviar | Baja | Una sola convención, la del login, desde `Campo` (prop `obligatorio`) | S | Pendiente |
+
+### 10.8 Fortalezas verificadas
+
+- **Marco común:** `PaginaDocente` reutiliza la cabecera, la barra y el ancho del área del alumno; la barra queda fija abajo en móvil y el contenido reserva su espacio. No se repite `RES-01`.
+- **Sin desbordes** en 390, 768, 1280 y 640×400, y ningún objetivo táctil menor de 44 px en móvil.
+- **axe sin violaciones** en las 8 vistas, a 390 y 1280 px, y en el login.
+- **Título por ruta y foco al `h1`** al navegar con la barra (`useTituloPagina`).
+- **Sistema de componentes aplicado:** 0 colores literales, 0 `<button>` nativos, 0 `catch`; `EstadoError`, `EstadoVacio`, `Campo`, `BadgeEstado` y los diccionarios en todas las pantallas.
+- **Errores HTTP bien traducidos:** el 401 lleva al login del docente con «Tu sesión venció»; 403, 404, 500 y el tiempo agotado tienen su frase (`estado-inicio-*.jpg`); el 409 de una solicitud repetida tiene un texto propio y oculta el identificador interno del backend.
+- **Pestañas con semántica ARIA** (`role="tab"`/`tabpanel`) en Horario y Espacios.
+- **`Boton` con `motivoDeshabilitado`:** «Enviar reporte» explica qué falta mientras está deshabilitado.
+- **Una sola petición del horario** para cuatro pantallas y búsqueda de capacidad con *debounce*.
+- **Contraste de texto AA** en todos los pares usados (§10.6).
+
+### 10.9 Descartes
+
+| Sospecha | Resultado |
+| --- | --- |
+| Los 409 y 422 al enviar una incidencia muestran «Inténtalo de nuevo en unos minutos» | Ocurre solo si el mensaje del backend trae un identificador interno (la API simulada lo incluía a propósito). Los mensajes reales de `docente.service.ts:45,251,255,330` son frases sin identificadores y se muestran tal cual |
+| Desborde horizontal en tabletas (como `RES-09` en el panel) | No ocurre: el ancho del documento es igual al de la ventana en las 32 combinaciones |
+| Objetivos táctiles pequeños en móvil (como `RES-05`) | No ocurre: en 390 y 768 px solo «Saltar al contenido», oculto hasta el foco, mide menos de 44 px |
+| Texto blanco translúcido de la tarjeta guinda con contraste insuficiente | 8.13:1 y 9.17:1 (§10.6) |
+
+### 10.10 Issues propuestos
+
+Los 4 hallazgos de prioridad Alta (`DEN-24`, `MAP-16`, `FDB-15`, `ACC-18`) tienen su issue redactado en [`auditoria-docente/issues-propuestos.md`](auditoria-docente/issues-propuestos.md), con el formato de `SAIE_Issues_Propuestos.md`, listos para crearse.
 
