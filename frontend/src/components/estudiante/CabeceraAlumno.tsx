@@ -34,7 +34,12 @@ export const CabeceraAlumno: React.FC<CabeceraAlumnoProps> = ({
     <header className="bg-saie-primary text-white">
       <Contenedor ancho={ancho} className="flex h-18 items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-          <Link to={inicio} className="flex min-h-11 shrink-0 items-center">
+          {/* ACC-18: foco blanco sobre fondo guinda (contraste 10,9:1) — Issue #403 */}
+          <Link
+            to={inicio}
+            aria-label="SAIE, ir al inicio"
+            className="flex min-h-11 shrink-0 items-center focus-visible:outline-white"
+          >
             <img src={logoBlanco} alt="SAIE" className="h-9 w-auto" />
           </Link>
           <span className="inline-flex min-w-0 items-center truncate rounded-full bg-white/15 px-3 py-1 text-xs font-medium sm:text-sm">
