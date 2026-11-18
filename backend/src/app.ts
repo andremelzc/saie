@@ -10,6 +10,8 @@ import docenteRouter from './routes/docente.routes.js';
 import asignacionRouter from './routes/asignacion.routes.js';
 import importRouter from './routes/import.routes.js';
 import telegramRouter from './routes/telegram.routes.js';
+import { logger } from './lib/logger.js';
+import { requestId } from './middlewares/requestId.middleware.js';
 
 export const createApp = (): Application => {
   const app = express();
@@ -22,6 +24,8 @@ export const createApp = (): Application => {
   if (proxies > 0) app.set('trust proxy', proxies);
 
   // Middlewares globales
+  // Primero: así todo lo que sigue (incluidos los errores) lleva el X-Request-Id (Issue 1.15).
+  app.use(requestId);
   // Cabeceras de seguridad. Es una API JSON consumida desde otro origen (Vercel → Render), por eso
   // la política de recursos es cross-origin; CORS sigue decidiendo quién puede leer las respuestas.
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
@@ -29,6 +33,8 @@ export const createApp = (): Application => {
     cors({
       origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
       credentials: true,
+      // El frontend puede leer el id para citarlo al reportar un error.
+      exposedHeaders: ['X-Request-Id'],
     }),
   );
   // La importación lee su propio cuerpo (CSV o JSON de hasta 10 mb), con autenticación previa:
@@ -57,10 +63,12 @@ export const createApp = (): Application => {
 
   // Manejo global de errores (500)
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    console.error('Error no controlado:', err);
+    const id = res.locals.requestId as string | undefined;
+    logger.error({ requestId: id, err }, 'Error no controlado');
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
+      ...(id ? { requestId: id } : {}),
     });
   });
 

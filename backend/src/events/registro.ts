@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { crearClienteTelegram } from '../telegram/cliente';
 import { avisarCambioDeAsignacion } from '../telegram/notificador';
@@ -17,7 +18,7 @@ export function registrarManejadores(): void {
   registrado = true;
 
   if (!process.env.TELEGRAM_BOT_TOKEN) {
-    console.warn('[eventos] TELEGRAM_BOT_TOKEN no está configurado: no se enviarán avisos');
+    logger.warn('TELEGRAM_BOT_TOKEN no está configurado: no se enviarán avisos');
     return;
   }
 

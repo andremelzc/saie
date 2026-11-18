@@ -19,6 +19,7 @@ import { RolCuenta } from '@prisma/client';
 import { createApp } from '../../src/app';
 import { firmarToken } from '../../src/services/auth.service';
 import { ejecutarImportacion } from '../../src/services/importacion.service';
+import { logger } from '../../src/lib/logger';
 
 process.env.JWT_SECRET = 'secreto-de-pruebas';
 
@@ -168,7 +169,7 @@ describe('POST /api/v1/import/:tipo (Issue 1.6)', () => {
   });
 
   it('no filtra el detalle de un error interno', async () => {
-    const consola = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const consola = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
     (ejecutarImportacion as jest.Mock).mockRejectedValue(new Error('conexión a la base caída'));
 
     const res = await request(app)

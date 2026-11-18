@@ -80,6 +80,8 @@ describe('Issue 2.17 - Servicio del verificador de corrida', () => {
     );
     expect(detalleAuditado(prisma)).toContain('conforme');
     expect(detalleAuditado(prisma)).toContain('corrida-9');
+    // Issue 4.48: la corrida también queda como dato estructurado
+    expect(prisma.registroAuditoria.create.mock.calls[0][0].data.corridaId).toBe('corrida-9');
   });
 
   it('registra en la auditoría las reglas incumplidas cuando no es conforme', async () => {

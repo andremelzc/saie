@@ -1,6 +1,7 @@
 import { BusEventos } from '../../../src/events/bus';
 import { TipoAlerta } from '@prisma/client';
 import { AlertaCreadaEvento, AsignacionCambiadaEvento } from '../../../src/events/tipos';
+import { logger } from '../../../src/lib/logger';
 
 describe('BusEventos (Issue 2.16)', () => {
   let bus: BusEventos;
@@ -48,7 +49,7 @@ describe('BusEventos (Issue 2.16)', () => {
   });
 
   it('aísla errores de manejadores: no afecta al emisor ni a otros manejadores', async () => {
-    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleError = jest.spyOn(logger, 'error').mockImplementation(() => {});
 
     const handlerFallaSincrono = jest.fn().mockImplementation(() => {
       throw new Error('Fallo crítico secreto');
@@ -77,6 +78,7 @@ describe('BusEventos (Issue 2.16)', () => {
     expect(handlerExitoso).toHaveBeenCalledWith(evento);
     // El registro de errores solo loguea el nombre del error, nunca datos sensibles
     expect(consoleError).toHaveBeenCalled();
+    expect(JSON.stringify(consoleError.mock.calls)).not.toMatch(/secreto|asíncrono/);
 
     consoleError.mockRestore();
   });

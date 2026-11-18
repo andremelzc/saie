@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { Request, Response } from 'express';
 import { responderError } from '../lib/http';
 import { igualesEnTiempoConstante } from '../lib/comparacion';
@@ -37,9 +38,9 @@ export async function recibirActualizacion(req: Request, res: Response): Promise
     });
   } catch (error: unknown) {
     // Solo el tipo: el mensaje podría incluir datos del alumno o el token.
-    console.error(
-      'Error procesando actualización de Telegram:',
-      error instanceof Error ? error.name : 'desconocido',
+    logger.error(
+      { tipo: error instanceof Error ? error.name : 'desconocido' },
+      'Error procesando actualización de Telegram',
     );
   }
 

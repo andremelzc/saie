@@ -80,6 +80,12 @@ Este módulo cubre la configuración base de la infraestructura del monorepo (ba
 ### 2.9 Issue 1.10 — Configurar Despliegue (Vercel, Render y Supabase)
 * **Objetivo:** Scripts de construcción y variables de entorno para Vercel (frontend), Render (backend Express) y Supabase (PostgreSQL managed).
 
+### 2.10 Issue 1.15 — Logger estructurado, `X-Request-Id` y `/health` con verificación de la base de datos
+* **Logger (`backend/src/lib/logger.ts`, pino):** una línea JSON por evento. Nivel por `LOG_LEVEL` (`fatal|error|warn|info|debug|trace|silent`, por defecto `info`; `silent` con `NODE_ENV=test`). Sustituye a todos los `console.*` de `backend/src`. Regla (RNF-09): nunca registrar claves, tokens ni datos personales; en los errores se registra el tipo (`err.name`), no el mensaje.
+* **`X-Request-Id` (`middlewares/requestId.middleware.ts`):** es el primer middleware. Toda respuesta (incluidos 404 y 500) lleva la cabecera; se reutiliza la que envía el cliente si cumple `[A-Za-z0-9._-]{8,64}` y, si no, se genera un UUID. Se expone a CORS (`Access-Control-Expose-Headers`). Al terminar cada petición se registra `{ requestId, metodo, ruta (sin query), estado, duracionMs }` (nivel `error` para 5xx, `warn` para 4xx).
+* **Errores 500:** el cuerpo pasa a `{ success: false, message: "Error interno del servidor", requestId }`; el mismo id está en el log del error, de modo que una persona puede citarlo y se puede seguir el fallo entre frontend, backend y GitHub Actions. Sin el detalle técnico del error.
+* **`GET /api/health`:** ejecuta `SELECT 1` con tiempo máximo (`HEALTH_DB_TIMEOUT_MS`, por defecto 3000 ms). 200 `{ status: "ok", database: "ok", timestamp, service, environment }`; 503 `{ status: "error", database: "unavailable", … }` si la base falla o no responde, sin exponer el motivo (solo el log lo registra). La verificación de salud del CD (Spec 06) usa este endpoint, por lo que ahora detecta una caída de Supabase.
+
 ---
 
 ## 3. Matriz de Pruebas Unitarias & Integración

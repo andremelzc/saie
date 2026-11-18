@@ -37,6 +37,7 @@ import {
   dispararAsignacionSiPeriodoCompleto,
   ejecutarImportacion,
 } from '../../../src/services/importacion.service';
+import { logger } from '../../../src/lib/logger';
 
 const resumen = {
   modo: 'periodo',
@@ -281,7 +282,7 @@ describe('dispararAsignacionSiPeriodoCompleto (Issue 1.6)', () => {
 
   it('no oculta la importación si el motor falla por un error inesperado', async () => {
     periodoCon(3, 5, 40);
-    const consola = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const consola = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
     (ejecutarAsignacionADemanda as jest.Mock).mockRejectedValue(new Error('detalle interno'));
 
     const r = await dispararAsignacionSiPeriodoCompleto(prismaMock);
