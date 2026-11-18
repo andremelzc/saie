@@ -41,6 +41,10 @@ Asimismo, incluye el panel de revisión y resolución de incidencias para la **J
     }
     ```
   * Registra la incidencia vinculada al espacio y docente y devuelve su `identificadorSeguimiento` (`INC-` + 8 hex).
+* `GET /api/v1/docente/incidencias` (Issue 7.14)
+  * Devuelve solo las incidencias del docente autenticado (el id sale del token), de la más reciente a la más antigua. Sin filtros ni paginación: un docente reporta pocas.
+  * Cada incidencia (`IncidenciaDocenteDTO`, el contrato de `IncidenciaAdminDTO` sin `docente`): `{ id, identificadorSeguimiento, tipo, prioridad, estado, descripcion, evidencia, fechaReporte, comentarioCierre, fechaCierre, espacio: { id, identificador, pabellon, piso }, asignacion: { id, codigoCurso, nombreCurso, codigoSeccion } }`.
+  * 401 sin token, 403 si el rol no es `DOCENTE`, 404 si la cuenta no tiene un docente asociado.
 
 ### 2.3 Revisión y Resolución por Jefatura (#7.11)
 * `GET /api/v1/admin/incidencias[?estado=&prioridad=&espacioId=]` (Issue 7.6)
