@@ -92,6 +92,28 @@ const ExploradorEspacios: React.FC = () => {
   });
 
   const espacios = datos?.espacios ?? [];
+
+  // El vacío solo con datos cargados: si la carga falló, ya lo explica EstadoError (Issue 7.16).
+  const renderLista = (): React.ReactNode => {
+    if (cargando && !datos) return <EsqueletoCarga texto="Buscando espacios…" />;
+    if (!datos) return null;
+    if (espacios.length === 0) {
+      return (
+        <EstadoVacio
+          titulo="Sin espacios que coincidan"
+          icono={ICONOS.edificio}
+          descripcion="Prueba con otro tipo, piso o franja horaria."
+        />
+      );
+    }
+    return (
+      <ul className="m-0 flex list-none flex-col gap-3 p-0" aria-label="Espacios encontrados">
+        {espacios.map((e) => (
+          <FilaEspacio key={e.id} e={e} />
+        ))}
+      </ul>
+    );
+  };
   const disponibles = espacios.filter((e) => e.disponible).length;
 
   return (
@@ -206,23 +228,7 @@ const ExploradorEspacios: React.FC = () => {
       </section>
 
       {error && <EstadoError mensaje={error} onReintentar={recargar} />}
-      <ZonaActualizable actualizando={cargando && datos !== null}>
-        {cargando && !datos ? (
-          <EsqueletoCarga texto="Buscando espacios…" />
-        ) : espacios.length === 0 ? (
-          <EstadoVacio
-            titulo="Sin espacios que coincidan"
-            icono={ICONOS.edificio}
-            descripcion="Prueba con otro tipo, piso o franja horaria."
-          />
-        ) : (
-          <ul className="m-0 flex list-none flex-col gap-3 p-0" aria-label="Espacios encontrados">
-            {espacios.map((e) => (
-              <FilaEspacio key={e.id} e={e} />
-            ))}
-          </ul>
-        )}
-      </ZonaActualizable>
+      <ZonaActualizable actualizando={cargando && datos !== null}>{renderLista()}</ZonaActualizable>
     </div>
   );
 };

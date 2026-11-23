@@ -67,6 +67,13 @@ describe('Solicitudes de software — docente (Issue 4.29)', () => {
     expect(await screen.findByText('Aún no has pedido ningún software')).toBeInTheDocument();
   });
 
+  it('si la carga falla muestra solo el error, sin el estado vacío (Issue 7.16)', async () => {
+    listar.mockRejectedValue(new Error('Error interno del servidor'));
+    montar();
+    expect(await screen.findByRole('button', { name: /Reintentar/ })).toBeInTheDocument();
+    expect(screen.queryByText('Aún no has pedido ningún software')).not.toBeInTheDocument();
+  });
+
   it('valida el nombre y la justificación antes de enviar', async () => {
     montar();
     await screen.findByText('Aún no has pedido ningún software');

@@ -191,6 +191,35 @@ describe('Espacios y equipos del docente (Issue 7.9)', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('posterior a la de inicio');
   });
 
+  it('si la carga falla muestra solo el error, sin el estado vacío (Issue 7.16)', async () => {
+    explorar.mockRejectedValue(new Error('Error interno del servidor'));
+    montar(<EspaciosDocentePage />);
+    expect(await screen.findByRole('button', { name: /Reintentar/ })).toBeInTheDocument();
+    expect(screen.queryByText('Sin espacios que coincidan')).not.toBeInTheDocument();
+  });
+
+  it('con una respuesta vacía sí muestra el estado vacío (Issue 7.16)', async () => {
+    explorar.mockResolvedValue({
+      franja: { diaSemana: 'LUNES', horaInicio: '09:30', horaFin: '09:31' },
+      espacios: [],
+    });
+    montar(<EspaciosDocentePage />);
+    expect(await screen.findByText('Sin espacios que coincidan')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Reintentar/ })).not.toBeInTheDocument();
+  });
+
+  it('si falla al cambiar el filtro conserva la lista anterior junto al error (Issue 7.16)', async () => {
+    montar(<EspaciosDocentePage />);
+    await screen.findByRole('list', { name: 'Espacios encontrados' });
+    explorar.mockRejectedValue(new Error('Error interno del servidor'));
+    fireEvent.change(screen.getByLabelText('Tipo de espacio'), {
+      target: { value: 'LABORATORIO' },
+    });
+    expect(await screen.findByRole('button', { name: /Reintentar/ })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Espacios encontrados' })).toBeInTheDocument();
+    expect(screen.queryByText('Sin espacios que coincidan')).not.toBeInTheDocument();
+  });
+
   it('muestra las PCs operativas e inoperativas y el software de su laboratorio', async () => {
     montar(<EspaciosDocentePage />);
     fireEvent.click(screen.getByRole('tab', { name: 'Mi laboratorio' }));
