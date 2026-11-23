@@ -21,7 +21,7 @@ const prismaMock: any = {
   asignacion: { findUnique: jest.fn(), findMany: jest.fn(), findFirst: jest.fn() },
   alerta: { findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
 
-  incidencia: { create: jest.fn() },
+  incidencia: { create: jest.fn(), findMany: jest.fn() },
   $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn(prismaMock)),
 };
 
@@ -398,11 +398,12 @@ describe('Portal del alumno: solo rol ALUMNO (Issues 3.10–3.12)', () => {
   });
 });
 
-describe('Portal docente: solo rol DOCENTE (Issues 7.2, 7.3, 7.5)', () => {
+describe('Portal docente: solo rol DOCENTE (Issues 7.2, 7.3, 7.5, 7.14)', () => {
   const rutas: Array<['get' | 'post', string]> = [
     ['get', '/api/v1/docente/horario'],
     ['get', '/api/v1/docente/espacios/explorador'],
     ['post', '/api/v1/docente/incidencias'],
+    ['get', '/api/v1/docente/incidencias'],
   ];
 
   it.each(rutas)(
@@ -458,6 +459,21 @@ describe('Portal docente: solo rol DOCENTE (Issues 7.2, 7.3, 7.5)', () => {
     expect(res.body.data.espacios).toEqual([
       expect.objectContaining({ id: 'a1', disponible: true }),
     ]);
+  });
+
+  it('mis incidencias responde 200 solo con las del docente autenticado', async () => {
+    prismaMock.docente.findUnique.mockResolvedValue({ id: 'doc-1' });
+    prismaMock.incidencia.findMany.mockResolvedValue([]);
+
+    const res = await request(app)
+      .get('/api/v1/docente/incidencias')
+      .set('Authorization', bearer(RolCuenta.DOCENTE));
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true, data: [] });
+    expect(prismaMock.incidencia.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { docenteId: 'doc-1' } }),
+    );
   });
 
   it('crear incidencia responde 201 con el identificador de seguimiento', async () => {

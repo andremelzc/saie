@@ -7,6 +7,7 @@ import { normalizarDia } from '../lib/horario';
 import {
   CrearIncidenciaSchema,
   explorarEspacios,
+  listarMisIncidencias,
   obtenerEstadoLaboratorioDocente,
   obtenerHorarioDocente,
   registrarIncidencia,
@@ -99,6 +100,16 @@ export async function crearIncidencia(req: Request, res: Response): Promise<void
     const entrada = CrearIncidenciaSchema.parse(req.body);
     const data = await registrarIncidencia(req.auth!.sub, entrada, prisma);
     res.status(201).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 7.14 — GET /api/v1/docente/incidencias */
+export async function listarIncidenciasDocente(req: Request, res: Response): Promise<void> {
+  try {
+    const data = await listarMisIncidencias(req.auth!.sub, prisma);
+    res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);
   }

@@ -5,6 +5,7 @@ import type {
   ExploradorEspaciosDTO,
   FiltrosExplorador,
   HorarioDocenteDTO,
+  IncidenciaDocenteDTO,
   IncidenciaRegistradaDTO,
 } from '../types/docente';
 
@@ -20,6 +21,9 @@ interface Respuesta<T> {
 
 /** Clave de caché compartida: inicio, horario, espacios e incidencias reutilizan la respuesta. */
 export const CLAVE_HORARIO_DOCENTE = 'docente:horario';
+
+/** Clave de caché de «Mis incidencias» (Issue 7.14). */
+export const CLAVE_INCIDENCIAS_DOCENTE = 'docente:incidencias';
 
 /** GET /v1/docente/horario — semana completa y asignaciones activas del periodo vigente. */
 export async function obtenerHorarioDocente(): Promise<HorarioDocenteDTO> {
@@ -69,5 +73,11 @@ export async function reportarIncidencia(
     '/v1/docente/incidencias',
     incidencia,
   );
+  return data.data;
+}
+
+/** GET /v1/docente/incidencias — solo las del docente autenticado, de la más reciente a la más antigua. */
+export async function obtenerMisIncidencias(): Promise<IncidenciaDocenteDTO[]> {
+  const { data } = await api.get<Respuesta<IncidenciaDocenteDTO[]>>('/v1/docente/incidencias');
   return data.data;
 }
