@@ -207,7 +207,8 @@ export const SolicitudesSoftwareDocentePage: React.FC = () => {
         {error && <EstadoError mensaje={error} onReintentar={recargar} />}
         {cargando && !datos ? (
           <EsqueletoCarga texto="Cargando tus solicitudes…" />
-        ) : solicitudes.length === 0 ? (
+        ) : !datos ? null : solicitudes.length === 0 ? (
+          // El vacío solo con datos cargados: si la carga falló, ya habla EstadoError (Issue 7.16).
           <EstadoVacio
             titulo="Aún no has pedido ningún software"
             icono={ICONOS.portapapeles}

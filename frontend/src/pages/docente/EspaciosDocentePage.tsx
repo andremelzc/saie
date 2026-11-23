@@ -209,7 +209,8 @@ const ExploradorEspacios: React.FC = () => {
       <ZonaActualizable actualizando={cargando && datos !== null}>
         {cargando && !datos ? (
           <EsqueletoCarga texto="Buscando espacios…" />
-        ) : espacios.length === 0 ? (
+        ) : !datos ? null : espacios.length === 0 ? (
+          // El vacío solo con datos cargados: si la carga falló, ya habla EstadoError (Issue 7.16).
           <EstadoVacio
             titulo="Sin espacios que coincidan"
             icono={ICONOS.edificio}
