@@ -11,25 +11,31 @@ import { EstadoError } from '../../components/ui/EstadoError';
 import { ICONOS } from '../../components/ui/iconos';
 import { RUTAS } from '../../config/rutas';
 import { useAccion } from '../../hooks/useAccion';
-import { useCarga } from '../../hooks/useCarga';
+import { useCarga, type EstadoCarga } from '../../hooks/useCarga';
 import {
   CLAVE_HORARIO_DOCENTE,
+  CLAVE_INCIDENCIAS_DOCENTE,
   obtenerHorarioDocente,
+  obtenerMisIncidencias,
   reportarIncidencia,
 } from '../../services/docente';
 import type {
   AsignacionActivaDocenteDTO,
+  IncidenciaDocenteDTO,
   IncidenciaRegistradaDTO,
   PrioridadIncidencia,
   TipoIncidencia,
 } from '../../types/docente';
 import type { EspacioAsignadoDTO } from '../../types/consulta';
 import {
+  describirEstadoIncidencia,
   describirPrioridadIncidencia,
   etiquetaTipoEspacio,
+  etiquetaTipoIncidencia,
   TIPO_INCIDENCIA,
 } from '../../utils/diccionarios';
 import { ubicacionEspacio } from '../../utils/docente';
+import { formatearFechaCorta } from '../../utils/fechas';
 
 const MIN_DESCRIPCION = 5;
 const MAX_DESCRIPCION = 1000;
@@ -124,6 +130,70 @@ const ConfirmacionIncidencia: React.FC<{ c: Confirmacion; onOtra: () => void }> 
   );
 };
 
+/** Una incidencia del docente con su estado y, si Jefatura la cerró, el comentario de cierre (Issue 7.14). */
+const FilaIncidencia: React.FC<{ i: IncidenciaDocenteDTO }> = ({ i }) => {
+  const estado = describirEstadoIncidencia(i.estado);
+  return (
+    <li className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="m-0 font-mono text-base font-bold">{i.identificadorSeguimiento}</h3>
+          <p className="m-0 text-sm text-saie-muted">
+            {etiquetaTipoIncidencia(i.tipo)} · reportada el {formatearFechaCorta(i.fechaReporte)}
+          </p>
+        </div>
+        <BadgeEstado tono={estado.tono}>{estado.etiqueta}</BadgeEstado>
+      </div>
+      <p className="m-0 text-sm text-saie-text">
+        {i.espacio.identificador} · {ubicacionEspacio(i.espacio)}
+      </p>
+      <p className="m-0 text-sm text-saie-muted">
+        Clase: {i.asignacion.codigoCurso} · Sección {i.asignacion.codigoSeccion} —{' '}
+        {i.asignacion.nombreCurso}
+      </p>
+      {i.comentarioCierre && (
+        <p className="m-0 rounded-lg bg-saie-canvas px-3 py-2 text-sm text-saie-text">
+          <span className="block text-xs font-semibold text-saie-muted">
+            Respuesta de Jefatura
+            {i.fechaCierre ? ` · ${formatearFechaCorta(i.fechaCierre)}` : ''}
+          </span>
+          {i.comentarioCierre}
+        </p>
+      )}
+    </li>
+  );
+};
+
+/** «Mis incidencias»: el error y el vacío nunca aparecen a la vez (Issue 7.16). */
+const SeccionMisIncidencias: React.FC<{ estado: EstadoCarga<IncidenciaDocenteDTO[]> }> = ({
+  estado,
+}) => {
+  const { datos, cargando, error, recargar } = estado;
+  return (
+    <section aria-labelledby="titulo-mis-incidencias" className="flex flex-col gap-3">
+      <h2 id="titulo-mis-incidencias" className="m-0 text-lg font-bold">
+        Mis incidencias
+      </h2>
+      {error && <EstadoError mensaje={error} onReintentar={recargar} />}
+      {!datos && cargando && <EsqueletoCarga texto="Cargando tus incidencias…" />}
+      {datos && datos.length === 0 && (
+        <EstadoVacio
+          titulo="Aún no has reportado incidencias"
+          icono={ICONOS.alerta}
+          descripcion="Cuando reportes una, aquí verás su estado y la respuesta de Jefatura."
+        />
+      )}
+      {datos && datos.length > 0 && (
+        <ul className="m-0 flex list-none flex-col gap-3 p-0">
+          {datos.map((i) => (
+            <FilaIncidencia key={i.id} i={i} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+};
+
 /**
  * Reporte de incidencias del docente (Issue 7.10), conectado a POST /docente/incidencias
  * (Issue 7.12). Solo se puede reportar sobre un espacio de una clase propia con aula vigente.
@@ -131,6 +201,7 @@ const ConfirmacionIncidencia: React.FC<{ c: Confirmacion; onOtra: () => void }> 
 export const IncidenciasDocentePage: React.FC = () => {
   const horario = useCarga(obtenerHorarioDocente, { clave: CLAVE_HORARIO_DOCENTE });
   const asignaciones = horario.datos?.asignacionesActivas ?? [];
+  const misIncidencias = useCarga(obtenerMisIncidencias, { clave: CLAVE_INCIDENCIAS_DOCENTE });
   const accion = useAccion();
   const [form, setForm] = useState<Formulario | null>(null);
   const [confirmacion, setConfirmacion] = useState<Confirmacion | null>(null);
@@ -182,6 +253,7 @@ export const IncidenciasDocentePage: React.FC = () => {
       { avisarError: false },
     );
     if (resultado?.ok) {
+      misIncidencias.recargar();
       setConfirmacion({
         registro: resultado.valor,
         prioridad: datos.prioridad,
@@ -337,6 +409,7 @@ export const IncidenciasDocentePage: React.FC = () => {
       descripcion="Informa una falla de equipos, software o del espacio. Jefatura de Laboratorios la atenderá."
     >
       {cuerpo()}
+      <SeccionMisIncidencias estado={misIncidencias} />
     </PaginaDocente>
   );
 };

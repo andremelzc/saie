@@ -3,6 +3,7 @@ import {
   CrearIncidenciaSchema,
   explorarEspacios,
   generarIdentificadorSeguimiento,
+  listarMisIncidencias,
   obtenerHorarioDocente,
   obtenerEstadoLaboratorioDocente,
   registrarIncidencia,
@@ -343,6 +344,96 @@ describe('Registrar incidencia (Issue 7.5)', () => {
       'db caída',
     );
     expect(create).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Mis incidencias (Issue 7.14)', () => {
+  const fila = (o: Record<string, unknown> = {}) => ({
+    id: 'inc-1',
+    identificadorSeguimiento: 'INC-1A2B3C4D',
+    tipo: 'EQUIPO_NO_OPERATIVO',
+    prioridad: 'ALTA',
+    estado: 'PENDIENTE',
+    descripcion: 'Tres PCs no encienden',
+    evidencia: null,
+    fechaReporte: new Date('2026-11-02T15:00:00Z'),
+    comentarioCierre: null,
+    fechaCierre: null,
+    asignacionId: 'asig-1',
+    espacio: { id: 'e1', identificador: 'L-204', pabellon: 'Nuevo', piso: 2 },
+    asignacion: {
+      seccion: { codigoSeccion: '1', curso: { codigo: 'IS101', nombre: 'Algoritmos' } },
+    },
+    ...o,
+  });
+
+  function prismaMock(docente: unknown, filas: unknown[] = []) {
+    return {
+      docente: { findUnique: jest.fn().mockResolvedValue(docente) },
+      incidencia: { findMany: jest.fn().mockResolvedValue(filas) },
+    } as any;
+  }
+
+  it('filtra por el docente de la cuenta y ordena de la más reciente a la más antigua', async () => {
+    const prisma = prismaMock({ id: 'doc-1' }, [fila()]);
+    await listarMisIncidencias('cuenta-d', prisma);
+
+    expect(prisma.docente.findUnique).toHaveBeenCalledWith({ where: { cuentaId: 'cuenta-d' } });
+    expect(prisma.incidencia.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { docenteId: 'doc-1' },
+        orderBy: { fechaReporte: 'desc' },
+      }),
+    );
+  });
+
+  it('devuelve el contrato de Jefatura sin el docente', async () => {
+    const cerrada = fila({
+      id: 'inc-2',
+      estado: 'RESUELTA',
+      comentarioCierre: 'Se reemplazaron las PCs.',
+      fechaCierre: new Date('2026-11-03T15:00:00Z'),
+    });
+    const res = await listarMisIncidencias(
+      'cuenta-d',
+      prismaMock({ id: 'doc-1' }, [fila(), cerrada]),
+    );
+
+    expect(res).toHaveLength(2);
+    expect(res[0]).toEqual({
+      id: 'inc-1',
+      identificadorSeguimiento: 'INC-1A2B3C4D',
+      tipo: 'EQUIPO_NO_OPERATIVO',
+      prioridad: 'ALTA',
+      estado: 'PENDIENTE',
+      descripcion: 'Tres PCs no encienden',
+      evidencia: null,
+      fechaReporte: new Date('2026-11-02T15:00:00Z'),
+      comentarioCierre: null,
+      fechaCierre: null,
+      espacio: { id: 'e1', identificador: 'L-204', pabellon: 'Nuevo', piso: 2 },
+      asignacion: {
+        id: 'asig-1',
+        codigoCurso: 'IS101',
+        nombreCurso: 'Algoritmos',
+        codigoSeccion: '1',
+      },
+    });
+    expect(res[0]).not.toHaveProperty('docente');
+    expect(res[1]).toMatchObject({
+      estado: 'RESUELTA',
+      comentarioCierre: 'Se reemplazaron las PCs.',
+    });
+  });
+
+  it('sin incidencias devuelve una lista vacía', async () => {
+    expect(await listarMisIncidencias('cuenta-d', prismaMock({ id: 'doc-1' }))).toEqual([]);
+  });
+
+  it('404 si la cuenta no tiene docente', async () => {
+    await expect(listarMisIncidencias('cuenta-x', prismaMock(null))).rejects.toMatchObject({
+      status: 404,
+    });
   });
 });
 

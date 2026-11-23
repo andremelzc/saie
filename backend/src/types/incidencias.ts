@@ -17,6 +17,9 @@ export interface IncidenciaAdminDTO {
   asignacion: { id: string; codigoCurso: string; nombreCurso: string; codigoSeccion: string };
 }
 
+/** Incidencia vista por el docente que la reportó: el contrato de Jefatura sin `docente` (Issue 7.14). */
+export type IncidenciaDocenteDTO = Omit<IncidenciaAdminDTO, 'docente'>;
+
 export interface FiltrosIncidencias {
   estado?: EstadoIncidencia;
   prioridad?: PrioridadIncidencia;

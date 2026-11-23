@@ -3,6 +3,7 @@ import { RolCuenta } from '@prisma/client';
 import {
   crearIncidencia,
   explorarEspaciosDocente,
+  listarIncidenciasDocente,
   obtenerEstadoLaboratorio,
   obtenerHorario,
 } from '../controllers/docente.controller';
@@ -21,6 +22,7 @@ router.get('/horario', obtenerHorario); // Issue 7.2
 router.get('/espacios/explorador', explorarEspaciosDocente); // Issue 7.3
 router.get('/laboratorio-estado/:espacioId', obtenerEstadoLaboratorio); // Issue 7.4
 router.post('/incidencias', crearIncidencia); // Issue 7.5
+router.get('/incidencias', listarIncidenciasDocente); // Issue 7.14
 
 // Solicitudes de software del docente (Issue 4.29): crea y lista solo las propias.
 router.post('/solicitudes-software', crearSolicitudSoftware);

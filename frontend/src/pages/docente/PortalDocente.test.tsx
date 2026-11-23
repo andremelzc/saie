@@ -7,9 +7,10 @@ import {
   explorarEspacios,
   obtenerEstadoLaboratorio,
   obtenerHorarioDocente,
+  obtenerMisIncidencias,
   reportarIncidencia,
 } from '../../services/docente';
-import { horarioDocente } from '../../test/fixtures/docente';
+import { horarioDocente, incidencia } from '../../test/fixtures/docente';
 import { esperarSinViolacionesGraves } from '../../test/axe';
 import InicioDocentePage from './InicioDocentePage';
 import HorarioDocentePage from './HorarioDocentePage';
@@ -21,16 +22,19 @@ vi.mock('../../context/useAuth', () => ({
 }));
 vi.mock('../../services/docente', () => ({
   CLAVE_HORARIO_DOCENTE: 'docente:horario',
+  CLAVE_INCIDENCIAS_DOCENTE: 'docente:incidencias',
   obtenerHorarioDocente: vi.fn(),
   explorarEspacios: vi.fn(),
   obtenerEstadoLaboratorio: vi.fn(),
   reportarIncidencia: vi.fn(),
+  obtenerMisIncidencias: vi.fn(),
 }));
 
 const horario = vi.mocked(obtenerHorarioDocente);
 const explorar = vi.mocked(explorarEspacios);
 const laboratorio = vi.mocked(obtenerEstadoLaboratorio);
 const reportar = vi.mocked(reportarIncidencia);
+const misIncidencias = vi.mocked(obtenerMisIncidencias);
 
 /** Lunes 09:30 (hora local): IS101 está en curso hasta las 10:00. */
 const LUNES_930 = new Date(2026, 10, 9, 9, 30);
@@ -46,6 +50,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vaciarCacheCarga();
   horario.mockResolvedValue(horarioDocente());
+  misIncidencias.mockResolvedValue([]);
 });
 
 describe('Inicio del docente (Issue 7.8)', () => {
@@ -260,6 +265,64 @@ describe('Reportar incidencia (Issue 7.10)', () => {
     horario.mockResolvedValue(horarioDocente({ asignacionesActivas: [] }));
     montar(<IncidenciasDocentePage />);
     expect(await screen.findByText('No tienes clases con aula asignada')).toBeInTheDocument();
+  });
+});
+
+describe('Mis incidencias (Issue 7.14)', () => {
+  it('lista el código, el espacio, la clase y el estado de cada incidencia', async () => {
+    misIncidencias.mockResolvedValue([
+      incidencia({ id: 'inc-1', identificadorSeguimiento: 'INC-AAAA1111' }),
+      incidencia({
+        id: 'inc-2',
+        identificadorSeguimiento: 'INC-BBBB2222',
+        estado: 'RESUELTA',
+        comentarioCierre: 'Se reemplazaron las PCs 5 y 6.',
+        fechaCierre: '2026-11-03T15:00:00Z',
+      }),
+    ]);
+    montar(<IncidenciasDocentePage />);
+
+    const seccion = await screen.findByRole('region', { name: 'Mis incidencias' });
+    expect(await within(seccion).findByText('INC-AAAA1111')).toBeInTheDocument();
+    expect(within(seccion).getByText('INC-BBBB2222')).toBeInTheDocument();
+    expect(within(seccion).getByText('Pendiente')).toBeInTheDocument();
+    expect(within(seccion).getByText('Resuelta')).toBeInTheDocument();
+    expect(within(seccion).getAllByText(/L-204/).length).toBeGreaterThan(0);
+    expect(within(seccion).getAllByText(/IS101/).length).toBeGreaterThan(0);
+    expect(within(seccion).getByText('Se reemplazaron las PCs 5 y 6.')).toBeInTheDocument();
+  });
+
+  it('sin incidencias muestra el estado vacío', async () => {
+    montar(<IncidenciasDocentePage />);
+    expect(await screen.findByText('Aún no has reportado incidencias')).toBeInTheDocument();
+  });
+
+  it('si la consulta falla muestra solo el error, sin el estado vacío', async () => {
+    misIncidencias.mockRejectedValue(new Error('Error de servidor'));
+    montar(<IncidenciasDocentePage />);
+    const seccion = await screen.findByRole('region', { name: 'Mis incidencias' });
+    await waitFor(() => expect(within(seccion).getByRole('alert')).toBeInTheDocument());
+    expect(screen.queryByText('Aún no has reportado incidencias')).not.toBeInTheDocument();
+  });
+
+  it('tras reportar una incidencia vuelve a consultar la lista', async () => {
+    reportar.mockResolvedValue({
+      identificadorSeguimiento: 'INC-1A2B3C4D',
+      estado: 'PENDIENTE',
+      fechaReporte: '2026-11-09T14:30:00Z',
+      mensaje: 'Incidencia registrada',
+    });
+    montar(<IncidenciasDocentePage />);
+    await screen.findByRole('button', { name: 'Enviar reporte' });
+    await waitFor(() => expect(misIncidencias).toHaveBeenCalledTimes(1));
+    fireEvent.change(screen.getByLabelText(/Tipo de incidencia/), { target: { value: 'OTRO' } });
+    fireEvent.change(screen.getByLabelText(/Descripción/), {
+      target: { value: 'El proyector no enciende.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar reporte' }));
+
+    await screen.findByRole('status', { name: 'Incidencia registrada' });
+    await waitFor(() => expect(misIncidencias).toHaveBeenCalledTimes(2));
   });
 });
 
