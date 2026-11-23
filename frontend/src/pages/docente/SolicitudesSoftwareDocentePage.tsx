@@ -112,6 +112,28 @@ export const SolicitudesSoftwareDocentePage: React.FC = () => {
 
   const solicitudes = datos ?? [];
 
+  // El vacío solo con datos cargados: si la carga falló, ya lo explica EstadoError (Issue 7.16).
+  const renderLista = (): React.ReactNode => {
+    if (cargando && !datos) return <EsqueletoCarga texto="Cargando tus solicitudes…" />;
+    if (!datos) return null;
+    if (solicitudes.length === 0) {
+      return (
+        <EstadoVacio
+          titulo="Aún no has pedido ningún software"
+          icono={ICONOS.portapapeles}
+          descripcion="Cuando envíes una solicitud, aquí verás si fue aprobada o rechazada y por qué."
+        />
+      );
+    }
+    return (
+      <ul className="m-0 flex list-none flex-col gap-3 p-0">
+        {solicitudes.map((s) => (
+          <FilaSolicitud key={s.id} s={s} />
+        ))}
+      </ul>
+    );
+  };
+
   return (
     <PaginaDocente
       titulo="Solicitudes de software"
@@ -205,22 +227,7 @@ export const SolicitudesSoftwareDocentePage: React.FC = () => {
           Mis solicitudes
         </h2>
         {error && <EstadoError mensaje={error} onReintentar={recargar} />}
-        {cargando && !datos ? (
-          <EsqueletoCarga texto="Cargando tus solicitudes…" />
-        ) : !datos ? null : solicitudes.length === 0 ? (
-          // El vacío solo con datos cargados: si la carga falló, ya habla EstadoError (Issue 7.16).
-          <EstadoVacio
-            titulo="Aún no has pedido ningún software"
-            icono={ICONOS.portapapeles}
-            descripcion="Cuando envíes una solicitud, aquí verás si fue aprobada o rechazada y por qué."
-          />
-        ) : (
-          <ul className="m-0 flex list-none flex-col gap-3 p-0">
-            {solicitudes.map((s) => (
-              <FilaSolicitud key={s.id} s={s} />
-            ))}
-          </ul>
-        )}
+        {renderLista()}
       </section>
     </PaginaDocente>
   );
