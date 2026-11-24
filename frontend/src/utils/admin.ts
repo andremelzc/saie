@@ -155,3 +155,19 @@ export function resumirReubicacion(r: ResultadoReubicacionDTO): string {
   if (enRevision > 0) partes.push(`${enRevision} en revisión en el inicio`);
   return `Alerta resuelta: ${partes.join(', ')}.`;
 }
+
+/**
+ * Issue 2.25 (riesgo R7 de la auditoría): una sección sin horarios no es un problema de aulas
+ * sino de datos incompletos. Se separa de las que sí esperan una decisión de Coordinación.
+ */
+export function separarDatosIncompletos<T extends { motivoEscalamiento: string | null }>(
+  secciones: T[],
+): { enRevision: T[]; datosIncompletos: T[] } {
+  const enRevision: T[] = [];
+  const datosIncompletos: T[] = [];
+  for (const s of secciones) {
+    const { codigo } = describirMotivoEscalamiento(s.motivoEscalamiento);
+    (codigo === 'SIN_HORARIOS_DEFINIDOS' ? datosIncompletos : enRevision).push(s);
+  }
+  return { enRevision, datosIncompletos };
+}

@@ -73,4 +73,17 @@ describe('Utils de Administración', () => {
       ).toBe('Alerta resuelta: 2 secciones reubicadas, 1 en revisión en el inicio.');
     });
   });
+
+  describe('separarDatosIncompletos (Issue 2.25)', () => {
+    it('separa las secciones sin horarios de las que esperan revisión', () => {
+      const sinHorario = { motivoEscalamiento: '[SIN_HORARIOS_DEFINIDOS] sin franjas' };
+      const ocupada = { motivoEscalamiento: '[HORARIO_BLOQUEADO] todo ocupado' };
+      const sinMotivo = { motivoEscalamiento: null };
+
+      expect(adminUtils.separarDatosIncompletos([sinHorario, ocupada, sinMotivo])).toEqual({
+        enRevision: [ocupada, sinMotivo],
+        datosIncompletos: [sinHorario],
+      });
+    });
+  });
 });
