@@ -27,6 +27,7 @@ import {
 import { evaluarCapacidadInsuficiente } from './deteccionAlertas.service';
 import { registrarCambioPcsMalogradas, registrarCambioSoftware } from './laboratorio.service';
 import { resolverSoftwareIds } from './software.service';
+import { vincularLaboratorioConJefatura } from './responsables.service';
 
 const CAMPOS_COORDINACION: CampoEspacio[] = [
   'identificador',
@@ -318,6 +319,11 @@ export async function crearEspacio(
             registradoPorId: auth.sub,
           })),
         });
+      }
+
+      // Issue 4.59: un laboratorio nuevo queda a cargo de Jefatura desde que se crea.
+      if (esLab) {
+        await vincularLaboratorioConJefatura(creado.id, tx);
       }
 
       await reemplazarContiguos(creado.id, vecinos, tx);

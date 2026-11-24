@@ -18,6 +18,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:backfill-software": "tsx prisma/backfill-software.ts",
+    "prisma:vincular-jefatura": "tsx prisma/vincular-jefatura.ts",
     "prisma:export": "tsx prisma/exportar-csv.ts"
   },
   "keywords": [
