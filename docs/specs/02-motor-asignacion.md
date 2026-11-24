@@ -38,7 +38,11 @@ El motor de asignación calcula automáticamente el mejor bloque contiguo de aul
 * **Issue 2.8 & 2.13 (Cercanía entre Secciones Paralelas):**
   * Función de puntuación de distancia física ($PuntajeCercania$) que premia bloques en el mismo piso o piso adyacente respecto a las secciones ya asignadas del mismo curso.
 * **Issue 2.9 (Desempate de Bloques Candidatos):**
-  * En caso de múltiples bloques válidos, desempata por: (1) Piso 1 si hay movilidad reducida, (2) Mayor puntuación de cercanía entre secciones paralelas, (3) Menor desperdicio de aforo residual.
+  * En caso de múltiples bloques válidos, desempata por: (1) Piso 1 si hay movilidad reducida, (2) Menor cantidad de espacios en el bloque, (3) Menor desperdicio de aforo, por tramos de `MARGEN_DESPERDICIO_ASIENTOS` (10 asientos), (4) Mayor puntuación de cercanía entre secciones paralelas, (5) Menor desperdicio exacto, (6) Menor piso, (7) Orden léxico de identificadores.
+  * **Issue 2.21 (riesgo R2 de la auditoría):** las aulas se ocupan de menor a mayor. Antes la cercanía iba antes que el desperdicio y una sección de 20 alumnos podía tomar un auditorio de 200 por estar en el mismo piso que otra sección del curso. Ahora la cercanía solo decide entre bloques de tamaño parecido (mismo tramo de desperdicio).
+* **Issue 2.20 (riesgo R1 de la auditoría — doble reserva en la corrida batch):**
+  * Las asignaciones vigentes que se conservan por idempotencia se reservan **antes** de recorrer el lote, no al llegar a su sección.
+  * `detectarDobleReserva` revisa el resultado antes de devolverlo; si dos asignaciones vigentes comparten espacio en franjas solapadas, la corrida lanza `DobleReservaError` (409) y no se guarda nada.
 
 ### 2.3 Issues 2.10 a 2.15 — Orquestación, Batch y Escalamiento
 * **Issue 2.10 (`orquestarAsignacionSeccion`):**

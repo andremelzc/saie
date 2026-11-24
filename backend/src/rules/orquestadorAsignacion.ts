@@ -26,6 +26,13 @@ export interface OrquestarAsignacionInput {
 }
 
 /**
+ * Issue 2.21: dos bloques cuyo desperdicio de asientos cae en el mismo tramo de este tamaño se
+ * consideran «de tamaño parecido», y entre ellos decide la cercanía con las secciones del curso.
+ * Fuera de ese margen gana siempre el bloque más justo: las aulas se ocupan de menor a mayor.
+ */
+export const MARGEN_DESPERDICIO_ASIENTOS = 10;
+
+/**
  * Genera una huella digital determinista (hash SHA-256) basada en los datos y restricciones
  * de la sección. Usada para garantizar idempotencia en asignaciones repetidas.
  */
@@ -214,13 +221,18 @@ export function orquestarAsignacionSeccion(input: OrquestarAsignacionInput): Res
     esPiso1: bloque.piso === 1,
   }));
 
-  // 7. Criterio jerárquico de selección y desempate:
+  // 7. Criterio jerárquico de selección y desempate (Issue 2.21, riesgo R2 de la auditoría:
+  //    las aulas se ocupan de menor a mayor; la cercanía solo desempata entre aulas parecidas):
   // (1) Si aplica movilidad reducida: Piso 1 tiene máxima prioridad
-  // (2) Mayor puntaje de cercanía entre secciones paralelas
-  // (3) Menor cantidad de espacios en el bloque
-  // (4) Menor desperdicio de aforo residual
-  // (5) Menor número de piso
-  // (6) Orden léxico de identificadores
+  // (2) Menor cantidad de espacios en el bloque
+  // (3) Menor desperdicio de aforo, por tramos de MARGEN_DESPERDICIO_ASIENTOS
+  // (4) Mayor puntaje de cercanía entre secciones paralelas
+  // (5) Menor desperdicio exacto
+  // (6) Menor número de piso
+  // (7) Orden léxico de identificadores
+  const tramoDesperdicio = (b: BloqueConMetricas) =>
+    Math.floor(b.bloque.desperdicio / MARGEN_DESPERDICIO_ASIENTOS);
+
   bloquesEvaluados.sort((a, b) => {
     if (tieneMovilidad) {
       if (a.esPiso1 !== b.esPiso1) {
@@ -228,12 +240,16 @@ export function orquestarAsignacionSeccion(input: OrquestarAsignacionInput): Res
       }
     }
 
-    if (b.puntajeCercania !== a.puntajeCercania) {
-      return b.puntajeCercania - a.puntajeCercania;
-    }
-
     if (a.bloque.espacios.length !== b.bloque.espacios.length) {
       return a.bloque.espacios.length - b.bloque.espacios.length;
+    }
+
+    if (tramoDesperdicio(a) !== tramoDesperdicio(b)) {
+      return tramoDesperdicio(a) - tramoDesperdicio(b);
+    }
+
+    if (b.puntajeCercania !== a.puntajeCercania) {
+      return b.puntajeCercania - a.puntajeCercania;
     }
 
     if (a.bloque.desperdicio !== b.bloque.desperdicio) {
