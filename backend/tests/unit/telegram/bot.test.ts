@@ -7,6 +7,7 @@ import {
 } from '../../../src/telegram/bot.service';
 import { desvincularChat, vincularChat } from '../../../src/telegram/vinculacion.service';
 import * as authService from '../../../src/services/auth.service';
+import { ActualizacionesVistas } from '../../../src/telegram/actualizacionesVistas';
 
 describe('procesarActualizacion (Issue 3.25)', () => {
   let cliente: jest.Mocked<ClienteTelegram>;
@@ -206,5 +207,46 @@ describe('vincularChat y desvincularChat (Issue 3.25)', () => {
 
     const res = await desvincularChat('123', prisma);
     expect(res).toBe(false);
+  });
+});
+
+describe('Actualizaciones repetidas de Telegram (Issue 3.64, riesgo R46)', () => {
+  it('el registro reconoce un update_id ya visto', () => {
+    const vistas = new ActualizacionesVistas();
+    expect(vistas.yaVista(10)).toBe(false);
+    expect(vistas.yaVista(10)).toBe(true);
+    expect(vistas.yaVista(11)).toBe(false);
+  });
+
+  it('olvida los más antiguos al superar su capacidad', () => {
+    const vistas = new ActualizacionesVistas(2);
+    vistas.yaVista(1);
+    vistas.yaVista(2);
+    vistas.yaVista(3);
+    expect(vistas.yaVista(1)).toBe(false);
+    expect(vistas.yaVista(3)).toBe(true);
+  });
+
+  it('el bot responde una sola vez aunque Telegram entregue dos veces el mismo mensaje', async () => {
+    const cliente = {
+      enviarMensaje: jest.fn().mockResolvedValue(undefined),
+      borrarMensaje: jest.fn().mockResolvedValue(undefined),
+    };
+    const deps = {
+      prisma: {} as never,
+      cliente,
+      limitador: new LimitadorIntentos(5, 1000, 1000),
+      vistas: new ActualizacionesVistas(),
+    };
+    const actualizacion: ActualizacionTelegram = {
+      update_id: 77,
+      message: { message_id: 1, text: '/start', chat: { id: 5, type: 'private' } },
+    };
+
+    await procesarActualizacion(actualizacion, deps);
+    await procesarActualizacion(actualizacion, deps);
+
+    expect(cliente.enviarMensaje).toHaveBeenCalledTimes(1);
+    expect(cliente.enviarMensaje).toHaveBeenCalledWith('5', MENSAJES.bienvenida);
   });
 });
