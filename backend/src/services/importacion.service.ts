@@ -14,6 +14,7 @@ import {
 } from '../types/importacion';
 import { ejecutarAsignacionADemanda } from './asignacionDemanda.service';
 import { registrarImportacion } from './importacionRegistro.service';
+import { validarImportacion } from './validacionImportacion.service';
 import { obtenerPeriodoVigente } from './periodo.service';
 
 interface ResultadoImportador {
@@ -122,7 +123,13 @@ export async function ejecutarImportacion(
   prisma: PrismaClient,
   cuentaId: string | null = null,
 ): Promise<ResultadoImportacionDTO> {
-  const { procesados, errores, clavesIniciales } = await correrImportador(tipo, filas, prisma);
+  // Issue 1.16 (riesgo R34 de la auditoría): todo o nada. Se valida el archivo completo antes de
+  // escribir; si hay al menos un error, no se guarda ninguna fila.
+  const validacion = await validarImportacion(tipo, filas, prisma);
+  const { procesados, errores, clavesIniciales }: ResultadoImportador =
+    validacion.errores.length > 0
+      ? { procesados: {}, errores: validacion.errores }
+      : await correrImportador(tipo, filas, prisma);
   const exitosa = errores.length === 0;
 
   try {
@@ -143,6 +150,8 @@ export async function ejecutarImportacion(
     procesados,
     errores,
     exitosa,
+    guardadas: exitosa,
+    ...(validacion.advertencias.length > 0 ? { advertencias: validacion.advertencias } : {}),
     asignacion,
     ...(clavesIniciales && clavesIniciales.length > 0 ? { clavesIniciales } : {}),
   };

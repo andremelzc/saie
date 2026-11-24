@@ -150,6 +150,15 @@ function insigniaDeEstado(
 }
 
 /** Resumen de lo que hizo la asignación tras la carga. */
+/**
+ * Filas que quedaron guardadas. Desde el Issue 1.16 la carga es «todo o nada»: con algún error no
+ * se guarda ninguna. Si el backend todavía no informa `guardadas`, se usa el cálculo anterior.
+ */
+function filasGuardadas(resultado: ResultadoImportacionDTO): number {
+  if (resultado.guardadas === undefined) return resultado.filasRecibidas - resultado.errores.length;
+  return resultado.guardadas ? resultado.filasRecibidas : 0;
+}
+
 function textoAsignacion(asignacion: NonNullable<ResultadoImportacionDTO['asignacion']>): string {
   const resumen = asignacion.resumen;
   if (!asignacion.disparada || !resumen) {
@@ -248,8 +257,8 @@ const PanelResultado: React.FC<{
     <div className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-saie-canvas p-4">
       {/*
         El resumen («N filas leídas · M guardadas») está una sola vez, en la tarjeta de la zona
-        de carga. Aquí solo va el detalle (Issue 4.53). Cada importador genera una entrada por
-        fila rechazada, así que `filasRecibidas - errores` son las filas que sí se guardaron.
+        de carga. Aquí solo va el detalle (Issue 4.53). Desde el Issue 1.16 la carga es «todo o
+        nada»: si hay errores no se guarda ninguna fila.
       */}
       {Object.keys(resultado.procesados).length > 0 && (
         <dl className="m-0 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
@@ -267,10 +276,9 @@ const PanelResultado: React.FC<{
       {conProblemas && (
         <>
           <Aviso tono="advertencia">
-            {tipo !== 'docentes' && (
-              <strong>No se asignaron aulas porque el archivo tiene filas con problemas. </strong>
-            )}
-            Corrige esas filas y sube el archivo de nuevo; las demás ya se guardaron.
+            <strong>No se guardó ninguna fila porque el archivo tiene filas con problemas. </strong>
+            Corrige todas las filas de la lista y sube el archivo de nuevo
+            {tipo !== 'docentes' ? '; después se asignarán las aulas.' : '.'}
           </Aviso>
           <div className="flex flex-wrap gap-2">
             <Boton
@@ -286,6 +294,23 @@ const PanelResultado: React.FC<{
           </div>
           <ErroresAgrupados errores={resultado.errores} />
         </>
+      )}
+
+      {resultado.advertencias && resultado.advertencias.length > 0 && (
+        <Aviso tono="info">
+          <strong>Revisa estos avisos. </strong>
+          El archivo se guardó, pero conviene revisarlos:
+          <ul className="m-0 mt-1 list-disc pl-5">
+            {resultado.advertencias.slice(0, FILAS_POR_GRUPO).map((a, i) => (
+              <li key={i}>{a}</li>
+            ))}
+          </ul>
+          {resultado.advertencias.length > FILAS_POR_GRUPO && (
+            <p className="m-0 mt-1">
+              Y {resultado.advertencias.length - FILAS_POR_GRUPO} aviso(s) más.
+            </p>
+          )}
+        </Aviso>
       )}
 
       {resultado.asignacion && (
@@ -356,9 +381,10 @@ const ResumenResultado: React.FC<{
         </BadgeEstado>
       </div>
       <p className="m-0 text-sm text-saie-muted">
-        {resultado.filasRecibidas} filas leídas ·{' '}
-        {resultado.filasRecibidas - resultado.errores.length} guardadas
+        {resultado.filasRecibidas} filas leídas · {filasGuardadas(resultado)} guardadas
         {resultado.errores.length > 0 && ` · ${resultado.errores.length} con problemas`}
+        {(resultado.advertencias?.length ?? 0) > 0 &&
+          ` · ${resultado.advertencias!.length} ${resultado.advertencias!.length === 1 ? 'aviso' : 'avisos'}`}
       </p>
       {resultado.asignacion && (
         <p className="m-0 text-sm text-saie-text">{textoAsignacion(resultado.asignacion)}</p>
