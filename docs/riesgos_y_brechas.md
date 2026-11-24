@@ -28,60 +28,62 @@
 
 ### Tabla general
 
-| # | Área | Riesgo | Grav. | Comprobado |
-|---|---|---|---|---|
-| 1 | Motor | La corrida completa puede asignar dos secciones a la misma aula a la misma hora | 🔴 | Simulación |
-| 2 | Motor | Las secciones pequeñas ocupan aulas grandes | 🟠 | Simulación |
-| 3 | Motor | El motor no detecta que un aula dejó de servir; las alertas no tienen salida | 🔴 | Código |
-| 4 | Motor | No existe asignación manual de secciones escaladas | 🟠 | Código |
-| 5 | Motor | «Reintentar» considera aulas ocupadas de otros periodos | 🟡 | Código |
-| 6 | Motor | Si ningún laboratorio tiene el software, la sección escala en lugar de asignarse con aviso | 🟡 | Código |
-| 7 | Motor | Las secciones sin horarios cuentan como escaladas | ⚪ | Base |
-| 8 | Motor | Una sección se reparte en varias aulas a la vez sin confirmación | ⚪ | Base |
-| 9 | Motor | No se puede reorganizar dando prioridad a las escaladas al inicio del ciclo | ⚪ | Código |
-| 10 | Accesibilidad | Si no hay lugar en el piso 1, se asigna otro piso sin avisar a nadie | 🔴 | Código + Base |
-| 11 | Accesibilidad | Reimportar las matrículas borra la declaración del alumno | 🔴 | Código |
-| 12 | Accesibilidad | Cualquier alumno puede declararse con movilidad reducida sin verificación | 🟠 | Código |
-| 13 | Accesibilidad | Declarar la condición no reasigna ni avisa a nadie | 🟠 | Código |
-| 14 | Accesibilidad | Coordinación no tiene una vista de quién necesita accesibilidad | 🟡 | Código |
-| 15 | Accesibilidad | Los docentes no pueden declarar movilidad reducida | 🟡 | Código |
-| 16 | Accesibilidad | La condición es un solo sí/no y no vence | ⚪ | Código |
-| 17 | Roles | Jefatura no tiene laboratorios a cargo | 🔴 | Base |
-| 18 | Espacios | Deshabilitar un espacio con clases no genera alerta | 🟠 | Código |
-| 19 | Alertas | Las alertas e incidencias no notifican a nadie | 🟡 | Código |
-| 20 | Roles | Nadie puede restablecer la clave de Coordinación ni de Jefatura | 🟡 | Código |
-| 21 | Secciones | El horario de una sección no se puede editar en pantalla | 🟡 | Código |
-| 22 | Secciones | Pasar una sección de teoría a laboratorio la duplica; el docente no puede pedirlo | 🟡 | Base + Código |
-| 23 | Presentación | Teoría y laboratorio se muestran como cursos distintos | 🟡 | Código |
-| 24 | Avisos | Los docentes no reciben aviso de cambio de aula | 🟡 | Código |
-| 25 | Periodos | El cambio de periodo depende de la configuración del servidor | 🟡 | Código |
-| 26 | Carga de datos | La «última carga» se guarda en el navegador | ⚪ | Código |
-| 27 | Operación | Tras un `git pull` el backend no compila sin `prisma generate` | ⚪ | Reproducido |
-| 28 | Operación | El bloqueo de corridas vive en memoria | ⚪ | Código |
-| 29 | Motor / UI | «Reintentar» no sirve si nada cambió y la pantalla no lo explica | 🟠 | Código |
-| 30 | Seguridad | Cualquiera que conozca un código puede tomar una cuenta no activada | 🔴 | Código + Base |
-| 31 | Privacidad | La consulta pública revela dónde estará cualquier alumno, sin iniciar sesión | 🟠 | Código |
-| 32 | Seguridad | Restablecer o cambiar la clave no cierra las sesiones abiertas | 🟡 | Código |
-| 33 | Seguridad | Telegram se vincula con la clave inicial y los límites de intentos se reinician | 🟡 | Código |
-| 34 | Importación | Un CSV con errores deja la base a medias | 🟠 | Código |
-| 35 | Importación | Las importaciones nunca borran: retiros y horarios cambiados quedan duplicados | 🟠 | Código |
-| 36 | Importación | No se valida que el inicio sea antes del fin ni los choques de docentes y alumnos | 🟡 | Código + Base |
-| 37 | Privacidad | La consulta pública carga la ficha médica y no filtra por periodo | ⚪ | Código |
-| 38 | Importación | Un CSV guardado desde Excel rompe las tildes y la ñ | 🟠 | Código |
-| 39 | Importación | Las importaciones grandes superan el tiempo de espera y siguen corriendo | 🟠 | Código + Base |
-| 40 | Operación | El primer acceso tras un rato sin uso falla por tiempo de espera | 🟡 | Código |
-| 41 | Datos | La regla de software nunca se ha probado: no hay software cargado | 🟠 | Base |
-| 42 | Accesibilidad | 30 espacios sobre el piso 1 no tienen distancia al ascensor | 🟡 | Base |
-| 43 | Auditoría | Varias acciones importantes no dejan registro de quién las hizo | 🟡 | Código |
-| 44 | Dependencias | Librerías con vulnerabilidades conocidas | 🟡 | `npm audit` |
-| 45 | Incidencias | La evidencia es solo un enlace; no se puede adjuntar una foto | ⚪ | Código |
-| 46 | Telegram | Los mensajes repetidos por Telegram se procesan dos veces | ⚪ | Código |
-| 47 | Datos | El nombre de un curso está corrupto y falta otro curso (`202SW0303`) | 🟠 | Base |
-| 48 | Datos | Cursos generales (Química, Redacción, Realidad Nacional…) tienen secciones de laboratorio de cómputo | 🟡 | Base |
-| 49 | Periodos | Un error al escribir el periodo (por ejemplo «2026-I») cambia el periodo de todo el sistema | 🔴 | Base + Código |
-| 50 | Periodos | Se puede registrar y modificar información de periodos que ya terminaron | 🟠 | Código |
-| 51 | Periodos | El sistema cambia de periodo en cuanto se carga el siguiente, aunque el actual no haya terminado | 🟠 | Código |
-| 52 | Periodos | Varias pantallas y reglas mezclan datos de distintos periodos | 🟡 | Código |
+> **Seguimiento en GitHub:** los riesgos a solucionar tienen su issue en el milestone *Sprint 6 — Correcciones de la auditoría* (etiqueta `auditoria-final`). Los aceptados para la demo no llevan issue: su registro es la tabla de decisiones.
+
+| # | Área | Riesgo | Grav. | Comprobado | Issue |
+|---|---|---|---|---|---|
+| 1 | Motor | La corrida completa puede asignar dos secciones a la misma aula a la misma hora | 🔴 | Simulación | [#409](https://github.com/andremelzc/saie/issues/409) |
+| 2 | Motor | Las secciones pequeñas ocupan aulas grandes | 🟠 | Simulación | [#410](https://github.com/andremelzc/saie/issues/410) |
+| 3 | Motor | El motor no detecta que un aula dejó de servir; las alertas no tienen salida | 🔴 | Código | [#411](https://github.com/andremelzc/saie/issues/411) |
+| 4 | Motor | No existe asignación manual de secciones escaladas | 🟠 | Código | [#412](https://github.com/andremelzc/saie/issues/412) |
+| 5 | Motor | «Reintentar» considera aulas ocupadas de otros periodos | 🟡 | Código | [#427](https://github.com/andremelzc/saie/issues/427) |
+| 6 | Motor | Si ningún laboratorio tiene el software, la sección escala en lugar de asignarse con aviso | 🟡 | Código | [#413](https://github.com/andremelzc/saie/issues/413) |
+| 7 | Motor | Las secciones sin horarios cuentan como escaladas | ⚪ | Base | [#414](https://github.com/andremelzc/saie/issues/414) |
+| 8 | Motor | Una sección se reparte en varias aulas a la vez sin confirmación | ⚪ | Base | [#439](https://github.com/andremelzc/saie/issues/439) |
+| 9 | Motor | No se puede reorganizar dando prioridad a las escaladas al inicio del ciclo | ⚪ | Código | [#415](https://github.com/andremelzc/saie/issues/415) |
+| 10 | Accesibilidad | Si no hay lugar en el piso 1, se asigna otro piso sin avisar a nadie | 🔴 | Código + Base | [#416](https://github.com/andremelzc/saie/issues/416) |
+| 11 | Accesibilidad | Reimportar las matrículas borra la declaración del alumno | 🔴 | Código | [#416](https://github.com/andremelzc/saie/issues/416) |
+| 12 | Accesibilidad | Cualquier alumno puede declararse con movilidad reducida sin verificación | 🟠 | Código | [#417](https://github.com/andremelzc/saie/issues/417) |
+| 13 | Accesibilidad | Declarar la condición no reasigna ni avisa a nadie | 🟠 | Código | [#417](https://github.com/andremelzc/saie/issues/417) |
+| 14 | Accesibilidad | Coordinación no tiene una vista de quién necesita accesibilidad | 🟡 | Código | [#417](https://github.com/andremelzc/saie/issues/417) |
+| 15 | Accesibilidad | Los docentes no pueden declarar movilidad reducida | 🟡 | Código | [#418](https://github.com/andremelzc/saie/issues/418) |
+| 16 | Accesibilidad | La condición es un solo sí/no y no vence | ⚪ | Código | [#418](https://github.com/andremelzc/saie/issues/418) |
+| 17 | Roles | Jefatura no tiene laboratorios a cargo | 🔴 | Base | [#422](https://github.com/andremelzc/saie/issues/422) |
+| 18 | Espacios | Deshabilitar un espacio con clases no genera alerta | 🟠 | Código | [#411](https://github.com/andremelzc/saie/issues/411) |
+| 19 | Alertas | Las alertas e incidencias no notifican a nadie | 🟡 | Código | [#423](https://github.com/andremelzc/saie/issues/423) |
+| 20 | Roles | Nadie puede restablecer la clave de Coordinación ni de Jefatura | 🟡 | Código | [#424](https://github.com/andremelzc/saie/issues/424) |
+| 21 | Secciones | El horario de una sección no se puede editar en pantalla | 🟡 | Código | [#425](https://github.com/andremelzc/saie/issues/425) |
+| 22 | Secciones | Pasar una sección de teoría a laboratorio la duplica; el docente no puede pedirlo | 🟡 | Base + Código | [#435](https://github.com/andremelzc/saie/issues/435) |
+| 23 | Presentación | Teoría y laboratorio se muestran como cursos distintos | 🟡 | Código | [#419](https://github.com/andremelzc/saie/issues/419) |
+| 24 | Avisos | Los docentes no reciben aviso de cambio de aula | 🟡 | Código | [#436](https://github.com/andremelzc/saie/issues/436) |
+| 25 | Periodos | El cambio de periodo depende de la configuración del servidor | 🟡 | Código | [#427](https://github.com/andremelzc/saie/issues/427) |
+| 26 | Carga de datos | La «última carga» se guarda en el navegador | ⚪ | Código | [#346](https://github.com/andremelzc/saie/issues/346) |
+| 27 | Operación | Tras un `git pull` el backend no compila sin `prisma generate` | ⚪ | Reproducido | [#434](https://github.com/andremelzc/saie/issues/434) |
+| 28 | Operación | El bloqueo de corridas vive en memoria | ⚪ | Código | [#440](https://github.com/andremelzc/saie/issues/440) |
+| 29 | Motor / UI | «Reintentar» no sirve si nada cambió y la pantalla no lo explica | 🟠 | Código | [#412](https://github.com/andremelzc/saie/issues/412) |
+| 30 | Seguridad | Cualquiera que conozca un código puede tomar una cuenta no activada | 🔴 | Código + Base | Aceptado (demo) |
+| 31 | Privacidad | La consulta pública revela dónde estará cualquier alumno, sin iniciar sesión | 🟠 | Código | Aceptado (demo) |
+| 32 | Seguridad | Restablecer o cambiar la clave no cierra las sesiones abiertas | 🟡 | Código | [#424](https://github.com/andremelzc/saie/issues/424) |
+| 33 | Seguridad | Telegram se vincula con la clave inicial y los límites de intentos se reinician | 🟡 | Código | Aceptado (demo) |
+| 34 | Importación | Un CSV con errores deja la base a medias | 🟠 | Código | [#428](https://github.com/andremelzc/saie/issues/428) |
+| 35 | Importación | Las importaciones nunca borran: retiros y horarios cambiados quedan duplicados | 🟠 | Código | [#429](https://github.com/andremelzc/saie/issues/429) |
+| 36 | Importación | No se valida que el inicio sea antes del fin ni los choques de docentes y alumnos | 🟡 | Código + Base | [#428](https://github.com/andremelzc/saie/issues/428) |
+| 37 | Privacidad | La consulta pública carga la ficha médica y no filtra por periodo | ⚪ | Código | [#420](https://github.com/andremelzc/saie/issues/420) |
+| 38 | Importación | Un CSV guardado desde Excel rompe las tildes y la ñ | 🟠 | Código | [#430](https://github.com/andremelzc/saie/issues/430) |
+| 39 | Importación | Las importaciones grandes superan el tiempo de espera y siguen corriendo | 🟠 | Código + Base | [#431](https://github.com/andremelzc/saie/issues/431) |
+| 40 | Operación | El primer acceso tras un rato sin uso falla por tiempo de espera | 🟡 | Código | Aceptado |
+| 41 | Datos | La regla de software nunca se ha probado: no hay software cargado | 🟠 | Base | [#438](https://github.com/andremelzc/saie/issues/438) |
+| 42 | Accesibilidad | 30 espacios sobre el piso 1 no tienen distancia al ascensor | 🟡 | Base | [#416](https://github.com/andremelzc/saie/issues/416) |
+| 43 | Auditoría | Varias acciones importantes no dejan registro de quién las hizo | 🟡 | Código | [#426](https://github.com/andremelzc/saie/issues/426) |
+| 44 | Dependencias | Librerías con vulnerabilidades conocidas | 🟡 | `npm audit` | [#433](https://github.com/andremelzc/saie/issues/433) |
+| 45 | Incidencias | La evidencia es solo un enlace; no se puede adjuntar una foto | ⚪ | Código | [#437](https://github.com/andremelzc/saie/issues/437) |
+| 46 | Telegram | Los mensajes repetidos por Telegram se procesan dos veces | ⚪ | Código | [#421](https://github.com/andremelzc/saie/issues/421) |
+| 47 | Datos | El nombre de un curso está corrupto y falta otro curso (`202SW0303`) | 🟠 | Base | [#432](https://github.com/andremelzc/saie/issues/432) |
+| 48 | Datos | Cursos generales (Química, Redacción, Realidad Nacional…) tienen secciones de laboratorio de cómputo | 🟡 | Base | [#439](https://github.com/andremelzc/saie/issues/439) |
+| 49 | Periodos | Un error al escribir el periodo (por ejemplo «2026-I») cambia el periodo de todo el sistema | 🔴 | Base + Código | [#427](https://github.com/andremelzc/saie/issues/427) |
+| 50 | Periodos | Se puede registrar y modificar información de periodos que ya terminaron | 🟠 | Código | [#427](https://github.com/andremelzc/saie/issues/427) |
+| 51 | Periodos | El sistema cambia de periodo en cuanto se carga el siguiente, aunque el actual no haya terminado | 🟠 | Código | [#427](https://github.com/andremelzc/saie/issues/427) |
+| 52 | Periodos | Varias pantallas y reglas mezclan datos de distintos periodos | 🟡 | Código | [#427](https://github.com/andremelzc/saie/issues/427) |
 
 ### Decisiones tomadas
 
