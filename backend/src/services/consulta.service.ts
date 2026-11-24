@@ -95,11 +95,12 @@ export async function obtenerAsignacionPorAlumno(
   prisma: PrismaClient,
   ahora: Date = new Date(),
 ): Promise<ConsultaAlumnoResponseDTO | null> {
-  // 1. Buscar alumno con sus matrículas, ficha médica, secciones, horarios y asignaciones
+  // 1. Buscar alumno con sus matrículas, secciones, horarios y asignaciones.
+  // Issue 3.63 (riesgo R37 de la auditoría): la consulta es pública, así que no se lee la ficha
+  // médica. Solo se trae lo que la respuesta muestra.
   const alumno = await prisma.alumno.findUnique({
     where: { codigo: codigoAlumno },
     include: {
-      fichaMedica: true,
       matriculas: {
         include: {
           seccion: {
