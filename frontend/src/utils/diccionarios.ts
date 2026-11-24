@@ -59,6 +59,9 @@ export const EVENTO_AUDITORIA: Record<string, EntradaEstado> = {
   ESCALAMIENTO: { etiqueta: 'Enviada a revisión', tono: 'advertencia' },
   ALERTA: { etiqueta: 'Alerta generada', tono: 'peligro' },
   VERIFICACION: { etiqueta: 'Comprobación', tono: 'info' },
+  EDICION_ESPACIO: { etiqueta: 'Espacio editado', tono: 'neutro' },
+  EDICION_SECCION: { etiqueta: 'Sección editada', tono: 'neutro' },
+  CAMBIO_LABORATORIO: { etiqueta: 'Laboratorio editado', tono: 'neutro' },
 };
 
 export function describirEventoAuditoria(tipo: string | null | undefined): EntradaEstado {

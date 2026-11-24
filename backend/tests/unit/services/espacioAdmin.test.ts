@@ -451,9 +451,11 @@ describe('actualizarEspacio (Issue 4.15)', () => {
       },
       asignacion: { findMany: jest.fn().mockResolvedValue([]) },
       alerta: { findMany: jest.fn().mockResolvedValue([]), create: jest.fn() },
+      registroAuditoria: { create: jest.fn().mockResolvedValue({}) },
     };
 
     return {
+      __tx: txMock,
       espacio: {
         findUnique: jest.fn().mockResolvedValue(actual),
       },
@@ -476,6 +478,62 @@ describe('actualizarEspacio (Issue 4.15)', () => {
 
     expect(res.espacio).toBeDefined();
     expect(res.alertas).toEqual([]);
+  });
+
+  it('registra quién editó el espacio, solo con los campos que cambiaron (Issue 4.58)', async () => {
+    const db = updateDb();
+    await actualizarEspacio(
+      'e1',
+      { identificador: 'Lab 01 Mod', aforoNominal: 35, piso: 1 },
+      authCoord,
+      db,
+    );
+
+    const audit = db.__tx.registroAuditoria.create;
+    expect(audit).toHaveBeenCalledTimes(1);
+    expect(audit).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        tipoEvento: 'EDICION_ESPACIO',
+        cuentaId: 'coord1',
+        espaciosIds: ['e1'],
+        cambios: [
+          { campo: 'identificador', anterior: 'Lab 01', nuevo: 'Lab 01 Mod' },
+          { campo: 'aforoNominal', anterior: 30, nuevo: 35 },
+        ],
+      }),
+    });
+    // El texto legible no trae identificadores internos.
+    expect(audit.mock.calls[0][0].data.detalle).toBe(
+      'Espacio Lab 01 Mod editado: identificador: Lab 01 → Lab 01 Mod; aforoNominal: 30 → 35',
+    );
+  });
+
+  it('no deja asiento si ningún valor cambió (Issue 4.58)', async () => {
+    const db = updateDb();
+    await actualizarEspacio('e1', { aforoNominal: 30, identificador: 'Lab 01' }, authCoord, db);
+    expect(db.__tx.registroAuditoria.create).not.toHaveBeenCalled();
+  });
+
+  it('registra el cambio de contiguos con los identificadores anterior y nuevo (Issue 4.58)', async () => {
+    const db = updateDb();
+    db.__tx.espacioContiguo.findMany.mockResolvedValue([{ espacioB: { identificador: 'Lab 02' } }]);
+    db.__tx.espacio = {
+      ...db.__tx.espacio,
+      findMany: jest
+        .fn()
+        .mockResolvedValue([{ id: 'e3', identificador: 'Lab 03', tipo: TipoEspacio.LABORATORIO }]),
+    };
+    await actualizarEspacio('e1', { contiguos: ['e3'] }, authCoord, db);
+
+    const cambios = db.__tx.registroAuditoria.create.mock.calls[0][0].data.cambios;
+    expect(cambios).toEqual([{ campo: 'contiguos', anterior: ['Lab 02'], nuevo: ['Lab 03'] }]);
+  });
+
+  it('no guarda claves ni datos de salud en los cambios (Issue 4.58)', async () => {
+    const db = updateDb();
+    await actualizarEspacio('e1', { aforoNominal: 35 }, authCoord, db);
+    const guardado = JSON.stringify(db.__tx.registroAuditoria.create.mock.calls[0][0]);
+    expect(guardado).not.toMatch(/clave|hash|ficha|movilidad/i);
   });
 
   it('409 si el identificador en actualización causa un P2002', async () => {

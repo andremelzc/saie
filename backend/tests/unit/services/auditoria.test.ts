@@ -18,6 +18,8 @@ function registro(overrides: Record<string, unknown> = {}) {
     cuentaId: null,
     puntaje: null,
     origen: null,
+    seccionId: null,
+    cambios: null,
     asignacion: {
       seccion: {
         id: 'sec-1',
@@ -54,7 +56,12 @@ function asignacion(estado: EstadoAsignacion = EstadoAsignacion.VIGENTE) {
 
 describe('Auditoría e historial de asignaciones (Issue 4.32)', () => {
   describe('listado de auditoría', () => {
-    function dbMock(filas: unknown[] = [], espacios: unknown[] = [], cuentas: unknown[] = []) {
+    function dbMock(
+      filas: unknown[] = [],
+      espacios: unknown[] = [],
+      cuentas: unknown[] = [],
+      secciones: unknown[] = [],
+    ) {
       return {
         registroAuditoria: {
           count: jest.fn().mockResolvedValue(filas.length),
@@ -62,6 +69,7 @@ describe('Auditoría e historial de asignaciones (Issue 4.32)', () => {
         },
         espacio: { findMany: jest.fn().mockResolvedValue(espacios) },
         cuenta: { findMany: jest.fn().mockResolvedValue(cuentas) },
+        seccion: { findMany: jest.fn().mockResolvedValue(secciones) },
       } as any;
     }
 
@@ -143,6 +151,47 @@ describe('Auditoría e historial de asignaciones (Issue 4.32)', () => {
         null,
       ]);
       expect(db.cuenta.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('devuelve los cambios de una acción de persona, con la sección editada y quién la hizo (Issue 4.58)', async () => {
+      const cambios = [{ campo: 'docente', anterior: 'Dra. García', nuevo: 'Ing. Pérez' }];
+      const db = dbMock(
+        [
+          registro({
+            tipoEvento: TipoEventoAuditoria.EDICION_SECCION,
+            detalle: 'Sección IS101-1 editada: docente: Dra. García → Ing. Pérez',
+            asignacionId: null,
+            asignacion: null,
+            seccionId: 'sec-1',
+            cuentaId: 'c-adm',
+            cambios,
+          }),
+        ],
+        [],
+        [{ id: 'c-adm', usuarioLogin: 'coordinacion', docente: null, alumno: null }],
+        [{ id: 'sec-1', codigoSeccion: '1', curso: { codigo: 'IS101', nombre: 'Algoritmos' } }],
+      );
+      const res = await listarAuditoria({ pagina: 1, limite: 50 }, db);
+
+      expect(res.items[0]).toMatchObject({
+        tipoEvento: 'EDICION_SECCION',
+        cuenta: { id: 'c-adm', nombre: 'coordinacion' },
+        cambios,
+        seccion: {
+          id: 'sec-1',
+          codigoCurso: 'IS101',
+          codigoSeccion: '1',
+          nombreCurso: 'Algoritmos',
+        },
+      });
+      expect(db.seccion.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('los asientos del motor devuelven cambios null y no consultan secciones aparte (Issue 4.58)', async () => {
+      const db = dbMock([registro()]);
+      const res = await listarAuditoria({ pagina: 1, limite: 50 }, db);
+      expect(res.items[0].cambios).toBeNull();
+      expect(db.seccion.findMany).not.toHaveBeenCalled();
     });
 
     it('filtra por tipo de evento', async () => {

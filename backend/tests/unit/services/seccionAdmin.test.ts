@@ -152,7 +152,8 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
   describe('edición', () => {
     function prismaEdicion() {
       const tx = {
-        docente: { findUnique: jest.fn().mockResolvedValue({ id: 'doc-2' }) },
+        docente: { findUnique: jest.fn().mockResolvedValue({ id: 'doc-2', nombre: 'Ing. Pérez' }) },
+        registroAuditoria: { create: jest.fn().mockResolvedValue({}) },
         seccion: { update: jest.fn().mockResolvedValue(seccion()) },
         seccionSoftware: {
           deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -228,6 +229,53 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
         where: { id: 'sec-1' },
         data: { docenteId: 'doc-2' },
       });
+    });
+
+    it('registra quién cambió el docente, con los nombres y no los ids (Issue 4.58)', async () => {
+      const { prisma, tx } = prismaEdicion();
+      await actualizarSeccion('sec-1', { docenteId: 'doc-2' }, COORDINACION, prisma);
+
+      expect(tx.registroAuditoria.create).toHaveBeenCalledTimes(1);
+      expect(tx.registroAuditoria.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          tipoEvento: 'EDICION_SECCION',
+          cuentaId: COORDINACION.sub,
+          seccionId: 'sec-1',
+          cambios: [{ campo: 'docente', anterior: 'Dra. García', nuevo: 'Ing. Pérez' }],
+        }),
+      });
+      expect(tx.registroAuditoria.create.mock.calls[0][0].data.detalle).toBe(
+        'Sección IS101-1 editada: docente: Dra. García → Ing. Pérez',
+      );
+    });
+
+    it('registra el cambio del software requerido con la regla de versión (Issue 4.58)', async () => {
+      const { prisma, tx } = prismaEdicion();
+      await actualizarSeccion(
+        'sec-1',
+        { softwareRequerido: [{ softwareId: 'sw-python', comparacionVersion: 'MINIMA' }] },
+        COORDINACION,
+        prisma,
+      );
+
+      expect(tx.registroAuditoria.create.mock.calls[0][0].data.cambios).toEqual([
+        {
+          campo: 'softwareRequerido',
+          anterior: ['Docker 24.0 (versión mínima)'],
+          nuevo: ['Python 3.12 (versión mínima)'],
+        },
+      ]);
+    });
+
+    it('no deja asiento si la edición no cambia ningún valor (Issue 4.58)', async () => {
+      const { prisma, tx } = prismaEdicion();
+      await actualizarSeccion(
+        'sec-1',
+        { tipoEspacioRequerido: TipoEspacio.LABORATORIO },
+        COORDINACION,
+        prisma,
+      );
+      expect(tx.registroAuditoria.create).not.toHaveBeenCalled();
     });
 
     it('404 si el docente indicado no existe', async () => {

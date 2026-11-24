@@ -1,5 +1,5 @@
 const prismaMock: any = {
-  cuenta: { findUnique: jest.fn(), update: jest.fn() },
+  cuenta: { findUnique: jest.fn(), update: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
   alumno: { findUnique: jest.fn(), create: jest.fn() },
   docente: { findUnique: jest.fn(), create: jest.fn() },
   espacio: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
@@ -7,6 +7,7 @@ const prismaMock: any = {
   espacioContiguo: { findMany: jest.fn(), deleteMany: jest.fn(), createMany: jest.fn() },
   asignacion: { findUnique: jest.fn(), findMany: jest.fn() },
   seccion: { findMany: jest.fn(), findFirst: jest.fn() },
+  importacion: { findFirst: jest.fn() },
   alerta: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
   incidencia: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
   registroAuditoria: { create: jest.fn() },
@@ -211,6 +212,70 @@ describe('Endpoints Sprint 4 (Issue #267)', () => {
       expect(res.body.data.pabellon).toBe('A');
       expect(res.body.data.piso).toBe(2);
       expect(res.body.data.espacios).toEqual([]);
+    });
+  });
+
+  describe('Última importación (GET /admin/importaciones/ultima, Issue 4.54)', () => {
+    const ruta = '/api/v1/admin/importaciones/ultima';
+    const coordinacion = () => bearer(RolCuenta.COORDINACION_ACADEMICA);
+
+    it('Coordinación recibe la última importación de cada tipo, con null para los que no hay', async () => {
+      prismaMock.importacion.findFirst.mockImplementation(async ({ where }: any) =>
+        where.tipo === 'MATRICULAS'
+          ? {
+              tipo: 'MATRICULAS',
+              cuentaId: 'cuenta-1',
+              fecha: new Date('2026-11-10T15:30:00Z'),
+              filasRecibidas: 10,
+              filasAceptadas: 10,
+              filasRechazadas: 0,
+              resultado: 'EXITOSA',
+            }
+          : null,
+      );
+      prismaMock.cuenta.findMany.mockResolvedValue([
+        { id: 'cuenta-1', usuarioLogin: 'coordinacion', alumno: null, docente: null },
+      ]);
+
+      const res = await request(app).get(ruta).set('Authorization', coordinacion());
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.matriculas).toMatchObject({
+        tipo: 'matriculas',
+        cuenta: { id: 'cuenta-1', nombre: 'coordinacion' },
+        filasRechazadas: 0,
+        resultado: 'EXITOSA',
+      });
+      expect(res.body.data.horarios).toBeNull();
+      expect(res.body.data.docentes).toBeNull();
+      expect(res.body.data['cursos-secciones']).toBeNull();
+    });
+
+    it('con ?tipo= devuelve solo ese tipo', async () => {
+      prismaMock.importacion.findFirst.mockResolvedValue(null);
+      const res = await request(app)
+        .get(`${ruta}?tipo=docentes`)
+        .set('Authorization', coordinacion());
+      expect(res.status).toBe(200);
+      expect(Object.keys(res.body.data)).toEqual(['docentes']);
+    });
+
+    it('400 si el tipo no existe o hay parámetros desconocidos', async () => {
+      expect(
+        (await request(app).get(`${ruta}?tipo=otro`).set('Authorization', coordinacion())).status,
+      ).toBe(400);
+      expect(
+        (await request(app).get(`${ruta}?x=1`).set('Authorization', coordinacion())).status,
+      ).toBe(400);
+    });
+
+    it('401 sin token y 403 para Jefatura, alumno y docente (solo Coordinación carga datos)', async () => {
+      expect((await request(app).get(ruta)).status).toBe(401);
+      for (const rol of [RolCuenta.JEFATURA_LABORATORIOS, RolCuenta.ALUMNO, RolCuenta.DOCENTE]) {
+        const res = await request(app).get(ruta).set('Authorization', bearer(rol));
+        expect(res.status).toBe(403);
+      }
     });
   });
 

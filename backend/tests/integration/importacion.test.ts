@@ -79,7 +79,8 @@ describe('POST /api/v1/import/:tipo (Issue 1.6)', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true, data: resultado });
-    expect(ejecutarImportacion).toHaveBeenCalledWith('horarios', filas, prismaMock);
+    // Issue 4.54: la importación recibe la cuenta que cargó el archivo.
+    expect(ejecutarImportacion).toHaveBeenCalledWith('horarios', filas, prismaMock, 'cuenta-1');
   });
 
   it('importa un objeto JSON con la propiedad datos', async () => {
@@ -93,6 +94,7 @@ describe('POST /api/v1/import/:tipo (Issue 1.6)', () => {
       'docentes',
       [{ codigoDocente: 'D1' }],
       prismaMock,
+      'cuenta-1',
     );
   });
 
@@ -109,6 +111,7 @@ describe('POST /api/v1/import/:tipo (Issue 1.6)', () => {
       'horarios',
       [{ codigoCurso: 'C1', diaSemana: 'MIERCOLES', horaInicio: '08:00' }],
       prismaMock,
+      'cuenta-1',
     );
   });
 

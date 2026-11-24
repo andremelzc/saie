@@ -27,7 +27,7 @@ export async function importarDatos(req: Request, res: Response): Promise<void> 
     }
 
     const filas = extraerFilas(tipo, req.body);
-    const data = await ejecutarImportacion(tipo, filas, prisma);
+    const data = await ejecutarImportacion(tipo, filas, prisma, req.auth?.sub ?? null);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);

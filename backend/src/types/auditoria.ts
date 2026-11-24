@@ -1,4 +1,5 @@
 import { EstadoAsignacion, TipoEventoAuditoria } from '@prisma/client';
+import { CuentaConNombreDTO } from '../lib/nombresCuenta';
 
 /**
  * Auditoría e historial de asignaciones (Issue 4.32).
@@ -15,10 +16,14 @@ export interface EspacioAuditoriaDTO {
   piso: number;
 }
 
-export interface CuentaAuditoriaDTO {
-  id: string;
-  /** Nombre de la persona (alumno o docente) o, si no tiene ficha, su usuario de acceso. */
-  nombre: string;
+/** Persona que hizo una acción: su nombre y, si no tiene ficha, su usuario de acceso. */
+export type CuentaAuditoriaDTO = CuentaConNombreDTO;
+
+/** Un campo que cambió en una acción de persona (Issue 4.58). */
+export interface CambioAuditoriaDTO {
+  campo: string;
+  anterior: string | number | boolean | string[] | null;
+  nuevo: string | number | boolean | string[] | null;
 }
 
 export interface RegistroAuditoriaDTO {
@@ -42,6 +47,11 @@ export interface RegistroAuditoriaDTO {
   espacios: EspacioAuditoriaDTO[];
   /** Persona que hizo la acción, con su nombre (alerta resuelta por una cuenta). */
   cuenta: CuentaAuditoriaDTO | null;
+  /**
+   * Qué campos cambió una persona, con su valor anterior y nuevo (Issue 4.58). `null` en los
+   * asientos del motor y de las alertas.
+   */
+  cambios: CambioAuditoriaDTO[] | null;
   /** Sección relacionada, para leer el asiento sin salir de la tabla. */
   seccion: {
     id: string;

@@ -4,6 +4,7 @@ import {
   altaAlumno,
   altaDocente,
   altaEspacio,
+  consultarUltimasImportaciones,
   consultarMapaOcupacion,
   consultarReporteAsignaciones,
   editarEspacio,
@@ -71,6 +72,9 @@ router.get('/incidencias', listarIncidenciasReportadas);
 router.patch('/incidencias/:id/resolver', resolverIncidencia);
 
 const soloCoordinacion = roleGuard(RolCuenta.COORDINACION_ACADEMICA);
+
+// Última carga de datos maestros por tipo (Issue 4.54). Solo Coordinación carga archivos.
+router.get('/importaciones/ultima', soloCoordinacion, consultarUltimasImportaciones);
 
 // Catálogo de software (Issue 4.28). Lectura para Coordinación y Jefatura; alta, edición y
 // baja lógica solo para Coordinación.

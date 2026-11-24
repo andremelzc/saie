@@ -14,6 +14,8 @@ import { filtrosDeMapa, MapaOcupacionQuerySchema } from '../lib/franja';
 import { obtenerOcupacionPorPiso } from '../services/ocupacion.service';
 import { listarSeccionesEscaladas } from '../services/revision.service';
 import { listarPeriodos } from '../services/periodo.service';
+import { obtenerUltimasImportaciones } from '../services/importacionRegistro.service';
+import { TIPOS_IMPORTACION } from '../types/importacion';
 import {
   actualizarEspacio,
   ActualizarEspacioSchema,
@@ -146,6 +148,23 @@ export async function consultarMapaOcupacion(req: Request, res: Response): Promi
   try {
     const q = MapaOcupacionQuerySchema.parse(req.query);
     const data = await obtenerOcupacionPorPiso(filtrosDeMapa(q), prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+const UltimaImportacionQuerySchema = z
+  .object({
+    tipo: z.enum(TIPOS_IMPORTACION, { error: 'El tipo de importación no es válido' }).optional(),
+  })
+  .strict();
+
+/** Issue 4.54 — GET /api/v1/admin/importaciones/ultima[?tipo=cursos-secciones] */
+export async function consultarUltimasImportaciones(req: Request, res: Response): Promise<void> {
+  try {
+    const { tipo } = UltimaImportacionQuerySchema.parse(req.query ?? {});
+    const data = await obtenerUltimasImportaciones(tipo, prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);

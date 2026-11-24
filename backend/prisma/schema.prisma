@@ -82,6 +82,23 @@ enum TipoEventoAuditoria {
   ESCALAMIENTO
   ALERTA
   VERIFICACION
+  // Acciones de personas (Issue 4.58): quién cambió qué, con valor anterior y nuevo.
+  EDICION_ESPACIO
+  EDICION_SECCION
+  CAMBIO_LABORATORIO
+}
+
+// Flujos de carga de datos maestros (Issue 4.54).
+enum TipoArchivoImportacion {
+  CURSOS_SECCIONES
+  HORARIOS
+  MATRICULAS
+  DOCENTES
+}
+
+enum ResultadoImportacion {
+  EXITOSA
+  CON_ERRORES
 }
 
 // Catálogo de software (Spec 08): deja de ser texto libre en `Espacio` y `Seccion`.
@@ -420,11 +437,33 @@ model RegistroAuditoria {
   puntaje     Float?
   origen      String?
 
+  // Acciones de personas (Issue 4.58): sección editada y lista de cambios
+  // `[{ campo, anterior, nuevo }]`. Nunca contienen claves ni datos de salud.
+  seccionId String? @map("seccion_id")
+  cambios   Json?
+
   asignacion Asignacion? @relation(fields: [asignacionId], references: [id], onDelete: SetNull)
   alerta     Alerta?     @relation(fields: [alertaId], references: [id], onDelete: SetNull)
 
   @@index([corridaId])
   @@map("registros_auditoria")
+}
+
+// Cada carga de datos maestros queda registrada (Issue 4.54): de aquí sale la "última carga" del
+// panel, que antes vivía solo en el navegador. Sin claves foráneas, igual que la auditoría: el
+// registro sobrevive aunque la cuenta se elimine, y el nombre se resuelve al leer.
+model Importacion {
+  id               String                 @id @default(uuid())
+  tipo             TipoArchivoImportacion
+  cuentaId         String?                @map("cuenta_id")
+  fecha            DateTime               @default(now())
+  filasRecibidas   Int                    @map("filas_recibidas")
+  filasAceptadas   Int                    @map("filas_aceptadas")
+  filasRechazadas  Int                    @map("filas_rechazadas")
+  resultado        ResultadoImportacion
+
+  @@index([tipo, fecha])
+  @@map("importaciones")
 }
 
 // ==========================================

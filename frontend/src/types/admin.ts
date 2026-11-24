@@ -227,7 +227,15 @@ export interface ResultadoImportacionDTO {
 
 export type ComparacionVersion = 'CUALQUIERA' | 'EXACTA' | 'MINIMA';
 export type EstadoAsignacion = 'VIGENTE' | 'ESCALADA' | 'HISTORICA';
-export type TipoEventoAuditoria = 'ASIGNACION' | 'ESCALAMIENTO' | 'ALERTA' | 'VERIFICACION';
+export type TipoEventoAuditoria =
+  | 'ASIGNACION'
+  | 'ESCALAMIENTO'
+  | 'ALERTA'
+  | 'VERIFICACION'
+  // Acciones de personas (Issue 4.58)
+  | 'EDICION_ESPACIO'
+  | 'EDICION_SECCION'
+  | 'CAMBIO_LABORATORIO';
 
 /** Campos de una sección que el backend permite editar según el rol. */
 export type CampoSeccion = 'tipoEspacioRequerido' | 'docenteId' | 'softwareRequerido';
