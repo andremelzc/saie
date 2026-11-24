@@ -1,0 +1,1068 @@
+# Riesgos y brechas funcionales — SAIE
+
+> **Fecha de la revisión:** 24/11/2026 · **Rama revisada:** `develop` en `cce4b32`
+> **Alcance:** motor de asignación, accesibilidad, roles y permisos, espacios y alertas, secciones, presentación de la información y operación.
+> **Cómo se comprobó cada hallazgo:**
+> - **Simulación:** se ejecutó el motor (funciones puras, sin tocar la base) con un caso armado para reproducir el problema.
+> - **Código:** se leyó el código y se siguió el flujo completo.
+> - **Base:** se consultó la base de datos real (solo lectura).
+>
+> Este documento **no** modifica código ni datos. Es el insumo para registrar los issues y priorizar el trabajo antes de la entrega.
+
+---
+
+## Resumen
+
+| Gravedad | Significado | Cantidad |
+|---|---|---|
+| 🔴 Crítica | Rompe una garantía básica del sistema, deja a una persona sin atender o permite tomar una cuenta ajena | 6 |
+| 🟠 Alta | Un flujo importante no funciona, se puede abusar o deja datos incorrectos | 13 |
+| 🟡 Media | Falta una función esperable o la información confunde | 19 |
+| ⚪ Baja | Detalle, caso borde o riesgo a futuro | 10 |
+| | **Total** | **48** |
+
+### Tabla general
+
+| # | Área | Riesgo | Grav. | Comprobado |
+|---|---|---|---|---|
+| 1 | Motor | La corrida completa puede asignar dos secciones a la misma aula a la misma hora | 🔴 | Simulación |
+| 2 | Motor | Las secciones pequeñas ocupan aulas grandes | 🟠 | Simulación |
+| 3 | Motor | El motor no detecta que un aula dejó de servir; las alertas no tienen salida | 🔴 | Código |
+| 4 | Motor | No existe asignación manual de secciones escaladas | 🟠 | Código |
+| 5 | Motor | «Reintentar» considera aulas ocupadas de otros periodos | 🟡 | Código |
+| 6 | Motor | Si ningún laboratorio tiene el software, la sección escala en lugar de asignarse con aviso | 🟡 | Código |
+| 7 | Motor | Las secciones sin horarios cuentan como escaladas | ⚪ | Base |
+| 8 | Motor | Una sección se reparte en varias aulas a la vez sin confirmación | ⚪ | Base |
+| 9 | Motor | No se puede reorganizar dando prioridad a las escaladas al inicio del ciclo | ⚪ | Código |
+| 10 | Accesibilidad | Si no hay lugar en el piso 1, se asigna otro piso sin avisar a nadie | 🔴 | Código + Base |
+| 11 | Accesibilidad | Reimportar las matrículas borra la declaración del alumno | 🔴 | Código |
+| 12 | Accesibilidad | Cualquier alumno puede declararse con movilidad reducida sin verificación | 🟠 | Código |
+| 13 | Accesibilidad | Declarar la condición no reasigna ni avisa a nadie | 🟠 | Código |
+| 14 | Accesibilidad | Coordinación no tiene una vista de quién necesita accesibilidad | 🟡 | Código |
+| 15 | Accesibilidad | Los docentes no pueden declarar movilidad reducida | 🟡 | Código |
+| 16 | Accesibilidad | La condición es un solo sí/no y no vence | ⚪ | Código |
+| 17 | Roles | Jefatura no tiene laboratorios a cargo | 🔴 | Base |
+| 18 | Espacios | Deshabilitar un espacio con clases no genera alerta | 🟠 | Código |
+| 19 | Alertas | Las alertas e incidencias no notifican a nadie | 🟡 | Código |
+| 20 | Roles | Nadie puede restablecer la clave de Coordinación ni de Jefatura | 🟡 | Código |
+| 21 | Secciones | El horario de una sección no se puede editar en pantalla | 🟡 | Código |
+| 22 | Secciones | Pasar una sección de teoría a laboratorio la duplica; el docente no puede pedirlo | 🟡 | Base + Código |
+| 23 | Presentación | Teoría y laboratorio se muestran como cursos distintos | 🟡 | Código |
+| 24 | Avisos | Los docentes no reciben aviso de cambio de aula | 🟡 | Código |
+| 25 | Periodos | El cambio de periodo depende de la configuración del servidor | 🟡 | Código |
+| 26 | Carga de datos | La «última carga» se guarda en el navegador | ⚪ | Código |
+| 27 | Operación | Tras un `git pull` el backend no compila sin `prisma generate` | ⚪ | Reproducido |
+| 28 | Operación | El bloqueo de corridas vive en memoria | ⚪ | Código |
+| 29 | Motor / UI | «Reintentar» no sirve si nada cambió y la pantalla no lo explica | 🟠 | Código |
+| 30 | Seguridad | Cualquiera que conozca un código puede tomar una cuenta no activada | 🔴 | Código + Base |
+| 31 | Privacidad | La consulta pública revela dónde estará cualquier alumno, sin iniciar sesión | 🟠 | Código |
+| 32 | Seguridad | Restablecer o cambiar la clave no cierra las sesiones abiertas | 🟡 | Código |
+| 33 | Seguridad | Telegram se vincula con la clave inicial y los límites de intentos se reinician | 🟡 | Código |
+| 34 | Importación | Un CSV con errores deja la base a medias | 🟠 | Código |
+| 35 | Importación | Las importaciones nunca borran: retiros y horarios cambiados quedan duplicados | 🟠 | Código |
+| 36 | Importación | No se valida que el inicio sea antes del fin ni los choques de docentes y alumnos | 🟡 | Código + Base |
+| 37 | Privacidad | La consulta pública carga la ficha médica y no filtra por periodo | ⚪ | Código |
+| 38 | Importación | Un CSV guardado desde Excel rompe las tildes y la ñ | 🟠 | Código |
+| 39 | Importación | Las importaciones grandes superan el tiempo de espera y siguen corriendo | 🟠 | Código + Base |
+| 40 | Operación | El primer acceso tras un rato sin uso falla por tiempo de espera | 🟡 | Código |
+| 41 | Datos | La regla de software nunca se ha probado: no hay software cargado | 🟠 | Base |
+| 42 | Accesibilidad | 30 espacios sobre el piso 1 no tienen distancia al ascensor | 🟡 | Base |
+| 43 | Auditoría | Varias acciones importantes no dejan registro de quién las hizo | 🟡 | Código |
+| 44 | Dependencias | Librerías con vulnerabilidades conocidas | 🟡 | `npm audit` |
+| 45 | Incidencias | La evidencia es solo un enlace; no se puede adjuntar una foto | ⚪ | Código |
+| 46 | Telegram | Los mensajes repetidos por Telegram se procesan dos veces | ⚪ | Código |
+| 47 | Datos | El nombre de un curso está corrupto y falta otro curso (`202SW0303`) | 🟠 | Base |
+| 48 | Datos | Cursos generales (Química, Redacción, Realidad Nacional…) tienen secciones de laboratorio de cómputo | 🟡 | Base |
+
+### Decisiones tomadas
+
+| # | Decisión | Fecha |
+|---|---|---|
+| #17 | **A solucionar.** Llenar `EspacioResponsable` con todos los laboratorios para la Jefatura (seed + laboratorios nuevos). No se elimina la tabla: la base ya está modelada así | 24/11/2026 |
+| #2 | **A solucionar.** Ocupar las aulas de menor a mayor; la cercanía queda como desempate | 24/11/2026 |
+| #12 | **A solucionar.** La declaración de accesibilidad del alumno debe confirmarla Coordinación antes de aplicarse | 24/11/2026 |
+| #30, #31 | **Riesgo aceptado (demo).** Se acepta porque el sistema no está en producción. **Debe resolverse antes de usarlo con usuarios reales** | 24/11/2026 |
+| #33 | **Riesgo aceptado (demo),** por ser una variante de #30. Se resuelve junto con él | 24/11/2026 |
+| #34 | **A solucionar.** Importación «todo o nada»: un CSV con al menos un error no guarda ninguna fila | 24/11/2026 |
+| #35 | **A solucionar.** Las importaciones deben reflejar retiros y cambios de horario | 24/11/2026 |
+| #37 | **A solucionar.** La consulta pública no debe leer la ficha médica y debe filtrar por periodo | 24/11/2026 |
+| #40 | **Riesgo conocido y aceptado.** Ya estaba documentado en `docs/arquitectura.md` (plan gratuito de Render). Mitigación para la demo: abrir el sistema unos minutos antes | 24/11/2026 |
+| #44 | **A solucionar como proceso,** no como cambio puntual: es normal que aparezcan vulnerabilidades nuevas en las librerías, así que se revisan de forma periódica | 24/11/2026 |
+| #38, #39, #41, #42, #43, #45, #46, #47, #48 | **A solucionar** | 24/11/2026 |
+
+> Los riesgos **#3, #4 y #29** son en el fondo un mismo problema: **cuando el motor no puede resolver algo, el sistema no le da a Coordinación ninguna salida.** Conviene diseñarlos juntos.
+
+### Prioridad sugerida para la entrega
+
+1. **#1** — Doble reserva: es la garantía más básica del sistema.
+2. **#30** — 67 de 68 docentes tienen una cuenta que cualquiera puede tomar.
+3. **#10 y #11** — Un alumno en silla de ruedas puede terminar en el piso 3 sin que nadie lo sepa.
+4. **#17** — Desbloquea todo el rol de Jefatura y las pruebas de la guía.
+5. **#3, #4 y #29** — Dan salida a las alertas y a las secciones escaladas.
+6. **#34 y #35** — Las recargas de datos dejan información incorrecta.
+7. **#2, #12 y #31** — Uso eficiente de las aulas, abuso de la accesibilidad y privacidad de la consulta pública.
+8. El resto, según el tiempo disponible.
+
+---
+
+## 1. Motor de asignación
+
+### #1 🔴 La corrida completa puede asignar dos secciones a la misma aula a la misma hora
+
+**Qué pasa.** En la corrida completa del periodo, el motor recorre las secciones en un orden fijo: primero las que tienen alumnos con movilidad reducida, luego de mayor a menor número de alumnos. Las secciones cuyos datos no cambiaron **conservan su aula** (idempotencia), pero esa aula solo se marca como ocupada **cuando el recorrido llega a esa sección**. Si antes pasa una sección que sí cambió, ve el aula libre y la toma.
+
+**Ejemplo reproducido (simulación).**
+
+| Sección | Alumnos | Situación previa | ¿Cambió? |
+|---|---|---|---|
+| S1 | 45 | Aula B (40 asientos), lunes 8–10 | Sí: subió de 35 a 45 alumnos |
+| S2 | 30 | Aula A (50 asientos), lunes 8–10 | No |
+
+Resultado de la corrida:
+
+```
+S1 VIGENTE [ 'A' ]
+S2 VIGENTE [ 'A' ] (conservada)
+```
+
+**Las dos secciones quedan en el aula A el lunes de 8 a 10.**
+
+**Cuándo ocurre en la vida real.** Cada vez que se recarga el CSV de matrículas, de horarios o de cursos y luego se vuelve a correr la asignación (la carga de datos la dispara sola). Basta con que una sección grande cambie y otra más pequeña no.
+
+**Dónde está.**
+- [corridaBatch.ts:90](../backend/src/rules/corridaBatch.ts) — antes del recorrido solo se marcan como ocupadas las asignaciones de secciones que **no** están en el lote; en una corrida completa todas están en el lote, así que no se marca ninguna.
+- [corridaBatch.ts:178](../backend/src/rules/corridaBatch.ts) — la ocupación de una sección conservada se registra recién al llegar a ella.
+
+**Por qué no lo atrapan las pruebas.** Las pruebas cubren la idempotencia y la ausencia de choques por separado, pero no la combinación: una sección que cambió procesada antes que una conservada que comparte franja.
+
+**Propuesta.**
+1. Antes del recorrido, marcar como ocupadas **todas** las asignaciones vigentes cuya huella no cambió (las que se van a conservar).
+2. Procesar después solo las secciones que cambiaron o están escaladas.
+3. Mantener el verificador de corrida (Issue 2.17) como red de seguridad y hacer que una doble reserva **bloquee** la persistencia en lugar de solo informarla.
+
+**Criterios de aceptación.**
+- Con el caso de la tabla, S1 no puede quedar en el aula A.
+- Ninguna corrida completa produce dos asignaciones vigentes en el mismo espacio y franja.
+
+---
+
+### #2 🟠 Las secciones pequeñas ocupan aulas grandes
+
+> **Decisión: a solucionar.** Ocupar las aulas de menor a mayor.
+
+**Qué pasa.** Al elegir entre varios espacios posibles, el motor ordena así ([orquestadorAsignacion.ts:224](../backend/src/rules/orquestadorAsignacion.ts)):
+
+1. Piso 1 (solo si hay movilidad reducida).
+2. **Cercanía con las otras secciones del mismo curso.**
+3. Menor número de espacios.
+4. **Menor desperdicio de asientos.**
+5. Menor piso.
+
+Como la cercanía va antes que el desperdicio, una sección pequeña prefiere un aula enorme en el mismo piso que su sección hermana antes que un aula justa en otro piso.
+
+**Ejemplo reproducido (simulación).** Sección de 20 alumnos; otra sección del curso está en el piso 1. Opciones: auditorio de 200 asientos en el piso 1 y aula de 25 en el piso 2.
+
+```
+20 alumnos -> [ 'AUDITORIO-200' ]
+```
+
+**Consecuencia.** Más adelante, una sección grande que solo cabía en ese auditorio no encuentra lugar y escala. El problema no se ve en la sección pequeña, sino en otra.
+
+**Propuesta.** Ocupar los salones de menor a mayor:
+1. Menor desperdicio de asientos (el aula más pequeña en la que la sección quepa).
+2. Cercanía con las secciones del curso, solo como desempate entre aulas de tamaño parecido (por ejemplo, desperdicio dentro de un margen de 10 asientos).
+3. El resto de criterios igual.
+
+**Criterios de aceptación.**
+- En el ejemplo, la sección de 20 queda en el aula de 25.
+- Con aulas de tamaño similar, sigue ganando la más cercana a las otras secciones del curso.
+
+---
+
+### #3 🔴 El motor no detecta que un aula dejó de servir; las alertas no tienen salida
+
+**Qué pasa.** Para decidir si conserva una asignación, el motor calcula una huella con los datos **de la sección**: curso, código, periodo, tipo de espacio, número de alumnos, movilidad reducida, horarios y software requerido ([orquestadorAsignacion.ts:32](../backend/src/rules/orquestadorAsignacion.ts)). **El estado del aula no forma parte de la huella.** Por lo tanto, si el aula cambia, la sección se conserva tal cual.
+
+**Casos concretos.**
+
+| Qué cambia en el aula | ¿Se genera alerta? | ¿Reasignar la mueve? |
+|---|---|---|
+| Jefatura registra PCs malogradas y la capacidad ya no alcanza | Sí, de capacidad | **No** |
+| Coordinación baja el aforo | Sí, de capacidad | **No** |
+| Se desinstala software que la sección necesita | Sí, de software | **No** |
+| Se deshabilita el espacio | **No** (ver #18) | **No** |
+
+Además, en la pantalla de alertas la única acción es **«marcar como resuelta»**: no hay botón para reubicar la sección afectada.
+
+**Ejemplo con datos reales.** `202SW0805 2-LAB` tiene 61 alumnos en los laboratorios 01, 02 y 03 del Nuevo Pabellón (21 puestos cada uno, 63 en total). Si Jefatura marca 3 PCs malogradas en el laboratorio 01, la capacidad baja a 60 y se genera la alerta. Al reasignar, la sección **se queda en los mismos laboratorios** con un alumno sin puesto.
+
+**Propuesta.**
+1. Antes de conservar una asignación, comprobar que sus espacios **siguen sirviendo**: habilitados, con capacidad real suficiente y con el software requerido. Si alguno falla, reevaluar la sección.
+2. En cada alerta, agregar la acción **«Reubicar sección»**, que reasigna las secciones afectadas y muestra el resultado (nueva aula o escalada).
+3. Cerrar la alerta automáticamente cuando todas sus secciones quedan resueltas.
+
+**Criterios de aceptación.**
+- Tras bajar la capacidad por debajo del número de alumnos, reasignar mueve la sección o la escala con el motivo correcto.
+- Desde la alerta se puede reubicar sin salir de la pantalla.
+
+---
+
+### #4 🟠 No existe asignación manual de secciones escaladas
+
+**Qué pasa.** Una sección escalada solo sale de ese estado si cambian sus datos. Cuando escala porque **todas las aulas están ocupadas a su hora** o porque **no hay un bloque contiguo libre**, no hay ningún dato que corregir: el problema es que otras secciones ocupan las aulas. Como el motor conserva las asignaciones vigentes, ningún reintento las mueve.
+
+**Motivos de escalamiento y su salida actual.**
+
+| Motivo | ¿Tiene salida hoy? |
+|---|---|
+| Sin horarios definidos | Sí: cargar el CSV de horarios |
+| Capacidad insuficiente en todo el campus | No realista en la práctica (protección ante datos mal cargados) |
+| Todos los espacios ocupados en la franja | **No** |
+| Software faltante en todos los laboratorios | Sí: que Jefatura lo instale (ver también #6) |
+| Capacidad fragmentada (no hay bloque contiguo) | **No** |
+
+**Propuesta: asignación manual por Coordinación.**
+1. Desde la sección escalada, **«Asignar a mano»**: Coordinación elige uno o más espacios.
+2. El sistema **bloquea** los choques de horario (son imposibles) y **advierte** lo demás: faltan asientos, falta software, no está en el piso 1 habiendo movilidad reducida. Coordinación puede confirmar con las advertencias a la vista.
+3. La asignación queda marcada como **manual / fijada**. Las corridas siguientes la tratan como una ocupación más y **nunca la mueven**.
+4. Motivo obligatorio y registro en auditoría: quién, cuándo, qué espacio, por qué.
+5. **«Liberar»**: quita la marca para que el motor vuelva a decidir cuando la causa se resuelva.
+
+**Cambios necesarios.** Campo nuevo en `Asignacion` (origen automático/manual) con su migración, endpoint para Coordinación, respeto de las fijadas en el motor (corrida completa y por sección), acción en el inicio de administración y actualización de la spec 02.
+
+---
+
+### #5 🟡 «Reintentar» considera aulas ocupadas de otros periodos
+
+**Qué pasa.** La corrida completa solo considera las asignaciones de su periodo, pero la corrida de una sola sección (la que usa «Reintentar») carga **todas** las asignaciones vigentes de la base, de cualquier periodo ([motor.service.ts:123](../backend/src/services/motor.service.ts)).
+
+**Consecuencia.** Cuando se cargue el ciclo 2027-1, las aulas que tenían clases en 2026-2 aparecerán ocupadas al reintentar una sección de 2027-1, y la sección escalará por «horario bloqueado» sin motivo real. Además, ambas corridas dan resultados distintos para la misma sección.
+
+**Hoy no se nota** porque solo existe el periodo 2026-2.
+
+**Propuesta.** Filtrar por el periodo de la sección, igual que la corrida completa. Opcionalmente, pasar a histórico las asignaciones vigentes de un periodo al cerrarlo (ver #25).
+
+---
+
+### #6 🟡 Si ningún laboratorio tiene el software, la sección escala en lugar de asignarse con aviso
+
+**Qué pasa.** Si la sección pide un software que ningún laboratorio disponible tiene, el motor la escala y la deja sin aula.
+
+**Lo realista.** Primero se asigna el laboratorio y luego se instala el programa.
+
+**Propuesta.**
+1. Si el único impedimento es el software, asignar el laboratorio que mejor encaja en capacidad y ubicación.
+2. Marcar la asignación como **«pendiente de instalar software»**.
+3. Generar automáticamente una **alerta de software para Jefatura** (el tipo de alerta ya existe), indicando qué programa, en qué laboratorio y para qué sección.
+4. Al registrar Jefatura la instalación, cerrar la alerta y quitar la marca.
+
+---
+
+### #7 ⚪ Las secciones sin horarios cuentan como escaladas
+
+**Qué pasa.** Una sección sin horarios entra al motor, falla de inmediato y aparece entre las escaladas, mezclada con los problemas que requieren una decisión. Hoy es el caso de `DEMO001 DEMO`.
+
+**Propuesta.** No procesarla en el motor y mostrarla aparte como **«Datos incompletos: falta cargar horarios»**, con enlace a la carga de datos o, cuando exista, a la edición de horario (#21).
+
+---
+
+### #8 ⚪ Una sección se reparte en varias aulas a la vez sin confirmación
+
+**Qué pasa.** Si ningún espacio individual alcanza, el motor junta hasta 4 espacios contiguos. Ejemplo real: `202SW0805 2-LAB` (61 alumnos) está en tres laboratorios de 21 puestos, con un solo docente en tres salas al mismo tiempo.
+
+**Pregunta para la facultad.** ¿Se acepta en la práctica? Si los laboratorios están conectados (puertas internas, un mismo ambiente dividido), sí; si son salas cerradas, no.
+
+**Propuesta.** Permitir el reparto solo entre espacios marcados como «conectables», o pedir confirmación de Coordinación cuando una sección quede repartida.
+
+---
+
+### #9 ⚪ No se puede reorganizar dando prioridad a las escaladas al inicio del ciclo
+
+**Qué pasa.** Dar prioridad a una sección escalada implicaría mover a otras que ya tienen aula. Con las clases en curso no conviene, porque cambia el aula de alumnos y docentes que no tenían ningún problema. Pero en las **primeras semanas** los ajustes son normales.
+
+**Límites de la idea.**
+- Solo ayuda cuando el motivo es «todas las aulas ocupadas» o «no hay bloque contiguo».
+- Si a una hora hay más secciones que aulas, la prioridad solo cambia **quién** se queda fuera.
+
+**Propuesta.** Una acción **«Reorganizar con prioridad»**, disponible solo durante un periodo configurable al inicio del ciclo, que procese primero las escaladas y avise por Telegram a todos los afectados. Fuera de ese periodo, la salida es la asignación manual (#4).
+
+---
+
+### #29 🟠 «Reintentar» no sirve si nada cambió y la pantalla no lo explica
+
+**Qué pasa.** El motor es determinista: con los mismos datos da el mismo resultado. Si nada cambió desde el último intento, «Reintentar» devuelve exactamente lo mismo. La pantalla muestra **«Esta sección sigue en revisión.»** ([InicioAdmin.tsx:134](../frontend/src/pages/admin/InicioAdmin.tsx)), pero no explica que **nada cambió** ni qué hacer.
+
+**Consecuencia.** Parece que el botón no funciona y Coordinación lo pulsa una y otra vez.
+
+**Propuesta.**
+1. Si los datos de la sección no cambiaron desde el último intento, desactivar el botón con el texto «No hay cambios desde el último intento».
+2. Mostrar qué puede hacer según el motivo: cargar horarios, pedir instalación de software, o **«Asignar a mano»** (#4).
+
+---
+
+## 2. Accesibilidad
+
+### Cómo funciona hoy
+
+1. **El alumno** declara en su perfil, en la ficha médica: *«¿Tienes alguna condición física que te impide subir a pisos superiores?»*. El texto de ayuda promete: *«Si la marcas, el sistema te prioriza las aulas del primer piso»*.
+2. Al guardarlo, el sistema marca **todas** sus matrículas con movilidad reducida ([alumno.service.ts:296](../backend/src/services/alumno.service.ts)).
+3. **Coordinación** también puede marcarla con la columna `movilidadReducida` del CSV de matrículas.
+4. Si **al menos un alumno** de una sección tiene la marca, el motor prioriza bloques del piso 1 para **toda** la sección.
+5. La ruta de referencia del alumno indica «ruta accesible por ascensor».
+
+**Estado de la base hoy:** ningún alumno tiene la condición declarada y ninguna matrícula está marcada. **El flujo nunca se ha probado con datos reales.**
+
+**Espacios habilitados por piso:**
+
+| Piso | Aulas teóricas | Laboratorios |
+|---|---|---|
+| 1 | 17 | **2** |
+| 2 | 15 | 4 |
+| 3 | 0 | **11** |
+
+---
+
+### #10 🔴 Si no hay lugar en el piso 1, se asigna otro piso sin avisar a nadie
+
+**Qué pasa.** Si no hay ningún bloque disponible en el piso 1, el motor aplica un plan B: el piso superior más cercano al ascensor ([accesibilidad.ts:93](../backend/src/rules/accesibilidad.ts)). Genera internamente un indicador (`fallbackPiso1Aplicado`) y un motivo, pero ese indicador **no se guarda en la base, no genera alerta, no queda en auditoría y no aparece en ninguna pantalla**.
+
+**Por qué es muy probable.** Solo hay **2 laboratorios habilitados en el piso 1**. Un alumno en silla de ruedas matriculado en `202SW0805 2-LAB` (61 alumnos, necesita 3 laboratorios) quedará casi seguro en el piso 2 o 3.
+
+**Consecuencia.** El alumno llega y no puede entrar al aula. Coordinación no lo sabía.
+
+**Propuesta.**
+1. Guardar el plan B en la asignación y mostrarlo.
+2. Generar una **alerta de accesibilidad** para Coordinación: «La sección X tiene alumnos con movilidad reducida y quedó en el piso 3».
+3. Opcionalmente, escalar la sección en lugar de asignarla fuera del piso 1, para que Coordinación decida (asignación manual, #4).
+
+---
+
+### #11 🔴 Reimportar las matrículas borra la declaración del alumno
+
+**Qué pasa.** Al importar el CSV de matrículas, cada matrícula se actualiza con el valor de movilidad reducida **del CSV**, que por defecto es «no» ([matriculas.importer.ts:159](../backend/src/importers/matriculas.importer.ts)).
+
+**Consecuencia.**
+- Un alumno que declaró su condición la pierde en la siguiente carga de matrículas.
+- Su perfil **sigue mostrando la casilla marcada**, así que cree que está protegido.
+- Las matrículas nuevas que llegan después de la declaración tampoco reciben la marca.
+
+**Propuesta.** Al importar, la movilidad reducida de una matrícula debe ser «sí» si el CSV lo indica **o** si el alumno tiene la condición declarada y aprobada (#12). Una importación nunca debe borrar una declaración.
+
+---
+
+### #12 🟠 Cualquier alumno puede declararse con movilidad reducida sin verificación
+
+> **Decisión: a solucionar.** Coordinación confirma la declaración antes de aplicarla.
+
+**Qué pasa.** La declaración del alumno se aplica de inmediato y sin revisión.
+
+**Riesgo.** Un alumno puede marcarla para conseguir aulas en el primer piso. Además, como basta **un** alumno para mover **toda** la sección, el abuso afecta a sus compañeros y quita espacios del piso 1 a quien sí los necesita.
+
+**Propuesta.**
+1. La casilla genera una **solicitud** con estado *pendiente*.
+2. Coordinación (o el área de Bienestar) la **aprueba o rechaza**, con la misma mecánica que las solicitudes de software.
+3. Solo al aprobarla se marca la movilidad reducida en las matrículas.
+4. El alumno ve el estado en su perfil: pendiente, aprobada o rechazada con motivo.
+5. Por privacidad, no pedir diagnósticos: basta con el requisito de acceso, como ya dice el texto de ayuda.
+
+---
+
+### #13 🟠 Declarar la condición no reasigna ni avisa a nadie
+
+**Qué pasa.** Al marcar la casilla solo se actualizan las matrículas. No se reasignan sus secciones, no se avisa a Coordinación y el alumno no recibe confirmación. El cambio recién se aplica cuando alguien vuelve a correr la asignación.
+
+**Consecuencia.** El alumno lee *«el sistema te prioriza las aulas del primer piso»* y puede pasar semanas subiendo escaleras creyendo que ya está resuelto.
+
+**Propuesta.** Al aprobarse la declaración (#12): reasignar las secciones del alumno, informar el resultado (piso 1 conseguido, o alerta si no, ver #10) y avisarle por Telegram y en el portal.
+
+---
+
+### #14 🟡 Coordinación no tiene una vista de quién necesita accesibilidad
+
+**Qué pasa.** No existe ninguna pantalla con los alumnos que declararon movilidad reducida, sus secciones y si quedaron o no en el piso 1.
+
+**Propuesta.** Vista «Accesibilidad» en administración: solicitudes pendientes, alumnos aprobados, secciones afectadas y su piso actual, resaltando las que quedaron fuera del piso 1.
+
+---
+
+### #15 🟡 Los docentes no pueden declarar movilidad reducida
+
+**Qué pasa.** Solo existe para alumnos (`Matricula.movilidadReducida` y la ficha médica del alumno). Un docente en silla de ruedas no tiene cómo indicarlo y el motor no lo considera.
+
+**Propuesta.** Agregar la declaración al portal docente, con la misma aprobación (#12), y que el motor priorice el piso 1 en las secciones de ese docente.
+
+---
+
+### #16 ⚪ La condición es un solo sí/no y no vence
+
+**Qué pasa.** No distingue una condición permanente (silla de ruedas) de una temporal (una pierna enyesada por un mes). Una condición temporal queda marcada para siempre, salvo que el alumno recuerde desmarcarla.
+
+**Propuesta.** Agregar una **fecha de fin** opcional. Al vencer, se quita la marca y se reasigna. Si se quiere más detalle, un tipo de requisito (no un diagnóstico): «no puede usar escaleras», «necesita espacio para silla de ruedas».
+
+---
+
+## 3. Roles, espacios y alertas
+
+### #17 🔴 Jefatura no tiene laboratorios a cargo
+
+> **Decisión: a solucionar.** Llenar la tabla; no se elimina.
+
+**Qué pasa.** Jefatura solo puede ver y editar los laboratorios que figuran en la tabla `EspacioResponsable` ([acceso.service.ts:9](../backend/src/services/acceso.service.ts)). La tabla está **vacía** y **ninguna pantalla, seed ni script la llena**.
+
+**Consecuencia.** La cuenta `jefatura` ve vacíos los espacios, las alertas y las incidencias, y recibe *«No tienes asignado este laboratorio»* en cualquier laboratorio. Si un docente reporta una incidencia, **nadie de Jefatura la ve**.
+
+**Contexto.** En la facultad hay una sola Jefatura, responsable de todos los laboratorios. La tabla se mantiene porque la base ya está modelada así y permite repartir laboratorios si algún día hiciera falta.
+
+**Propuesta (acordada).**
+1. Agregar al seed un paso que vincule toda cuenta de Jefatura con todos los laboratorios.
+2. Ejecutar solo ese paso en la base actual (no el seed completo, que recarga el Excel).
+3. Al crear un laboratorio nuevo, vincularlo automáticamente a Jefatura.
+
+---
+
+### #18 🟠 Deshabilitar un espacio con clases no genera alerta
+
+**Qué pasa.** Al editar un espacio, solo un cambio de **aforo** evalúa capacidad y genera alerta ([espacioAdmin.service.ts:445](../backend/src/services/espacioAdmin.service.ts)). Deshabilitar un espacio que tiene secciones asignadas no avisa a nadie, y por #3 esas secciones siguen asignadas a un espacio deshabilitado.
+
+**Propuesta.** Al deshabilitar un espacio con asignaciones vigentes: advertir antes de confirmar («Este espacio tiene N secciones asignadas»), generar la alerta y ofrecer «Reubicar secciones».
+
+---
+
+### #19 🟡 Las alertas e incidencias no notifican a nadie
+
+**Qué pasa.** Jefatura y Coordinación tienen que entrar a revisar. Una incidencia de prioridad alta («no funciona ningún proyector») puede esperar horas sin que nadie la vea.
+
+**Propuesta.** Aviso inmediato a Jefatura por Telegram para incidencias de prioridad alta, y un contador visible en el inicio de administración.
+
+---
+
+### #20 🟡 Nadie puede restablecer la clave de Coordinación ni de Jefatura
+
+**Qué pasa.** Coordinación restablece las claves de alumnos y docentes, pero las cuentas de Coordinación y Jefatura solo se crean en el seed. Si se olvida su clave, solo se arregla tocando la base.
+
+**Propuesta.** Como mínimo, un procedimiento documentado (script de restablecimiento). Idealmente, que Coordinación pueda restablecer la de Jefatura, y un procedimiento de soporte para la de Coordinación.
+
+---
+
+## 4. Secciones, datos y presentación
+
+### #21 🟡 El horario de una sección no se puede editar en pantalla
+
+**Qué pasa.** En la edición de secciones solo se puede cambiar el tipo de espacio, el docente y el software requerido ([seccionAdmin.service.ts:144](../backend/src/services/seccionAdmin.service.ts)). Para corregir el horario de **una** sección hay que volver a cargar el CSV de horarios completo.
+
+**Propuesta.** Editar los horarios de una sección desde la pantalla de Secciones, validando el formato y los choques del docente, y reasignar la sección al guardar.
+
+---
+
+### #22 🟡 Pasar una sección de teoría a laboratorio la duplica; el docente no puede pedirlo
+
+**Cómo se modela hoy.** Cada grupo de un curso son **dos secciones**, cada una con su horario y tipo de espacio. De los 50 cursos, 48 tienen teoría y laboratorio. Ejemplo:
+
+| Sección | Tipo | Docente | Horario |
+|---|---|---|---|
+| `2` | Aula teórica | 0A0690 | Jueves 18:00–20:00 |
+| `2-LAB` | Laboratorio | 0A0690 | Jueves 20:00–22:00 |
+
+**Qué pasa.** Algunos docentes dictan todas las horas en laboratorio. Hoy Coordinación puede cambiar el tipo de la sección `2` a laboratorio, pero quedan **dos secciones de laboratorio** del mismo grupo, que el motor trata por separado y que pueden caer en **laboratorios distintos** a mitad de la clase. Además, el docente no tiene forma de pedir el cambio.
+
+**Propuesta.**
+1. **Fusión:** los horarios de la sección `2` pasan a `2-LAB` (jueves 18:00–22:00), la sección de teoría se retira conservando su historial y se libera su aula. Como el motor busca un espacio libre en **todas** las franjas de una sección, le asigna el mismo laboratorio las 4 horas.
+2. **Solicitud docente:** desde el portal docente, «Dictar todo en laboratorio» con justificación. Coordinación la aprueba o rechaza; al aprobar se ejecuta la fusión y se reasigna.
+
+---
+
+### #23 🟡 Teoría y laboratorio se muestran como cursos distintos
+
+**Qué pasa.** Algunas vistas agrupan las secciones por curso y otras no:
+
+| Vista | ¿Agrupa teoría y laboratorio? |
+|---|---|
+| «Mis cursos» del alumno | ✅ Sí |
+| Consulta pública por código de alumno | ✅ Sí |
+| Telegram (`/hoy`, `/ahora`, horario semanal, resumen diario) | ❌ No |
+| Horario del alumno (cuadrícula y vista por día) | ❌ No |
+| Portal docente (inicio y horario) | ❌ No |
+
+En las que fallan:
+- No dice si la clase es teoría o laboratorio: muestra el código crudo «Sec. 2-LAB».
+- El horario semanal de Telegram no muestra la sección ([consultasBot.service.ts:189](../backend/src/telegram/consultasBot.service.ts)): aparecen dos líneas idénticas «202SW0805 – Nombre del curso» con aulas distintas.
+
+**Propuesta.** Una función compartida que agrupe por curso y grupo y rotule el tipo:
+
+```
+202SW0805 · Nombre del curso (Grupo 2)
+  Teoría       18:00–20:00  Aula 105
+  Laboratorio  20:00–22:00  Laboratorio 01
+```
+
+Usarla en Telegram, en el horario del alumno y en el portal docente.
+
+---
+
+### #24 🟡 Los docentes no reciben aviso de cambio de aula
+
+**Qué pasa.** Cuando una sección cambia de aula, el aviso por Telegram solo llega a los alumnos vinculados. El docente no tiene vinculación con Telegram ni recibe otro aviso.
+
+**Propuesta.** Vinculación de Telegram para docentes (o aviso en el portal) y envío del cambio de aula también al docente de la sección.
+
+---
+
+### #25 🟡 El cambio de periodo depende de la configuración del servidor
+
+**Qué pasa.** El periodo vigente sale de la variable `PERIODO_VIGENTE` o, si no existe, del periodo más reciente con secciones ([periodo.service.ts](../backend/src/services/periodo.service.ts)). No existe una acción de «cerrar ciclo» o «abrir ciclo» desde Coordinación, ni nada que pase a histórico las asignaciones del ciclo anterior (relacionado con #5).
+
+**Propuesta.** Acción de Coordinación para cambiar de periodo que archive las asignaciones del anterior y fije el nuevo como vigente.
+
+---
+
+### #26 ⚪ La «última carga» se guarda en el navegador
+
+**Qué pasa.** En Carga de datos, la fecha y el resultado de la última carga se guardan en el navegador. Otro equipo u otra persona de Coordinación no los ve. El backend ya expone la última carga real (`GET /admin/importaciones/ultima`), pero la pantalla no la usa.
+
+**Propuesta.** Que la pantalla lea la fecha, el usuario y el resultado de la última carga desde `GET /admin/importaciones/ultima`, y que use el navegador solo si el servidor no responde, rotulándolo «en este navegador».
+
+**Seguimiento.** Ya está registrado en el issue #346.
+
+---
+
+## 5. Operación
+
+### #27 ⚪ Tras un `git pull` el backend no compila sin `prisma generate`
+
+**Qué pasa.** Si el pull trae cambios en `schema.prisma`, el cliente de Prisma queda desactualizado: el backend no compila y fallan 20 suites de pruebas. Se reprodujo el 24/11/2026 y se resolvió con `npx prisma generate`.
+
+**Propuesta.** Indicarlo en el README o ejecutarlo automáticamente en `postinstall`.
+
+---
+
+### #28 ⚪ El bloqueo de corridas vive en memoria
+
+**Qué pasa.** Para evitar dos corridas simultáneas se usa una variable en memoria ([asignacionDemanda.service.ts:16](../backend/src/services/asignacionDemanda.service.ts)). Funciona porque el backend corre en **una sola instancia** de Render. Con más de una instancia, dos corridas podrían cruzarse y producir dobles reservas.
+
+**Propuesta.** Solo si se escala: usar un bloqueo en la base (por ejemplo, un *advisory lock* de PostgreSQL).
+
+---
+
+## 6. Seguridad y privacidad
+
+### #30 🔴 Cualquiera que conozca un código puede tomar una cuenta no activada
+
+> **Decisión: riesgo aceptado (demo).** El sistema es una demostración y no está en producción. Debe resolverse antes de usarlo con usuarios reales.
+
+**Qué pasa.** Las cuentas del seed y de las altas manuales usan el **código como usuario y como clave inicial**. Quien inicia sesión con esa clave debe cambiarla, pero el sistema no puede distinguir al dueño real de cualquier otra persona que conozca el código.
+
+**Datos reales.** **67 de 68 docentes** y **3 de 5 alumnos** con cuenta todavía tienen la clave inicial.
+
+**Escenario.**
+1. Un alumno conoce el código de un docente (los códigos siguen un patrón, como `0A0690`) o el de un compañero.
+2. Entra con código y clave iguales al código, y el sistema le pide definir una nueva.
+3. Define la suya: ahora la cuenta es de él y **el dueño real queda fuera**.
+4. Con una cuenta de docente puede reportar incidencias o pedir software en su nombre; con una de alumno, ver su perfil y su ficha médica.
+
+**Propuesta.**
+1. Clave inicial **aleatoria**, como ya hace la importación de docentes, entregada por un canal del dueño (correo institucional o en persona).
+2. Que la clave inicial **venza** (por ejemplo, a los 7 días) y requiera un restablecimiento.
+3. Para la base actual: regenerar las claves de las cuentas no activadas y repartirlas.
+
+---
+
+### #31 🟠 La consulta pública revela dónde estará cualquier alumno, sin iniciar sesión
+
+> **Decisión: riesgo aceptado (demo).** Debe resolverse antes de usarlo con usuarios reales.
+
+**Qué pasa.** `GET /consulta/alumno/:codigo` no exige sesión y devuelve el nombre de pila, los cursos, los horarios, las aulas y el nombre del docente de cualquier alumno.
+
+**Riesgo.**
+- Basta el código de alguien para saber **dónde estará y a qué hora** durante todo el ciclo. Es un riesgo de acoso.
+- Los códigos son secuenciales (`23200107`, `23200263`…) y el límite es de 120 consultas por minuto por IP, así que se puede recorrer a toda la población en poco tiempo.
+
+**Propuesta.** Que la consulta por código de **alumno** exija iniciar sesión (y que cada alumno solo vea la suya), dejando pública solo la consulta por código de **curso**, que no identifica a personas.
+
+---
+
+### #32 🟡 Restablecer o cambiar la clave no cierra las sesiones abiertas
+
+**Qué pasa.** Las sesiones son tokens JWT válidos por 8 horas y no hay forma de revocarlos ([auth.service.ts:30](../backend/src/services/auth.service.ts)). Si alguien robó una sesión, ni el cambio de clave ni el restablecimiento por Coordinación la cierran.
+
+**Propuesta.** Guardar en la cuenta una «versión de credenciales» que cambie con cada cambio o restablecimiento de clave, incluirla en el token y rechazar los tokens con una versión anterior.
+
+---
+
+### #33 🟡 Telegram se vincula con la clave inicial y los límites de intentos se reinician
+
+> **Decisión: riesgo aceptado (demo),** por ser una variante de #30. Se resuelve junto con él.
+
+**Cómo funciona la vinculación.** Para recibir su horario por Telegram, el alumno escribe al bot su código y su clave. El bot compara la clave con la **clave actual** de la cuenta:
+
+| Situación de la cuenta | ¿Qué clave acepta el bot? | ¿Hay riesgo? |
+|---|---|---|
+| El alumno ya cambió su clave inicial en el portal | Solo la **nueva** clave | No |
+| El alumno **nunca** entró al portal | La clave inicial, que es **el mismo código** | **Sí** |
+
+**Qué pasa.** El problema está solo en el segundo caso. El portal obliga a cambiar la clave inicial antes de usarlo, pero **el bot no exige ese cambio**.
+
+**Ejemplo.** Juan conoce el código de Ana, y Ana nunca entró al portal. Juan escribe al bot «código-de-Ana código-de-Ana», el bot vincula **su** Telegram a la cuenta de Ana y Juan recibe cada mañana el horario de Ana. Ana no se entera.
+
+**Problema adicional.** Los límites de intentos (login y Telegram) viven en memoria. Render suspende el servicio tras 15 minutos sin tráfico y, al despertar, los contadores empiezan de cero.
+
+**Propuesta.**
+1. El bot rechaza la vinculación de cuentas con la clave inicial pendiente y responde: «Primero activa tu cuenta en el portal y cambia tu clave; luego vuelve a escribirme con tu nueva clave».
+2. Cuando la cuenta ya cambió su clave, nada cambia: el bot sigue aceptando solo la clave actual.
+3. Guardar los contadores de intentos en la base para que no se reinicien al despertar el servidor.
+
+**Criterios de aceptación.**
+- Una cuenta con clave inicial pendiente no se puede vincular, aunque la clave sea correcta.
+- Una cuenta activada se vincula solo con su clave actual.
+
+---
+
+### #37 ⚪ La consulta pública carga la ficha médica y no filtra por periodo
+
+> **Decisión: a solucionar.**
+
+**Qué pasa.**
+1. Cuando alguien busca un código de alumno en la consulta pública, el sistema trae de la base **todo** el registro del alumno, **incluida su ficha médica** (tipo de sangre, alergias, condición de accesibilidad), aunque después **no la muestra** ([consulta.service.ts:102](../backend/src/services/consulta.service.ts)).
+2. Además, muestra las matrículas de **todos** los periodos, no solo del vigente.
+
+**Riesgo.**
+- Hoy no se filtra ningún dato, porque la respuesta solo incluye cursos, aulas y el nombre de pila. Pero los datos de salud ya están en memoria en una página **pública**: basta un cambio descuidado en la respuesta (por ejemplo, devolver «el alumno completo» para depurar) para exponerlos. La regla segura es no leer lo que no se va a mostrar.
+- Cuando haya varios ciclos cargados, la consulta mostrará también cursos y aulas de ciclos pasados, mezclados con los actuales.
+
+**Propuesta.**
+1. Quitar `fichaMedica` de la consulta pública. Leer solo los campos que se muestran: código, nombre y las matrículas con su sección, curso, docente, horarios y aula.
+2. Filtrar las matrículas por el **periodo vigente**, igual que el resto del sistema.
+3. Revisar el resto de consultas que llegan a respuestas públicas o de otros roles con el mismo criterio: la ficha médica solo la lee el propio alumno en su perfil.
+
+**Criterios de aceptación.**
+- La consulta pública no lee la ficha médica de la base.
+- Con dos periodos cargados, la consulta muestra solo el vigente.
+
+---
+
+## 7. Integridad de las importaciones
+
+### #34 🟠 Un CSV con errores deja la base a medias
+
+> **Decisión: a solucionar.** Si el CSV tiene al menos un error, no se importa nada.
+
+**Qué pasa.** Las cuatro importaciones procesan el CSV **fila por fila**, cada una por separado y sin transacción. Si una fila falla, se registra el error y se sigue con la siguiente: las filas buenas **quedan guardadas**.
+
+**Lo que sí funciona.** Volver a subir el archivo corregido **no duplica nada**: cada fila se actualiza si ya existe y se crea si no. Es decir, el «análisis de duplicados» al reimportar ya existe. El problema no es la segunda carga, sino **lo que pasa entre la primera y la segunda**.
+
+**Ejemplo.**
+1. Se sube un CSV de matrículas con un error en la fila 500.
+2. Se guardan las 499 filas buenas.
+3. **El motor se ejecuta solo** al terminar la importación y asigna aulas con el 99 % de los datos.
+4. Los alumnos ya ven aulas calculadas con datos incompletos.
+5. Coordinación corrige y vuelve a subir el archivo, algunas secciones cambian de aula y se envían avisos de cambio a alumnos que no tenían por qué recibirlos.
+
+**Propuesta: importación «todo o nada».**
+1. **Leer y validar el archivo completo** antes de escribir en la base: formato de cada fila, que existan los cursos, secciones y alumnos referidos, que no haya filas repetidas dentro del mismo archivo y las reglas de #36.
+2. **Si hay al menos un error, no se guarda nada.** La pantalla muestra la lista completa de errores (fila, columna y motivo) para corregirlos todos de una vez, no uno por uno.
+3. **Si no hay errores, se guarda todo en una sola transacción.** Si algo falla durante el guardado (por ejemplo, se cae la conexión), la base vuelve al estado anterior.
+4. **Solo después de guardar con éxito** se ejecuta el motor de asignación.
+5. El registro de importaciones guarda el intento rechazado con su número de errores, para que quede constancia.
+
+El seed del proyecto ([seed.ts](../backend/prisma/seed.ts)) ya valida todo el archivo antes de tocar la base, así que hay un modelo a seguir dentro del mismo código.
+
+**Criterios de aceptación.**
+- Un CSV con un error en una sola fila no cambia ningún registro de la base.
+- La pantalla lista todos los errores del archivo, no solo el primero.
+- El motor no se ejecuta tras una importación rechazada.
+- Subir dos veces el mismo archivo válido deja la base igual que subirlo una vez.
+
+---
+
+### #35 🟠 Las importaciones nunca borran: retiros y horarios cambiados quedan duplicados
+
+**Qué pasa.** Las importaciones solo **crean o actualizan**; nunca eliminan lo que ya no está en el CSV.
+
+| Caso real | Qué queda en la base |
+|---|---|
+| Un alumno se retira de un curso y se recarga el CSV de matrículas | **Sigue matriculado**: cuenta para el aforo y sigue viendo la clase |
+| Una sección cambia su inicio de 18:00 a 19:00 y se recarga el CSV de horarios | **Quedan las dos franjas**: la de 18:00 (vieja) y la de 19:00 (nueva), porque la clave del horario es sección + día + hora de inicio ([horarios.importer.ts:86](../backend/src/importers/horarios.importer.ts)) |
+| Se cierra una sección | Sigue existiendo y ocupando aula |
+
+**Ejemplo paso a paso: un alumno que se retira.**
+1. Se carga el CSV de matrículas: Pedro está matriculado en Cálculo.
+2. Pedro se retira y Coordinación carga el CSV actualizado, que ya no lo incluye.
+3. La importación solo crea o actualiza lo que viene en el archivo. Como Pedro no viene, **no lo toca**.
+4. Pedro sigue matriculado: cuenta para el tamaño de la sección y sigue viendo Cálculo en su horario.
+
+**Ejemplo paso a paso: un horario que cambia.**
+1. Cálculo era el lunes de 18:00 a 20:00.
+2. Se cambia al lunes de 19:00 a 21:00 y se carga el CSV actualizado.
+3. Cada horario se identifica por sección, día y **hora de inicio**. Como la hora de inicio cambió, el sistema cree que es **otro** horario: agrega el de 19:00 y deja el de 18:00.
+4. La sección queda con dos franjas que se pisan (18:00–20:00 y 19:00–21:00) y el motor le busca aula para las dos, o la escala.
+
+**Consecuencia.** Aulas reservadas para clases que ya no existen, aforos inflados y secciones que escalan porque piden dos franjas.
+
+> **Decisión: a solucionar.**
+
+**Propuesta: cada archivo es la verdad para lo que incluye.**
+1. **Matrículas:** para cada sección que aparece en el archivo, las matrículas de esa sección pasan a ser **exactamente** las del archivo. Las que ya no figuran se eliminan (retiros). Las secciones que no aparecen en el archivo no se tocan, para que se pueda cargar por partes.
+2. **Horarios:** igual. Para cada sección del archivo, sus horarios pasan a ser exactamente los del archivo. Un cambio de hora reemplaza la franja vieja en lugar de sumarse a ella.
+3. **Cursos y secciones:** una sección que deja de aparecer no se borra (tiene historial), pero se marca como **inactiva**: no entra al motor y libera su aula.
+4. **Vista previa antes de confirmar:** «Se agregarán 12 matrículas, se quitarán 3 (retiros) y se reemplazarán 2 horarios». Coordinación confirma o cancela.
+5. Todo dentro de la misma transacción «todo o nada» de #34.
+6. Tras guardar, el motor reasigna las secciones afectadas y se avisa a quienes cambian de aula.
+
+**Criterios de aceptación.**
+- Un alumno que no figura en el nuevo CSV de su sección deja de estar matriculado y deja de contar para el aforo.
+- Cambiar la hora de inicio de una sección en el CSV deja una sola franja, la nueva.
+- Las secciones que no aparecen en el archivo no se modifican.
+- La vista previa coincide con lo que finalmente se guarda.
+
+---
+
+### #36 🟡 No se valida que el inicio sea antes del fin ni los choques de docentes y alumnos
+
+**Qué pasa.** La importación de horarios valida el formato `HH:mm`, pero no que el inicio sea **anterior** al fin. Un horario 20:00–18:00 se acepta y el motor nunca lo detecta como solapado con otro, así que puede generar choques. Tampoco se valida que un docente no tenga dos secciones a la misma hora, ni que un alumno no esté matriculado en dos clases simultáneas.
+
+**Datos reales hoy:** 0 horarios invertidos, 0 choques de docentes y 0 choques entre los 2237 alumnos. **Los datos actuales están limpios, pero nada impide que la próxima carga no lo esté.**
+
+**Propuesta.** Rechazar en la importación los horarios con inicio ≥ fin y advertir los choques de docentes y alumnos.
+
+---
+
+## 8. Datos reales, operación y dependencias
+
+### #38 🟠 Un CSV guardado desde Excel rompe las tildes y la ñ
+
+**Qué pasa.** La pantalla de Carga de datos lee el archivo siempre como UTF-8 ([CargaDatos.tsx:116](../frontend/src/pages/admin/CargaDatos.tsx)). Excel en Windows en español, con la opción habitual «CSV (delimitado por comas)», guarda el archivo en otra codificación (Windows-1252). Al leerlo como UTF-8, cada letra con tilde o ñ se convierte en el carácter de reemplazo `�`.
+
+**Ejemplo.** «Cálculo» se guarda como «C�lculo» y «Muñoz» como «Mu�oz», **sin ningún error ni aviso**: la importación sale «exitosa» con los nombres dañados.
+
+**Lo que sí funciona.** El separador `;` que usa Excel en español y la marca BOM inicial ya se detectan correctamente ([archivoImportacion.ts](../backend/src/lib/archivoImportacion.ts)).
+
+**Estado de la base hoy.** Se revisaron los nombres de cursos, docentes, alumnos y espacios: **no hay ningún carácter dañado**. Los datos actuales se cargaron con el seed desde Excel (`.xlsx`), que no tiene este problema. El riesgo aparece con la **próxima** carga por CSV.
+
+**¿Se pueden reparar los caracteres después?** **No, una vez guardados.** Al leer el archivo con la codificación equivocada, **todas** las letras especiales (á, é, í, ó, ú, ñ) se convierten en el **mismo** símbolo `�`. Desde «C�lculo» no se puede saber si la letra perdida era «á», «é» o «ñ»: la información se pierde en el momento de leer el archivo.
+
+Por eso la reparación tiene que hacerse **al leer el archivo**, antes de que se pierda nada. Leído correctamente, el texto queda bien desde el principio.
+
+> El caso contrario sí es reparable: si un archivo UTF-8 se lee como Windows-1252, «Cálculo» aparece como «CÃ¡lculo», y esa secuencia se puede revertir. Pero no es lo que ocurre aquí.
+
+**Propuesta: detectar la codificación al leer.**
+1. En la pantalla de Carga de datos, leer el archivo como **bytes** y no directamente como texto.
+2. Intentar decodificarlo como UTF-8 en modo estricto. Si el archivo no es UTF-8 válido, decodificarlo como **Windows-1252**, que es lo que guarda Excel en español. Ambas cosas las hace el navegador sin librerías adicionales (`TextDecoder`).
+3. Mostrar en la vista previa algunos nombres del archivo («Cálculo II», «Muñoz») para que Coordinación confirme que se leen bien antes de importar.
+4. Como red de seguridad en el backend: rechazar cualquier fila que todavía contenga `�`, con el mensaje «El archivo tiene caracteres dañados: guárdalo como CSV UTF-8 en Excel».
+5. Indicar en las plantillas y en `docs/guia-csv.md` que se recomienda «CSV UTF-8 (delimitado por comas)».
+
+**Criterios de aceptación.**
+- Un CSV guardado con «CSV (delimitado por comas)» desde Excel en español importa «Cálculo» y «Muñoz» correctamente.
+- Un CSV en UTF-8 sigue funcionando igual.
+- Ninguna fila con `�` llega a la base.
+
+---
+
+### #39 🟠 Las importaciones grandes superan el tiempo de espera y siguen corriendo
+
+**Qué pasa.** Cada fila de matrículas hace entre 5 y 7 consultas a la base, **una detrás de otra** ([matriculas.importer.ts](../backend/src/importers/matriculas.importer.ts)). La base actual tiene **4470 matrículas**, lo que supone unas 25 000 consultas. El frontend espera como máximo **120 segundos** a la importación. Aun con 10 ms por consulta, serían unos 4 minutos.
+
+**Consecuencia.**
+1. A los 120 s la pantalla muestra un error de tiempo agotado.
+2. El backend **sigue importando** en segundo plano y termina guardando los datos (y ejecutando el motor).
+3. Coordinación cree que falló y vuelve a subir el archivo: ahora hay **dos importaciones a la vez** sobre los mismos datos.
+
+**Cómo se comprobó.** Es una **estimación**: no se ejecutó una importación real para no modificar la base. El número de consultas por fila y el volumen de datos sí se verificaron.
+
+**Propuesta.**
+1. Cargar de una vez los cursos, secciones y alumnos existentes y escribir en lotes, en lugar de consultar fila por fila.
+2. Procesar la importación **en segundo plano** y que la pantalla consulte su estado («procesando 2300 de 4470»).
+3. Rechazar una importación nueva mientras otra del mismo tipo esté en curso.
+
+---
+
+### #40 🟡 El primer acceso tras un rato sin uso falla por tiempo de espera
+
+**Qué pasa.** El servidor gratuito de Render se suspende tras 15 minutos sin tráfico y tarda entre **45 y 60 segundos** en despertar (dato de `docs/arquitectura.md`). El frontend corta las peticiones a los **30 segundos** ([api.ts](../frontend/src/services/api.ts)).
+
+**Consecuencia.** El primer usuario de la mañana (o el evaluador al empezar la demo) intenta iniciar sesión y recibe un error de tiempo agotado. Al reintentar, funciona.
+
+> **Decisión: riesgo conocido y aceptado.** Ya estaba documentado como riesgo operativo del plan gratuito de Render. Las mejoras siguientes son opcionales.
+
+**Propuesta.**
+1. Al abrir la página de inicio o de login, hacer una petición a `/health` para despertar el servidor mientras el usuario escribe.
+2. Si una petición falla por tiempo agotado, reintentarla una vez con el mensaje «Estamos despertando el servidor, un momento…».
+3. **Antes de la sustentación:** abrir el sistema unos minutos antes para que el servidor esté despierto.
+
+---
+
+### #41 🟠 La regla de software nunca se ha probado: no hay software cargado
+
+**Qué pasa.** En la base hay **0 programas en el catálogo, 0 instalados en laboratorios y 0 requisitos de software en secciones**. Los 17 laboratorios habilitados aparecen sin software.
+
+**Consecuencia.**
+- La matriz de software, que es lo que distingue a los laboratorios de las aulas teóricas, **nunca se ha ejercitado con datos reales**. Todas las secciones de laboratorio se asignaron sin revisar software.
+- En la demo no se puede mostrar el escalamiento por software, la alerta de software ni la solicitud de un docente con efecto real (flujo F-03 de la guía).
+
+**Por qué está vacío.** Nunca se cargó software, pero **el sistema sí tiene por dónde cargarlo**:
+
+| Vía | Qué carga | Estado |
+|---|---|---|
+| **Excel del seed** (`backend/prisma/data/seed-plantilla.xlsx`) | Hoja *Espacios*, columna `software_instalado`: lo que tiene cada laboratorio. Hoja *Cursos_Secciones*, columna `software_requerido`: lo que pide cada sección. El seed crea el catálogo automáticamente con esos nombres | **Las dos columnas existen, pero están vacías** (0 celdas con datos) |
+| **CSV de cursos y secciones** | Columna `stackSoftwareRequerido`: lo que pide cada sección | Solo acepta programas que **ya existen** en el catálogo; si no, la fila falla con `SOFTWARE_NO_REGISTRADO` |
+| **Pantallas** | Coordinación da de alta el catálogo (`/admin/software`); Jefatura registra lo instalado en cada laboratorio (`/admin/laboratorio`); Coordinación edita lo que pide cada sección (`/admin/secciones`) | Funciona, pero es lento: 17 laboratorios × ~15 programas, uno por uno |
+
+**No existe un CSV para el catálogo ni para lo instalado en cada laboratorio.** Solo se pueden cargar de forma masiva con el Excel del seed.
+
+> **Decisión: primero proponer, después cargar.** El catálogo **no se carga directamente** en la base. Primero se presenta como propuesta, se revisa y se aprueba; solo entonces se carga.
+
+**Propuesta: cómo solucionarlo, en este orden.**
+1. **Proponer.** Presentar el **Anexo C** (catálogo, imagen base, laboratorios especializados y software por curso) como **propuesta** al equipo y a quien corresponda en la facultad (Coordinación, Jefatura de Laboratorios y los docentes de cada curso). El Anexo C sale de los nombres de los cursos, no de un inventario real.
+2. **Revisar y ajustar.** Cada docente confirma o corrige lo que usa su curso; Jefatura confirma qué tiene instalado cada laboratorio y cuáles son los especializados. Se resuelven también las dudas de #47 y #48 (cursos corruptos y cursos generales con laboratorio).
+3. **Aprobar.** Dejar la versión final aprobada por escrito (por ejemplo, actualizando el Anexo C con la fecha y quién la aprobó).
+4. **Cargar.** Solo con la versión aprobada:
+   - **Para la demo (lo más rápido):** completar en el Excel del seed las columnas `software_instalado` (hoja *Espacios*) y `software_requerido` (hoja *Cursos_Secciones*) y volver a correr el seed. El seed es idempotente: actualiza sin duplicar. Antes, validar con `SEED_SOLO_VALIDAR=1`, que revisa el Excel sin tocar la base.
+   - **A mediano plazo:** agregar dos tipos de importación por CSV en Carga de datos: **catálogo de software** (nombre, versión, categoría, licencia) y **software instalado por laboratorio** (laboratorio, programa). Así Coordinación y Jefatura no dependen del seed.
+5. **Verificar.** Volver a correr la asignación y revisar qué secciones escalan por software. Algunas lo harán, y es lo esperado: muestra que la regla funciona.
+
+**Cómo repartir el software entre laboratorios (propuesta).** En una facultad lo habitual es una **imagen base** igual en todos los laboratorios y algunos **laboratorios especializados**:
+
+| Laboratorios | Software |
+|---|---|
+| Todos | Imagen base del Anexo C |
+| 2 o 3 laboratorios de bases de datos | Imagen base + SQL Server, MongoDB, Power BI Desktop |
+| 2 laboratorios de redes | Imagen base + Cisco Packet Tracer, GNS3, Wireshark |
+| 2 laboratorios de hardware y sistemas | Imagen base + Logisim Evolution, Arduino IDE, MS-MPI / OpenMPI, VirtualBox |
+| 2 laboratorios de ciencia de datos e IA | Imagen base + Anaconda, R + RStudio, Weka, KNIME, Power BI Desktop |
+
+Así la regla de software tiene efecto real: un curso de redes solo cabe en los laboratorios de redes, y si están ocupados, la sección escala.
+
+---
+
+### #42 🟡 30 espacios sobre el piso 1 no tienen distancia al ascensor
+
+**Qué pasa.** Cuando no hay lugar en el piso 1 para una sección con movilidad reducida, el plan B elige el espacio **más cercano al ascensor** (ver #10). Pero **30 espacios habilitados de los pisos 2 y 3 no tienen registrada esa distancia**, así que el plan B no tiene datos y queda librado al orden por defecto.
+
+**Propuesta.**
+1. Completar la columna `distancia_ascensor` de la hoja *Espacios* del Excel del seed (ya existe) para todos los espacios fuera del piso 1. Se puede medir sobre los planos SVG con el conversor de planos (`tools/planos`).
+2. No aplicar el plan B sobre espacios sin ese dato: si ninguno lo tiene, escalar la sección para que decida Coordinación (ver #10).
+
+---
+
+### #43 🟡 Varias acciones importantes no dejan registro de quién las hizo
+
+**Qué pasa.** La auditoría de acciones de personas solo cubre la edición de espacios, de laboratorios y de secciones. Estas acciones **no dejan registro** de quién las hizo ni cuándo:
+
+| Acción | Por qué importa |
+|---|---|
+| Restablecer la clave de un usuario | Es una acción de seguridad: si una cuenta se usa mal, hay que saber quién la restableció |
+| Altas de alumnos y docentes | Crea cuentas con acceso al sistema |
+| Aprobar o rechazar solicitudes de software | Cambia el catálogo y los requisitos de las secciones |
+| Cerrar o descartar incidencias | Queda quién la cerró, pero no en la auditoría general |
+| Cambios en el catálogo de software | Afecta a la asignación de laboratorios |
+
+**Propuesta.** Registrar estas acciones con el mismo mecanismo de auditoría que ya usan espacios y secciones, y mostrarlas en `/admin/auditoria`.
+
+---
+
+### #44 🟡 Librerías con vulnerabilidades conocidas
+
+> **Decisión: a solucionar como proceso.** Es normal que aparezcan vulnerabilidades: se descubren continuamente en librerías muy usadas, así que ningún proyecto queda «limpio» para siempre. Lo que se espera de un proyecto bien mantenido no es cero vulnerabilidades, sino **revisarlas de forma periódica y no tener ninguna alta o crítica sin evaluar**.
+
+**Qué pasa.** `npm audit` sobre las dependencias de producción, ejecutado el 24/11/2026:
+
+| Proyecto | Altas | Moderadas | Paquetes afectados |
+|---|---|---|---|
+| Backend | 6 | 2 | `prisma`, `@prisma/config`, `zod`, `effect`, `deepmerge-ts`, `source-map-js`, `exceljs`, `uuid` |
+| Frontend | 2 | 0 | `follow-redirects` (usado por axios), `source-map-js` |
+
+La mayoría son ataques de denegación de servicio (consumo de memoria o CPU con entradas manipuladas). Ninguna está catalogada como crítica.
+
+**Propuesta.**
+1. **Ahora:** ejecutar `npm audit fix` (sin `--force`) en backend y frontend. Solo aplica actualizaciones compatibles; después, comprobar que compilan y pasan las pruebas.
+2. **Las que requieran un cambio de versión mayor** (por ejemplo, Prisma): evaluarlas por separado, porque pueden romper código. Si no se actualizan, dejar constancia de por qué.
+3. **De forma continua:** activar **Dependabot** en GitHub, que abre automáticamente un pull request cada vez que una librería publica una corrección de seguridad.
+4. **En integración continua:** agregar `npm audit --omit=dev --audit-level=high` al pipeline para que avise cuando aparezca una vulnerabilidad alta nueva.
+
+---
+
+### #45 ⚪ La evidencia de una incidencia es solo un enlace; no se puede adjuntar una foto
+
+**Qué pasa.** El campo «evidencia» es un texto de hasta 500 caracteres. Jefatura lo ve como enlace si empieza por `http`. El docente no puede adjuntar una foto del equipo dañado: tiene que subirla a otro sitio y pegar el enlace.
+
+**Riesgos menores.** El enlace puede apuntar a cualquier sitio web, y Jefatura lo abre confiando en que viene de un docente.
+
+**Propuesta.** Permitir adjuntar una imagen a la incidencia (con límite de tamaño y tipo) y mostrarla en la ficha que ve Jefatura.
+
+---
+
+### #46 ⚪ Los mensajes repetidos por Telegram se procesan dos veces
+
+**Qué pasa.** Si el servidor tarda en responder (por ejemplo, mientras Render despierta, ver #40), Telegram reenvía el mismo mensaje. El bot no recuerda qué mensajes ya procesó (no usa el identificador `update_id`), así que puede responder dos veces el mismo comando.
+
+**Impacto.** Bajo: respuestas duplicadas, sin daño en los datos.
+
+**Propuesta.** Guardar el último `update_id` procesado y descartar los repetidos.
+
+---
+
+### #47 🟠 El nombre de un curso está corrupto y falta otro curso (`202SW0303`)
+
+**Qué pasa.** El curso `202SW0302` tiene como nombre:
+
+```
+ESTADÍSTICA Y PROBABILIDADES 4.0 1 -- 30 7 -- VIERNES 08:00 - 11:00 -- VIERNES 11:00 - 13:00 202SW0303 - FISICA ELÉCTRÓNICA
+```
+
+Es decir, al armar los datos se **pegaron dos cursos en uno**: el nombre de `202SW0302` arrastra créditos, vacantes y horarios, y además el código y nombre de **`202SW0303 – Física Electrónica`**, que **no existe en la base** como curso propio. Probablemente es un error al extraer los datos del PDF del horario.
+
+**Consecuencia.**
+- El nombre corrupto aparece tal cual en el portal del alumno, en Telegram y en los reportes.
+- Física Electrónica no tiene secciones, horarios ni aulas: sus alumnos no la ven en su horario.
+
+**Propuesta.**
+1. Corregir el nombre de `202SW0302` a «ESTADÍSTICA Y PROBABILIDADES».
+2. Agregar `202SW0303 – FÍSICA ELECTRÓNICA` (corrigiendo además la tilde extra de «ELÉCTRÓNICA») con sus secciones, horarios y matrículas.
+3. Al importar, rechazar nombres de curso que contengan códigos de otro curso, horas (`08:00`) o separadores como `--`, para detectar este tipo de errores a tiempo.
+
+---
+
+### #48 🟡 Cursos generales tienen secciones de laboratorio de cómputo
+
+**Qué pasa.** Varios cursos que normalmente no usan computadoras tienen **6 o 7 secciones de laboratorio**:
+
+| Curso | Secciones de laboratorio |
+|---|---|
+| Redacción y Técnicas de Comunicación Efectiva II | 6 |
+| Investigación Formativa | 7 |
+| Realidad Nacional y Mundial | 6 |
+| Química General | 6 |
+| Física I | 6 |
+| Emprendimiento e Innovación | 6 |
+| Metodología de la Investigación | 5 |
+
+**Duda.** En SAIE «laboratorio» significa **laboratorio de cómputo**. Química General y Física I suelen tener laboratorios **de química o de física**, que no son de cómputo. Y Redacción o Realidad Nacional rara vez usan laboratorio.
+
+**Consecuencia.** Si los datos no son correctos, estas secciones ocupan laboratorios de cómputo que necesitan los cursos de la carrera, y provocan escalamientos innecesarios.
+
+**Propuesta.**
+1. Confirmar con la facultad qué secciones usan realmente laboratorio de cómputo.
+2. Las que usan laboratorios de otro tipo (química, física) deberían excluirse del motor o modelarse como otro tipo de espacio.
+3. Las que no usan laboratorio, pasarlas a aula teórica.
+
+---
+
+## Anexo A — Ángulos revisados y no revisados
+
+| Ángulo | Estado |
+|---|---|
+| Reglas del motor de asignación | Revisado |
+| Accesibilidad de punta a punta | Revisado |
+| Roles y permisos por pantalla y endpoint | Revisado |
+| Autenticación, sesiones y Telegram | Revisado |
+| Privacidad de la consulta pública y de la ficha médica | Revisado |
+| Integridad de las importaciones | Revisado |
+| Zona horaria (Lima) en resúmenes y «clase actual» | Revisado: correcta |
+| Lectura de CSV reales (codificación, separador, BOM) | Revisado |
+| Frontend ante tiempos de espera y arranque lento del servidor | Revisado |
+| Coherencia de los datos de espacios, software y contigüidad | Revisado (las 74 contigüidades son del mismo piso, pabellón y tipo) |
+| Cobertura de la auditoría | Revisado |
+| Dependencias con vulnerabilidades conocidas | Revisado (`npm audit`) |
+| Rendimiento y carga (k6) | **No revisado**; solo la estimación de #39 |
+| Accesibilidad web (lectores de pantalla, contraste) | **No revisado** a fondo; hay pruebas automáticas en el frontend |
+| Respaldo y recuperación de la base | **No revisado**; existe `docs/runbook_rollback.md` |
+
+---
+
+## Anexo C — Propuesta de software por laboratorio y por curso (riesgo #41)
+
+> **Estado: PROPUESTA, pendiente de revisión y aprobación. No cargar en la base hasta que se apruebe** (ver el orden de pasos en #41).
+>
+> Es una propuesta razonable hecha a partir de los nombres de los cursos y de lo habitual en una carrera de Ingeniería de Software. **No es un inventario real.** Cada docente debería confirmar lo que usa su curso. Los nombres van sin versión, así que el motor acepta cualquier versión instalada (comparación `CUALQUIERA`).
+
+### C.1 Catálogo propuesto
+
+| Categoría | Programas |
+|---|---|
+| Sistema operativo | Windows 11, Ubuntu (máquina virtual) |
+| Ofimática | Microsoft Office (Word, Excel, PowerPoint), Microsoft Project |
+| IDE | Visual Studio Code, IntelliJ IDEA Community, Eclipse IDE, Apache NetBeans, Code::Blocks |
+| Lenguajes | Python, Java JDK, GCC / G++ (MinGW), Node.js |
+| Bases de datos | PostgreSQL + pgAdmin, MySQL + MySQL Workbench, SQL Server Express + SSMS, MongoDB Community |
+| Redes | Cisco Packet Tracer, GNS3, Wireshark |
+| Simulación y matemática | GeoGebra, GNU Octave, R + RStudio, Logisim Evolution, Arduino IDE |
+| Modelado y diseño | StarUML, Bizagi Modeler, draw.io, Figma (navegador) |
+| Datos e IA | Anaconda (Jupyter, scikit-learn, TensorFlow), Weka, KNIME, Power BI Desktop |
+| Desarrollo y calidad | Git, Docker Desktop, VirtualBox, Postman, Apache JMeter, Selenium IDE |
+| Compiladores y paralelismo | ANTLR, WinFlexBison (Flex/Bison), MS-MPI / OpenMPI |
+| Automatización | UiPath Studio Community |
+| Otros | Google Chrome, GanttProject, Blender |
+
+**Imagen base** (instalada en **todos** los laboratorios): Windows 11, Microsoft Office, Google Chrome, Visual Studio Code, Python, Java JDK, GCC / G++, Git, GeoGebra, draw.io, PostgreSQL + pgAdmin, MySQL + MySQL Workbench.
+
+### C.2 Software requerido por curso (solo secciones de laboratorio)
+
+| Curso | Software requerido |
+|---|---|
+| 202SW0104 Cálculo I | GeoGebra, GNU Octave |
+| 202SW0106 Álgebra y Geometría Analítica I | GeoGebra, GNU Octave |
+| 202SW0201 Redacción y Técnicas de Comunicación Efectiva II | Microsoft Office *(confirmar si usa laboratorio, #48)* |
+| 202SW0202 Investigación Formativa | Microsoft Office *(confirmar, #48)* |
+| 202SW0203 Realidad Nacional y Mundial | Microsoft Office *(confirmar, #48)* |
+| 202SW0204 Cálculo II | GeoGebra, GNU Octave |
+| 202SW0205 Física I | GeoGebra *(confirmar si es laboratorio de física, #48)* |
+| 202SW0206 Química General | — *(probablemente laboratorio de química, #48)* |
+| 202SW0207 Introducción a las Ciencias e Ingeniería | Microsoft Office, Python |
+| 202SW0302 Estadística y Probabilidades | R + RStudio, Microsoft Office |
+| 202SW0303 Física Electrónica *(falta en la base, #47)* | Logisim Evolution, Arduino IDE |
+| 202SW0304 Ingeniería Económica | Microsoft Office |
+| 202SW0306 Matemática Básica | GeoGebra |
+| 202SW0401 Algorítmica II | Code::Blocks, GCC / G++, Java JDK |
+| 202SW0402 Contabilidad para la Gestión | Microsoft Office |
+| 202SW0403 Organización y Administración | Microsoft Office, Bizagi Modeler |
+| 202SW0404 Matemática Discreta | Python, GeoGebra |
+| 202SW0405 Estructura de Datos | Code::Blocks, GCC / G++, Java JDK, IntelliJ IDEA Community |
+| 202SW0406 Procesos de Software | Bizagi Modeler, StarUML |
+| 202SW0407 Sistemas Digitales | Logisim Evolution |
+| 202SW0501 Análisis y Diseño de Algoritmos | GCC / G++, Python, Java JDK |
+| 202SW0502 Arquitectura de Computadoras | Logisim Evolution, VirtualBox |
+| 202SW0503 Base de Datos I | PostgreSQL + pgAdmin, MySQL + MySQL Workbench |
+| 202SW0504 Computación Visual | Python, Blender |
+| 202SW0505 Economía para la Gestión | Microsoft Office |
+| 202SW0506 Ingeniería de Requisitos | StarUML, Bizagi Modeler, Figma |
+| 202SW0507 Lenguajes y Compiladores | ANTLR, WinFlexBison, GCC / G++ |
+| 202SW0601 Base de Datos II | SQL Server Express + SSMS, MongoDB Community, PostgreSQL + pgAdmin |
+| 202SW0602 Calidad de Software | Selenium IDE, Apache JMeter, Postman |
+| 202SW0603 Diseño de Software | StarUML, IntelliJ IDEA Community |
+| 202SW0605 Gestión de Proyecto de Software | Microsoft Project, GanttProject |
+| 202SW0606 Interacción Hombre Computador | Figma |
+| 202SW0607 Sistemas Operativos | VirtualBox, Ubuntu |
+| 202SW0701 Arquitectura de Software | Docker Desktop, StarUML, IntelliJ IDEA Community |
+| 202SW0702 Experiencia de Usuario y Usabilidad | Figma |
+| 202SW0703 Gestión de la Configuración y Mantenimiento del Software | Git, Docker Desktop |
+| 202SW0704 Formación de Empresas de Software | Microsoft Office |
+| 202SW0705 Inteligencia Artificial | Anaconda |
+| 202SW0706 Pruebas de Software | Selenium IDE, Apache JMeter, Postman |
+| 202SW0707 Redes y Transmisión de Datos | Cisco Packet Tracer, Wireshark, GNS3 |
+| 202SW0801 Automatización y Control de Software | UiPath Studio Community, Arduino IDE |
+| 202SW0802 Inteligencia de Negocios | Power BI Desktop, SQL Server Express + SSMS |
+| 202SW0803 Metodología de la Investigación | Microsoft Office *(confirmar, #48)* |
+| 202SW0804 Minería de Datos | Weka, KNIME, Anaconda |
+| 202SW0805 Programación Concurrente y Paralela | MS-MPI / OpenMPI, Java JDK, GCC / G++ |
+| 202SW0806 Taller de Construcción de Software Web | Node.js, Docker Desktop, Postman |
+| 202SW0807 Aseguramiento de la Calidad del Software | Apache JMeter, Selenium IDE |
+| 202SW0E01 Programación y Computación | Python, Visual Studio Code |
+| 202SW0E02 Emprendimiento e Innovación | Microsoft Office, Figma *(confirmar, #48)* |
+
+*202SW0604 Ética Profesional y Legislación Informática no tiene secciones de laboratorio.*
+
+### C.3 Efecto esperado al cargarlo
+
+- Los cursos que solo piden software de la imagen base (Matemática, Base de Datos I, Algorítmica, etc.) caben en **cualquier** laboratorio, como hoy.
+- Los cursos especializados (Redes, Minería de Datos, Inteligencia de Negocios, Programación Concurrente, Sistemas Digitales) solo caben en los laboratorios especializados. **Si esos laboratorios están ocupados a su hora, la sección escalará por software.** Eso permite mostrar en la demo la regla de software, la alerta y el flujo de solicitud del docente.
+
+---
+
+## Anexo B — Decisiones de diseño a confirmar con la facultad
+
+| Tema | Pregunta | Relacionado |
+|---|---|---|
+| Reparto en varias aulas | ¿Se acepta que una sección use varias salas a la vez con un solo docente? | #8 |
+| Reorganización al inicio del ciclo | ¿Cuántas semanas se permiten cambios de aula masivos? | #9 |
+| Verificación de accesibilidad | ¿Quién aprueba las declaraciones: Coordinación o Bienestar? | #12 |
+| Plan B de accesibilidad | Sin piso 1 disponible, ¿asignar el piso más accesible con alerta o escalar siempre? | #10 |
+| Teoría como laboratorio | ¿Lo decide el docente con aprobación, o solo Coordinación? | #22 |
