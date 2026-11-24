@@ -15,11 +15,11 @@
 
 | Gravedad | Significado | Cantidad |
 |---|---|---|
-| 🔴 Crítica | Rompe una garantía básica del sistema, deja a una persona sin atender o permite tomar una cuenta ajena | 6 |
-| 🟠 Alta | Un flujo importante no funciona, se puede abusar o deja datos incorrectos | 13 |
-| 🟡 Media | Falta una función esperable o la información confunde | 19 |
+| 🔴 Crítica | Rompe una garantía básica del sistema, deja a una persona sin atender o permite tomar una cuenta ajena | 7 |
+| 🟠 Alta | Un flujo importante no funciona, se puede abusar o deja datos incorrectos | 15 |
+| 🟡 Media | Falta una función esperable o la información confunde | 20 |
 | ⚪ Baja | Detalle, caso borde o riesgo a futuro | 10 |
-| | **Total** | **48** |
+| | **Total** | **52** |
 
 ### Tabla general
 
@@ -73,6 +73,10 @@
 | 46 | Telegram | Los mensajes repetidos por Telegram se procesan dos veces | ⚪ | Código |
 | 47 | Datos | El nombre de un curso está corrupto y falta otro curso (`202SW0303`) | 🟠 | Base |
 | 48 | Datos | Cursos generales (Química, Redacción, Realidad Nacional…) tienen secciones de laboratorio de cómputo | 🟡 | Base |
+| 49 | Periodos | Un error al escribir el periodo (por ejemplo «2026-I») cambia el periodo de todo el sistema | 🔴 | Base + Código |
+| 50 | Periodos | Se puede registrar y modificar información de periodos que ya terminaron | 🟠 | Código |
+| 51 | Periodos | El sistema cambia de periodo en cuanto se carga el siguiente, aunque el actual no haya terminado | 🟠 | Código |
+| 52 | Periodos | Varias pantallas y reglas mezclan datos de distintos periodos | 🟡 | Código |
 
 ### Decisiones tomadas
 
@@ -89,13 +93,14 @@
 | #40 | **Riesgo conocido y aceptado.** Ya estaba documentado en `docs/arquitectura.md` (plan gratuito de Render). Mitigación para la demo: abrir el sistema unos minutos antes | 24/11/2026 |
 | #44 | **A solucionar como proceso,** no como cambio puntual: es normal que aparezcan vulnerabilidades nuevas en las librerías, así que se revisan de forma periódica | 24/11/2026 |
 | #38, #39, #41, #42, #43, #45, #46, #47, #48 | **A solucionar** | 24/11/2026 |
+| #25, #49, #50, #51, #52 | **A solucionar.** El cambio de periodo debe hacerse desde Coordinación, y no debe permitirse registrar información en periodos que ya terminaron (ver sección 9) | 24/11/2026 |
 
 > Los riesgos **#3, #4 y #29** son en el fondo un mismo problema: **cuando el motor no puede resolver algo, el sistema no le da a Coordinación ninguna salida.** Conviene diseñarlos juntos.
 
 ### Prioridad sugerida para la entrega
 
 1. **#1** — Doble reserva: es la garantía más básica del sistema.
-2. **#30** — 67 de 68 docentes tienen una cuenta que cualquiera puede tomar.
+2. **#49** — Un error al escribir el periodo en un CSV deja todo el sistema en un periodo que no existe.
 3. **#10 y #11** — Un alumno en silla de ruedas puede terminar en el piso 3 sin que nadie lo sepa.
 4. **#17** — Desbloquea todo el rol de Jefatura y las pruebas de la guía.
 5. **#3, #4 y #29** — Dan salida a las alertas y a las secciones escaladas.
@@ -509,9 +514,11 @@ Usarla en Telegram, en el horario del alumno y en el portal docente.
 
 ### #25 🟡 El cambio de periodo depende de la configuración del servidor
 
+> **Decisión: a solucionar.** El cambio de periodo debe hacerse desde Coordinación.
+
 **Qué pasa.** El periodo vigente sale de la variable `PERIODO_VIGENTE` o, si no existe, del periodo más reciente con secciones ([periodo.service.ts](../backend/src/services/periodo.service.ts)). No existe una acción de «cerrar ciclo» o «abrir ciclo» desde Coordinación, ni nada que pase a histórico las asignaciones del ciclo anterior (relacionado con #5).
 
-**Propuesta.** Acción de Coordinación para cambiar de periodo que archive las asignaciones del anterior y fije el nuevo como vigente.
+**Propuesta.** Ver la **sección 9 — Gestión de periodos**, que agrupa este riesgo con #49 a #52 y detalla cómo se hace hoy el cambio y cómo debería hacerse.
 
 ---
 
@@ -946,6 +953,155 @@ Es decir, al armar los datos se **pegaron dos cursos en uno**: el nombre de `202
 
 ---
 
+## 9. Gestión de periodos (semestres)
+
+### 9.1 Cómo se cambia de periodo hoy
+
+No hay ninguna acción para cambiar de semestre. El sistema decide el periodo vigente así ([periodo.service.ts](../backend/src/services/periodo.service.ts)):
+
+1. Si en el servidor (Render) está definida la variable `PERIODO_VIGENTE`, usa ese valor.
+2. Si no, usa **el periodo más reciente que tenga secciones cargadas**. Hoy no está definida, así que el vigente es `2026-2` por ser el único cargado.
+
+**Pasos actuales para pasar al siguiente semestre:**
+1. Preparar los CSV del nuevo periodo (cursos y secciones, horarios, matrículas y, si hay, docentes nuevos) con la columna `periodo` = `2027-1`.
+2. Cargarlos en Carga de datos, en ese orden.
+3. Al tener secciones, horarios y matrículas, el motor asigna las aulas solo.
+4. Como `2027-1` es ahora el más reciente, el sistema entero pasa a mostrarlo.
+
+Las cuentas, los espacios y el catálogo de software se mantienen entre periodos.
+
+**Cómo evitar el cambio adelantado hoy, sin cambiar código** (ver #51):
+1. **Antes** de cargar el nuevo periodo, definir en Render `PERIODO_VIGENTE=2026-2`.
+2. Cargar y revisar `2027-1`. Mientras tanto, la corrida automática sigue usando `2026-2`.
+3. El día que empieza el semestre, cambiar la variable a `PERIODO_VIGENTE=2027-1`, reiniciar el servicio y correr la asignación.
+
+Depende de alguien con acceso a Render, no de Coordinación.
+
+---
+
+### #49 🔴 Un error al escribir el periodo cambia el periodo de todo el sistema
+
+**Qué pasa.** Las importaciones solo exigen que la columna `periodo` no esté vacía: aceptan cualquier texto ([horarios.importer.ts:7](../backend/src/importers/horarios.importer.ts), y lo mismo en cursos y matrículas). Y el «periodo más reciente» se calcula **ordenando el texto**, no la fecha.
+
+**Comprobado en la base.** Así ordena la base distintos valores, de mayor a menor:
+
+```
+"2027-1" > "2026-II" > "2026-I" > "2026-2 " > "2026-2" > "2026-10"
+```
+
+**Consecuencia.** En Perú es común escribir los semestres en romanos («2026-I», «2026-II»). Si alguien sube un CSV con `2026-I`:
+1. Se crea un periodo nuevo, «2026-I», distinto de «2026-2».
+2. Como «2026-I» queda **por encima** de «2026-2» al ordenar, **pasa a ser el periodo vigente de todo el sistema**.
+3. Los alumnos dejan de ver su horario, el panel muestra un periodo casi vacío y la corrida automática se ejecuta sobre el periodo equivocado.
+
+Basta un error de una sola letra en un archivo para dejar el sistema en un periodo que no existe.
+
+**Propuesta.**
+1. Validar el formato del periodo en todas las importaciones: exactamente `AAAA-1` o `AAAA-2` (y `AAAA-0` si hay ciclo de verano). Cualquier otro valor es un error de fila, con el mensaje «El periodo debe tener el formato 2026-1 o 2026-2».
+2. Aceptar solo periodos **registrados** por Coordinación (ver 9.2): un periodo que no existe en la lista se rechaza.
+3. Nunca decidir el periodo vigente ordenando texto: lo fija Coordinación (ver 9.2).
+
+---
+
+### #50 🟠 Se puede registrar y modificar información de periodos que ya terminaron
+
+**Qué pasa.** Ninguna operación de escritura comprueba si el periodo ya terminó:
+
+| Operación | ¿Comprueba el periodo? |
+|---|---|
+| Importar cursos, horarios o matrículas | No: acepta cualquier periodo, incluso uno pasado |
+| Editar una sección (`/admin/secciones`) | No |
+| «Reintentar» la asignación de una sección | No: reasigna aunque sea de un periodo pasado, y ocupa aulas |
+| Reportar una incidencia (docente) | No: basta que la asignación figure como vigente, y las de periodos pasados nunca se archivan |
+| Solicitar software para una sección | No |
+
+**Consecuencia.** Como planteó el equipo: si ya estamos en 2027-1, registrar algo en 2026-1 no tiene sentido. Además puede tener efectos reales: reasignar una sección de un periodo pasado le da aulas **vigentes** que bloquean las de 2027-1 en los reintentos (#5).
+
+**Propuesta.** Reglas por estado del periodo (ver 9.2):
+
+| Estado del periodo | ¿Qué se permite? |
+|---|---|
+| **En preparación** (futuro) | Cargar y corregir datos, correr la asignación de prueba. Alumnos y docentes **no** lo ven todavía |
+| **Vigente** | Todo lo normal: cargas, ediciones, reasignaciones, incidencias, solicitudes |
+| **Cerrado** (pasado) | **Solo consulta.** Ninguna importación, edición, reasignación, incidencia ni solicitud. Rechazo con «El periodo 2026-1 está cerrado» |
+
+---
+
+### #51 🟠 El sistema cambia de periodo en cuanto se carga el siguiente
+
+**Qué pasa.** Con la regla del «más reciente», el periodo cambia en el momento en que se carga la primera sección del siguiente, no cuando termina el semestre.
+
+**Consecuencia.** Si Coordinación prepara 2027-1 en diciembre, con las clases de 2026-2 en curso:
+- los alumnos dejan de ver su horario actual en el portal y en Telegram;
+- el resumen diario de Telegram manda el horario del ciclo siguiente;
+- el panel de Coordinación muestra un periodo que todavía no empieza;
+- la corrida automática se ejecuta sobre el periodo nuevo.
+
+**Propuesta.** Separar «cargar un periodo» de «activarlo»: cargar 2027-1 lo deja **en preparación**, y solo pasa a vigente cuando Coordinación lo activa (ver 9.2).
+
+---
+
+### #52 🟡 Varias pantallas y reglas mezclan datos de distintos periodos
+
+**Qué pasa.** Algunas consultas filtran por periodo y otras no. Las que no filtran:
+
+| Dónde | Qué mezcla |
+|---|---|
+| «Reintentar» una sección | Aulas ocupadas por asignaciones de cualquier periodo (#5) |
+| Consulta pública por alumno | Cursos de todos los periodos (#37) |
+| Detección de alertas de capacidad y software | Todas las asignaciones vigentes del espacio, de cualquier periodo |
+| Mapa de ocupación | Ocupación de cualquier asignación vigente |
+
+**Hoy no se nota** porque solo hay un periodo cargado. Con el segundo, aparecerán aulas «ocupadas» por clases del semestre anterior y alertas sobre secciones que ya terminaron.
+
+**Propuesta.**
+1. Al cerrar un periodo, pasar todas sus asignaciones a **históricas** (ver 9.2). Así ninguna consulta de «vigentes» las vuelve a ver.
+2. Además, filtrar explícitamente por el periodo vigente en todas las consultas de la tabla.
+
+---
+
+### 9.2 Propuesta: gestión de periodos desde Coordinación
+
+Una pantalla **«Periodos»** en el panel de Coordinación que reemplace la variable `PERIODO_VIGENTE` y la regla del «más reciente».
+
+**Datos.** Una tabla `Periodo` nueva (con su migración): código (`2027-1`), fecha de inicio, fecha de fin y estado (`EN_PREPARACION`, `VIGENTE`, `CERRADO`). Solo puede haber **un** periodo vigente a la vez.
+
+**Ciclo de vida de un periodo:**
+
+```
+Registrar ──► EN PREPARACIÓN ──► Activar ──► VIGENTE ──► Cerrar ──► CERRADO
+```
+
+**Acciones de Coordinación:**
+
+| Acción | Qué hace | Validaciones |
+|---|---|---|
+| **Registrar periodo** | Crea `2027-1` en preparación, con sus fechas | Formato `AAAA-N`; no puede repetirse; las fechas no pueden solaparse con otro periodo |
+| **Cargar datos** | Las importaciones indican el periodo de destino y solo aceptan periodos **en preparación o vigentes** | Rechaza periodos cerrados o no registrados (#49, #50) |
+| **Asignación de prueba** | Corre el motor sobre un periodo en preparación para revisar escaladas antes de publicar | Alumnos y docentes no ven el resultado todavía |
+| **Activar periodo** | Pasa `2027-1` a vigente y cierra el anterior **en el mismo paso** | Pide confirmación: «Se cerrará 2026-2 y alumnos y docentes verán 2027-1 desde ahora». Requiere que el nuevo tenga secciones, horarios y matrículas |
+| **Cerrar periodo** | Pasa el periodo a cerrado y sus asignaciones a históricas | Solo consulta desde ese momento |
+
+**Efectos de activar un periodo:**
+1. El anterior queda **cerrado** y sus asignaciones pasan a **históricas** (resuelve #52 y el problema de «Reintentar» de #5).
+2. El portal del alumno, el portal docente, Telegram y el panel pasan a mostrar el nuevo periodo.
+3. Queda registrado en la auditoría quién lo activó y cuándo.
+4. Opcional: aviso por Telegram a los alumnos («Ya están disponibles tus aulas de 2027-1»).
+
+**Qué ve cada rol:**
+- **Alumnos y docentes:** solo el periodo vigente. Nunca uno en preparación.
+- **Coordinación y Jefatura:** el vigente por defecto, con un selector para consultar periodos cerrados (solo lectura) o preparar uno nuevo.
+
+**Transición desde lo actual.** Al desplegarlo, registrar `2026-2` como vigente con sus fechas. La variable `PERIODO_VIGENTE` deja de usarse.
+
+**Criterios de aceptación.**
+- Cargar un CSV con periodo `2026-I` o con un periodo no registrado no cambia nada y muestra el error.
+- Con 2027-1 en preparación, alumnos y docentes siguen viendo 2026-2.
+- Tras activar 2027-1, 2026-2 queda cerrado y ninguna operación de escritura lo acepta.
+- Ninguna consulta de aulas ocupadas, alertas o mapa incluye asignaciones de periodos cerrados.
+
+---
+
 ## Anexo A — Ángulos revisados y no revisados
 
 | Ángulo | Estado |
@@ -961,6 +1117,7 @@ Es decir, al armar los datos se **pegaron dos cursos en uno**: el nombre de `202
 | Frontend ante tiempos de espera y arranque lento del servidor | Revisado |
 | Coherencia de los datos de espacios, software y contigüidad | Revisado (las 74 contigüidades son del mismo piso, pabellón y tipo) |
 | Cobertura de la auditoría | Revisado |
+| Manejo de periodos (validación, cambio de semestre, escritura en periodos pasados) | Revisado |
 | Dependencias con vulnerabilidades conocidas | Revisado (`npm audit`) |
 | Rendimiento y carga (k6) | **No revisado**; solo la estimación de #39 |
 | Accesibilidad web (lectores de pantalla, contraste) | **No revisado** a fondo; hay pruebas automáticas en el frontend |
