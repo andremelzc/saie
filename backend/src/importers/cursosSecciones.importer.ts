@@ -2,12 +2,13 @@ import { ComparacionVersion, PrismaClient, TipoEspacio } from '@prisma/client';
 import { z } from 'zod';
 import { parsearNombreVersion } from '../lib/software';
 import { resolverSoftwarePorNombre } from '../services/software.service';
+import { periodoSchema } from '../lib/periodo';
 
 export const CursoSeccionSchema = z.object({
   codigoCurso: z.string().min(1, 'El código del curso es requerido'),
   nombreCurso: z.string().min(1, 'El nombre del curso es requerido'),
   codigoSeccion: z.string().min(1, 'El código de la sección es requerido'),
-  periodo: z.string().min(1, 'El periodo es requerido'),
+  periodo: periodoSchema,
   tipoEspacioRequerido: z.enum([TipoEspacio.AULA_TEORICA, TipoEspacio.LABORATORIO]),
   /** Nombres con versión opcional (`"Python 3.12"`): se resuelven contra el catálogo. */
   stackSoftwareRequerido: z.array(z.string()).optional().default([]),

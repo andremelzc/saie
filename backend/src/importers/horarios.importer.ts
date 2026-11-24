@@ -1,10 +1,11 @@
 import { DiaSemana, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { periodoSchema } from '../lib/periodo';
 
 export const HorarioSchema = z.object({
   codigoCurso: z.string().min(1, 'El código del curso es requerido'),
   codigoSeccion: z.string().min(1, 'El código de la sección es requerido'),
-  periodo: z.string().min(1, 'El periodo es requerido'),
+  periodo: periodoSchema,
   diaSemana: z.enum([
     DiaSemana.LUNES,
     DiaSemana.MARTES,

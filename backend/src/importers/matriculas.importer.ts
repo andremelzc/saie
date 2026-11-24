@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { generarClaveInicial } from '../lib/claves';
 import { CredencialInicialDTO } from './docentes.importer';
+import { periodoSchema } from '../lib/periodo';
 
 export const MatriculaSchema = z.object({
   codigoAlumno: z.string().min(1, 'El código del alumno es requerido'),
@@ -11,7 +12,7 @@ export const MatriculaSchema = z.object({
   movilidadReducida: z.boolean().default(false),
   codigoCurso: z.string().min(1, 'El código del curso es requerido'),
   codigoSeccion: z.string().min(1, 'El código de la sección es requerido'),
-  periodo: z.string().min(1, 'El periodo es requerido'),
+  periodo: periodoSchema,
   crearCuentaAcceso: z.boolean().default(true),
 });
 
@@ -118,8 +119,13 @@ export async function importarMatriculas(
           correo,
           ...(cuentaId ? { cuentaId } : {}),
         },
+        include: { fichaMedica: { select: { condicionAccesible: true } } },
       });
       alumnosProcesados++;
+
+      // Issue 3.59 (riesgo R11 de la auditoría): la importación nunca borra la movilidad reducida
+      // que el alumno declaró en su ficha. La matrícula la lleva si lo indica el CSV o la ficha.
+      const movilidadFinal = movilidadReducida || alumno.fichaMedica?.condicionAccesible === true;
 
       // 3. Buscar Sección
       const curso = await prisma.curso.findUnique({
@@ -156,11 +162,11 @@ export async function importarMatriculas(
             seccionId: seccion.id,
           },
         },
-        update: { movilidadReducida },
+        update: { movilidadReducida: movilidadFinal },
         create: {
           alumnoId: alumno.id,
           seccionId: seccion.id,
-          movilidadReducida,
+          movilidadReducida: movilidadFinal,
         },
       });
       matriculasProcesadas++;
