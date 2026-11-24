@@ -41,4 +41,36 @@ describe('Utils de Administración', () => {
       }
     });
   });
+
+  describe('resumirReubicacion (Issue 2.22)', () => {
+    const seccion = (estado: 'VIGENTE' | 'ESCALADA') => ({
+      seccionId: 's',
+      codigoSeccion: '1',
+      codigoCurso: 'C1',
+      estado,
+      espacioIds: [],
+      motivoEscalamiento: null,
+      conservada: false,
+    });
+
+    it('cuenta las secciones reubicadas', () => {
+      expect(
+        adminUtils.resumirReubicacion({
+          alertaId: 'a',
+          alertaResuelta: true,
+          secciones: [seccion('VIGENTE')],
+        }),
+      ).toBe('Alerta resuelta: 1 sección reubicada.');
+    });
+
+    it('indica las que quedaron en revisión', () => {
+      expect(
+        adminUtils.resumirReubicacion({
+          alertaId: 'a',
+          alertaResuelta: true,
+          secciones: [seccion('VIGENTE'), seccion('VIGENTE'), seccion('ESCALADA')],
+        }),
+      ).toBe('Alerta resuelta: 2 secciones reubicadas, 1 en revisión en el inicio.');
+    });
+  });
 });
