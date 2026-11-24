@@ -2,7 +2,7 @@
 
 > **Para qué sirve:** recorrer el sistema completo con los cuatro roles, comprobando no solo los casos de éxito sino también los casos en que el sistema **rechaza** una acción o **escala** un problema a otro rol (Coordinación o Jefatura) para que lo resuelva.
 >
-> **Estado de la base al redactar esta guía (24/11/2026):** 14 migraciones aplicadas y sin diferencias con `schema.prisma`; periodo `2026-2`; 54 espacios (18 laboratorios, 36 aulas, 5 deshabilitados); 229 secciones; 228 asignaciones vigentes y 1 escalada; 0 alertas, 0 incidencias y 0 solicitudes de software.
+> **Estado de la base al redactar esta guía (24/11/2026):** 14 migraciones aplicadas y sin diferencias con `schema.prisma`; periodo `2026-2`; 54 espacios (18 laboratorios, 36 aulas, 5 deshabilitados); 229 secciones; 228 asignaciones vigentes y 1 escalada; 0 alertas, 0 incidencias y 0 solicitudes de software; 0 programas en el catálogo de software.
 
 ---
 
@@ -34,6 +34,10 @@ La tabla `EspacioResponsable` está **vacía** y ninguna pantalla ni script la l
 - **Después de cada `git pull`** correr `npx prisma generate` en `backend/`; si no, el backend no compila.
 - **Límite de intentos de login:** 5 intentos por usuario y 20 por IP cada 10 minutos. Los casos de clave incorrecta consumen intentos: hacerlos al final o con otra cuenta.
 - **Carga de datos (#346, pendiente):** la «última carga» se guarda en el navegador, no en el servidor. Si otro navegador no la muestra, es el comportamiento conocido, no un error nuevo.
+- **No hay software cargado** (riesgo #41): el catálogo, el software de los laboratorios y los requisitos de las secciones están vacíos. Para los casos de software (C-11, C-15, C-16 y F-03), Coordinación debe crear primero al menos un programa en `/admin/software`. **No cargar el catálogo propuesto** del documento de riesgos: está pendiente de aprobación.
+- **CSV desde Excel** (riesgo #38): guardar los CSV de prueba como «CSV UTF-8 (delimitado por comas)». Con el formato «CSV (delimitado por comas)» las tildes y la ñ se dañan.
+- **Servidor dormido** (riesgo #40): si nadie usó el sistema en 15 minutos, el primer acceso puede fallar por tiempo de espera. Reintentar una vez.
+- **No escribir periodos en romanos** (riesgo #49): en los CSV usar `2026-2`, nunca `2026-II`; un periodo mal escrito cambia el periodo vigente de todo el sistema.
 - Las acciones que modifican datos (PCs malogradas, software, aforo, solicitudes, incidencias) **cambian la base real**. Anotar los valores originales para revertirlos al final (sección 6).
 
 ### 0.4 Cómo registrar los resultados
@@ -215,8 +219,12 @@ Revertir lo que se cambió en la base real:
 
 | Hallazgo | Impacto en las pruebas | Seguimiento |
 |---|---|---|
-| Jefatura sin laboratorios a cargo (`EspacioResponsable` vacía y sin pantalla para llenarla) | Bloquea la sección 4 y los flujos F-01 a F-03 | **Por abrir issue** |
-| Reasignar no mueve una sección cuyo espacio perdió capacidad o fue deshabilitado: el motor la conserva porque solo mira los datos de la sección | F-01 se queda en el paso 4; deshabilitar un espacio con clases no genera alerta | **Por abrir issue** |
-| «Última carga» guardada en el navegador | Difiere entre navegadores | #346 |
-| No hay asignación manual de una sección escalada a un espacio concreto: solo se corrige la causa y se reintenta | Las escaladas se resuelven siempre por F-01 / F-03 / F-04 | Decisión de diseño a confirmar |
-| Los horarios de una sección no se editan en pantalla | F-04 requiere carga de CSV | Decisión de diseño a confirmar |
+| Jefatura sin laboratorios a cargo (`EspacioResponsable` vacía y sin pantalla para llenarla) | Bloquea la sección 4 y los flujos F-01 a F-03 | Riesgo #17 · **por abrir issue** |
+| Reasignar no mueve una sección cuyo espacio perdió capacidad o fue deshabilitado: el motor la conserva porque solo mira los datos de la sección | F-01 se queda en el paso 4; deshabilitar un espacio con clases no genera alerta | Riesgos #3 y #18 · **por abrir issue** |
+| La corrida completa puede dejar dos secciones en la misma aula a la misma hora | Revisar el mapa y la verificación de corrida después de cada carga de datos | Riesgo #1 · **por abrir issue** |
+| Un CSV con errores guarda igualmente las filas válidas | C-06 muestra filas guardadas aunque haya errores | Riesgo #34 · **por abrir issue** |
+| No hay software cargado | Los casos de software requieren crear un programa antes | Riesgo #41 |
+| «Última carga» guardada en el navegador | Difiere entre navegadores | Riesgo #26 · issue #346 |
+| No hay asignación manual de una sección escalada a un espacio concreto: solo se corrige la causa y se reintenta | Las escaladas se resuelven siempre por F-01 / F-03 / F-04 | Riesgos #4 y #29 |
+| Los horarios de una sección no se editan en pantalla | F-04 requiere carga de CSV | Riesgo #21 |
+| Alguien que conoce el código de una cuenta no activada puede tomarla (la clave inicial es el código) | Al probar A-06, no usar cuentas reales de otras personas | Riesgo #30 · aceptado para la demo |

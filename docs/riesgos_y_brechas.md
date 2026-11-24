@@ -1,13 +1,18 @@
 # Riesgos y brechas funcionales — SAIE
 
 > **Fecha de la revisión:** 24/11/2026 · **Rama revisada:** `develop` en `cce4b32`
-> **Alcance:** motor de asignación, accesibilidad, roles y permisos, espacios y alertas, secciones, presentación de la información y operación.
+> **Alcance:** motor de asignación, accesibilidad, roles y permisos, espacios y alertas, secciones y presentación, seguridad y privacidad, importaciones, calidad de los datos, gestión de periodos, operación y dependencias. El Anexo A detalla qué ángulos se revisaron y cuáles no.
 > **Cómo se comprobó cada hallazgo:**
 > - **Simulación:** se ejecutó el motor (funciones puras, sin tocar la base) con un caso armado para reproducir el problema.
 > - **Código:** se leyó el código y se siguió el flujo completo.
 > - **Base:** se consultó la base de datos real (solo lectura).
+> - **`npm audit`** y **Reproducido:** se ejecutó la herramienta o el paso indicado.
 >
 > Este documento **no** modifica código ni datos. Es el insumo para registrar los issues y priorizar el trabajo antes de la entrega.
+>
+> **Cómo leer cada riesgo:** *Qué pasa* (el problema, con ejemplo), *Dónde está* (enlace al código, cuando aplica), *Decisión* (si el equipo ya decidió algo), *Propuesta* (cómo solucionarlo) y *Criterios de aceptación* (cómo comprobar que quedó resuelto).
+>
+> **Documentos relacionados:** [`guia_pruebas_por_rol.md`](./guia_pruebas_por_rol.md) (guía de pruebas manuales, que remite a este documento en sus hallazgos conocidos).
 
 ---
 
@@ -94,6 +99,8 @@
 | #44 | **A solucionar como proceso,** no como cambio puntual: es normal que aparezcan vulnerabilidades nuevas en las librerías, así que se revisan de forma periódica | 24/11/2026 |
 | #38, #39, #41, #42, #43, #45, #46, #47, #48 | **A solucionar** | 24/11/2026 |
 | #25, #49, #50, #51, #52 | **A solucionar.** El cambio de periodo debe hacerse desde Coordinación, y no debe permitirse registrar información en periodos que ya terminaron (ver sección 9) | 24/11/2026 |
+| #41 | **Primero proponer, después cargar.** El catálogo de software del Anexo B se presenta como propuesta y solo se carga una vez aprobado | 24/11/2026 |
+| #1, #3–#11, #13–#16, #18–#24, #26–#29, #32, #36 | **Sin decisión explícita todavía.** El documento propone solucionarlos; falta que el equipo los priorice. Las preguntas abiertas están en el Anexo C | — |
 
 > Los riesgos **#3, #4 y #29** son en el fondo un mismo problema: **cuando el motor no puede resolver algo, el sistema no le da a Coordinación ninguna salida.** Conviene diseñarlos juntos.
 
@@ -235,6 +242,13 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 
 **Cambios necesarios.** Campo nuevo en `Asignacion` (origen automático/manual) con su migración, endpoint para Coordinación, respeto de las fijadas en el motor (corrida completa y por sección), acción en el inicio de administración y actualización de la spec 02.
 
+**Criterios de aceptación.**
+- Coordinación puede asignar a mano una sección escalada a uno o más espacios.
+- Un choque de horario se bloquea; la falta de asientos, de software o de piso 1 se advierte y se puede confirmar.
+- Las corridas siguientes no mueven una asignación manual.
+- La asignación manual queda en la auditoría con su motivo.
+- «Liberar» devuelve la sección al motor.
+
 ---
 
 ### #5 🟡 «Reintentar» considera aulas ocupadas de otros periodos
@@ -246,6 +260,10 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 **Hoy no se nota** porque solo existe el periodo 2026-2.
 
 **Propuesta.** Filtrar por el periodo de la sección, igual que la corrida completa. Opcionalmente, pasar a histórico las asignaciones vigentes de un periodo al cerrarlo (ver #25).
+
+**Criterios de aceptación.**
+- Con dos periodos cargados, reintentar una sección solo considera ocupadas las aulas de su propio periodo.
+- Reintentar una sección y la corrida completa dan el mismo resultado para esa sección.
 
 ---
 
@@ -261,6 +279,11 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 3. Generar automáticamente una **alerta de software para Jefatura** (el tipo de alerta ya existe), indicando qué programa, en qué laboratorio y para qué sección.
 4. Al registrar Jefatura la instalación, cerrar la alerta y quitar la marca.
 
+**Criterios de aceptación.**
+- Si el único impedimento es el software, la sección queda asignada y marcada «pendiente de instalar software».
+- Se genera una alerta de software para Jefatura con el programa, el laboratorio y la sección.
+- Al registrar Jefatura la instalación, la alerta se cierra y la marca desaparece.
+
 ---
 
 ### #7 ⚪ Las secciones sin horarios cuentan como escaladas
@@ -268,6 +291,10 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 **Qué pasa.** Una sección sin horarios entra al motor, falla de inmediato y aparece entre las escaladas, mezclada con los problemas que requieren una decisión. Hoy es el caso de `DEMO001 DEMO`.
 
 **Propuesta.** No procesarla en el motor y mostrarla aparte como **«Datos incompletos: falta cargar horarios»**, con enlace a la carga de datos o, cuando exista, a la edición de horario (#21).
+
+**Criterios de aceptación.**
+- Una sección sin horarios no aparece entre las escaladas.
+- Aparece en una lista «Datos incompletos» con un enlace para cargar o editar su horario.
 
 ---
 
@@ -278,6 +305,10 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 **Pregunta para la facultad.** ¿Se acepta en la práctica? Si los laboratorios están conectados (puertas internas, un mismo ambiente dividido), sí; si son salas cerradas, no.
 
 **Propuesta.** Permitir el reparto solo entre espacios marcados como «conectables», o pedir confirmación de Coordinación cuando una sección quede repartida.
+
+**Criterios de aceptación.**
+- Queda registrada la decisión de la facultad.
+- Si se restringe, una sección solo se reparte entre espacios marcados como conectables, o requiere la confirmación de Coordinación.
 
 ---
 
@@ -291,6 +322,11 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 
 **Propuesta.** Una acción **«Reorganizar con prioridad»**, disponible solo durante un periodo configurable al inicio del ciclo, que procese primero las escaladas y avise por Telegram a todos los afectados. Fuera de ese periodo, la salida es la asignación manual (#4).
 
+**Criterios de aceptación.**
+- La acción solo está disponible durante el periodo configurado al inicio del ciclo.
+- Antes de confirmar, muestra cuántas secciones cambiarían de aula.
+- Procesa primero las escaladas y avisa por Telegram a todos los afectados.
+
 ---
 
 ### #29 🟠 «Reintentar» no sirve si nada cambió y la pantalla no lo explica
@@ -302,6 +338,10 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 **Propuesta.**
 1. Si los datos de la sección no cambiaron desde el último intento, desactivar el botón con el texto «No hay cambios desde el último intento».
 2. Mostrar qué puede hacer según el motivo: cargar horarios, pedir instalación de software, o **«Asignar a mano»** (#4).
+
+**Criterios de aceptación.**
+- Si los datos de la sección no cambiaron desde el último intento, el botón está desactivado y explica por qué.
+- La pantalla muestra la acción sugerida según el motivo, incluida «Asignar a mano».
 
 ---
 
@@ -340,6 +380,11 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 2. Generar una **alerta de accesibilidad** para Coordinación: «La sección X tiene alumnos con movilidad reducida y quedó en el piso 3».
 3. Opcionalmente, escalar la sección en lugar de asignarla fuera del piso 1, para que Coordinación decida (asignación manual, #4).
 
+**Criterios de aceptación.**
+- Si una sección con alumnos con movilidad reducida queda fuera del piso 1, se genera una alerta visible para Coordinación.
+- La asignación guarda que se aplicó el plan B y se muestra en la sección.
+- Si se decide escalar en lugar de usar el plan B, la sección queda escalada con motivo de accesibilidad.
+
 ---
 
 ### #11 🔴 Reimportar las matrículas borra la declaración del alumno
@@ -352,6 +397,10 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 - Las matrículas nuevas que llegan después de la declaración tampoco reciben la marca.
 
 **Propuesta.** Al importar, la movilidad reducida de una matrícula debe ser «sí» si el CSV lo indica **o** si el alumno tiene la condición declarada y aprobada (#12). Una importación nunca debe borrar una declaración.
+
+**Criterios de aceptación.**
+- Reimportar las matrículas no quita la movilidad reducida de un alumno que la declaró y fue aprobada.
+- Una matrícula nueva de ese alumno nace con la marca.
 
 ---
 
@@ -370,6 +419,12 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 4. El alumno ve el estado en su perfil: pendiente, aprobada o rechazada con motivo.
 5. Por privacidad, no pedir diagnósticos: basta con el requisito de acceso, como ya dice el texto de ayuda.
 
+**Criterios de aceptación.**
+- Marcar la casilla crea una solicitud pendiente y no cambia ninguna matrícula.
+- Coordinación la aprueba o la rechaza con motivo.
+- Solo al aprobarla se marca la movilidad reducida en las matrículas.
+- El alumno ve el estado de su declaración en el perfil.
+
 ---
 
 ### #13 🟠 Declarar la condición no reasigna ni avisa a nadie
@@ -380,6 +435,10 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 
 **Propuesta.** Al aprobarse la declaración (#12): reasignar las secciones del alumno, informar el resultado (piso 1 conseguido, o alerta si no, ver #10) y avisarle por Telegram y en el portal.
 
+**Criterios de aceptación.**
+- Al aprobarse la declaración, las secciones del alumno se reasignan automáticamente.
+- El alumno recibe la confirmación del resultado: piso 1 conseguido, o aviso de que no fue posible.
+
 ---
 
 ### #14 🟡 Coordinación no tiene una vista de quién necesita accesibilidad
@@ -387,6 +446,10 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 **Qué pasa.** No existe ninguna pantalla con los alumnos que declararon movilidad reducida, sus secciones y si quedaron o no en el piso 1.
 
 **Propuesta.** Vista «Accesibilidad» en administración: solicitudes pendientes, alumnos aprobados, secciones afectadas y su piso actual, resaltando las que quedaron fuera del piso 1.
+
+**Criterios de aceptación.**
+- Existe una vista con las solicitudes pendientes, los alumnos aprobados y las secciones afectadas con su piso actual.
+- Se resaltan las secciones que quedaron fuera del piso 1.
 
 ---
 
@@ -396,6 +459,10 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 
 **Propuesta.** Agregar la declaración al portal docente, con la misma aprobación (#12), y que el motor priorice el piso 1 en las secciones de ese docente.
 
+**Criterios de aceptación.**
+- Un docente puede declarar la condición, sujeta a la misma aprobación que los alumnos.
+- El motor prioriza el piso 1 en las secciones de ese docente.
+
 ---
 
 ### #16 ⚪ La condición es un solo sí/no y no vence
@@ -403,6 +470,10 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 **Qué pasa.** No distingue una condición permanente (silla de ruedas) de una temporal (una pierna enyesada por un mes). Una condición temporal queda marcada para siempre, salvo que el alumno recuerde desmarcarla.
 
 **Propuesta.** Agregar una **fecha de fin** opcional. Al vencer, se quita la marca y se reasigna. Si se quiere más detalle, un tipo de requisito (no un diagnóstico): «no puede usar escaleras», «necesita espacio para silla de ruedas».
+
+**Criterios de aceptación.**
+- Se puede indicar una fecha de fin opcional.
+- Al vencer, se quita la marca y se reasignan las secciones afectadas.
 
 ---
 
@@ -423,6 +494,12 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 2. Ejecutar solo ese paso en la base actual (no el seed completo, que recarga el Excel).
 3. Al crear un laboratorio nuevo, vincularlo automáticamente a Jefatura.
 
+**Criterios de aceptación.**
+- La cuenta de Jefatura ve todos los laboratorios, con sus alertas e incidencias.
+- Abrir o editar cualquier laboratorio ya no devuelve 403.
+- Un laboratorio creado después queda a cargo de Jefatura automáticamente.
+- Las aulas teóricas siguen fuera del alcance de Jefatura.
+
 ---
 
 ### #18 🟠 Deshabilitar un espacio con clases no genera alerta
@@ -430,6 +507,11 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 **Qué pasa.** Al editar un espacio, solo un cambio de **aforo** evalúa capacidad y genera alerta ([espacioAdmin.service.ts:445](../backend/src/services/espacioAdmin.service.ts)). Deshabilitar un espacio que tiene secciones asignadas no avisa a nadie, y por #3 esas secciones siguen asignadas a un espacio deshabilitado.
 
 **Propuesta.** Al deshabilitar un espacio con asignaciones vigentes: advertir antes de confirmar («Este espacio tiene N secciones asignadas»), generar la alerta y ofrecer «Reubicar secciones».
+
+**Criterios de aceptación.**
+- Al deshabilitar un espacio con asignaciones vigentes, se advierte antes de confirmar.
+- Se genera una alerta con las secciones afectadas.
+- Desde la alerta se pueden reubicar esas secciones.
 
 ---
 
@@ -439,6 +521,10 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 
 **Propuesta.** Aviso inmediato a Jefatura por Telegram para incidencias de prioridad alta, y un contador visible en el inicio de administración.
 
+**Criterios de aceptación.**
+- Una incidencia de prioridad alta genera un aviso inmediato a Jefatura.
+- El inicio de administración muestra cuántas alertas e incidencias hay pendientes.
+
 ---
 
 ### #20 🟡 Nadie puede restablecer la clave de Coordinación ni de Jefatura
@@ -446,6 +532,10 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 **Qué pasa.** Coordinación restablece las claves de alumnos y docentes, pero las cuentas de Coordinación y Jefatura solo se crean en el seed. Si se olvida su clave, solo se arregla tocando la base.
 
 **Propuesta.** Como mínimo, un procedimiento documentado (script de restablecimiento). Idealmente, que Coordinación pueda restablecer la de Jefatura, y un procedimiento de soporte para la de Coordinación.
+
+**Criterios de aceptación.**
+- Existe un procedimiento documentado y probado para restablecer la clave de Coordinación y de Jefatura.
+- Si se implementa en pantalla, el restablecimiento queda en la auditoría.
 
 ---
 
@@ -456,6 +546,11 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 **Qué pasa.** En la edición de secciones solo se puede cambiar el tipo de espacio, el docente y el software requerido ([seccionAdmin.service.ts:144](../backend/src/services/seccionAdmin.service.ts)). Para corregir el horario de **una** sección hay que volver a cargar el CSV de horarios completo.
 
 **Propuesta.** Editar los horarios de una sección desde la pantalla de Secciones, validando el formato y los choques del docente, y reasignar la sección al guardar.
+
+**Criterios de aceptación.**
+- Coordinación puede agregar, cambiar y quitar franjas de una sección desde Secciones.
+- Se rechaza un inicio igual o posterior al fin, y se advierte el choque con otra sección del mismo docente.
+- Al guardar, la sección se reasigna.
 
 ---
 
@@ -473,6 +568,11 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 **Propuesta.**
 1. **Fusión:** los horarios de la sección `2` pasan a `2-LAB` (jueves 18:00–22:00), la sección de teoría se retira conservando su historial y se libera su aula. Como el motor busca un espacio libre en **todas** las franjas de una sección, le asigna el mismo laboratorio las 4 horas.
 2. **Solicitud docente:** desde el portal docente, «Dictar todo en laboratorio» con justificación. Coordinación la aprueba o rechaza; al aprobar se ejecuta la fusión y se reasigna.
+
+**Criterios de aceptación.**
+- El docente puede solicitar «dictar todo en laboratorio» para su sección de teoría.
+- Al aprobarse, queda una sola sección de laboratorio con todas las franjas y se libera el aula teórica.
+- La sección fusionada recibe el mismo laboratorio en todas sus franjas.
 
 ---
 
@@ -502,6 +602,10 @@ En las que fallan:
 
 Usarla en Telegram, en el horario del alumno y en el portal docente.
 
+**Criterios de aceptación.**
+- Telegram, el horario del alumno y el portal docente agrupan teoría y laboratorio bajo el mismo curso y grupo.
+- Cada clase indica «Teoría» o «Laboratorio» en lugar del código de sección crudo.
+
 ---
 
 ### #24 🟡 Los docentes no reciben aviso de cambio de aula
@@ -509,6 +613,9 @@ Usarla en Telegram, en el horario del alumno y en el portal docente.
 **Qué pasa.** Cuando una sección cambia de aula, el aviso por Telegram solo llega a los alumnos vinculados. El docente no tiene vinculación con Telegram ni recibe otro aviso.
 
 **Propuesta.** Vinculación de Telegram para docentes (o aviso en el portal) y envío del cambio de aula también al docente de la sección.
+
+**Criterios de aceptación.**
+- Cuando una sección cambia de aula, su docente recibe el aviso, además de los alumnos.
 
 ---
 
@@ -520,6 +627,9 @@ Usarla en Telegram, en el horario del alumno y en el portal docente.
 
 **Propuesta.** Ver la **sección 9 — Gestión de periodos**, que agrupa este riesgo con #49 a #52 y detalla cómo se hace hoy el cambio y cómo debería hacerse.
 
+**Criterios de aceptación.**
+- Coordinación ve y cambia el periodo vigente desde el panel, sin tocar el servidor (detalle en la sección 9.2).
+
 ---
 
 ### #26 ⚪ La «última carga» se guarda en el navegador
@@ -529,6 +639,10 @@ Usarla en Telegram, en el horario del alumno y en el portal docente.
 **Propuesta.** Que la pantalla lea la fecha, el usuario y el resultado de la última carga desde `GET /admin/importaciones/ultima`, y que use el navegador solo si el servidor no responde, rotulándolo «en este navegador».
 
 **Seguimiento.** Ya está registrado en el issue #346.
+
+**Criterios de aceptación.**
+- Dos navegadores distintos muestran la misma última carga.
+- Nunca coexisten «Sin cargar» y una fecha de última carga.
 
 ---
 
@@ -540,6 +654,9 @@ Usarla en Telegram, en el horario del alumno y en el portal docente.
 
 **Propuesta.** Indicarlo en el README o ejecutarlo automáticamente en `postinstall`.
 
+**Criterios de aceptación.**
+- Tras un pull con cambios en `schema.prisma`, `npm install` deja el cliente de Prisma generado, o el README indica el paso.
+
 ---
 
 ### #28 ⚪ El bloqueo de corridas vive en memoria
@@ -547,6 +664,9 @@ Usarla en Telegram, en el horario del alumno y en el portal docente.
 **Qué pasa.** Para evitar dos corridas simultáneas se usa una variable en memoria ([asignacionDemanda.service.ts:16](../backend/src/services/asignacionDemanda.service.ts)). Funciona porque el backend corre en **una sola instancia** de Render. Con más de una instancia, dos corridas podrían cruzarse y producir dobles reservas.
 
 **Propuesta.** Solo si se escala: usar un bloqueo en la base (por ejemplo, un *advisory lock* de PostgreSQL).
+
+**Criterios de aceptación.**
+- Solo si se escala a varias instancias: dos corridas lanzadas a la vez desde instancias distintas no se ejecutan en paralelo.
 
 ---
 
@@ -571,6 +691,10 @@ Usarla en Telegram, en el horario del alumno y en el portal docente.
 2. Que la clave inicial **venza** (por ejemplo, a los 7 días) y requiera un restablecimiento.
 3. Para la base actual: regenerar las claves de las cuentas no activadas y repartirlas.
 
+**Criterios de aceptación.**
+- Una cuenta nueva no se puede activar conociendo solo el código.
+- La clave inicial vence pasado el plazo definido.
+
 ---
 
 ### #31 🟠 La consulta pública revela dónde estará cualquier alumno, sin iniciar sesión
@@ -585,6 +709,10 @@ Usarla en Telegram, en el horario del alumno y en el portal docente.
 
 **Propuesta.** Que la consulta por código de **alumno** exija iniciar sesión (y que cada alumno solo vea la suya), dejando pública solo la consulta por código de **curso**, que no identifica a personas.
 
+**Criterios de aceptación.**
+- La consulta por código de alumno exige sesión y cada alumno solo ve la suya.
+- La consulta por código de curso sigue siendo pública.
+
 ---
 
 ### #32 🟡 Restablecer o cambiar la clave no cierra las sesiones abiertas
@@ -592,6 +720,9 @@ Usarla en Telegram, en el horario del alumno y en el portal docente.
 **Qué pasa.** Las sesiones son tokens JWT válidos por 8 horas y no hay forma de revocarlos ([auth.service.ts:30](../backend/src/services/auth.service.ts)). Si alguien robó una sesión, ni el cambio de clave ni el restablecimiento por Coordinación la cierran.
 
 **Propuesta.** Guardar en la cuenta una «versión de credenciales» que cambie con cada cambio o restablecimiento de clave, incluirla en el token y rechazar los tokens con una versión anterior.
+
+**Criterios de aceptación.**
+- Tras cambiar o restablecer la clave, las sesiones abiertas anteriores reciben 401.
 
 ---
 
@@ -730,6 +861,10 @@ El seed del proyecto ([seed.ts](../backend/prisma/seed.ts)) ya valida todo el ar
 
 **Propuesta.** Rechazar en la importación los horarios con inicio ≥ fin y advertir los choques de docentes y alumnos.
 
+**Criterios de aceptación.**
+- Un horario con inicio igual o posterior al fin se rechaza en la importación.
+- Se advierte cuando un docente o un alumno quedaría con dos clases a la vez.
+
 ---
 
 ## 8. Datos reales, operación y dependencias
@@ -780,6 +915,11 @@ Por eso la reparación tiene que hacerse **al leer el archivo**, antes de que se
 2. Procesar la importación **en segundo plano** y que la pantalla consulte su estado («procesando 2300 de 4470»).
 3. Rechazar una importación nueva mientras otra del mismo tipo esté en curso.
 
+**Criterios de aceptación.**
+- Importar las 4470 matrículas actuales termina sin error de tiempo de espera en la pantalla.
+- La pantalla muestra el avance de la importación.
+- No se puede iniciar otra importación del mismo tipo mientras una está en curso.
+
 ---
 
 ### #40 🟡 El primer acceso tras un rato sin uso falla por tiempo de espera
@@ -794,6 +934,9 @@ Por eso la reparación tiene que hacerse **al leer el archivo**, antes de que se
 1. Al abrir la página de inicio o de login, hacer una petición a `/health` para despertar el servidor mientras el usuario escribe.
 2. Si una petición falla por tiempo agotado, reintentarla una vez con el mensaje «Estamos despertando el servidor, un momento…».
 3. **Antes de la sustentación:** abrir el sistema unos minutos antes para que el servidor esté despierto.
+
+**Criterios de aceptación.**
+- Tras 15 minutos sin uso, el primer inicio de sesión funciona, aunque tarde, o muestra el mensaje de espera y reintenta solo.
 
 ---
 
@@ -818,9 +961,9 @@ Por eso la reparación tiene que hacerse **al leer el archivo**, antes de que se
 > **Decisión: primero proponer, después cargar.** El catálogo **no se carga directamente** en la base. Primero se presenta como propuesta, se revisa y se aprueba; solo entonces se carga.
 
 **Propuesta: cómo solucionarlo, en este orden.**
-1. **Proponer.** Presentar el **Anexo C** (catálogo, imagen base, laboratorios especializados y software por curso) como **propuesta** al equipo y a quien corresponda en la facultad (Coordinación, Jefatura de Laboratorios y los docentes de cada curso). El Anexo C sale de los nombres de los cursos, no de un inventario real.
+1. **Proponer.** Presentar el **Anexo B** (catálogo, imagen base, laboratorios especializados y software por curso) como **propuesta** al equipo y a quien corresponda en la facultad (Coordinación, Jefatura de Laboratorios y los docentes de cada curso). El Anexo B sale de los nombres de los cursos, no de un inventario real.
 2. **Revisar y ajustar.** Cada docente confirma o corrige lo que usa su curso; Jefatura confirma qué tiene instalado cada laboratorio y cuáles son los especializados. Se resuelven también las dudas de #47 y #48 (cursos corruptos y cursos generales con laboratorio).
-3. **Aprobar.** Dejar la versión final aprobada por escrito (por ejemplo, actualizando el Anexo C con la fecha y quién la aprobó).
+3. **Aprobar.** Dejar la versión final aprobada por escrito (por ejemplo, actualizando el Anexo B con la fecha y quién la aprobó).
 4. **Cargar.** Solo con la versión aprobada:
    - **Para la demo (lo más rápido):** completar en el Excel del seed las columnas `software_instalado` (hoja *Espacios*) y `software_requerido` (hoja *Cursos_Secciones*) y volver a correr el seed. El seed es idempotente: actualiza sin duplicar. Antes, validar con `SEED_SOLO_VALIDAR=1`, que revisa el Excel sin tocar la base.
    - **A mediano plazo:** agregar dos tipos de importación por CSV en Carga de datos: **catálogo de software** (nombre, versión, categoría, licencia) y **software instalado por laboratorio** (laboratorio, programa). Así Coordinación y Jefatura no dependen del seed.
@@ -830,13 +973,18 @@ Por eso la reparación tiene que hacerse **al leer el archivo**, antes de que se
 
 | Laboratorios | Software |
 |---|---|
-| Todos | Imagen base del Anexo C |
+| Todos | Imagen base del Anexo B |
 | 2 o 3 laboratorios de bases de datos | Imagen base + SQL Server, MongoDB, Power BI Desktop |
 | 2 laboratorios de redes | Imagen base + Cisco Packet Tracer, GNS3, Wireshark |
 | 2 laboratorios de hardware y sistemas | Imagen base + Logisim Evolution, Arduino IDE, MS-MPI / OpenMPI, VirtualBox |
 | 2 laboratorios de ciencia de datos e IA | Imagen base + Anaconda, R + RStudio, Weka, KNIME, Power BI Desktop |
 
 Así la regla de software tiene efecto real: un curso de redes solo cabe en los laboratorios de redes, y si están ocupados, la sección escala.
+
+**Criterios de aceptación.**
+- El catálogo aprobado está cargado: cada laboratorio tiene su software y cada sección de laboratorio sus requisitos.
+- Tras correr la asignación, ninguna sección de laboratorio queda en un laboratorio sin el software que pide.
+- En la demo se puede mostrar una sección escalada por software y su alerta.
 
 ---
 
@@ -847,6 +995,10 @@ Así la regla de software tiene efecto real: un curso de redes solo cabe en los 
 **Propuesta.**
 1. Completar la columna `distancia_ascensor` de la hoja *Espacios* del Excel del seed (ya existe) para todos los espacios fuera del piso 1. Se puede medir sobre los planos SVG con el conversor de planos (`tools/planos`).
 2. No aplicar el plan B sobre espacios sin ese dato: si ninguno lo tiene, escalar la sección para que decida Coordinación (ver #10).
+
+**Criterios de aceptación.**
+- Todos los espacios habilitados fuera del piso 1 tienen registrada la distancia al ascensor.
+- El plan B no elige espacios sin ese dato.
 
 ---
 
@@ -863,6 +1015,9 @@ Así la regla de software tiene efecto real: un curso de redes solo cabe en los 
 | Cambios en el catálogo de software | Afecta a la asignación de laboratorios |
 
 **Propuesta.** Registrar estas acciones con el mismo mecanismo de auditoría que ya usan espacios y secciones, y mostrarlas en `/admin/auditoria`.
+
+**Criterios de aceptación.**
+- Las acciones de la tabla aparecen en `/admin/auditoria` con quién, cuándo y qué cambió.
 
 ---
 
@@ -885,6 +1040,11 @@ La mayoría son ataques de denegación de servicio (consumo de memoria o CPU con
 3. **De forma continua:** activar **Dependabot** en GitHub, que abre automáticamente un pull request cada vez que una librería publica una corrección de seguridad.
 4. **En integración continua:** agregar `npm audit --omit=dev --audit-level=high` al pipeline para que avise cuando aparezca una vulnerabilidad alta nueva.
 
+**Criterios de aceptación.**
+- `npm audit --omit=dev` no muestra vulnerabilidades altas o críticas sin evaluar.
+- Dependabot está activo en el repositorio.
+- El pipeline avisa cuando aparece una vulnerabilidad alta nueva.
+
 ---
 
 ### #45 ⚪ La evidencia de una incidencia es solo un enlace; no se puede adjuntar una foto
@@ -895,6 +1055,11 @@ La mayoría son ataques de denegación de servicio (consumo de memoria o CPU con
 
 **Propuesta.** Permitir adjuntar una imagen a la incidencia (con límite de tamaño y tipo) y mostrarla en la ficha que ve Jefatura.
 
+**Criterios de aceptación.**
+- El docente puede adjuntar una imagen a la incidencia.
+- Se rechazan archivos que no sean imagen o que superen el tamaño máximo.
+- Jefatura ve la imagen en la ficha de la incidencia.
+
 ---
 
 ### #46 ⚪ Los mensajes repetidos por Telegram se procesan dos veces
@@ -904,6 +1069,9 @@ La mayoría son ataques de denegación de servicio (consumo de memoria o CPU con
 **Impacto.** Bajo: respuestas duplicadas, sin daño en los datos.
 
 **Propuesta.** Guardar el último `update_id` procesado y descartar los repetidos.
+
+**Criterios de aceptación.**
+- Un mismo mensaje entregado dos veces por Telegram genera una sola respuesta.
 
 ---
 
@@ -925,6 +1093,11 @@ Es decir, al armar los datos se **pegaron dos cursos en uno**: el nombre de `202
 1. Corregir el nombre de `202SW0302` a «ESTADÍSTICA Y PROBABILIDADES».
 2. Agregar `202SW0303 – FÍSICA ELECTRÓNICA` (corrigiendo además la tilde extra de «ELÉCTRÓNICA») con sus secciones, horarios y matrículas.
 3. Al importar, rechazar nombres de curso que contengan códigos de otro curso, horas (`08:00`) o separadores como `--`, para detectar este tipo de errores a tiempo.
+
+**Criterios de aceptación.**
+- `202SW0302` se llama «ESTADÍSTICA Y PROBABILIDADES».
+- `202SW0303` existe con sus secciones, horarios y matrículas.
+- Un nombre de curso con horas o con el código de otro curso se rechaza al importar.
 
 ---
 
@@ -950,6 +1123,10 @@ Es decir, al armar los datos se **pegaron dos cursos en uno**: el nombre de `202
 1. Confirmar con la facultad qué secciones usan realmente laboratorio de cómputo.
 2. Las que usan laboratorios de otro tipo (química, física) deberían excluirse del motor o modelarse como otro tipo de espacio.
 3. Las que no usan laboratorio, pasarlas a aula teórica.
+
+**Criterios de aceptación.**
+- Queda confirmada con la facultad la lista de secciones que usan laboratorio de cómputo.
+- Las demás pasan a aula teórica o se excluyen del motor.
 
 ---
 
@@ -1002,6 +1179,11 @@ Basta un error de una sola letra en un archivo para dejar el sistema en un perio
 3. Aceptar solo periodos **registrados** por Coordinación (ver 9.2): un periodo que no existe en la lista se rechaza.
 4. Nunca decidir el periodo vigente ordenando texto: lo fija Coordinación (ver 9.2).
 
+**Criterios de aceptación.**
+- «2026-I» y «2026-II» se guardan como «2026-1» y «2026-2».
+- Un periodo con formato inválido o no registrado se rechaza sin cambiar nada en la base.
+- Cargar datos nunca cambia, por sí solo, el periodo vigente.
+
 ---
 
 ### #50 🟠 Se puede registrar y modificar información de periodos que ya terminaron
@@ -1026,6 +1208,10 @@ Basta un error de una sola letra en un archivo para dejar el sistema en un perio
 | **Vigente** | Todo lo normal: cargas, ediciones, reasignaciones, incidencias, solicitudes |
 | **Cerrado** (pasado) | **Solo consulta.** Ninguna importación, edición, reasignación, incidencia ni solicitud. Rechazo con «El periodo 2026-1 está cerrado» |
 
+**Criterios de aceptación.**
+- Con un periodo cerrado, importar, editar secciones, reintentar, reportar incidencias o solicitar software sobre él se rechaza con «El periodo … está cerrado».
+- Los datos del periodo cerrado se pueden seguir consultando.
+
 ---
 
 ### #51 🟠 El sistema cambia de periodo en cuanto se carga el siguiente
@@ -1039,6 +1225,10 @@ Basta un error de una sola letra en un archivo para dejar el sistema en un perio
 - la corrida automática se ejecuta sobre el periodo nuevo.
 
 **Propuesta.** Separar «cargar un periodo» de «activarlo»: cargar 2027-1 lo deja **en preparación**, y solo pasa a vigente cuando Coordinación lo activa (ver 9.2).
+
+**Criterios de aceptación.**
+- Cargar 2027-1 mientras 2026-2 está vigente no cambia lo que ven alumnos y docentes.
+- Solo la acción «Activar periodo» cambia el periodo vigente.
 
 ---
 
@@ -1058,6 +1248,9 @@ Basta un error de una sola letra en un archivo para dejar el sistema en un perio
 **Propuesta.**
 1. Al cerrar un periodo, pasar todas sus asignaciones a **históricas** (ver 9.2). Así ninguna consulta de «vigentes» las vuelve a ver.
 2. Además, filtrar explícitamente por el periodo vigente en todas las consultas de la tabla.
+
+**Criterios de aceptación.**
+- Con dos periodos cargados, el reintento, la consulta pública, las alertas y el mapa solo consideran el periodo vigente.
 
 ---
 
@@ -1128,13 +1321,13 @@ Registrar ──► EN PREPARACIÓN ──► Activar ──► VIGENTE ──�
 
 ---
 
-## Anexo C — Propuesta de software por laboratorio y por curso (riesgo #41)
+## Anexo B — Propuesta de software por laboratorio y por curso (riesgo #41)
 
 > **Estado: PROPUESTA, pendiente de revisión y aprobación. No cargar en la base hasta que se apruebe** (ver el orden de pasos en #41).
 >
 > Es una propuesta razonable hecha a partir de los nombres de los cursos y de lo habitual en una carrera de Ingeniería de Software. **No es un inventario real.** Cada docente debería confirmar lo que usa su curso. Los nombres van sin versión, así que el motor acepta cualquier versión instalada (comparación `CUALQUIERA`).
 
-### C.1 Catálogo propuesto
+### B.1 Catálogo propuesto
 
 | Categoría | Programas |
 |---|---|
@@ -1154,7 +1347,7 @@ Registrar ──► EN PREPARACIÓN ──► Activar ──► VIGENTE ──�
 
 **Imagen base** (instalada en **todos** los laboratorios): Windows 11, Microsoft Office, Google Chrome, Visual Studio Code, Python, Java JDK, GCC / G++, Git, GeoGebra, draw.io, PostgreSQL + pgAdmin, MySQL + MySQL Workbench.
 
-### C.2 Software requerido por curso (solo secciones de laboratorio)
+### B.2 Software requerido por curso (solo secciones de laboratorio)
 
 | Curso | Software requerido |
 |---|---|
@@ -1210,14 +1403,14 @@ Registrar ──► EN PREPARACIÓN ──► Activar ──► VIGENTE ──�
 
 *202SW0604 Ética Profesional y Legislación Informática no tiene secciones de laboratorio.*
 
-### C.3 Efecto esperado al cargarlo
+### B.3 Efecto esperado al cargarlo
 
 - Los cursos que solo piden software de la imagen base (Matemática, Base de Datos I, Algorítmica, etc.) caben en **cualquier** laboratorio, como hoy.
 - Los cursos especializados (Redes, Minería de Datos, Inteligencia de Negocios, Programación Concurrente, Sistemas Digitales) solo caben en los laboratorios especializados. **Si esos laboratorios están ocupados a su hora, la sección escalará por software.** Eso permite mostrar en la demo la regla de software, la alerta y el flujo de solicitud del docente.
 
 ---
 
-## Anexo B — Decisiones de diseño a confirmar con la facultad
+## Anexo C — Decisiones de diseño a confirmar con la facultad
 
 | Tema | Pregunta | Relacionado |
 |---|---|---|
@@ -1226,3 +1419,8 @@ Registrar ──► EN PREPARACIÓN ──► Activar ──► VIGENTE ──�
 | Verificación de accesibilidad | ¿Quién aprueba las declaraciones: Coordinación o Bienestar? | #12 |
 | Plan B de accesibilidad | Sin piso 1 disponible, ¿asignar el piso más accesible con alerta o escalar siempre? | #10 |
 | Teoría como laboratorio | ¿Lo decide el docente con aprobación, o solo Coordinación? | #22 |
+| Catálogo de software | ¿Quién aprueba el catálogo y el software de cada curso propuestos en el Anexo B? | #41 |
+| Laboratorios especializados | ¿Qué laboratorios son de bases de datos, redes, hardware o datos e IA? | #41 |
+| Cursos generales con laboratorio | ¿Qué secciones de Química, Física, Redacción, etc. usan realmente laboratorio de cómputo? | #48 |
+| Origen de los datos | ¿De qué fuente se corrigen `202SW0302` y `202SW0303`? | #47 |
+| Periodos | ¿Hay ciclo de verano (`AAAA-0`)? ¿Cuáles son las fechas de inicio y fin de cada semestre? | #49, 9.2 |
