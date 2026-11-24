@@ -258,6 +258,9 @@ describe('crearEspacio — validaciones de contigüidad y catálogo (Issue 4.15 
         createMany: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
       },
+      // Issue 4.59: al crear un laboratorio se vincula con las cuentas de Jefatura.
+      cuenta: { findMany: jest.fn().mockResolvedValue([]) },
+      espacioResponsable: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
     };
 
     return {
