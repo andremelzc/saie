@@ -1,3 +1,4 @@
+import type { ResultadoReubicacionDTO } from '../types/admin';
 import { RUTAS } from '../config/rutas';
 import type { RolCuenta } from '../types/auth';
 import { ROL } from './diccionarios';
@@ -142,4 +143,15 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
  */
 export function etiquetaRol(rol?: RolCuenta): string {
   return rol ? ROL[rol] : 'Administrativo';
+}
+
+/** Resumen del resultado de reubicar: cuántas secciones cambiaron de espacio y cuántas escalaron. */
+export function resumirReubicacion(r: ResultadoReubicacionDTO): string {
+  const enRevision = r.secciones.filter((s) => s.estado === 'ESCALADA').length;
+  const reubicadas = r.secciones.length - enRevision;
+  const partes = [
+    `${reubicadas} ${reubicadas === 1 ? 'sección reubicada' : 'secciones reubicadas'}`,
+  ];
+  if (enRevision > 0) partes.push(`${enRevision} en revisión en el inicio`);
+  return `Alerta resuelta: ${partes.join(', ')}.`;
 }

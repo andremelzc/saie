@@ -6,6 +6,7 @@ import {
   AsignacionOcupacionInput,
 } from '../services/disponibilidad.service';
 import { validarSoftwareBloque } from './validarSoftware';
+import { calcularCapacidadReal } from './calcularCapacidadReal';
 import { priorizarBloquesPiso1 } from './accesibilidad';
 import { AsignacionParalelaUbicacion, evaluarCercaniaParalelas } from './cercaniaParalelas';
 import { clasificarMotivoEscalamiento, formatearMotivoEscalamiento } from './escalamiento';
@@ -31,6 +32,66 @@ export interface OrquestarAsignacionInput {
  * Fuera de ese margen gana siempre el bloque más justo: las aulas se ocupan de menor a mayor.
  */
 export const MARGEN_DESPERDICIO_ASIENTOS = 10;
+
+/**
+ * Issue 2.22 (riesgo R3 de la auditoría): una asignación solo se conserva si sus espacios siguen
+ * sirviendo a la sección. La huella mira solo los datos de la sección; sin esta comprobación, un
+ * aula deshabilitada, con menos capacidad (PCs malogradas, aforo menor) o sin el software
+ * requerido se conservaba igual y la sección nunca se movía.
+ *
+ * `espaciosDisponibles` son los espacios habilitados: un espacio ausente cuenta como no válido.
+ */
+export function espaciosSiguenSirviendo(
+  seccion: SeccionInputMotor,
+  espacioIds: string[],
+  espaciosDisponibles: EspacioConexo[],
+): boolean {
+  const porId = new Map(espaciosDisponibles.map((e) => [e.id, e]));
+  const espacios = espacioIds.map((id) => porId.get(id));
+  if (espacios.length === 0 || espacios.some((e) => e === undefined)) return false;
+
+  const bloque = espacios as EspacioConexo[];
+  if (bloque.some((e) => e.tipo !== seccion.tipoEspacioRequerido)) return false;
+
+  const capacidad = bloque.reduce((suma, e) => suma + calcularCapacidadReal(e), 0);
+  if (capacidad < seccion.alumnosMatriculados) return false;
+
+  if (seccion.tipoEspacioRequerido === TipoEspacio.LABORATORIO) {
+    const resultado = validarSoftwareBloque(
+      {
+        espacios: bloque,
+        espacioIds,
+        capacidadTotal: capacidad,
+        desperdicio: capacidad - seccion.alumnosMatriculados,
+        piso: bloque[0].piso,
+        pabellon: bloque[0].pabellon,
+        tipo: TipoEspacio.LABORATORIO,
+      },
+      seccion.softwareRequerido,
+    );
+    if (!resultado.cumple) return false;
+  }
+
+  return true;
+}
+
+/**
+ * Una asignación previa se conserva por idempotencia si sigue vigente, los datos de la sección
+ * no cambiaron (misma huella) y sus espacios siguen sirviendo.
+ */
+export function puedeConservarse(
+  seccion: SeccionInputMotor,
+  asignacionPrevia: AsignacionExistenteContexto | null | undefined,
+  espaciosDisponibles: EspacioConexo[],
+): asignacionPrevia is AsignacionExistenteContexto {
+  return Boolean(
+    asignacionPrevia &&
+    asignacionPrevia.estado === EstadoAsignacion.VIGENTE &&
+    asignacionPrevia.huellaEntrada === calcularHuellaEntradaSeccion(seccion) &&
+    asignacionPrevia.espacioIds.length > 0 &&
+    espaciosSiguenSirviendo(seccion, asignacionPrevia.espacioIds, espaciosDisponibles),
+  );
+}
 
 /**
  * Genera una huella digital determinista (hash SHA-256) basada en los datos y restricciones
@@ -86,13 +147,9 @@ export function orquestarAsignacionSeccion(input: OrquestarAsignacionInput): Res
 
   const huellaEntrada = calcularHuellaEntradaSeccion(seccion);
 
-  // Idempotencia: Si ya existía asignación VIGENTE y los requerimientos no cambiaron, conservar
-  if (
-    asignacionPrevia &&
-    asignacionPrevia.estado === EstadoAsignacion.VIGENTE &&
-    asignacionPrevia.huellaEntrada === huellaEntrada &&
-    asignacionPrevia.espacioIds.length > 0
-  ) {
+  // Idempotencia: si ya existía asignación VIGENTE, los requerimientos no cambiaron y sus
+  // espacios siguen sirviendo (Issue 2.22), se conserva.
+  if (puedeConservarse(seccion, asignacionPrevia, todosLosEspacios)) {
     return {
       seccionId: seccion.id,
       codigoSeccion: seccion.codigoSeccion,

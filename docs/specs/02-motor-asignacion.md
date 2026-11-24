@@ -43,6 +43,9 @@ El motor de asignación calcula automáticamente el mejor bloque contiguo de aul
 * **Issue 2.20 (riesgo R1 de la auditoría — doble reserva en la corrida batch):**
   * Las asignaciones vigentes que se conservan por idempotencia se reservan **antes** de recorrer el lote, no al llegar a su sección.
   * `detectarDobleReserva` revisa el resultado antes de devolverlo; si dos asignaciones vigentes comparten espacio en franjas solapadas, la corrida lanza `DobleReservaError` (409) y no se guarda nada.
+* **Issue 2.22 (riesgo R3 de la auditoría — espacios que dejaron de servir):**
+  * Una asignación vigente solo se conserva por idempotencia si, además de tener la misma huella, sus espacios **siguen sirviendo** (`espaciosSiguenSirviendo`): están habilitados, son del tipo requerido, su capacidad real alcanza y, en laboratorios, tienen el software requerido. Si no, la sección se reevalúa.
+  * Aplica igual a la corrida batch y a la reasignación de una sección (`puedeConservarse`).
 
 ### 2.3 Issues 2.10 a 2.15 — Orquestación, Batch y Escalamiento
 * **Issue 2.10 (`orquestarAsignacionSeccion`):**

@@ -33,6 +33,11 @@ Todas las rutas de `/api/v1/admin/*` exigen JWT válido de `COORDINACION_ACADEMI
   * Cada alerta: `{ id, tipo, estado, motivo, fechaDeteccion, espacio: { id, identificador, pabellon, piso }, asignacionesAfectadas: [{ asignacionId, codigoCurso, nombreCurso, codigoSeccion }] }`.
 * `PATCH /api/v1/admin/alertas/:id/resolver` (Issue 4.7)
   * Marca la alerta como `RESUELTA` y deja un `RegistroAuditoria` de tipo `ALERTA`. 404 si no existe, 403 si Jefatura no es responsable del espacio, 409 si ya estaba resuelta.
+* `POST /api/v1/admin/alertas/:id/reubicar` (Issue 2.22, solo Coordinación)
+  * Reevalúa con el motor cada sección afectada por la alerta (una vez por sección) y después la marca `RESUELTA`. Cada sección termina en un espacio válido o `ESCALADA` con su motivo.
+  * Respuesta: `{ alertaId, alertaResuelta, secciones: [{ seccionId, codigoSeccion, codigoCurso, estado, espacioIds, motivoEscalamiento, conservada }] }`. 404 si no existe, 409 si ya estaba resuelta.
+  * En la pantalla de alertas, el botón «Reubicar secciones» (con confirmación) solo aparece para Coordinación.
+* **Deshabilitar un espacio con clases** (Issue 2.22, riesgo R18): al pasar `habilitado` de `true` a `false`, si el espacio tiene asignaciones vigentes se registra una alerta de tipo `CAPACIDAD` con esas secciones («el espacio fue deshabilitado»).
 * Al crearse una alerta nueva se emite `alerta.creada` ([Spec 02](02-motor-asignacion.md) §2.4).
 
 ### 2.2 Mapa Visual de Ocupación por Piso (2D & 3D) (#4.11, #4.12, #4.13, #4.14, #4.15, #4.23, #4.24)

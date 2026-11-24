@@ -54,6 +54,7 @@ import {
   registrarCambioPcsMalogradas,
   registrarCambioSoftware,
 } from '../services/laboratorio.service';
+import { reubicarSeccionesDeAlerta } from '../services/reubicacion.service';
 
 const LaboratorioParamSchema = z.object({
   id: z.string().min(1, 'El id del laboratorio es requerido'),
@@ -134,6 +135,20 @@ export async function resolverAlertaPendiente(req: Request, res: Response): Prom
   try {
     const { id } = AlertaParamSchema.parse(req.params);
     const data = await resolverAlerta(id, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/**
+ * Issue 2.22 — POST /api/v1/admin/alertas/:id/reubicar (solo Coordinación)
+ * Reevalúa con el motor cada sección afectada por la alerta y la marca resuelta.
+ */
+export async function reubicarSeccionesAlerta(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = AlertaParamSchema.parse(req.params);
+    const data = await reubicarSeccionesDeAlerta(id, req.auth!, prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);

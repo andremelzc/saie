@@ -9,9 +9,10 @@ import { Boton } from '../../components/ui/Boton';
 import { useAuth } from '../../context/useAuth';
 import { useAccion } from '../../hooks/useAccion';
 import { invalidarCacheCarga, useCarga } from '../../hooks/useCarga';
-import { obtenerAlertas, resolverAlerta } from '../../services/admin';
-import type { AlertaDTO, TipoAlerta } from '../../types/admin';
+import { obtenerAlertas, resolverAlerta, reubicarSeccionesAlerta } from '../../services/admin';
+import type { AlertaDTO, ResultadoReubicacionDTO, TipoAlerta } from '../../types/admin';
 import { ETIQUETA_TIPO_ALERTA } from '../../utils/etiquetas';
+import { resumirReubicacion } from '../../utils/admin';
 
 type Filtro = 'TODAS' | TipoAlerta;
 
@@ -36,7 +37,9 @@ const ListaAlertas: React.FC<{
   filtro: Filtro;
   alertas: AlertaDTO[];
   onResolver: (id: string) => void;
+  onReubicar?: (id: string) => void;
   reintentando: string | null;
+  reubicando: string | null;
   onVerTodas: () => void;
 }> = ({
   hayAlertas,
@@ -45,7 +48,9 @@ const ListaAlertas: React.FC<{
   filtro,
   alertas,
   onResolver,
+  onReubicar,
   reintentando,
+  reubicando,
   onVerTodas,
 }) => {
   if (!error && !hayAlertas) {
@@ -80,6 +85,8 @@ const ListaAlertas: React.FC<{
           alerta={a}
           onResolver={onResolver}
           resolviendo={reintentando === a.id}
+          onReubicar={onReubicar}
+          reubicando={reubicando === a.id}
         />
       ))}
     </div>
@@ -92,6 +99,8 @@ export const AlertasAdmin: React.FC = () => {
   const { ejecutar } = useAccion();
   const [resueltasLocal, setResueltasLocal] = useState<Set<string>>(new Set());
   const [enCurso, setEnCurso] = useState<string | null>(null);
+  const [reubicando, setReubicando] = useState<string | null>(null);
+  const esCoordinacion = sesion?.rol === 'COORDINACION_ACADEMICA';
   const [errorAccion, setErrorAccion] = useState<{
     mensaje: string;
     reintentar: () => void;
@@ -127,6 +136,25 @@ export const AlertasAdmin: React.FC = () => {
       setErrorAccion({ mensaje: resultado.error, reintentar: () => manejarResolver(id) });
     }
     setEnCurso(null);
+  }
+
+  // Issue 2.22: reasigna las secciones afectadas y deja la alerta resuelta.
+  async function manejarReubicar(id: string) {
+    if (enCurso || reubicando) return;
+    setReubicando(id);
+    setErrorAccion(null);
+    const resultado = await ejecutar(() => reubicarSeccionesAlerta(id), {
+      exito: (r: ResultadoReubicacionDTO) => resumirReubicacion(r),
+      avisarError: false,
+    });
+    if (resultado?.ok) {
+      invalidarCacheCarga('alertas');
+      invalidarCacheCarga('escaladas');
+      setResueltasLocal((prev) => new Set(prev).add(id));
+    } else if (resultado) {
+      setErrorAccion({ mensaje: resultado.error, reintentar: () => manejarReubicar(id) });
+    }
+    setReubicando(null);
   }
 
   const subtitulo =
@@ -186,7 +214,9 @@ export const AlertasAdmin: React.FC = () => {
             filtro={filtro}
             alertas={alertas}
             onResolver={manejarResolver}
+            onReubicar={esCoordinacion ? manejarReubicar : undefined}
             reintentando={enCurso}
+            reubicando={reubicando}
             onVerTodas={() => setFiltro('TODAS')}
           />
         )}

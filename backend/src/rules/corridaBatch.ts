@@ -7,7 +7,11 @@ import {
 } from '../services/disponibilidad.service';
 import { HttpError } from '../lib/http';
 import { AsignacionParalelaUbicacion } from './cercaniaParalelas';
-import { orquestarAsignacionSeccion, calcularHuellaEntradaSeccion } from './orquestadorAsignacion';
+import {
+  orquestarAsignacionSeccion,
+  calcularHuellaEntradaSeccion,
+  puedeConservarse,
+} from './orquestadorAsignacion';
 import {
   AsignacionExistenteContexto,
   ResultadoCorridaBatch,
@@ -124,15 +128,11 @@ export function ejecutarCorridaBatch(input: CorridaBatchInput): ResultadoCorrida
   // Issue 2.20 (riesgo R1 de la auditoría): las asignaciones que se van a conservar por
   // idempotencia se reservan ANTES de recorrer el lote. Si se reservaran al llegar a su sección,
   // una sección que cambió y se procesa antes vería libre el espacio y lo tomaría: doble reserva.
+  // Issue 2.22 (riesgo R3): solo se conserva si sus espacios siguen sirviendo a la sección.
   const idsConservadas = new Set<string>();
   for (const seccion of secciones) {
     const previa = mapaPrevias.get(seccion.id);
-    if (
-      previa &&
-      previa.estado === EstadoAsignacion.VIGENTE &&
-      previa.huellaEntrada === calcularHuellaEntradaSeccion(seccion) &&
-      previa.espacioIds.length > 0
-    ) {
+    if (puedeConservarse(seccion, previa, todosLosEspacios)) {
       idsConservadas.add(seccion.id);
       ocupacionesVigentes.push({
         id: previa.id,

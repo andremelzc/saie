@@ -191,6 +191,13 @@ export interface ResultadoSeccionDTO {
   conservada: boolean;
 }
 
+/** Respuesta de POST /v1/admin/alertas/:id/reubicar (Issue 2.22). */
+export interface ResultadoReubicacionDTO {
+  alertaId: string;
+  alertaResuelta: boolean;
+  secciones: (ResultadoSeccionDTO & { codigoCurso: string })[];
+}
+
 /** Respuesta de POST /v1/asignaciones/batch y /seccion/:id (Issue 2.15). */
 export interface ResumenAsignacionDTO {
   modo: 'seccion' | 'periodo';

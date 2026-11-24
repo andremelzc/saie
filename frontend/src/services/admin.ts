@@ -18,6 +18,7 @@ import type {
   ListadoHistorialDTO,
   ListadoSeccionesDTO,
   ListadoSoftwareDTO,
+  ResultadoReubicacionDTO,
   NuevoAlumnoDTO,
   NuevoDocenteDTO,
   NuevoEspacioDTO,
@@ -72,6 +73,19 @@ export function ordenarAlertasPorFecha(alertas: AlertaDTO[]): AlertaDTO[] {
 /** PATCH /v1/admin/alertas/:id/resolver (Issue 4.7). */
 export async function resolverAlerta(id: string): Promise<void> {
   await api.patch(`/v1/admin/alertas/${encodeURIComponent(id)}/resolver`);
+}
+
+/**
+ * POST /v1/admin/alertas/:id/reubicar (Issue 2.22): reasigna las secciones afectadas por la
+ * alerta y la deja resuelta. Corre el motor una vez por sección, así que puede tardar.
+ */
+export async function reubicarSeccionesAlerta(id: string): Promise<ResultadoReubicacionDTO> {
+  const { data } = await api.post<Respuesta<ResultadoReubicacionDTO>>(
+    `/v1/admin/alertas/${encodeURIComponent(id)}/reubicar`,
+    {},
+    { timeout: 60000 },
+  );
+  return data.data;
 }
 
 /** GET /v1/admin/secciones-escaladas (Issue 4.22). */

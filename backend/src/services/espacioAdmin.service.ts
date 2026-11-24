@@ -24,7 +24,10 @@ import {
   calcularCambios,
   registrarAccionDePersona,
 } from './auditoriaAcciones.service';
-import { evaluarCapacidadInsuficiente } from './deteccionAlertas.service';
+import {
+  cargarAsignacionesVigentesDeEspacio,
+  evaluarCapacidadInsuficiente,
+} from './deteccionAlertas.service';
 import { registrarCambioPcsMalogradas, registrarCambioSoftware } from './laboratorio.service';
 import { resolverSoftwareIds } from './software.service';
 import { vincularLaboratorioConJefatura } from './responsables.service';
@@ -459,6 +462,27 @@ export async function actualizarEspacio(
             actual.id,
             actualizado.identificador,
             afectadas,
+            tx,
+          );
+          if (alerta) alertas.push(alerta);
+        }
+
+        // Issue 2.22 (riesgo R18 de la auditoría): deshabilitar un espacio con clases deja a
+        // esas secciones sin aula. Se genera una alerta para que Coordinación las reubique.
+        if (actual.habilitado && entrada.habilitado === false) {
+          const vigentes = await cargarAsignacionesVigentesDeEspacio(actual.id, tx);
+          const alerta = await registrarAlertaDesdeDeteccion(
+            TipoAlerta.CAPACIDAD,
+            actual.id,
+            actualizado.identificador,
+            vigentes.map((a) => ({
+              asignacionId: a.id,
+              seccionId: a.seccionId,
+              codigoCurso: a.codigoCurso,
+              nombreCurso: a.nombreCurso,
+              codigoSeccion: a.codigoSeccion,
+              detalle: 'el espacio fue deshabilitado',
+            })),
             tx,
           );
           if (alerta) alertas.push(alerta);
