@@ -997,9 +997,10 @@ Depende de alguien con acceso a Render, no de Coordinación.
 Basta un error de una sola letra en un archivo para dejar el sistema en un periodo que no existe.
 
 **Propuesta.**
-1. Validar el formato del periodo en todas las importaciones: exactamente `AAAA-1` o `AAAA-2` (y `AAAA-0` si hay ciclo de verano). Cualquier otro valor es un error de fila, con el mensaje «El periodo debe tener el formato 2026-1 o 2026-2».
-2. Aceptar solo periodos **registrados** por Coordinación (ver 9.2): un periodo que no existe en la lista se rechaza.
-3. Nunca decidir el periodo vigente ordenando texto: lo fija Coordinación (ver 9.2).
+1. **Aceptar las dos formas habituales y guardarlas siempre igual:** «2026-I» se convierte en «2026-1» y «2026-II» en «2026-2» (también sin importar mayúsculas ni espacios). Así nunca se crean dos periodos para el mismo semestre.
+2. Validar el formato ya normalizado en todas las importaciones: exactamente `AAAA-1` o `AAAA-2` (y `AAAA-0` si hay ciclo de verano). Cualquier otro valor es un error de fila, con el mensaje «El periodo debe tener el formato 2026-1 (o 2026-I)».
+3. Aceptar solo periodos **registrados** por Coordinación (ver 9.2): un periodo que no existe en la lista se rechaza.
+4. Nunca decidir el periodo vigente ordenando texto: lo fija Coordinación (ver 9.2).
 
 ---
 
@@ -1063,6 +1064,8 @@ Basta un error de una sola letra en un archivo para dejar el sistema en un perio
 ### 9.2 Propuesta: gestión de periodos desde Coordinación
 
 Una pantalla **«Periodos»** en el panel de Coordinación que reemplace la variable `PERIODO_VIGENTE` y la regla del «más reciente».
+
+**Por qué.** El cambio de semestre es una decisión **académica**, no técnica: le corresponde a Coordinación. Hoy depende de una variable de entorno del servidor, es decir, de que alguien con acceso a Render la cambie y reinicie el servicio. Coordinación no puede ver cuál es el periodo vigente ni cambiarlo, y el cambio no queda registrado en la auditoría.
 
 **Datos.** Una tabla `Periodo` nueva (con su migración): código (`2027-1`), fecha de inicio, fecha de fin y estado (`EN_PREPARACION`, `VIGENTE`, `CERRADO`). Solo puede haber **un** periodo vigente a la vez.
 
