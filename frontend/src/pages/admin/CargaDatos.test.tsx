@@ -105,6 +105,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     importar.mockResolvedValue({
       ...base,
       exitosa: false,
+      guardadas: false,
       procesados: {},
       errores: ['Fila 2: código inválido', 'Fila 5: falta columna'],
     });
@@ -115,17 +116,37 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     // La tarjeta solo resume; el detalle de las filas va en el drawer.
     expect(await screen.findByText('La carga tiene 2 filas con problemas')).toBeInTheDocument();
     expect(screen.getByText('Con errores')).toBeInTheDocument();
+    // Issue 1.16: «todo o nada», con errores no se guarda ninguna fila.
+    expect(screen.getByText(/0 guardadas · 2 con problemas/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Continuar con/ })).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
     const dialogo = screen.getByRole('dialog', { name: /Resultado de la carga.*3. Matrículas/ });
     expect(
-      within(dialogo).getByText(/No se asignaron aulas porque el archivo tiene filas/),
+      within(dialogo).getByText(/No se guardó ninguna fila porque el archivo tiene filas/),
     ).toBeInTheDocument();
     expect(within(dialogo).getByText('Fila 2: código inválido')).toBeInTheDocument();
     expect(within(dialogo).getByText('Fila 5: falta columna')).toBeInTheDocument();
     expect(
       within(dialogo).getByRole('button', { name: 'Descargar errores (CSV)' }),
+    ).toBeInTheDocument();
+  });
+
+  it('muestra las advertencias de una carga guardada (Issue 1.16)', async () => {
+    importar.mockResolvedValue({
+      ...base,
+      guardadas: true,
+      advertencias: ['El docente de C1-1 y C2-1 tendría dos clases a la vez'],
+    });
+    montar();
+    elegirArchivo('horarios');
+    fireEvent.click(botonImportar('2. Horarios'));
+
+    expect(await screen.findByText(/1 aviso/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
+    const dialogo = screen.getByRole('dialog', { name: /Resultado de la carga.*2. Horarios/ });
+    expect(
+      within(dialogo).getByText('El docente de C1-1 y C2-1 tendría dos clases a la vez'),
     ).toBeInTheDocument();
   });
 
