@@ -99,7 +99,7 @@
 | #44 | **A solucionar como proceso,** no como cambio puntual: es normal que aparezcan vulnerabilidades nuevas en las librerías, así que se revisan de forma periódica | 24/11/2026 |
 | #38, #39, #41, #42, #43, #45, #46, #47, #48 | **A solucionar** | 24/11/2026 |
 | #25, #49, #50, #51, #52 | **A solucionar.** El cambio de periodo debe hacerse desde Coordinación, y no debe permitirse registrar información en periodos que ya terminaron (ver sección 9) | 24/11/2026 |
-| #41 | **Primero proponer, después cargar.** El catálogo de software del Anexo B se presenta como propuesta y solo se carga una vez aprobado | 24/11/2026 |
+| #41 | **Primero proponer, después cargar.** El catálogo de software del Anexo B lo revisa y aprueba **el propio equipo**; solo entonces se carga | 24/11/2026 |
 | #1, #3–#11, #13–#16, #18–#24, #26–#29, #32, #36 | **Sin decisión explícita todavía.** El documento propone solucionarlos; falta que el equipo los priorice. Las preguntas abiertas están en el Anexo C | — |
 
 > Los riesgos **#3, #4 y #29** son en el fondo un mismo problema: **cuando el motor no puede resolver algo, el sistema no le da a Coordinación ninguna salida.** Conviene diseñarlos juntos.
@@ -302,12 +302,12 @@ Además, en la pantalla de alertas la única acción es **«marcar como resuelta
 
 **Qué pasa.** Si ningún espacio individual alcanza, el motor junta hasta 4 espacios contiguos. Ejemplo real: `202SW0805 2-LAB` (61 alumnos) está en tres laboratorios de 21 puestos, con un solo docente en tres salas al mismo tiempo.
 
-**Pregunta para la facultad.** ¿Se acepta en la práctica? Si los laboratorios están conectados (puertas internas, un mismo ambiente dividido), sí; si son salas cerradas, no.
+**Decisión pendiente del equipo.** ¿Se acepta en la práctica? Si los laboratorios están conectados (puertas internas, un mismo ambiente dividido), sí; si son salas cerradas, no.
 
 **Propuesta.** Permitir el reparto solo entre espacios marcados como «conectables», o pedir confirmación de Coordinación cuando una sección quede repartida.
 
 **Criterios de aceptación.**
-- Queda registrada la decisión de la facultad.
+- Queda registrada la decisión del equipo.
 - Si se restringe, una sección solo se reparte entre espacios marcados como conectables, o requiere la confirmación de Coordinación.
 
 ---
@@ -958,11 +958,11 @@ Por eso la reparación tiene que hacerse **al leer el archivo**, antes de que se
 
 **No existe un CSV para el catálogo ni para lo instalado en cada laboratorio.** Solo se pueden cargar de forma masiva con el Excel del seed.
 
-> **Decisión: primero proponer, después cargar.** El catálogo **no se carga directamente** en la base. Primero se presenta como propuesta, se revisa y se aprueba; solo entonces se carga.
+> **Decisión: primero proponer, después cargar.** El catálogo **no se carga directamente** en la base. Primero se presenta como propuesta, **el propio equipo** la revisa y la aprueba (no requiere validación externa); solo entonces se carga.
 
 **Propuesta: cómo solucionarlo, en este orden.**
-1. **Proponer.** Presentar el **Anexo B** (catálogo, imagen base, laboratorios especializados y software por curso) como **propuesta** al equipo y a quien corresponda en la facultad (Coordinación, Jefatura de Laboratorios y los docentes de cada curso). El Anexo B sale de los nombres de los cursos, no de un inventario real.
-2. **Revisar y ajustar.** Cada docente confirma o corrige lo que usa su curso; Jefatura confirma qué tiene instalado cada laboratorio y cuáles son los especializados. Se resuelven también las dudas de #47 y #48 (cursos corruptos y cursos generales con laboratorio).
+1. **Proponer.** Presentar el **Anexo B** (catálogo, imagen base, laboratorios especializados y software por curso) como **propuesta** al equipo. El Anexo B sale de los nombres de los cursos y de lo habitual en la carrera.
+2. **Revisar y ajustar en el equipo.** Revisar el software de cada curso, qué laboratorios son especializados y qué lleva la imagen base. Conviene resolver también las dudas de #47 y #48 (cursos corruptos y cursos generales con laboratorio).
 3. **Aprobar.** Dejar la versión final aprobada por escrito (por ejemplo, actualizando el Anexo B con la fecha y quién la aprobó).
 4. **Cargar.** Solo con la versión aprobada:
    - **Para la demo (lo más rápido):** completar en el Excel del seed las columnas `software_instalado` (hoja *Espacios*) y `software_requerido` (hoja *Cursos_Secciones*) y volver a correr el seed. El seed es idempotente: actualiza sin duplicar. Antes, validar con `SEED_SOLO_VALIDAR=1`, que revisa el Excel sin tocar la base.
@@ -1120,12 +1120,12 @@ Es decir, al armar los datos se **pegaron dos cursos en uno**: el nombre de `202
 **Consecuencia.** Si los datos no son correctos, estas secciones ocupan laboratorios de cómputo que necesitan los cursos de la carrera, y provocan escalamientos innecesarios.
 
 **Propuesta.**
-1. Confirmar con la facultad qué secciones usan realmente laboratorio de cómputo.
+1. Decidir en el equipo qué secciones usan realmente laboratorio de cómputo.
 2. Las que usan laboratorios de otro tipo (química, física) deberían excluirse del motor o modelarse como otro tipo de espacio.
 3. Las que no usan laboratorio, pasarlas a aula teórica.
 
 **Criterios de aceptación.**
-- Queda confirmada con la facultad la lista de secciones que usan laboratorio de cómputo.
+- Queda definida por el equipo la lista de secciones que usan laboratorio de cómputo.
 - Las demás pasan a aula teórica o se excluyen del motor.
 
 ---
@@ -1323,9 +1323,9 @@ Registrar ──► EN PREPARACIÓN ──► Activar ──► VIGENTE ──�
 
 ## Anexo B — Propuesta de software por laboratorio y por curso (riesgo #41)
 
-> **Estado: PROPUESTA, pendiente de revisión y aprobación. No cargar en la base hasta que se apruebe** (ver el orden de pasos en #41).
+> **Estado: PROPUESTA, pendiente de revisión y aprobación por el equipo. No cargar en la base hasta que se apruebe** (ver el orden de pasos en #41).
 >
-> Es una propuesta razonable hecha a partir de los nombres de los cursos y de lo habitual en una carrera de Ingeniería de Software. **No es un inventario real.** Cada docente debería confirmar lo que usa su curso. Los nombres van sin versión, así que el motor acepta cualquier versión instalada (comparación `CUALQUIERA`).
+> Es una propuesta razonable hecha a partir de los nombres de los cursos y de lo habitual en una carrera de Ingeniería de Software. La revisa y la aprueba el propio equipo. Los nombres van sin versión, así que el motor acepta cualquier versión instalada (comparación `CUALQUIERA`).
 
 ### B.1 Catálogo propuesto
 
@@ -1410,7 +1410,7 @@ Registrar ──► EN PREPARACIÓN ──► Activar ──► VIGENTE ──�
 
 ---
 
-## Anexo C — Decisiones de diseño a confirmar con la facultad
+## Anexo C — Decisiones abiertas del equipo
 
 | Tema | Pregunta | Relacionado |
 |---|---|---|
