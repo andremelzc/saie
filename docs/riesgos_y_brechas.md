@@ -67,7 +67,7 @@
 | 33 | Seguridad | Telegram se vincula con la clave inicial y los límites de intentos se reinician | 🟡 | Código | Aceptado (demo) |
 | 34 | Importación | Un CSV con errores deja la base a medias | 🟠 | Código | [#428](https://github.com/andremelzc/saie/issues/428) |
 | 35 | Importación | Las importaciones nunca borran: retiros y horarios cambiados quedan duplicados | 🟠 | Código | [#429](https://github.com/andremelzc/saie/issues/429) |
-| 36 | Importación | No se valida que el inicio sea antes del fin ni los choques de docentes y alumnos | 🟡 | Código + Base | [#428](https://github.com/andremelzc/saie/issues/428) |
+| 36 | Importación | No se advierten los choques de horario de docentes y alumnos al importar | 🟡 | Código + Base | [#428](https://github.com/andremelzc/saie/issues/428) |
 | 37 | Privacidad | La consulta pública carga la ficha médica y no filtra por periodo | ⚪ | Código | [#420](https://github.com/andremelzc/saie/issues/420) |
 | 38 | Importación | Un CSV guardado desde Excel rompe las tildes y la ñ | 🟠 | Código | [#430](https://github.com/andremelzc/saie/issues/430) |
 | 39 | Importación | Las importaciones grandes superan el tiempo de espera y siguen corriendo | 🟠 | Código + Base | [#431](https://github.com/andremelzc/saie/issues/431) |
@@ -792,9 +792,13 @@ Usarla en Telegram, en el horario del alumno y en el portal docente.
 **Ejemplo.**
 1. Se sube un CSV de matrículas con un error en la fila 500.
 2. Se guardan las 499 filas buenas.
-3. **El motor se ejecuta solo** al terminar la importación y asigna aulas con el 99 % de los datos.
-4. Los alumnos ya ven aulas calculadas con datos incompletos.
-5. Coordinación corrige y vuelve a subir el archivo, algunas secciones cambian de aula y se envían avisos de cambio a alumnos que no tenían por qué recibirlos.
+3. La corrida automática **no** se ejecuta, porque la carga tuvo errores. Pero la base ya quedó con el 99 % de las matrículas nuevas mezcladas con las anteriores.
+4. Si en ese intervalo alguien ejecuta la asignación a mano (o la corrida programada), las aulas se calculan con datos incompletos.
+5. Coordinación corrige y vuelve a subir el archivo; con la corrida siguiente algunas secciones pueden cambiar de aula y se envían avisos que no hacían falta.
+
+> *Corrección (24/11/2026):* una versión anterior de este documento decía que la corrida automática se ejecutaba tras una carga con errores. No es así: `ejecutarImportacion` solo encadena la asignación cuando la carga no tiene errores. El problema real es la base a medias.
+
+**Estado: resuelto en el issue 1.16 (#428).** Antes de escribir, `validarImportacion` revisa el archivo completo: formato, periodo, filas repetidas, secciones y software referidos (en consultas agrupadas) y, en horarios, que el inicio sea anterior al fin. Si encuentra al menos un error, no se guarda ninguna fila y la respuesta indica `guardadas: false`. La pantalla de Carga de datos muestra «0 guardadas» y pide corregir todas las filas. Limitación: el guardado posterior a una validación exitosa sigue siendo fila por fila (sin transacción única); solo una falla de la base a mitad del guardado podría dejarla a medias.
 
 **Propuesta: importación «todo o nada».**
 1. **Leer y validar el archivo completo** antes de escribir en la base: formato de cada fila, que existan los cursos, secciones y alumnos referidos, que no haya filas repetidas dentro del mismo archivo y las reglas de #36.
@@ -855,9 +859,13 @@ El seed del proyecto ([seed.ts](../backend/prisma/seed.ts)) ya valida todo el ar
 
 ---
 
-### #36 🟡 No se valida que el inicio sea antes del fin ni los choques de docentes y alumnos
+### #36 🟡 No se advierten los choques de horario de docentes y alumnos al importar
 
-**Qué pasa.** La importación de horarios valida el formato `HH:mm`, pero no que el inicio sea **anterior** al fin. Un horario 20:00–18:00 se acepta y el motor nunca lo detecta como solapado con otro, así que puede generar choques. Tampoco se valida que un docente no tenga dos secciones a la misma hora, ni que un alumno no esté matriculado en dos clases simultáneas.
+**Qué pasa.** No se valida que un docente no tenga dos secciones a la misma hora, ni que un alumno no esté matriculado en dos clases simultáneas.
+
+> *Corrección (24/11/2026):* una versión anterior decía que tampoco se validaba que el inicio fuera anterior al fin. Sí se validaba: el importador de horarios ya rechaza esas filas («La hora de inicio debe ser menor a la hora de fin»); la comprobación está en el importador, no en el esquema, y por eso no se vio al principio.
+
+**Estado: resuelto en el issue 1.16 (#428).** La validación previa advierte, sin impedir el guardado, cuando un docente quedaría con dos clases a la vez (cruzando el archivo con las secciones que ya están en la base) y cuando un alumno quedaría matriculado en dos clases simultáneas. Las advertencias se muestran en el resultado de la carga.
 
 **Datos reales hoy:** 0 horarios invertidos, 0 choques de docentes y 0 choques entre los 2237 alumnos. **Los datos actuales están limpios, pero nada impide que la próxima carga no lo esté.**
 

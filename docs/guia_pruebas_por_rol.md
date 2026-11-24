@@ -135,7 +135,7 @@ Usar `0A0690` (dicta `202SW0805 2-LAB` en los laboratorios 01, 02 y 03 del Nuevo
 | C-03 | Reintentar una escalada sin corregir la causa | «Reintentar» en `DEMO001 DEMO` | Sigue escalada con el mismo motivo (no hay horarios) |
 | C-04 | Corregir la causa y reintentar | Cargar en `/admin/carga` un CSV de horarios que incluya `DEMO001 DEMO` y reintentar | Pasa a *Vigente* con espacio asignado, o escala por otro motivo distinto |
 | C-05 | Carga de CSV correcta | `/admin/carga`, subir un CSV válido (ver `docs/guia-csv.md`) | Resultado *Exitosa* con conteo de filas |
-| C-06 | CSV con errores | Columnas faltantes, filas con códigos inexistentes o formato roto | Resultado *Con errores*, indicando filas y motivo. **Hoy las filas válidas sí se guardan** (riesgo #34): comprobar cuántas quedaron |
+| C-06 | CSV con errores | Columnas faltantes, filas con códigos inexistentes o formato roto | Resultado *Con errores* con **todas** las filas y su motivo, y «0 guardadas»: no se guarda ninguna fila (riesgo #34, resuelto en #428) |
 | C-07 | Archivo equivocado | Subir un CSV de matrículas en la zona de horarios, o un archivo no CSV | Rechazo con mensaje claro |
 | C-08 | Editar sección | `/admin/secciones`, cambiar docente o software requerido de una sección de laboratorio | Se guarda y queda en auditoría |
 | C-09 | Sección sin cambios | Guardar sin modificar nada | «Indica al menos un campo a modificar» |
@@ -222,7 +222,7 @@ Revertir lo que se cambió en la base real:
 | Jefatura sin laboratorios a cargo (`EspacioResponsable` vacía y sin pantalla para llenarla) | Bloquea la sección 4 y los flujos F-01 a F-03 | Riesgo #17 · **por abrir issue** |
 | Reasignar no mueve una sección cuyo espacio perdió capacidad o fue deshabilitado: el motor la conserva porque solo mira los datos de la sección | F-01 se queda en el paso 4; deshabilitar un espacio con clases no genera alerta | Riesgos #3 y #18 · **por abrir issue** |
 | La corrida completa puede dejar dos secciones en la misma aula a la misma hora | Revisar el mapa y la verificación de corrida después de cada carga de datos | Riesgo #1 · **por abrir issue** |
-| Un CSV con errores guarda igualmente las filas válidas | C-06 muestra filas guardadas aunque haya errores | Riesgo #34 · **por abrir issue** |
+| Un CSV con errores guardaba igualmente las filas válidas | Resuelto: C-06 debe mostrar «0 guardadas» | Riesgo #34 · #428 |
 | No hay software cargado | Los casos de software requieren crear un programa antes | Riesgo #41 |
 | «Última carga» guardada en el navegador | Difiere entre navegadores | Riesgo #26 · issue #346 |
 | No hay asignación manual de una sección escalada a un espacio concreto: solo se corrige la causa y se reintenta | Las escaladas se resuelven siempre por F-01 / F-03 / F-04 | Riesgos #4 y #29 |
