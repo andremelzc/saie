@@ -83,6 +83,9 @@ export const EVENTO_AUDITORIA: Record<TipoEventoAuditoria, EstadoVisual> = {
   ESCALAMIENTO: { etiqueta: 'Enviada a revisión', tono: 'advertencia' },
   ALERTA: { etiqueta: 'Alerta', tono: 'peligro' },
   VERIFICACION: { etiqueta: 'Verificación', tono: 'info' },
+  EDICION_ESPACIO: { etiqueta: 'Espacio editado', tono: 'neutro' },
+  EDICION_SECCION: { etiqueta: 'Sección editada', tono: 'neutro' },
+  CAMBIO_LABORATORIO: { etiqueta: 'Laboratorio editado', tono: 'neutro' },
 };
 
 export const ETIQUETA_COMPARACION_VERSION: Record<ComparacionVersion, string> = {

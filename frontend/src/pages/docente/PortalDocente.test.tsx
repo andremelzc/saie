@@ -232,6 +232,45 @@ describe('Espacios y equipos del docente (Issue 7.9)', () => {
     expect(screen.getByText('Falta: Docker')).toBeInTheDocument();
     expect(laboratorio).toHaveBeenCalledWith('esp-l204');
   });
+
+  it('«Cambios recientes» dice qué cambió, sin corchetes ni listas completas (Issue 7.15)', async () => {
+    const base = await laboratorio('esp-l204');
+    laboratorio.mockResolvedValue({
+      ...base,
+      historial: [
+        {
+          campo: 'SOFTWARE',
+          valorAnterior: JSON.stringify(['Visual Studio Code 1.95', 'Python 3.10']),
+          valorNuevo: JSON.stringify(['Visual Studio Code 1.95', 'IntelliJ IDEA Community 2024.2']),
+          fechaCambio: '2026-11-10T15:00:00Z',
+        },
+        {
+          campo: 'SOFTWARE',
+          valorAnterior: null,
+          valorNuevo: 'texto que no es una lista',
+          fechaCambio: '2026-11-09T15:00:00Z',
+        },
+        {
+          campo: 'PCS_MALOGRADAS',
+          valorAnterior: '1',
+          valorNuevo: '3',
+          fechaCambio: '2026-11-08T15:00:00Z',
+        },
+      ],
+    });
+    montar(<EspaciosDocentePage />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Mi laboratorio' }));
+
+    const seccion = (await screen.findByText('Cambios recientes')).closest('section')!;
+    expect(
+      within(seccion).getByText(
+        'Se instaló IntelliJ IDEA Community 2024.2 y se retiró Python 3.10',
+      ),
+    ).toBeInTheDocument();
+    expect(within(seccion).getByText('Se actualizó el software instalado')).toBeInTheDocument();
+    expect(within(seccion).getByText('PCs inoperativas: 1 → 3')).toBeInTheDocument();
+    expect(seccion.textContent).not.toMatch(/[[\]"]|texto que no es/);
+  });
 });
 
 describe('Reportar incidencia (Issue 7.10)', () => {

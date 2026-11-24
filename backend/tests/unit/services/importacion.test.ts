@@ -2,6 +2,7 @@ const prismaMock: any = {
   seccion: { count: jest.fn(), findFirst: jest.fn() },
   horario: { count: jest.fn() },
   matricula: { count: jest.fn() },
+  importacion: { create: jest.fn() },
 };
 
 jest.mock('../../../src/importers', () => ({
@@ -361,5 +362,43 @@ describe('ejecutarImportacion (Issue 1.6)', () => {
     expect(r).toMatchObject({ exitosa: true, asignacion: null });
     expect(prismaMock.seccion.count).not.toHaveBeenCalled();
     expect(ejecutarAsignacionADemanda).not.toHaveBeenCalled();
+  });
+
+  it('registra cada importación con la cuenta que la cargó y su resultado (Issue 4.54)', async () => {
+    (importarHorarios as jest.Mock).mockResolvedValue({
+      horariosProcesados: 1,
+      errores: ['Fila 2: hora inválida'],
+    });
+
+    await ejecutarImportacion('horarios', [{}, {}], prismaMock, 'cuenta-9');
+
+    expect(prismaMock.importacion.create).toHaveBeenCalledTimes(1);
+    expect(prismaMock.importacion.create).toHaveBeenCalledWith({
+      data: {
+        tipo: 'HORARIOS',
+        cuentaId: 'cuenta-9',
+        filasRecibidas: 2,
+        filasAceptadas: 1,
+        filasRechazadas: 1,
+        resultado: 'CON_ERRORES',
+      },
+    });
+  });
+
+  it('si no se puede registrar la importación, igual devuelve su resultado (Issue 4.54)', async () => {
+    (importarDocentes as jest.Mock).mockResolvedValue({
+      docentesProcesados: 1,
+      cuentasCreadas: 1,
+      errores: [],
+    });
+    prismaMock.importacion.create.mockRejectedValueOnce(new Error('tabla no disponible'));
+    const log = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
+
+    const r = await ejecutarImportacion('docentes', [{}], prismaMock, 'cuenta-9');
+
+    expect(r).toMatchObject({ exitosa: true });
+    expect(log).toHaveBeenCalled();
+    expect(JSON.stringify(log.mock.calls)).not.toContain('tabla no disponible');
+    log.mockRestore();
   });
 });

@@ -13,6 +13,7 @@ import {
   TipoImportacion,
 } from '../types/importacion';
 import { ejecutarAsignacionADemanda } from './asignacionDemanda.service';
+import { registrarImportacion } from './importacionRegistro.service';
 import { obtenerPeriodoVigente } from './periodo.service';
 
 interface ResultadoImportador {
@@ -110,14 +111,28 @@ export async function dispararAsignacionSiPeriodoCompleto(
 /**
  * Issue 1.6: ejecuta un flujo de importación y, si terminó sin filas rechazadas, encadena la
  * corrida de asignación (salvo docentes, que no afectan la asignación).
+ *
+ * Issue 4.54: el resultado queda registrado con la cuenta que cargó el archivo (`cuentaId`). Si el
+ * registro falla no se oculta el resultado de la importación, que ya quedó guardada: solo se avisa
+ * en el log.
  */
 export async function ejecutarImportacion(
   tipo: TipoImportacion,
   filas: unknown[],
   prisma: PrismaClient,
+  cuentaId: string | null = null,
 ): Promise<ResultadoImportacionDTO> {
   const { procesados, errores, clavesIniciales } = await correrImportador(tipo, filas, prisma);
   const exitosa = errores.length === 0;
+
+  try {
+    await registrarImportacion(prisma, { tipo, cuentaId, filasRecibidas: filas.length, errores });
+  } catch (error: unknown) {
+    logger.error(
+      { tipo, causa: error instanceof Error ? error.name : 'desconocido' },
+      'No se pudo registrar la importación',
+    );
+  }
 
   const asignacion =
     exitosa && tipo !== 'docentes' ? await dispararAsignacionSiPeriodoCompleto(prisma) : null;

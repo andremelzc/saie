@@ -53,6 +53,7 @@ describe('Import Controller (Issue 1.6)', () => {
     const req = {
       params: { tipo: 'horarios' },
       body: mockFilas,
+      auth: { sub: 'cuenta-9', rol: 'COORDINACION_ACADEMICA' },
     } as unknown as Request;
     const res = mockResponse();
 
@@ -64,7 +65,13 @@ describe('Import Controller (Issue 1.6)', () => {
       data: mockResultado,
     });
     expect(extraerFilas).toHaveBeenCalledWith('horarios', mockFilas);
-    expect(ejecutarImportacion).toHaveBeenCalledWith('horarios', mockFilas, expect.anything());
+    // Issue 4.54: se pasa la cuenta que cargó el archivo.
+    expect(ejecutarImportacion).toHaveBeenCalledWith(
+      'horarios',
+      mockFilas,
+      expect.anything(),
+      'cuenta-9',
+    );
   });
 
   it('debe responder con error si ejecutarImportacion falla', async () => {

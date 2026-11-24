@@ -5,6 +5,7 @@ import {
   RolCuenta,
   TipoAlerta,
   TipoEspacio,
+  TipoEventoAuditoria,
 } from '@prisma/client';
 import { z } from 'zod';
 import { HttpError } from '../lib/http';
@@ -21,6 +22,11 @@ import {
   SoftwareRequeridoInputSeccion,
 } from '../types/secciones';
 import { registrarAlertaDesdeDeteccion } from './alerta.service';
+import {
+  CamposAuditados,
+  calcularCambios,
+  registrarAccionDePersona,
+} from './auditoriaAcciones.service';
 import { evaluarIncompatibilidadSoftware } from './deteccionAlertas.service';
 import { obtenerPeriodoVigente } from './periodo.service';
 import { mapearSoftwareInstalado, resolverSoftwareIds } from './software.service';
@@ -254,6 +260,17 @@ export async function listarDocentesParaAsignar(
  * asignada y el software nuevo no está instalado en ella, se genera la alerta de software
  * correspondiente: el cambio no se queda solo en la sección, se refleja en el panel.
  */
+/** «Python 3.11», o «Python 3.11 (versión mínima)» si la sección no acepta cualquier versión. */
+function etiquetaSoftwareRequerido(
+  software: { nombre: string; version: string },
+  comparacion: string | undefined,
+): string {
+  const base = formatearSoftware(software);
+  if (comparacion === 'EXACTA') return `${base} (versión exacta)`;
+  if (comparacion === 'MINIMA') return `${base} (versión mínima)`;
+  return base;
+}
+
 export async function actualizarSeccion(
   seccionId: string,
   entrada: ActualizarSeccionInput,
@@ -275,14 +292,20 @@ export async function actualizarSeccion(
   const alertas: { id: string; tipo: string; motivo: string }[] = [];
 
   await prisma.$transaction(async (tx) => {
+    // Issue 4.58: lo que cambia se acumula aquí y se registra al final, junto con el cambio.
+    const campos: CamposAuditados = {};
+
     if (entrada.docenteId !== undefined) {
+      let nombreNuevo: string | null = null;
       if (entrada.docenteId !== null) {
         const docente = await tx.docente.findUnique({ where: { id: entrada.docenteId } });
         if (!docente) {
           throw new HttpError(404, 'El docente indicado no existe');
         }
+        nombreNuevo = docente.nombre ?? null;
       }
       await tx.seccion.update({ where: { id: actual.id }, data: { docenteId: entrada.docenteId } });
+      campos.docente = { anterior: actual.docente?.nombre ?? null, nuevo: nombreNuevo };
     }
 
     if (entrada.tipoEspacioRequerido !== undefined) {
@@ -290,6 +313,10 @@ export async function actualizarSeccion(
         where: { id: actual.id },
         data: { tipoEspacioRequerido: entrada.tipoEspacioRequerido },
       });
+      campos.tipoEspacioRequerido = {
+        anterior: actual.tipoEspacioRequerido,
+        nuevo: entrada.tipoEspacioRequerido,
+      };
     }
 
     if (entrada.softwareRequerido !== undefined) {
@@ -312,7 +339,22 @@ export async function actualizarSeccion(
           })),
         });
       }
+
+      campos.softwareRequerido = {
+        anterior: actual.softwareRequerido.map((f) =>
+          etiquetaSoftwareRequerido(f.software, f.comparacionVersion),
+        ),
+        nuevo: software.map((s) => etiquetaSoftwareRequerido(s, versiones.get(s.id))),
+      };
     }
+
+    await registrarAccionDePersona(tx, {
+      tipoEvento: TipoEventoAuditoria.EDICION_SECCION,
+      cuentaId: auth.sub,
+      seccionId: actual.id,
+      descripcion: `Sección ${actual.curso.codigo}-${actual.codigoSeccion} editada`,
+      cambios: calcularCambios(campos),
+    });
   });
 
   // El laboratorio ya asignado puede no tener el software nuevo: se comprueba y se avisa.

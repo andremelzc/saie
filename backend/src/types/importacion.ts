@@ -1,3 +1,4 @@
+import { CuentaConNombreDTO } from '../lib/nombresCuenta';
 import { ResumenAsignacionDTO } from './asignacionDemanda';
 
 /** Flujos de carga independientes de datos maestros (Issues 1.3, 1.4, 1.5 y 1.8). */
@@ -38,3 +39,18 @@ export interface ResultadoImportacionDTO {
     claveInicial: string;
   }[];
 }
+
+/** Última importación de un tipo de archivo (Issue 4.54). */
+export interface UltimaImportacionDTO {
+  tipo: TipoImportacion;
+  fecha: string;
+  /** Persona que la cargó; `null` si la cuenta ya no existe. */
+  cuenta: CuentaConNombreDTO | null;
+  filasRecibidas: number;
+  filasAceptadas: number;
+  filasRechazadas: number;
+  resultado: 'EXITOSA' | 'CON_ERRORES';
+}
+
+/** La última importación de cada tipo; `null` si ese tipo nunca se cargó. */
+export type UltimasImportacionesDTO = Record<TipoImportacion, UltimaImportacionDTO | null>;

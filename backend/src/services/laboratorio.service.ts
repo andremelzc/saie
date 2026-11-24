@@ -1,4 +1,10 @@
-import { CampoHistorialEspacio, PrismaClient, TipoAlerta, TipoEspacio } from '@prisma/client';
+import {
+  CampoHistorialEspacio,
+  PrismaClient,
+  TipoAlerta,
+  TipoEspacio,
+  TipoEventoAuditoria,
+} from '@prisma/client';
 import { HttpError } from '../lib/http';
 import { formatearSoftware } from '../lib/software';
 import { emitirAlertasCreadas } from '../events/emisores';
@@ -6,6 +12,7 @@ import { AlertaRegistradaDTO } from '../types/alertas';
 import { TokenPayload } from '../types/auth';
 import { SoftwareInstaladoInput, SoftwareResumenDTO } from '../types/software';
 import { verificarAccesoEspacio } from './acceso.service';
+import { calcularCambios, registrarAccionDePersona } from './auditoriaAcciones.service';
 import { registrarAlertaDesdeDeteccion } from './alerta.service';
 import {
   evaluarCapacidadInsuficiente,
@@ -118,6 +125,20 @@ export async function registrarCambioSoftware(
       },
     });
 
+    // Issue 4.58: quién cambió el software, con la lista anterior y la nueva.
+    await registrarAccionDePersona(tx, {
+      tipoEvento: TipoEventoAuditoria.CAMBIO_LABORATORIO,
+      cuentaId: auth.sub,
+      espacioId: lab.id,
+      descripcion: `Software del laboratorio ${lab.identificador} actualizado`,
+      cambios: calcularCambios({
+        software: {
+          anterior: actuales.map((a) => formatearSoftware(a.software)),
+          nuevo: software.map(formatearSoftware),
+        },
+      }),
+    });
+
     const nuevoSoftware: SoftwareInstaladoInput[] = software.map((s) => ({
       nombre: s.nombre,
       nombreNormalizado: s.nombreNormalizado,
@@ -200,6 +221,17 @@ export async function registrarCambioPcsMalogradas(
         valorNuevo: String(pcsMalogradas),
         cuentaId: auth.sub,
       },
+    });
+
+    // Issue 4.58: quién cambió el conteo de PCs malogradas.
+    await registrarAccionDePersona(tx, {
+      tipoEvento: TipoEventoAuditoria.CAMBIO_LABORATORIO,
+      cuentaId: auth.sub,
+      espacioId: lab.id,
+      descripcion: `PCs malogradas del laboratorio ${lab.identificador} actualizadas`,
+      cambios: calcularCambios({
+        pcsMalogradas: { anterior: lab.pcsMalogradas, nuevo: pcsMalogradas },
+      }),
     });
 
     const afectadas = await evaluarCapacidadInsuficiente(lab.id, { pcsMalogradas }, tx);

@@ -1,4 +1,11 @@
-import { Prisma, PrismaClient, RolCuenta, TipoAlerta, TipoEspacio } from '@prisma/client';
+import {
+  Prisma,
+  PrismaClient,
+  RolCuenta,
+  TipoAlerta,
+  TipoEspacio,
+  TipoEventoAuditoria,
+} from '@prisma/client';
 import { z } from 'zod';
 import { HttpError } from '../lib/http';
 import { formatearSoftware } from '../lib/software';
@@ -12,6 +19,11 @@ import {
 } from '../types/espacios';
 import { verificarAccesoEspacio } from './acceso.service';
 import { registrarAlertaDesdeDeteccion } from './alerta.service';
+import {
+  CamposAuditados,
+  calcularCambios,
+  registrarAccionDePersona,
+} from './auditoriaAcciones.service';
 import { evaluarCapacidadInsuficiente } from './deteccionAlertas.service';
 import { registrarCambioPcsMalogradas, registrarCambioSoftware } from './laboratorio.service';
 import { resolverSoftwareIds } from './software.service';
@@ -181,6 +193,27 @@ async function validarContiguos(
     throw new HttpError(422, 'La contigüidad solo se permite entre espacios del mismo tipo');
   }
   return unicos;
+}
+
+/** Identificadores legibles de los espacios contiguos actuales (para la auditoría, Issue 4.58). */
+async function identificadoresContiguos(
+  espacioId: string,
+  db: Pick<Db, 'espacioContiguo'>,
+): Promise<string[]> {
+  const filas = await db.espacioContiguo.findMany({
+    where: { espacioIdA: espacioId },
+    include: { espacioB: { select: { identificador: true } } },
+  });
+  return filas.map((f) => f.espacioB.identificador);
+}
+
+async function identificadoresDe(ids: string[], db: Pick<Db, 'espacio'>): Promise<string[]> {
+  if (ids.length === 0) return [];
+  const filas = await db.espacio.findMany({
+    where: { id: { in: ids } },
+    select: { identificador: true },
+  });
+  return filas.map((f) => f.identificador);
 }
 
 /** Reemplaza el conjunto de contiguos de un espacio, guardando ambos sentidos de la relación. */
@@ -382,9 +415,32 @@ export async function actualizarEspacio(
           },
         });
 
+        const campos: CamposAuditados = {
+          identificador: { anterior: actual.identificador, nuevo: actualizado.identificador },
+          pabellon: { anterior: actual.pabellon, nuevo: actualizado.pabellon },
+          piso: { anterior: actual.piso, nuevo: actualizado.piso },
+          aforoNominal: { anterior: actual.aforoNominal, nuevo: actualizado.aforoNominal },
+          habilitado: { anterior: actual.habilitado, nuevo: actualizado.habilitado },
+          descripcionUso: {
+            anterior: actual.descripcionUso ?? null,
+            nuevo: actualizado.descripcionUso ?? null,
+          },
+        };
+
         if (vecinos) {
+          const antes = await identificadoresContiguos(actual.id, tx);
           await reemplazarContiguos(actual.id, vecinos, tx);
+          campos.contiguos = { anterior: antes, nuevo: await identificadoresDe(vecinos, tx) };
         }
+
+        // Issue 4.58: quién editó el espacio, con el valor anterior y el nuevo de cada campo.
+        await registrarAccionDePersona(tx, {
+          tipoEvento: TipoEventoAuditoria.EDICION_ESPACIO,
+          cuentaId: auth.sub,
+          espacioId: actual.id,
+          descripcion: `Espacio ${actualizado.identificador} editado`,
+          cambios: calcularCambios(campos),
+        });
 
         if (entrada.aforoNominal !== undefined && entrada.aforoNominal !== actual.aforoNominal) {
           const afectadas = await evaluarCapacidadInsuficiente(

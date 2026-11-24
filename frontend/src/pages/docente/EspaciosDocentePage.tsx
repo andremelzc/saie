@@ -21,7 +21,11 @@ import {
 import type { DiaSemana, TipoEspacio } from '../../types/consulta';
 import type { EspacioExploradorDTO, EstadoLaboratorioDocenteDTO } from '../../types/docente';
 import { etiquetaTipoEspacio } from '../../utils/diccionarios';
-import { laboratoriosDelDocente, ubicacionEspacio } from '../../utils/docente';
+import {
+  describirCambioLaboratorio,
+  laboratoriosDelDocente,
+  ubicacionEspacio,
+} from '../../utils/docente';
 import { formatearFechaCorta } from '../../utils/fechas';
 import { DIAS_LECTIVOS, ETIQUETA_DIA, formatearRango } from '../../utils/horario';
 import { plural } from '../../utils/texto';
@@ -320,10 +324,7 @@ const DetalleLaboratorio: React.FC<{ estado: EstadoLaboratorioDocenteDTO }> = ({
                 <span className="text-saie-muted tabular-nums">
                   {formatearFechaCorta(h.fechaCambio)}
                 </span>
-                <span>
-                  {h.campo === 'PCS_MALOGRADAS' ? 'PCs inoperativas' : 'Software'}:{' '}
-                  {h.valorAnterior ?? '—'} → {h.valorNuevo}
-                </span>
+                <span>{describirCambioLaboratorio(h)}</span>
               </li>
             ))}
           </ul>
