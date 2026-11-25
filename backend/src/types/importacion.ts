@@ -33,6 +33,8 @@ export interface ResultadoImportacionDTO {
    * archivo tenía al menos un error y no se guardó ninguna.
    */
   guardadas: boolean;
+  /** `true` si falló al escribir y las filas anteriores al error sí quedaron guardadas. */
+  parcial?: boolean;
   /** Avisos que no impiden guardar, como un docente o alumno con dos clases a la vez (R36). */
   advertencias?: string[];
   /** `null` si la importación no encadena asignación (docentes) o tuvo filas rechazadas. */

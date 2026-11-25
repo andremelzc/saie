@@ -131,6 +131,10 @@ export async function ejecutarImportacion(
       ? { procesados: {}, errores: validacion.errores }
       : await correrImportador(tipo, filas, prisma);
   const exitosa = errores.length === 0;
+  // La validación previa no cubre los fallos al escribir (por ejemplo, un correo ya usado por otro
+  // alumno): si el importador falla a medias, las filas anteriores sí quedaron guardadas y se avisa.
+  const parcial =
+    !exitosa && validacion.errores.length === 0 && Object.values(procesados).some((n) => n > 0);
 
   try {
     await registrarImportacion(prisma, { tipo, cuentaId, filasRecibidas: filas.length, errores });
@@ -151,6 +155,7 @@ export async function ejecutarImportacion(
     errores,
     exitosa,
     guardadas: exitosa,
+    ...(parcial ? { parcial: true } : {}),
     ...(validacion.advertencias.length > 0 ? { advertencias: validacion.advertencias } : {}),
     asignacion,
     ...(clavesIniciales && clavesIniciales.length > 0 ? { clavesIniciales } : {}),

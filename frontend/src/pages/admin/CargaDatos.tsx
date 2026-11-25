@@ -156,6 +156,7 @@ function insigniaDeEstado(
  */
 function filasGuardadas(resultado: ResultadoImportacionDTO): number {
   if (resultado.guardadas === undefined) return resultado.filasRecibidas - resultado.errores.length;
+  if (resultado.parcial) return Math.max(0, resultado.filasRecibidas - resultado.errores.length);
   return resultado.guardadas ? resultado.filasRecibidas : 0;
 }
 
@@ -276,8 +277,20 @@ const PanelResultado: React.FC<{
       {conProblemas && (
         <>
           <Aviso tono="advertencia">
-            <strong>No se guardó ninguna fila porque el archivo tiene filas con problemas. </strong>
-            Corrige todas las filas de la lista y sube el archivo de nuevo
+            {resultado.parcial ? (
+              <>
+                <strong>El archivo falló a medias: las filas sin problema ya se guardaron. </strong>
+                Corrige las filas de la lista y sube el archivo de nuevo; repetir la carga no
+                duplica datos
+              </>
+            ) : (
+              <>
+                <strong>
+                  No se guardó ninguna fila porque el archivo tiene filas con problemas.{' '}
+                </strong>
+                Corrige todas las filas de la lista y sube el archivo de nuevo
+              </>
+            )}
             {tipo !== 'docentes' ? '; después se asignarán las aulas.' : '.'}
           </Aviso>
           <div className="flex flex-wrap gap-2">
@@ -301,8 +314,8 @@ const PanelResultado: React.FC<{
           <strong>Revisa estos avisos. </strong>
           El archivo se guardó, pero conviene revisarlos:
           <ul className="m-0 mt-1 list-disc pl-5">
-            {resultado.advertencias.slice(0, FILAS_POR_GRUPO).map((a, i) => (
-              <li key={i}>{a}</li>
+            {resultado.advertencias.slice(0, FILAS_POR_GRUPO).map((a) => (
+              <li key={a}>{a}</li>
             ))}
           </ul>
           {resultado.advertencias.length > FILAS_POR_GRUPO && (

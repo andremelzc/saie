@@ -224,6 +224,8 @@ export interface ResultadoImportacionDTO {
   exitosa: boolean;
   /** Issue 1.16: «todo o nada». `false` si el archivo tenía errores y no se guardó ninguna fila. */
   guardadas?: boolean;
+  /** `true` si falló al escribir y las filas anteriores al error sí quedaron guardadas. */
+  parcial?: boolean;
   /** Avisos que no impiden guardar, como un docente o alumno con dos clases a la vez. */
   advertencias?: string[];
   asignacion: {
