@@ -85,6 +85,16 @@
 | 51 | Periodos | El sistema cambia de periodo en cuanto se carga el siguiente, aunque el actual no haya terminado | 🟠 | Código | [#427](https://github.com/andremelzc/saie/issues/427) |
 | 52 | Periodos | Varias pantallas y reglas mezclan datos de distintos periodos | 🟡 | Código | [#427](https://github.com/andremelzc/saie/issues/427) |
 
+### Estado de las correcciones (PR #408)
+
+| Estado | Riesgos |
+|---|---|
+| **Resueltos** | R1 (doble reserva), R2 (aulas de menor a mayor), R3 y R18 (espacios que dejan de servir, alerta al deshabilitar y «Reubicar secciones»), R7 (secciones sin horarios como datos incompletos), R10 (alerta de accesibilidad), R11 (la importación conserva la movilidad declarada), R17 (Jefatura a cargo de los laboratorios, aplicado en Supabase), R27 (indicación en README y AGENTS.md), R34 y R36 (importación todo o nada y avisos de choques), R46 (Telegram sin respuestas repetidas), R49 (normalización y validación del periodo) |
+| **En parte** | R37 (la consulta ya no lee la ficha médica; falta filtrar por periodo, depende de #427) |
+| **Pendientes** | El resto de los issues del milestone *Sprint 6 — Correcciones de la auditoría* |
+
+La migración `20261125000000_alerta_accesibilidad` (valor `ACCESIBILIDAD` en `TipoAlerta`) ya está aplicada en Supabase.
+
 ### Decisiones tomadas
 
 | # | Decisión | Fecha |
