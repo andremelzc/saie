@@ -29,6 +29,7 @@ describe('Issue 1.14: Claves iniciales no derivables del código de usuario', ()
         findUnique: jest.fn().mockResolvedValue({ id: 'sec-1', codigoSeccion: 'S1' }),
       },
       matricula: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
         upsert: jest.fn().mockResolvedValue({ id: 'mat-1' }),
       },
     };

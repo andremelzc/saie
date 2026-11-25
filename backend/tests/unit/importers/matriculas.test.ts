@@ -18,6 +18,7 @@ describe('Importador de Matrículas y Cuentas de Alumno (Issues 1.5 y 1.7)', () 
         findUnique: jest.fn().mockResolvedValue({ id: 'seccion-123', codigoSeccion: 'S1' }),
       },
       matricula: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
         upsert: jest.fn().mockResolvedValue({ id: 'matricula-123' }),
       },
     };
@@ -236,6 +237,62 @@ describe('Importador de Matrículas y Cuentas de Alumno (Issues 1.5 y 1.7)', () 
 
       expect(resultado.matriculasProcesadas).toBe(0);
       expect(resultado.errores[0]).toContain('El periodo debe tener el formato');
+    });
+  });
+
+  describe('retiros: las matrículas de la sección quedan como el archivo (Issue 1.17, R35)', () => {
+    const fila = (codigoAlumno: string) => ({
+      codigoAlumno,
+      nombre: 'Alumno',
+      correo: `${codigoAlumno}@unmsm.edu.pe`,
+      movilidadReducida: false,
+      codigoCurso: '2020101',
+      codigoSeccion: 'S1',
+      periodo: '2026-1',
+      crearCuentaAcceso: false,
+    });
+
+    it('retira a los alumnos que ya no figuran en la sección del archivo', async () => {
+      mockPrisma.alumno.upsert
+        .mockResolvedValueOnce({ id: 'al-1', fichaMedica: null })
+        .mockResolvedValueOnce({ id: 'al-2', fichaMedica: null });
+      mockPrisma.matricula.deleteMany.mockResolvedValue({ count: 3 });
+
+      const r = await importarMatriculas([fila('A1'), fila('A2')], mockPrisma);
+
+      expect(mockPrisma.matricula.deleteMany).toHaveBeenCalledWith({
+        where: { seccionId: 'seccion-123', alumnoId: { notIn: ['al-1', 'al-2'] } },
+      });
+      expect(r.matriculasRetiradas).toBe(3);
+    });
+
+    it('no toca las secciones que no aparecen en el archivo', async () => {
+      await importarMatriculas([fila('A1')], mockPrisma);
+
+      expect(mockPrisma.matricula.deleteMany).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.matricula.deleteMany.mock.calls[0][0].where.seccionId).toBe('seccion-123');
+    });
+
+    it('no retira a nadie si alguna fila falló: el archivo no se leyó completo', async () => {
+      mockPrisma.matricula.upsert
+        .mockResolvedValueOnce({ id: 'm1' })
+        .mockRejectedValueOnce(new Error('fallo'));
+
+      const r = await importarMatriculas([fila('A1'), fila('A2')], mockPrisma);
+
+      expect(r.errores).toHaveLength(1);
+      expect(mockPrisma.matricula.deleteMany).not.toHaveBeenCalled();
+      expect(r.matriculasRetiradas).toBe(0);
+    });
+
+    it('informa el avance fila por fila', async () => {
+      const avance: [number, number][] = [];
+      await importarMatriculas([fila('A1'), fila('A2')], mockPrisma, (h, t) => avance.push([h, t]));
+      expect(avance).toEqual([
+        [0, 2],
+        [1, 2],
+        [2, 2],
+      ]);
     });
   });
 });
