@@ -1,3 +1,4 @@
+import { obtenerPeriodoVigente } from './periodo.service';
 import { EstadoAsignacion, PrismaClient } from '@prisma/client';
 import { marcarAccesibilidad } from '../lib/accesibilidad';
 import { minutosHastaProximaSesion } from '../lib/horario';
@@ -98,10 +99,13 @@ export async function obtenerAsignacionPorAlumno(
   // 1. Buscar alumno con sus matrículas, secciones, horarios y asignaciones.
   // Issue 3.63 (riesgo R37 de la auditoría): la consulta es pública, así que no se lee la ficha
   // médica. Solo se trae lo que la respuesta muestra.
+  // Issue 4.64 (R52, R37): solo se muestran las matrículas del periodo vigente.
+  const periodoVigente = await obtenerPeriodoVigente(prisma);
   const alumno = await prisma.alumno.findUnique({
     where: { codigo: codigoAlumno },
     include: {
       matriculas: {
+        where: { seccion: { periodo: periodoVigente ?? '' } },
         include: {
           seccion: {
             include: {

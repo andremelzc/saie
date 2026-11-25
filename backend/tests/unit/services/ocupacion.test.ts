@@ -60,6 +60,7 @@ function dbMock(espacios: any[] = [], asignaciones: any[] = [], alertas: any[] =
     espacio: {
       findMany: jest.fn().mockResolvedValue(espacios),
     },
+    periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
     asignacion: {
       findMany: jest.fn().mockResolvedValue(asignaciones),
     },
@@ -78,6 +79,26 @@ const FRANJA = {
 /* ── suite ────────────────────────────────────────────────── */
 
 describe('Mapa de ocupación por piso (Issues 4.11, 4.12)', () => {
+  it('solo considera las asignaciones del periodo vigente (Issue 4.64, R52)', async () => {
+    const db = dbMock([espacio('e1')], [], []);
+
+    await obtenerOcupacionPorPiso({ pabellon: 'A', piso: 1, franja: FRANJA }, db);
+
+    expect(db.asignacion.findMany.mock.calls[0][0].where).toMatchObject({
+      seccion: { periodo: '2026-2' },
+    });
+  });
+
+  it('sin periodo vigente no muestra ocupación (Issue 4.64)', async () => {
+    const db = dbMock([espacio('e1')], [], []);
+    db.periodo.findFirst.mockResolvedValue(null);
+
+    const res = await obtenerOcupacionPorPiso({ pabellon: 'A', piso: 1, franja: FRANJA }, db);
+
+    expect(db.asignacion.findMany).not.toHaveBeenCalled();
+    expect(res.espacios[0].estado).toBe('DISPONIBLE');
+  });
+
   it('marca DISPONIBLE un espacio sin asignación vigente en la franja', async () => {
     const e1 = espacio('e1');
     const db = dbMock([e1], [], []);

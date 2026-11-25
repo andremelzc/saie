@@ -25,6 +25,7 @@ function crearDb(secciones: ReturnType<typeof seccion>[] = []) {
     curso: {},
     seccion: { findMany: jest.fn().mockResolvedValue(secciones) },
     software: { findUnique: jest.fn().mockResolvedValue(null) },
+    periodo: { findMany: jest.fn().mockResolvedValue([{ codigo: '2026-2', estado: 'VIGENTE' }]) },
   } as any;
 }
 
@@ -185,6 +186,58 @@ describe('Validación previa de importaciones (Issue 1.16, riesgos R34 y R36)', 
       expect(r.errores).toEqual([
         'Fila 2: la sección C1-1-LAB (2026-2) está repetida (ya aparece en la fila 1)',
       ]);
+    });
+  });
+
+  describe('periodos (Issue 4.64, riesgos R49 y R50)', () => {
+    const dbConPeriodos = (periodos: { codigo: string; estado: string }[]) => ({
+      ...crearDb([seccion('C1', '1')]),
+      periodo: { findMany: jest.fn().mockResolvedValue(periodos) },
+    });
+
+    it('rechaza un periodo que no está registrado', async () => {
+      const r = await validarImportacion(
+        'horarios',
+        [horario('C1', '1', { periodo: '2030-1' })],
+        dbConPeriodos([]),
+      );
+      expect(r.errores).toContain(
+        'Fila 1: El periodo 2030-1 no está registrado. Regístralo primero en Periodos',
+      );
+    });
+
+    it('rechaza escribir en un periodo cerrado', async () => {
+      for (const tipo of ['horarios', 'matriculas', 'cursos-secciones'] as const) {
+        const fila =
+          tipo === 'horarios'
+            ? horario('C1', '1')
+            : tipo === 'matriculas'
+              ? matricula('A1', 'C1', '1')
+              : {
+                  codigoCurso: 'C1',
+                  nombreCurso: 'Curso',
+                  codigoSeccion: '1',
+                  periodo: '2026-2',
+                  tipoEspacioRequerido: 'AULA_TEORICA',
+                };
+        const r = await validarImportacion(
+          tipo,
+          [fila],
+          dbConPeriodos([{ codigo: '2026-2', estado: 'CERRADO' }]),
+        );
+        expect(r.errores).toContain(
+          'Fila 1: El periodo 2026-2 está cerrado y solo admite consulta',
+        );
+      }
+    });
+
+    it('acepta un periodo en preparación', async () => {
+      const r = await validarImportacion(
+        'horarios',
+        [horario('C1', '1')],
+        dbConPeriodos([{ codigo: '2026-2', estado: 'EN_PREPARACION' }]),
+      );
+      expect(r.errores).toEqual([]);
     });
   });
 

@@ -8,7 +8,7 @@ import { haySolapamientoHorario, HorarioSlot } from './disponibilidad.service';
 import { resolverSoftwarePorNombre } from './software.service';
 import { TipoImportacion } from '../types/importacion';
 
-type Db = Pick<PrismaClient, 'curso' | 'seccion' | 'software'>;
+type Db = Pick<PrismaClient, 'curso' | 'seccion' | 'software' | 'periodo'>;
 
 export interface ValidacionImportacion {
   /** Una entrada por fila con problemas. Si hay al menos una, no se guarda ninguna fila. */
@@ -60,6 +60,36 @@ function marcarRepetidas<T>(
 
 const claveSeccion = (codigoCurso: string, codigoSeccion: string, periodo: string) =>
   `${codigoCurso}|${codigoSeccion}|${periodo}`;
+
+/**
+ * Issue 4.64 (riesgos R49 y R50): solo se carga en periodos registrados y no cerrados. Así un error
+ * al escribir el periodo en el CSV no crea uno nuevo ni toca uno que ya terminó.
+ */
+async function validarPeriodos(
+  validas: FilaValida<{ periodo: string }>[],
+  db: Db,
+  errores: string[],
+): Promise<void> {
+  const codigos = [...new Set(validas.map((v) => v.datos.periodo))];
+  if (codigos.length === 0) return;
+  const registrados = await db.periodo.findMany({
+    where: { codigo: { in: codigos } },
+    select: { codigo: true, estado: true },
+  });
+  const estados = new Map(registrados.map((p) => [p.codigo, p.estado]));
+  for (const v of validas) {
+    const estado = estados.get(v.datos.periodo);
+    if (!estado) {
+      errores.push(
+        `Fila ${v.fila}: El periodo ${v.datos.periodo} no está registrado. Regístralo primero en Periodos`,
+      );
+    } else if (estado === 'CERRADO') {
+      errores.push(
+        `Fila ${v.fila}: El periodo ${v.datos.periodo} está cerrado y solo admite consulta`,
+      );
+    }
+  }
+}
 
 /** Carga en una sola consulta las secciones que el archivo referencia, por curso+sección+periodo. */
 async function cargarSeccionesReferidas(
@@ -121,6 +151,7 @@ async function validarHorarios(filas: unknown[], db: Db, r: ValidacionImportacio
     r.errores,
   );
 
+  await validarPeriodos(validas, db, r.errores);
   const secciones = await cargarSeccionesReferidas(
     validas.map((v) => v.datos),
     db,
@@ -190,6 +221,7 @@ async function validarMatriculas(
     r.errores,
   );
 
+  await validarPeriodos(validas, db, r.errores);
   const secciones = await cargarSeccionesReferidas(
     validas.map((v) => v.datos),
     db,
@@ -237,6 +269,8 @@ async function validarCursosSecciones(
     (d) => `la sección ${d.codigoCurso}-${d.codigoSeccion} (${d.periodo})`,
     r.errores,
   );
+
+  await validarPeriodos(validas, db, r.errores);
 
   // Software requerido: se resuelve cada nombre una sola vez contra el catálogo.
   const resueltos = new Map<string, boolean>();

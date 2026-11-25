@@ -65,6 +65,7 @@ function dbMock(
     solicitud?: unknown;
     solicitudes?: unknown[];
     total?: number;
+    estadoPeriodo?: string;
   } = {},
 ) {
   const tx = {
@@ -74,6 +75,9 @@ function dbMock(
         .mockResolvedValue(opciones.docente === undefined ? DOCENTE : opciones.docente),
     },
     seccion: { findUnique: jest.fn().mockResolvedValue(opciones.seccion ?? null) },
+    periodo: {
+      findUnique: jest.fn().mockResolvedValue({ estado: opciones.estadoPeriodo ?? 'VIGENTE' }),
+    },
     software: {
       findUnique: jest.fn().mockResolvedValue(opciones.software ?? null),
       create: jest.fn().mockImplementation(async ({ data }) => ({
@@ -183,6 +187,24 @@ describe('Solicitudes del docente (Issue 4.29)', () => {
       status: 409,
       message: expect.stringMatching(/MATLAB R2023b.*sw-matlab/),
     });
+    expect(db.solicitudSoftware.create).not.toHaveBeenCalled();
+  });
+
+  it('409 si la sección es de un periodo cerrado (Issue 4.64)', async () => {
+    const db = dbMock({ seccion: { id: 's1', periodo: '2026-1' }, estadoPeriodo: 'CERRADO' });
+
+    await expect(
+      crearSolicitud(
+        'cuenta-doc',
+        {
+          nombre: 'MATLAB',
+          version: '',
+          justificacion: 'x',
+          seccionId: '00000000-0000-4000-8000-000000000001',
+        },
+        db,
+      ),
+    ).rejects.toMatchObject({ status: 409 });
     expect(db.solicitudSoftware.create).not.toHaveBeenCalled();
   });
 

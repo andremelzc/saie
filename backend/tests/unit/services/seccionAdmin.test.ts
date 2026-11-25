@@ -68,7 +68,10 @@ function dbMock(secciones: unknown[] = [], total = secciones.length) {
       findUnique: jest.fn().mockResolvedValue(secciones[0] ?? null),
       update: jest.fn().mockResolvedValue(seccion()),
     },
-    periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
+    periodo: {
+      findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }),
+      findUnique: jest.fn().mockResolvedValue({ estado: 'VIGENTE' }),
+    },
   } as any;
 }
 
@@ -152,6 +155,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
   describe('edición', () => {
     function prismaEdicion() {
       const tx = {
+        periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
         docente: { findUnique: jest.fn().mockResolvedValue({ id: 'doc-2', nombre: 'Ing. Pérez' }) },
         registroAuditoria: { create: jest.fn().mockResolvedValue({}) },
         seccion: { update: jest.fn().mockResolvedValue(seccion()) },
@@ -172,6 +176,10 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
           findUnique: jest.fn().mockResolvedValue(seccion({ asignaciones: [] })),
         },
         espacio: { findUnique: jest.fn() },
+        periodo: {
+          findUnique: jest.fn().mockResolvedValue({ estado: 'VIGENTE' }),
+          findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }),
+        },
         asignacion: { findMany: jest.fn().mockResolvedValue([]) },
         alerta: {
           findMany: jest.fn().mockResolvedValue([]),
@@ -193,6 +201,20 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
           prisma,
         ),
       ).rejects.toMatchObject({ status: 403 });
+    });
+
+    it('409 si la sección es de un periodo cerrado (Issue 4.64)', async () => {
+      const { prisma, tx } = prismaEdicion();
+      prisma.periodo.findUnique.mockResolvedValue({ estado: 'CERRADO' });
+      await expect(
+        actualizarSeccion(
+          'sec-1',
+          { tipoEspacioRequerido: TipoEspacio.AULA_TEORICA },
+          COORDINACION,
+          prisma,
+        ),
+      ).rejects.toMatchObject({ status: 409 });
+      expect(tx.seccion.update).not.toHaveBeenCalled();
     });
 
     it('404 si la sección no existe', async () => {

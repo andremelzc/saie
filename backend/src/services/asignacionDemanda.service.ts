@@ -8,7 +8,7 @@ import {
   OrigenCorrida,
 } from '../types/asignacionDemanda';
 import { procesarAsignacionSeccionIndividual, procesarCorridaBatchPeriodo } from './motor.service';
-import { obtenerPeriodoVigente } from './periodo.service';
+import { asegurarPeriodoEscribible, obtenerPeriodoVigente } from './periodo.service';
 import { verificarCorridaPeriodo } from './verificador.service';
 
 // El motor corre en el mismo proceso, sin colas (Issue 2.15): un candado en memoria basta para
@@ -86,6 +86,9 @@ export async function ejecutarAsignacionADemanda(
       if (!seccion) {
         throw new HttpError(404, `La sección con ID '${seccionId}' no existe`);
       }
+
+      // Issue 4.64 (R50): no se reasigna una sección de un periodo cerrado.
+      await asegurarPeriodoEscribible(prisma, seccion.periodo);
 
       const resultado = await procesarAsignacionSeccionIndividual(seccionId, prisma);
       // Issue 2.17: la verificación cubre el periodo completo para detectar dobles reservas

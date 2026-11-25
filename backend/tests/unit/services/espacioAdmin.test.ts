@@ -452,6 +452,7 @@ describe('actualizarEspacio (Issue 4.15)', () => {
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
         createMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
+      periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
       asignacion: { findMany: jest.fn().mockResolvedValue([]) },
       alerta: { findMany: jest.fn().mockResolvedValue([]), create: jest.fn() },
       registroAuditoria: { create: jest.fn().mockResolvedValue({}) },

@@ -125,6 +125,8 @@ export async function procesarAsignacionSeccionIndividual(
     where: {
       estado: EstadoAsignacion.VIGENTE,
       seccionId: { not: seccionId },
+      // Issue 4.64 (R52): solo cuentan las asignaciones del mismo periodo.
+      seccion: { periodo: seccionInput.periodo },
     },
     include: {
       espacios: true,

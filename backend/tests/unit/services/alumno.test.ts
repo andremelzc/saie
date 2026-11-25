@@ -461,6 +461,7 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
           matriculas: [],
         }),
       },
+      periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
     } as any;
 
     const publico = await obtenerAsignacionPorAlumno('22200101', prisma);
