@@ -7,42 +7,167 @@
 ---
 
 ## [Sin publicar]
-Trabajo aún no fusionado a `develop`: la rama `feature/espacios-habilitados-seed-excel` (espacios habilitados y seed desde Excel) y el PR #302 (`feature/4.15-edicion-espacios-y-pulido-ui-panel`), con el sistema de diseño del panel, el rediseño de las pantallas administrativas y el alta y edición de espacios por rol.
+Sin cambios fusionados a `develop` después de la v1.12.0.
+
+---
+
+## [1.12.0] - 2026-11-25
+**Hitos:** Sprint 5 — Estabilización (cierre) y Sprint 6 — Correcciones de la auditoría (abierto). **PR:** #398, #399, #404, #405, #406, #407, #441, #442, #443, #444, #445, #446, #447, #448.
 
 ### Añadido
-- **Espacios habilitados o deshabilitados:** `Espacio.habilitado` (por defecto `true`) y `Espacio.descripcionUso` (rótulo visual, máximo 120 caracteres). El aforo puede omitirse o ser 0 solo si el espacio está deshabilitado; habilitarlo exige un aforo mayor a 0 (422). Coordinación cambia ambos campos en `POST` y `PATCH /api/v1/admin/espacios`. El mapa del panel marca los espacios como `DESHABILITADO` (`resumen.deshabilitados`) y expone `descripcionUso`; el alumno y el explorador del docente no los muestran.
-- **Seed desde Excel:** `backend/prisma/data/seed-plantilla.xlsx` pasa a ser la única fuente de datos (espacios, contigüidades, docentes, cursos, secciones, horarios, alumnos y matrículas), sin datos sintéticos. Valida todo el archivo antes de escribir y es idempotente. Las matrículas anónimas (`X-<curso>-<sección>-NNN`) completan el total declarado en `matriculados`. Nueva lógica en `plantilla.seed.ts`. Se agrega al Excel a la alumna 23200263 con sus 16 matrículas (teoría y laboratorio de 8 cursos), por lo que el seed descuenta sus lugares de los anónimos.
-- **Spec 08:** borrador de la especificación del catálogo de software (Issues 4.27 a 4.30).
-- **Sistema de diseño del panel (`frontend/src/components/ui/`):** `Boton` (variantes, tamaño táctil de 44 px y motivo visible de por qué está deshabilitado), `BadgeEstado`, `Aviso`, `Acordeon`, `Drawer` y `ProveedorAvisos` con una región viva siempre montada para los avisos globales. Los botones, badges y avisos duplicados del panel se reemplazan por estas piezas y los tintes de éxito y peligro quedan unificados en tokens.
-- **Alta y edición de espacios por rol (Issue 4.15):** formulario de alta y de edición de espacios con `camposEditables`, que acota qué puede modificar cada rol (Coordinación, Jefatura y Administración), con validación en línea y aviso de las alertas que genera el cambio. El listado de espacios gana contador por tipo, filtros combinables, estado por fila y un drawer de detalle.
-- **Pruebas de accesibilidad con axe (Issue 3.23):** helper `frontend/src/test/axe.ts` que ejecuta axe sobre un contenedor y falla solo con violaciones `serious` o `critical`, aplicado a las pantallas del panel (Espacios, Alertas, Inicio, Carga de datos, Cambio de laboratorio y el formulario de espacio dentro de su drawer). En paralelo, `tests/e2e/accesibilidad.spec.ts` repite la auditoría **en un navegador real** con `@axe-core/playwright`, que es donde sí se mide el contraste de color. Detectó y se corrigieron tres violaciones reales: el contraste insuficiente de los distintivos de estado, el nombre accesible de los botones de filtro de alertas y el de los enlaces de acceso del inicio.
-- **Panel usable en móvil:** el listado de espacios pasa de tabla a tarjetas por debajo de 1024 px (decidido con el hook `usePantallaAncha`, de modo que nunca coexisten las dos versiones en el DOM) y las columnas de las plantillas de carga se apilan en pantallas estrechas. `tests/e2e/responsive.spec.ts` comprueba que ninguna pantalla del panel desborda a 320, 375 y 390 px.
-- **E2E del flujo de espacios:** `tests/e2e/espacios-admin.spec.ts` cubre el ingreso al panel como Coordinación, la edición del aforo de un espacio, el guardado y la comprobación del aviso y de la fila actualizada. No necesita backend ni base de datos: el login y las consultas al panel se interceptan, igual que en el spec de consulta pública. Se incorpora al CI con un job propio de Playwright.
+- **Observabilidad (#398, Issue 1.15):** logger estructurado con `pino` (nivel por `LOG_LEVEL`) que reemplaza los `console.*` del backend; middleware `requestId` que devuelve `X-Request-Id` en cada respuesta y lo incluye en los errores 500; `GET /api/health` comprueba la base con `SELECT 1` y un tiempo máximo (`HEALTH_DB_TIMEOUT_MS`) y responde 503 si falla.
+- **Auditoría estructurada (#398, Issue 4.48):** `RegistroAuditoria` gana `corridaId`, `espaciosIds`, `cuentaId`, `puntaje` y `origen`; `detalle` se conserva por compatibilidad.
+- **Auditoría de acciones de personas (#407, Issue 4.58):** eventos `EDICION_ESPACIO`, `EDICION_SECCION` y `CAMBIO_LABORATORIO` con la cuenta que hizo el cambio y la lista `{ campo, anterior, nuevo }`, en la misma transacción y sin datos sensibles.
+- **Registro de importaciones (#407, Issue 4.54):** cada carga de CSV queda registrada en el servidor (tipo, resultado, filas y cuenta), de modo que la última carga se ve igual en cualquier navegador.
+- **Incidencias del docente (#404, Issue 7.14):** `GET /api/v1/docente/incidencias` y sección «Mis incidencias» con código, estado y respuesta de Jefatura (RF-18).
+- **Gestión de periodos (#441, Issue 4.64):** tabla `Periodo` con estados *en preparación*, *vigente* y *cerrado*, y pantalla «Periodos» para que Coordinación registre, active y cierre el semestre. Las escrituras exigen un periodo abierto, y la consulta pública, las alertas y el mapa filtran por el vigente. Ya no depende de `PERIODO_VIGENTE`.
+- **Reubicar secciones (#441, Issue 2.22):** el motor solo conserva una asignación si sus espacios siguen sirviendo; deshabilitar un espacio con clases genera una alerta y `POST /admin/alertas/:id/reubicar` mueve las secciones afectadas.
+- **Alerta de accesibilidad (#441, Issue 3.59):** nueva alerta `ACCESIBILIDAD` cuando una sección con alumnos con movilidad reducida queda fuera del piso 1.
+- **Importación en segundo plano (#441, Issues 1.18 y 1.19):** la carga detecta la codificación del CSV (UTF-8 o Windows-1252), rechaza filas con caracteres dañados, corre en segundo plano con avance visible y no admite dos cargas del mismo tipo a la vez.
+- **Vista previa e inactivación de secciones (#445, Issue 1.17):** se puede revisar la importación antes de confirmarla, y las secciones que dejan de figurar en el CSV pasan a `activa = false` (no se borran, liberan su aula y no entran al motor). Las matrículas y los horarios reflejan los retiros y los cambios de hora.
+- **Avisos a Jefatura (#442, Issue 4.60):** aviso inmediato por Telegram (`TELEGRAM_CHAT_JEFATURA`) de las incidencias de prioridad alta y de las alertas nuevas de software o capacidad, y las pendientes en el inicio de Jefatura.
+- **Editar el horario de una sección (#446, Issue 4.62):** `PATCH /admin/secciones/:id` acepta `horarios`, valida las franjas, registra el cambio en la auditoría, reasigna con el motor y advierte el choque con otra sección del mismo docente.
+- **Confirmación de la declaración de accesibilidad (#447, Issue 3.60):** la casilla del alumno crea una `SolicitudAccesibilidad` pendiente; Coordinación la aprueba o la rechaza (`GET /admin/accesibilidad`, `PATCH /admin/accesibilidad/:id/resolver`) antes de que cambie alguna matrícula.
+- **Reorganizar con prioridad (#448, Issue 2.26):** al inicio del ciclo (`REORGANIZACION_SEMANAS`, 2 por defecto) la corrida puede procesar primero las secciones escaladas, con una simulación previa que no escribe nada y muestra qué cambiaría.
+- **Pruebas E2E del marco del alumno (#405, Issue 5.27):** `tests/e2e/marco-estudiante.spec.ts` comprueba la cabecera persistente, la ausencia de desborde en móvil y la pestaña «Más».
+- **Documentación de la auditoría final (#441):** `docs/guia_pruebas_por_rol.md` (casos de prueba por rol y flujos de escalamiento) y `docs/riesgos_y_brechas.md` (52 riesgos con su decisión, propuesta y criterio de aceptación).
+- **Auditoría de UI/UX del portal docente (#399, Issue 7.13):** sección 10 de `docs/AUDITORIA_UI_UX.md` con 19 hallazgos, capturas y mediciones en `docs/auditoria-docente/`.
+- **Informe de pruebas (#405, Issue 5.14):** `docs/informe_resumen_pruebas.md`.
 
 ### Cambiado
-- **Motor de asignación:** solo carga los espacios habilitados, de modo que los deshabilitados quedan fuera del grafo de contigüidad y de la disponibilidad.
-- **Seed:** reemplaza el dataset sintético del Issue 5.17 (v1.5.0).
-- **Carga de datos maestros (Issue 1.9):** la guía y las plantillas pasan a un drawer para no tapar la tarea principal; cada flujo conserva su estado (sin cargar, con errores, cargado) y su última carga; el resultado distingue filas leídas de filas con problemas, permite descargar los errores en CSV, avisa que no se asignaron aulas y ofrece continuar con el siguiente flujo.
-- **Alertas (Issue 4.10):** el contador pasa a "N pendientes de M" sobre el total real, los vacíos se distinguen (sin alertas pendientes frente a sin coincidencias con el filtro), resolver una alerta pide confirmación y se confirma con un aviso, y el error de la resolución se puede reintentar.
-- **Inicio de Coordinación (Issue 4.20):** la corrida se desglosa en secciones con aula nueva, que conservan la suya y que necesitan revisión; pide confirmación antes de ejecutarse; el resultado de una sección reintentada se muestra aparte del resultado del periodo; y el veredicto del verificador queda visible tras la corrida.
-- **Cambio de laboratorio (Issue 4.19):** software y PCs se editan en pestañas pero se guardan con un solo botón y un solo estado; se distingue "sin registrar" de 0, el catálogo tiene búsqueda y los controles deshabilitados explican el motivo.
-- **Consulta pública (Issues 3.5 a 3.7):** el resultado de la búsqueda recibe el foco y se anuncia en una región viva.
-- **Tintes del panel:** los colores sueltos (`#E8F3E9`, `#FBE9E9`, `#FDF0E1` y sus equivalentes) se sustituyen por los tokens `saie-success-soft`, `saie-danger-soft` y `saie-warning-soft` con el texto en la variante fuerte, que es la que cumple el contraste mínimo de 4,5:1.
+- **Motor de asignación (#441, Issue 2.21):** el desempate prioriza el aula con menor desperdicio de asientos; la cercanía con las otras secciones del curso solo decide entre bloques de tamaño parecido.
+- **Importación todo o nada (#441, Issue 1.16):** `validarImportacion` revisa el archivo completo antes de escribir; con un solo error no se guarda ninguna fila. Avisa, sin bloquear, si un docente o un alumno quedaría con dos clases a la vez.
+- **Periodos normalizados (#441):** «2026-II» pasa a «2026-2» y los formatos inválidos se rechazan en las importaciones y en el seed.
+- **Horario y Telegram (#444, Issue 3.62):** teoría y laboratorio del mismo curso se agrupan bajo el curso y se rotulan «Teoría» o «Laboratorio».
+- **Historial de software legible (#407, Issue 7.15):** «Cambios recientes» del laboratorio describe el cambio en una frase en lugar del JSON guardado.
+- **Inicio de administración (#441, Issue 2.25):** las secciones sin horarios se muestran aparte como datos incompletos y no cuentan como «Esperan revisión».
 
 ### Corregido
-- **Corrida batch:** la transacción interactiva hacía unas 900 consultas seguidas y, contra una base remota, superaba el tiempo máximo de Prisma y respondía 500. Ahora usa 4 operaciones masivas (`updateMany` y 3 `createMany`) en una sola transacción: 228 secciones en unos 8 s.
-- **CD:** el job `ci` de `cd.yml` hereda los secrets (`secrets: inherit`). Sin esto `SONAR_TOKEN` llegaba vacío al workflow reutilizable, el análisis de SonarCloud fallaba y el job de despliegue (migraciones, Render, Vercel) quedaba omitido en cada push a `develop` desde el 10 de octubre.
-- **Corrida de asignación en el panel:** reintentar una sección ya no sobrescribe el resultado del periodo, las alertas se vuelven a pedir después de la corrida y el contador distingue las secciones asignadas de las que conservan su aula.
-- **Cambio de laboratorio:** el aviso de éxito ya no sobrevive a una edición posterior y los valores sin registrar ya no se muestran como 0.
-- **Interfaz:** se quitan los números de issue de las pantallas y se sustituyen por un mensaje honesto con la acción disponible.
-- **Carga de datos:** el resumen de la importación distingue las filas leídas de las guardadas («10 filas leídas · 8 guardadas · 2 con problemas»), un dato exacto: cada importador genera una entrada de error por fila rechazada.
-- **Calidad del código del panel:** la lógica de `FormularioEspacio`, `CambioLaboratorio`, `CargaDatos`, `EspaciosAdmin` e `InicioAdmin` se parte en funciones y componentes pequeños, y los roles ARIA que tenían un equivalente semántico pasan a usar el elemento correspondiente (`<fieldset>`, `<section>`, `<output>`).
+- **Doble reserva en la corrida completa (#441, Issue 2.20):** las asignaciones conservadas se reservan antes de recorrer el lote y `detectarDobleReserva` aborta la corrida (409) si encontrara una.
+- **Privacidad de la consulta pública (#441, Issue 3.63):** ya no lee la ficha médica y solo muestra el periodo vigente.
+- **Movilidad reducida (#441):** reimportar matrículas ya no borra la condición declarada en la ficha del alumno.
+- **Telegram (#441, Issue 3.64):** el bot descarta las actualizaciones repetidas (`update_id`).
+- **Jefatura sin laboratorios (#441, Issue 4.59):** el seed y `npm run prisma:vincular-jefatura` vinculan a Jefatura con los laboratorios.
+- **Nombres de curso mezclados (#443, Issue 1.20):** la importación rechaza un nombre con horas, `--` o el código de otro curso, y se corrige `202SW0302`.
+- **Estado vacío con error (#406, Issue 7.16):** el explorador y las solicitudes del docente ya no muestran a la vez el error y el vacío.
+- **Foco en la cabecera (#405, Issue 3.58):** el aro de foco del logo pasa a blanco sobre guinda (10,9:1).
 
 ### Base de datos
-- Migración `20261013000000_espacio_habilitado`.
+- `20261111000000_auditoria_estructurada`, `20261124000000_auditoria_acciones_personas`, `20261124000100_importaciones`, `20261125000000_alerta_accesibilidad`, `20261126000000_periodos`, `20261127000000_seccion_activa` y `20261128000000_solicitudes_accesibilidad`.
 
-### Pendiente
-- Actualizar las pruebas de QA que simulan la transacción fila por fila: `motorService.test.ts` (`procesarCorridaBatchPeriodo`), `registroAuditoria.test.ts` y `docente.test.ts` (7.3, ahora la consulta incluye `habilitado: true`).
+### Issues cerrados
+1.15 (#368), 1.16 (#428), 1.17 (#429), 1.18 (#430), 1.19 (#431), 2.20 (#409), 2.21 (#410), 2.22 (#411), 2.25 (#414), 2.26 (#415), 3.58 (#403), 3.60 (#417), 3.62 (#419), 3.63 (#420), 3.64 (#421), 4.48 (#339), 4.54 (#345), 4.58 (#349), 4.59 (#422), 4.60 (#423), 4.62 (#425), 4.64 (#427), 5.14 (#187), 5.19 (#221), 5.27 (#371), 5.29 (#379), 5.31 (#434), 7.13 (#372), 7.14 (#400), 7.15 (#401), 7.16 (#402).
+
+### Notas
+- 1.20 (#432) sigue abierto: falta cargar `202SW0303 – Física Electrónica` desde la fuente oficial que se defina en 6.15 (#439).
+- 3.59 (#416) sigue abierto: falta la distancia al ascensor de los espacios (R42).
+- Las migraciones `alerta_accesibilidad` y `periodos` se aplicaron en Supabase el 2026-11-25.
+
+---
+
+## [1.11.0] - 2026-11-11
+**Hitos:** Sprint 4 — Control, excepciones y validación (cerrado) y Sprint 5 — Estabilización. **PR:** #377, #378, #386, #387, #388, #389, #390, #391, #392, #393, #394, #395, #396.
+
+### Añadido
+- **Cambio de clave obligatorio (#377, Issue 4.45):** el JWT lleva `debeCambiarClave` mientras la cuenta deba cambiarla; `authGuard` responde 403 con `CLAVE_DEBE_CAMBIARSE` y solo `POST /auth/cambiar-clave` deja pasar y devuelve un token nuevo. Pantalla `/cambiar-clave` (Issue 4.21).
+- **Planos reales y mapa 2D/3D (#387):** planos de los tres pisos en `assets/planos/` enlazados con los 54 espacios de la base, mapa de ocupación con zoom, buscador, filtros y franja horaria, maqueta 3D, y ruta que sigue los pasillos y elige escalera o ascensor.
+- **Portal docente (#388, Issues 7.8 a 7.12):** inicio, horario, explorador de espacios con disponibilidad, estado de equipos del laboratorio y formulario de incidencias con código de seguimiento, conectados a `/docente/*`.
+- **Incidencias de Jefatura (#388, Issue 7.11):** bandeja con filtros, detalle técnico del laboratorio y cierre (resolver o descartar) con comentario.
+- **Inicio de Jefatura y laboratorios (#389, Issue 4.16):** métricas de laboratorios y PCs, alerta más reciente, mapa con sus laboratorios y listado con aforo real frente al nominal.
+- **Catálogo de software (#393, Issue 4.30):** pantalla `/admin/software` con filtros, alta, edición y baja lógica; laboratorios y secciones eligen el software del catálogo.
+- **Solicitudes de software (#378, Issue 4.29):** el docente pide un software y ve su estado; Coordinación lo aprueba o lo rechaza con motivo.
+- **Periodos (#394, Issue 4.42):** `GET /api/v1/admin/periodos` con el vigente y la lista; selector de periodo en Secciones, Historial e Informe (Issue 4.43).
+- **Endurecimiento HTTP (#394, Issue 1.12):** `helmet`, `trust proxy` configurable, límite de intentos fallidos en los tres logins (5 por usuario y 20 por IP cada 10 min, 429 con `Retry-After`) y límite de 120 consultas públicas por minuto. La consulta pública devuelve solo los datos mínimos (Issue 3.37).
+- **Componentes del panel (#386):** `EstadoAsignacion` único (Issue 3.57), `Paginador` con el total real (Issues 4.38 y 4.39) y `FiltrosActivos` (Issue 4.40).
+- **Historial (#378, #390, Issues 4.46, 4.47 y 4.50):** agrupado por corrida, con buscador, filtro de fechas y línea de tiempo de cada sección.
+
+### Cambiado
+- **Accesibilidad y feedback (#378):** pestañas ARIA en `SelectorSegmentado` (Issue 3.46), foco al `h1` al cambiar de ruta (Issue 3.45), hook `useAccion` para acciones con aviso (Issue 3.51), estados vacíos con salida (Issue 3.43) y avisos de espera en la corrida y la importación (Issue 4.56).
+- **Rendimiento (#378, Issues 3.47 y 3.49):** carga diferida por pantalla (el paquete principal baja de más de 500 KB a unos 330 KB) y caché breve en `useCarga`.
+- **Fechas y colores (#378, Issues 3.50 y 3.40):** un único módulo de fechas en hora de Lima y un color estable por curso.
+- **Textos y estilo (#391, Issues 3.44, 3.48, 3.52, 3.53 y 3.55):** glosario sin jerga («asignación automática» en lugar de «motor»), sin mayúsculas sostenidas, texto mínimo de 14 px, esqueletos de carga y animaciones de 250 ms o menos.
+- **Portal del alumno (#392, #395, Issues 3.38, 3.39 y 3.41):** inicio sin la clase destacada repetida, bloques del horario con su detalle en un drawer, marco único con `LayoutEstudiante` y validación al salir de cada campo con resumen de errores.
+- **Panel de Coordinación (#390, Issues 4.49, 4.52 y 4.57):** mensajes con el aula y su ubicación en lugar de UUID, métricas con enlace a su lista e informe con estado vacío.
+- **Panel administrativo (#396):** carga sin vacíos falsos, navegación que manda a «Más» solo lo que no cabe y una acción principal por vista.
+- **Listados (#377, Issue 4.41):** búsqueda con espera de 300 ms e indicador «Actualizando…» al refrescar con datos previos.
+
+### Corregido
+- **Drawers en la URL (#378, Issue 4.51):** «Atrás» cierra el drawer de Secciones y Espacios, y el enlace lo abre.
+- **Pantallas del panel desbordadas o con vacíos falsos (#396):** Incidencias y Solicitudes muestran el esqueleto mientras cargan, y el relleno inferior del marco ya no desaparece entre `md` y `lg`.
+
+### Issues cerrados
+1.12 (#332), 3.15 (#144), 3.23 (#212), 3.37 (#336), 3.38 (#350), 3.39 (#351), 3.40 (#352), 3.41 (#353), 3.42 (#354), 3.43 (#355), 3.44 (#356), 3.45 (#357), 3.46 (#358), 3.47 (#359), 3.48 (#360), 3.49 (#361), 3.50 (#362), 3.51 (#363), 3.52 (#364), 3.53 (#365), 3.54 (#366), 3.55 (#367), 3.56 (#373), 3.57 (#374), 4.16 (#167), 4.17 (#168), 4.18 (#169), 4.21 (#213), 4.26 (#218), 4.29 (#275), 4.30 (#276), 4.38 (#325), 4.39 (#326), 4.40 (#327), 4.41 (#328), 4.42 (#329), 4.43 (#330), 4.44 (#331), 4.45 (#335), 4.46 (#337), 4.47 (#338), 4.49 (#340), 4.50 (#341), 4.51 (#342), 4.52 (#343), 4.53 (#344), 4.56 (#347), 4.57 (#348), 7.8 (#205), 7.9 (#206), 7.10 (#207), 7.11 (#208), 7.12 (#209).
+
+### Notas
+- 4.55 (#346) sigue abierto en el Sprint 5: la pantalla aún rotula la última carga «en este navegador». El registro de importaciones del servidor llegó en la v1.12.0 (#407, Issue 4.54).
+- 3.23 (#212) se cerró con #391; las pruebas con axe ya estaban en la v1.9.0.
+
+---
+
+## [1.10.0] - 2026-10-28
+**Hitos:** Sprint 3.1 (cerrado) y parte del Sprint 4 y del Sprint 5. **PR:** #316, #375, #380, #381, #382, #383, #384, #385.
+
+### Añadido
+- **Auditoría de UI/UX, etapas 1 a 4 (#316):** `docs/AUDITORIA_UI_UX.md` (118 hallazgos y plan por etapas), tokens, diccionario de etiquetas y componentes base (`Drawer`, `Campo`, `TablaDatos`, `DialogoConfirmacion`, `EstadoError`). Playfair Display para la marca y los títulos, según la guía de estilos.
+- **Runbook de rollback (#383, Issue 5.26):** `docs/runbook_rollback.md` para Render, Vercel y las migraciones de Prisma, y alerta en el resumen del CD cuando el despliegue falla.
+- **Paginación acotada (#382, Issue 5.25):** `pagina` y `limite` (1 a 200) en alertas, escaladas, incidencias, espacios y docentes, con `docs/auditoria_paginacion_endpoints.md`.
+- **Pruebas del cambio de clave obligatorio (#381, Issue 5.28).**
+
+### Cambiado
+- **Navegación responsive (#375, Issues 4.35 y 3.34):** barra inferior con «Más» por debajo de 1024 px en el panel y en el portal del alumno.
+- **Cabecera única del alumno (#380, Issue 3.33)** y modo tablero solo con 1024 × 800 px o más (Issue 4.36).
+- **Bordes de los campos (#375, Issue 3.35)** con contraste de 3,68:1, y filas de revisión apiladas en móvil (Issue 4.37).
+
+### Corregido
+- **Respuestas de error (#384, Issue 1.13):** 404 y 500 con la forma `{ success: false, message }`, sin detalle técnico.
+- **Clave inicial (#385, Issue 1.14):** las cuentas nuevas reciben una clave aleatoria no derivable del código, con `debeCambiarClave`.
+- **Desborde del inicio del alumno en móvil (#380, Issue 3.32)** y `<summary>` de 44 px de alto (Issue 3.36).
+
+### Issues cerrados
+1.13 (#333), 1.14 (#334), 3.32 (#317), 3.33 (#320), 3.34 (#321), 3.35 (#322), 3.36 (#324), 4.35 (#318), 4.36 (#319), 4.37 (#323), 5.25 (#369), 5.26 (#370), 5.28 (#376).
+
+---
+
+## [1.9.0] - 2026-10-21
+**Hito:** Sprint 3 — MVP funcional (cerrado). **PR:** #277, #284, #285, #288, #290, #291, #292, #293, #295, #296, #298, #299, #300, #301, #302, #310, #311, #312, #314. **Publicada en `main`** con los PR #313 y #315.
+
+### Añadido
+- **Espacios habilitados o deshabilitados (#277):** `Espacio.habilitado` y `Espacio.descripcionUso`. El aforo puede ser 0 solo si el espacio está deshabilitado; el motor, el alumno y el explorador del docente no toman los deshabilitados.
+- **Seed desde Excel (#277):** `backend/prisma/data/seed-plantilla.xlsx` es la única fuente de datos de demostración; valida todo el archivo antes de escribir y es idempotente.
+- **Verificador de la corrida (#290, Issue 2.17):** regla pura que comprueba las 7 reglas duras después de cada corrida, con el veredicto en la respuesta, en la auditoría y en el panel (#299).
+- **Asignación programada (#290, Issue 2.18):** `POST /api/v1/asignaciones/programada` con token de servicio y workflow nocturno.
+- **Catálogo de software (#291, #292, Issues 4.27 a 4.29):** tablas `Software`, `EspacioSoftware` y `SeccionSoftware` con regla de versión (`CUALQUIERA`, `EXACTA`, `MINIMA`), endpoints de administración y solicitudes de software del docente. Spec 08.
+- **Telegram y accesibilidad (#285):** alta y baja de Telegram desde el perfil del alumno (pantalla en #299) y `Espacio.distanciaAscensor` para la regla de accesibilidad.
+- **Condición de accesibilidad en la ficha médica (#310, Issue 3.30):** el alumno la declara y se propaga a `Matricula.movilidadReducida`.
+- **Gestión individual de secciones, historial e informe de salones (#310, Issues 4.31 a 4.33).**
+- **Exportador de CSVs (#310, Issue 4.34):** `npm run prisma:export` vuelca la base a diez archivos, con `docs/guia-csv.md`.
+- **Panel administrativo (#296, #302):** inicio de Coordinación y Jefatura (Issue 4.20), alertas (Issues 4.9 y 4.10), carga de datos (Issue 1.9), cambio de laboratorio (Issue 4.19) y alta y edición de espacios por rol (Issue 4.15).
+- **Sistema de diseño del panel (#302):** `Boton`, `BadgeEstado`, `Aviso`, `Acordeon`, `Drawer` y `ProveedorAvisos`, con tokens de estado que cumplen 4,5:1.
+- **Configuración y ayuda del alumno (#295, Issue 3.17)** e inicio del alumno rediseñado (#293).
+- **Pruebas de carga y E2E (#284, Issues 5.8 y 5.9):** k6 sobre la consulta pública en el pico del primer día y Playwright sobre los flujos principales. Pruebas de accesibilidad con axe en jsdom y en navegador real, y E2E de espacios con su job en el CI (#302).
+- **Cobertura (#288, Issue 5.18):** pruebas de todos los controllers y módulos auxiliares para superar el 85 % global.
+- **Compilación TypeScript en el CI (#290, Issue 5.24)** y health check después del despliegue.
+
+### Cambiado
+- **Corrida batch (#277):** 4 operaciones masivas en una transacción en lugar de unas 900 consultas: 228 secciones en unos 8 s.
+- **Sesión entre pestañas (#310, Issue 3.31):** las pestañas comparten el inicio y el cierre de sesión con `BroadcastChannel`, sin mover el token a `localStorage`.
+- **Portal y panel en modo tablero (#310, #311, Issue 3.29):** la portada y el tablero caben en una pantalla, y el detalle se abre en drawers en lugar de scrolls internos.
+- **Vocabulario único (#312):** ninguna pantalla muestra enums, UUID ni códigos internos.
+- **Línea base (#310, Issues 1.11 y 6.13):** se aplicó el cambio de alcance de Telegram (#247).
+
+### Corregido
+- **CD (#277):** el job `ci` de `cd.yml` hereda los secrets; sin `SONAR_TOKEN` el despliegue se omitía desde el 10 de octubre.
+- **SonarCloud en `main` (#314):** se omite el Quality Gate en el push a `main`, que el plan no permite consultar.
+- **Rutas directas en Vercel (#300):** rewrite a `index.html` para que React Router resuelva las rutas internas.
+- **Validación manual (#298, Issue 5.15):** orden de las clases por cercanía, cursos agrupados, ruta de la corrida (`/asignaciones/batch`) y reintento en el inicio del alumno.
+- **Secciones escaladas (#301):** motivo legible y acción «Cargar horario».
+- **Orden determinista (#290):** comparador explícito en los `.sort()` del motor y los servicios (SonarCloud S2871).
+
+### Base de datos
+- `20261013000000_espacio_habilitado`, `20261014000000_espacio_distancia_ascensor`, `20261019000000_auditoria_verificacion`, `20261020000000_catalogo_software`, `20261021000000_catalogo_software_limpieza`, `20261021000000_ficha_accesible` y `20261022000000_solicitudes_software`.
+
+### Issues cerrados
+1.9 (#115), 1.11 (#248), 2.17 (#280), 2.18 (#281), 3.17 (#146), 3.29 (#307), 3.30 (#308), 3.31 (#309), 4.9 (#160), 4.10 (#161), 4.15 (#166), 4.19 (#170), 4.20 (#171), 4.27 (#273), 4.28 (#274), 4.31 (#303), 4.32 (#304), 4.33 (#305), 4.34 (#306), 5.8 (#180), 5.9 (#181), 5.15 (#188), 5.18 (#220), 5.20 (#255), 5.21 (#267), 5.22 (#268), 5.23 (#269), 5.24 (#282), 6.13 (#256), #247, #286.
 
 ---
 
@@ -58,7 +183,7 @@ Trabajo aún no fusionado a `develop`: la rama `feature/espacios-habilitados-see
 3.7 (#136), 3.16 (#145).
 
 ### Notas
-- El perfil se entregó dentro de #279, pero el Issue 3.17 (#146) sigue abierto.
+- El perfil se entregó dentro de #279; el Issue 3.17 (#146) se cerró en la v1.9.0 con #295.
 - Se mantiene el desvío al cambio de clave inicial tras el login.
 
 ---
