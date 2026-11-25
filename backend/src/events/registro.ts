@@ -1,6 +1,7 @@
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { avisarAccesibilidadAlAlumno } from '../telegram/avisoAccesibilidad';
+import { avisarFusionALosAlumnos } from '../telegram/avisoFusion';
 import { crearClienteTelegram } from '../telegram/cliente';
 import {
   avisarAlertaAJefatura,
@@ -35,6 +36,10 @@ export function registrarManejadores(): void {
   // Issue 3.60: el alumno se entera de que Coordinación resolvió su declaración de accesibilidad.
   bus.suscribir('accesibilidad.resuelta', async (evento) => {
     await avisarAccesibilidadAlAlumno(evento, { prisma, cliente });
+  });
+  // Issue 7.17: los alumnos se enteran de que su curso se dicta todo en laboratorio.
+  bus.suscribir('seccion.fusionada', async (evento) => {
+    await avisarFusionALosAlumnos(evento, { prisma, cliente });
   });
 
   // Issue 4.60: avisos inmediatos a Jefatura, solo si hay un chat de destino configurado.

@@ -40,7 +40,7 @@ describe('Servicio de Consulta Pública (#3.2 y #3.4)', () => {
       await obtenerAsignacionPorAlumno('20200000', mockPrisma as unknown as PrismaClient);
 
       const { include } = mockPrisma.alumno.findUnique.mock.calls[0][0];
-      expect(include.matriculas.where).toEqual({ seccion: { periodo: '2026-2' } });
+      expect(include.matriculas.where).toEqual({ seccion: { periodo: '2026-2', activa: true } });
     });
 
     it('retorna null si el alumno no existe en la base de datos', async () => {
