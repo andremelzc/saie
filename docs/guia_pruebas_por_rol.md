@@ -32,7 +32,7 @@ Los CSV para los casos de carga están en [`demo/pruebas/`](../demo/pruebas/) y 
 
 - **Después de cada `git pull`** correr `npx prisma generate` en `backend/`; si no, el backend no compila.
 - **Límite de intentos de login:** 5 intentos por usuario y 20 por IP cada 10 minutos. Los casos de clave incorrecta consumen intentos: hacerlos al final o con otra cuenta.
-- **No hay software cargado** (riesgo #41): el catálogo, el software de los laboratorios y los requisitos de las secciones están vacíos. Para los casos de software (C-11, C-15, C-16 y F-03), Coordinación debe crear primero al menos un programa en `/admin/software`. **No cargar el catálogo propuesto** del documento de riesgos: está pendiente de aprobación del equipo.
+- **Software:** el catálogo aprobado (Anexo B) se carga con `npm run prisma:cargar-catalogo-software` en `backend/` (issue #438). Si la base todavía no lo tiene (riesgo #41): el catálogo, el software de los laboratorios y los requisitos de las secciones están vacíos. Para los casos de software (C-11, C-15, C-16 y F-03), Coordinación debe crear primero al menos un programa en `/admin/software`.
 - **Servidor dormido** (riesgo #40): si nadie usó el sistema en 15 minutos, el primer acceso puede fallar por tiempo de espera. Reintentar una vez.
 - **Periodos en romanos:** desde el issue #427 se aceptan «2026-I» y «2026-II» y se guardan como «2026-1» y «2026-2». Lo que se rechaza es cualquier otro formato y los periodos no registrados (casos CD-20 a CD-22).
 - **Activar y cerrar periodos cambia lo que ven todos los usuarios.** Los casos P-05 a P-07 se prueban **solo en una base local o de prueba**, nunca en la base compartida.
@@ -276,7 +276,7 @@ Revertir lo que se cambió en la base real:
 
 | Hallazgo | Impacto en las pruebas | Seguimiento |
 |---|---|---|
-| No hay software cargado | Los casos de software requieren crear un programa antes | Riesgo #41 · issue #438 |
+| Catálogo de software sin cargar en la base | Cargarlo con `prisma:cargar-catalogo-software` y correr la asignación; si no, los casos de software requieren crear un programa antes | Riesgo #41 · issue #438 |
 | No hay asignación manual de una sección escalada a un espacio concreto | Una escalada solo sale si cambia algo (datos, espacios) o con «Reubicar» desde una alerta | Riesgos #4 y #29 · issue #412 |
 | Los horarios de una sección no se editan en pantalla | Cambiar un horario requiere subir un CSV | Riesgo #21 · issue #425 |
 | Cargar matrículas u horarios reemplaza los de cada sección incluida, sin vista previa | No subir archivos parciales de secciones reales (ver 0.2) | Riesgo #35 · issue #429 |
