@@ -138,6 +138,8 @@ export interface SeccionEscaladaDTO {
     docenteNombre: string | null;
     tipoEspacioRequerido: TipoEspacio;
     alumnosMatriculados: number;
+    /** Franjas de la sección (el backend las envía desde 4.22; opcional para datos antiguos). */
+    horarios?: { diaSemana: DiaSemana; horaInicio: string; horaFin: string }[];
   };
 }
 

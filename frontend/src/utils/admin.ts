@@ -190,6 +190,20 @@ export function separarDatosIncompletos<T extends { motivoEscalamiento: string |
   return { enRevision, datosIncompletos };
 }
 
+/**
+ * Software que falta según el motivo `[SOFTWARE_FALTANTE] … requerido: [MySQL, Python >=3.10].`
+ * Devuelve `[]` si el motivo es de otro tipo o no trae la lista.
+ */
+export function softwareFaltanteDeMotivo(motivo: string | null | undefined): string[] {
+  const { codigo, descripcion } = describirMotivoEscalamiento(motivo);
+  if (codigo !== 'SOFTWARE_FALTANTE') return [];
+  const lista = descripcion.match(/\[([^\]]*)\]\.?\s*$/)?.[1] ?? '';
+  return lista
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 /** Texto de espera de una importación grande, con el avance cuando ya se conoce (Issue 1.19). */
 export function textoAvanceImportacion(
   avance: { procesadas: number; total: number } | null,

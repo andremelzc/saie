@@ -580,7 +580,58 @@ describe('Inicio del panel administrativo', () => {
       // Solo cuentan los laboratorios habilitados: 27 + 25 operativas, 3 + 0 inoperativas.
       expect(valorMetrica('PCs operativas')).toHaveTextContent('52');
       expect(valorMetrica('PCs inoperativas')).toHaveTextContent('3');
-      expect(escaladas).not.toHaveBeenCalled();
+    });
+
+    it('muestra las secciones escaladas por software faltante, con qué instalar', async () => {
+      alertas.mockResolvedValue([]);
+      escaladas.mockResolvedValue({
+        ...conEscaladas,
+        total: 3,
+        secciones: [
+          ...conEscaladas.secciones,
+          {
+            asignacionId: 'x9',
+            fechaEscalamiento: '2026-11-25T10:00:00Z',
+            motivoEscalamiento:
+              '[SOFTWARE_FALTANTE] Ningún laboratorio disponible en la franja horaria cuenta con el stack de software requerido: [MySQL].',
+            seccion: {
+              id: 'sec9',
+              codigoCurso: '202SW0503',
+              nombreCurso: 'BASE DE DATOS I',
+              codigoSeccion: '2-LAB',
+              periodo: '2026-2',
+              docenteNombre: null,
+              tipoEspacioRequerido: 'LABORATORIO',
+              alumnosMatriculados: 7,
+              horarios: [{ diaSemana: 'LUNES', horaInicio: '17:00', horaFin: '19:00' }],
+            },
+          },
+        ],
+      });
+      montar();
+
+      const bloque = await screen.findByRole('region', {
+        name: 'Secciones que esperan software (1)',
+      });
+      // Solo las de software faltante: las demás escaladas son asunto de Coordinación.
+      expect(within(bloque).getAllByRole('listitem')).toHaveLength(1);
+      expect(within(bloque).getByText('202SW0503 · 2-LAB — BASE DE DATOS I')).toBeInTheDocument();
+      expect(within(bloque).getByText('MySQL')).toBeInTheDocument();
+      expect(
+        within(bloque).getByText(/Lunes 17:00 – 19:00 · 7 alumnos matriculados/),
+      ).toBeVisible();
+      expect(within(bloque).getByText(/Coordinación debe pulsar «Reintentar»/)).toBeVisible();
+      expect(
+        within(bloque).getByRole('link', { name: 'Instalar en un laboratorio' }),
+      ).toHaveAttribute('href', '/admin/laboratorio');
+    });
+
+    it('sin escaladas por software no muestra el bloque', async () => {
+      alertas.mockResolvedValue([]);
+      montar();
+      expect(await screen.findByText('Laboratorios activos')).toBeInTheDocument();
+      await waitFor(() => expect(escaladas).toHaveBeenCalled());
+      expect(screen.queryByRole('region', { name: /Secciones que esperan software/ })).toBeNull();
     });
 
     it('destaca la alerta pendiente más reciente', async () => {

@@ -32,7 +32,12 @@ import type {
   ResultadoVerificacionDTO,
   SeccionEscaladaDTO,
 } from '../../types/admin';
-import { describirMotivoEscalamiento, separarDatosIncompletos } from '../../utils/admin';
+import {
+  describirMotivoEscalamiento,
+  separarDatosIncompletos,
+  softwareFaltanteDeMotivo,
+} from '../../utils/admin';
+import { formatearBloqueHorario } from '../../utils/etiquetas';
 import { formatearFechaCorta } from '../../utils/fechas';
 import { plural } from '../../utils/texto';
 import { fraseDeMotivoAlerta } from '../../utils/textoMotor';
@@ -328,6 +333,74 @@ const ListaEscaladas: React.FC<{
  * inoperativas, la alerta más reciente, accesos y el mapa de ocupación con sus laboratorios
  * resaltados (componente del mapa de los Issues 4.13 y 4.14).
  */
+/**
+ * Secciones que el motor escaló porque ningún laboratorio libre tiene el software que piden.
+ * Quien instala el software es Jefatura, así que se le muestran aquí (sin alertas: una alerta
+ * exige un espacio y estas secciones no tienen ninguno). Si no hay, el bloque no aparece.
+ */
+const SeccionesEsperanSoftware: React.FC = () => {
+  const escaladas = useCarga(obtenerEscaladas, { clave: 'escaladas' });
+  const secciones = (escaladas.datos?.secciones ?? []).filter(
+    (s) => describirMotivoEscalamiento(s.motivoEscalamiento).codigo === 'SOFTWARE_FALTANTE',
+  );
+  if (secciones.length === 0) return null;
+
+  return (
+    <section
+      aria-labelledby="titulo-esperan-software"
+      className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4"
+    >
+      <div className="flex flex-col gap-1">
+        <h2 id="titulo-esperan-software" className="m-0 text-base font-bold">
+          Secciones que esperan software ({secciones.length})
+        </h2>
+        <p className="m-0 text-sm text-saie-muted">
+          Ningún laboratorio libre a su hora tiene el software que piden. Instálalo en un
+          laboratorio a tu cargo; después, Coordinación debe pulsar «Reintentar» para asignarles
+          aula.
+        </p>
+      </div>
+      <ul className="m-0 flex list-none flex-col gap-2 p-0">
+        {secciones.map((s) => {
+          const falta = softwareFaltanteDeMotivo(s.motivoEscalamiento);
+          const horarios = s.seccion.horarios ?? [];
+          return (
+            <li
+              key={s.asignacionId}
+              className="flex flex-col gap-1 rounded-lg bg-saie-canvas px-3 py-2 text-sm"
+            >
+              <span className="font-semibold text-saie-text">
+                {s.seccion.codigoCurso} · {s.seccion.codigoSeccion} — {s.seccion.nombreCurso}
+              </span>
+              <span>
+                <span className="text-saie-muted">Falta: </span>
+                {falta.length > 0 ? falta.join(', ') : 'software requerido por la sección'}
+              </span>
+              <span className="text-saie-muted">
+                {horarios.length > 0 &&
+                  `${horarios.map((h) => formatearBloqueHorario(h, false)).join(' · ')} · `}
+                {plural(
+                  s.seccion.alumnosMatriculados,
+                  'alumno matriculado',
+                  'alumnos matriculados',
+                )}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <BotonEnlace
+        to={RUTAS.cambioLaboratorio}
+        variante="secundario"
+        tamano="sm"
+        className="self-start"
+      >
+        Instalar en un laboratorio
+      </BotonEnlace>
+    </section>
+  );
+};
+
 const InicioJefatura: React.FC = () => {
   const alertas = useCarga(obtenerAlertas, { clave: 'alertas' });
   const labs = useCarga(obtenerLaboratoriosConEstado, { clave: CLAVE_LABORATORIOS_ESTADO });
@@ -431,6 +504,8 @@ const InicioJefatura: React.FC = () => {
                 </p>
               )}
             </section>
+
+            <SeccionesEsperanSoftware />
 
             <nav aria-label="Accesos de Jefatura" className="grid gap-3">
               <Acceso

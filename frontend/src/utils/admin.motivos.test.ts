@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { describirMotivoEscalamiento } from './admin';
+import { describirMotivoEscalamiento, softwareFaltanteDeMotivo } from './admin';
+
+describe('softwareFaltanteDeMotivo', () => {
+  it('extrae la lista de software del motivo de software faltante', () => {
+    expect(
+      softwareFaltanteDeMotivo(
+        '[SOFTWARE_FALTANTE] Ningún laboratorio disponible en la franja horaria cuenta con el stack de software requerido: [MySQL, Python >=3.10].',
+      ),
+    ).toEqual(['MySQL', 'Python >=3.10']);
+  });
+
+  it('devuelve una lista vacía para otros motivos o sin lista', () => {
+    expect(softwareFaltanteDeMotivo('[CAPACIDAD_INSUFICIENTE] Faltan 3 puestos [x].')).toEqual([]);
+    expect(softwareFaltanteDeMotivo('[SOFTWARE_FALTANTE] Sin detalle.')).toEqual([]);
+    expect(softwareFaltanteDeMotivo(null)).toEqual([]);
+  });
+});
 
 describe('describirMotivoEscalamiento', () => {
   it('separa el código, traduce la etiqueta y sugiere cargar el horario', () => {
