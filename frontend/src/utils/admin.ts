@@ -127,6 +127,13 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
       trazo: ICONOS.usuarioRelleno,
       secundaria: true,
     },
+    // Issue 7.17: solicitudes de los docentes para dictar todo en laboratorio.
+    {
+      to: RUTAS.solicitudesLaboratorioAdmin,
+      etiqueta: 'Dictar en laboratorio',
+      trazo: T_LAB,
+      secundaria: true,
+    },
     { to: RUTAS.cargaAdmin, etiqueta: 'Carga', trazo: T_CARGA },
     // Issue 4.64: Coordinación decide cuándo cambia el semestre.
     { to: RUTAS.periodosAdmin, etiqueta: 'Periodos', trazo: ICONOS.calendario, secundaria: true },

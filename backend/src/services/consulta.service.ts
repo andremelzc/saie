@@ -105,7 +105,7 @@ export async function obtenerAsignacionPorAlumno(
     where: { codigo: codigoAlumno },
     include: {
       matriculas: {
-        where: { seccion: { periodo: periodoVigente ?? '' } },
+        where: { seccion: { periodo: periodoVigente ?? '', activa: true } },
         include: {
           seccion: {
             include: {
