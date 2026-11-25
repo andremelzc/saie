@@ -8,9 +8,11 @@ import {
   obtenerLaboratoriosConEstado,
   obtenerMapaOcupacionAdmin,
   obtenerEscaladas,
+  obtenerIncidencias,
   reintentarSeccion,
 } from '../../services/admin';
 import type { LaboratorioConEstadoDTO } from '../../services/admin';
+import type { IncidenciaAdminDTO } from '../../types/docente';
 import type {
   AlertaDTO,
   ReglaVerificacion,
@@ -30,6 +32,7 @@ vi.mock('../../services/admin', () => ({
   obtenerMapaOcupacionAdmin: vi.fn(),
   obtenerAlertas: vi.fn(),
   obtenerEscaladas: vi.fn(),
+  obtenerIncidencias: vi.fn().mockResolvedValue([]),
   ejecutarCorrida: vi.fn(),
   reintentarSeccion: vi.fn(),
 }));
@@ -43,6 +46,11 @@ const mapaAdmin = vi.mocked(obtenerMapaOcupacionAdmin);
 const escaladas = vi.mocked(obtenerEscaladas);
 const corrida = vi.mocked(ejecutarCorrida);
 const reintento = vi.mocked(reintentarSeccion);
+const incidencias = vi.mocked(obtenerIncidencias);
+
+/** Lo único que lee la cifra de incidencias es la prioridad; el resto da igual. */
+const incidencia = (prioridad: IncidenciaAdminDTO['prioridad']) =>
+  ({ id: prioridad, prioridad, estado: 'PENDIENTE' }) as IncidenciaAdminDTO;
 
 const alerta = (o: Partial<AlertaDTO>): AlertaDTO => ({
   id: 'a',
@@ -568,6 +576,27 @@ describe('Inicio del panel administrativo', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }));
       expect(await screen.findByText('Alertas pendientes')).toBeInTheDocument();
       await waitFor(() => expect(screen.queryByRole('button', { name: 'Reintentar' })).toBeNull());
+    });
+
+    it('cuenta las incidencias pendientes y enlaza a la lista (Issue 4.60)', async () => {
+      alertas.mockResolvedValue([]);
+      incidencias.mockResolvedValue([incidencia('ALTA'), incidencia('BAJA')]);
+      montar();
+      await waitFor(() => expect(valorMetrica('Incidencias pendientes')).toHaveTextContent('2'));
+      expect(incidencias).toHaveBeenCalledWith({ estado: 'PENDIENTE' });
+      expect(screen.getByRole('link', { name: /Ver incidencias/ })).toHaveAttribute(
+        'href',
+        '/admin/incidencias',
+      );
+    });
+
+    it('muestra «no disponible» si no se pudieron leer las incidencias', async () => {
+      alertas.mockResolvedValue([]);
+      incidencias.mockRejectedValue(new Error('x'));
+      montar();
+      await waitFor(() =>
+        expect(valorMetrica('Incidencias pendientes')).toHaveTextContent('no disponible'),
+      );
     });
 
     it('muestra el mapa de ocupación con sus laboratorios', async () => {

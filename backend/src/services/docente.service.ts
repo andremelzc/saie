@@ -9,6 +9,7 @@ import {
   TipoIncidencia,
 } from '@prisma/client';
 import { z } from 'zod';
+import { bus } from '../events/bus';
 import { HttpError } from '../lib/http';
 import {
   agruparPorDia,
@@ -269,6 +270,12 @@ export async function registrarIncidencia(
           evidencia: entrada.evidencia,
           identificadorSeguimiento: generarIdentificadorSeguimiento(),
         },
+      });
+
+      // Issue 4.60: Jefatura recibe un aviso inmediato de las incidencias de prioridad alta.
+      void bus.emitir('incidencia.registrada', {
+        incidenciaId: incidencia.id,
+        prioridad: incidencia.prioridad,
       });
 
       return {

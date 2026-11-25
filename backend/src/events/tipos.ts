@@ -1,4 +1,4 @@
-import { TipoAlerta } from '@prisma/client';
+import { PrioridadIncidencia, TipoAlerta } from '@prisma/client';
 import { HorarioSlot } from '../services/disponibilidad.service';
 
 export interface EspacioEventoDTO {
@@ -30,10 +30,17 @@ export interface AlertaCreadaEvento {
   asignacionesAfectadas: number;
 }
 
+/** Un docente registró una incidencia (Issue 4.60). Quien escucha lee el detalle de la base. */
+export interface IncidenciaRegistradaEvento {
+  incidenciaId: string;
+  prioridad: PrioridadIncidencia;
+}
+
 /** Eventos internos del sistema y la forma de su contenido. */
 export interface MapaEventos {
   'asignacion.cambiada': AsignacionCambiadaEvento;
   'alerta.creada': AlertaCreadaEvento;
+  'incidencia.registrada': IncidenciaRegistradaEvento;
 }
 
 export type NombreEvento = keyof MapaEventos;
