@@ -45,9 +45,6 @@ export const HORAS_GRILLA: number[] = Array.from(
   (_, i) => HORA_INICIO_GRILLA + i,
 );
 
-const MINUTOS_INICIO_GRILLA = HORA_INICIO_GRILLA * 60;
-const MINUTOS_FIN_GRILLA = HORA_FIN_GRILLA * 60;
-
 const DIA_POR_INDICE_JS: DiaSemana[] = [
   'DOMINGO',
   'LUNES',
@@ -116,16 +113,43 @@ export function estadoDeClase(
   return 'PROXIMA';
 }
 
+/** Horas que muestra una grilla: de `desde` (incluida) a `hasta` (excluida). */
+export interface RangoGrilla {
+  desde: number;
+  hasta: number;
+}
+
+/**
+ * Rango de horas de la grilla ajustado a las clases (Issue 3.39): de la hora en que empieza la
+ * primera a la hora en que termina la última, con al menos 4 horas. Sin clases, 08:00–22:00.
+ */
+export function rangoDeHorario(horario: HorarioSemanalDTO): RangoGrilla {
+  const sesiones = todasLasSesiones(horario);
+  if (sesiones.length === 0) return { desde: HORA_INICIO_GRILLA, hasta: HORA_FIN_GRILLA };
+  const desde = Math.floor(Math.min(...sesiones.map((s) => aMinutos(s.horaInicio))) / 60);
+  let hasta = Math.ceil(Math.max(...sesiones.map((s) => aMinutos(s.horaFin))) / 60);
+  if (hasta - desde < 4) hasta = Math.min(24, desde + 4);
+  return { desde, hasta };
+}
+
+/** Horas enteras de un rango, para las líneas y rótulos de la grilla. */
+export function horasDeRango(rango: RangoGrilla): number[] {
+  return Array.from({ length: rango.hasta - rango.desde }, (_, i) => rango.desde + i);
+}
+
 /** Posición vertical de un bloque dentro de la grilla, en porcentaje de su alto total. */
 export function posicionBloque(
   horaInicio: string,
   horaFin: string,
+  rango: RangoGrilla = { desde: HORA_INICIO_GRILLA, hasta: HORA_FIN_GRILLA },
 ): { top: number; height: number } {
-  const total = MINUTOS_FIN_GRILLA - MINUTOS_INICIO_GRILLA;
-  const inicio = Math.max(aMinutos(horaInicio), MINUTOS_INICIO_GRILLA);
-  const fin = Math.min(aMinutos(horaFin), MINUTOS_FIN_GRILLA);
+  const minInicio = rango.desde * 60;
+  const minFin = rango.hasta * 60;
+  const total = minFin - minInicio;
+  const inicio = Math.max(aMinutos(horaInicio), minInicio);
+  const fin = Math.min(aMinutos(horaFin), minFin);
   return {
-    top: ((inicio - MINUTOS_INICIO_GRILLA) / total) * 100,
+    top: ((inicio - minInicio) / total) * 100,
     height: (Math.max(fin - inicio, 0) / total) * 100,
   };
 }
@@ -176,12 +200,20 @@ export const PALETA_CURSOS: ColorCurso[] = [
   { fondo: '#FCE4EC', borde: '#AD1457' },
 ];
 
-/** Asigna un color estable a cada código de curso (orden alfabético). */
+/** Color de un curso: depende solo de su código, así que no cambia entre pantallas (Issue 3.40). */
+export function colorDeCurso(codigo: string): ColorCurso {
+  // Hash djb2 del código: estable, sin estado compartido y sin depender de qué otros cursos
+  // aparezcan en la pantalla.
+  let hash = 5381;
+  for (let i = 0; i < codigo.length; i++) {
+    hash = ((hash << 5) + hash + codigo.charCodeAt(i)) >>> 0;
+  }
+  return PALETA_CURSOS[hash % PALETA_CURSOS.length];
+}
+
+/** Color de cada código de curso (ver `colorDeCurso`): el mismo en Inicio, Horario y Mis cursos. */
 export function asignarColoresCursos(codigos: string[]): Record<string, ColorCurso> {
-  const unicos = [...new Set(codigos)].sort((a, b) => a.localeCompare(b));
-  return Object.fromEntries(
-    unicos.map((codigo, i) => [codigo, PALETA_CURSOS[i % PALETA_CURSOS.length]]),
-  );
+  return Object.fromEntries([...new Set(codigos)].map((codigo) => [codigo, colorDeCurso(codigo)]));
 }
 
 /** «Buenos días», «Buenas tardes» o «Buenas noches» según la hora. */
@@ -214,15 +246,6 @@ export function cuentaRegresiva(
     return `Empieza en ${formatearMinutos(aMinutos(sesion.horaInicio) - ahoraEnMinutos)}`;
   }
   return 'Ya terminó';
-}
-
-/** «domingo 18 de octubre». */
-export function fechaLarga(fecha: Date): string {
-  return new Intl.DateTimeFormat('es-PE', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  }).format(fecha);
 }
 
 /** ¿El bloque de horario se cruza con la franja dada (mismo día y horas que se solapan)? */
@@ -334,4 +357,86 @@ export function agruparPorCurso<
       ),
     }))
     .sort((a, b) => a.codigoCurso.localeCompare(b.codigoCurso));
+}
+
+const SUFIJO_LABORATORIO = '-LAB';
+
+/**
+ * Issue 3.62: grupo al que pertenece una sección. Cada grupo de un curso son dos secciones,
+ * la de teoría y la de laboratorio (`2` y `2-LAB`): las dos son el «Grupo 2».
+ */
+export function grupoDeSeccion(codigoSeccion: string): string {
+  const codigo = codigoSeccion.trim();
+  return codigo.toUpperCase().endsWith(SUFIJO_LABORATORIO)
+    ? codigo.slice(0, -SUFIJO_LABORATORIO.length)
+    : codigo;
+}
+
+/** «Teoría» o «Laboratorio» según el tipo de espacio que requiere la sección. */
+export function etiquetaTipoClase(tipo: TipoEspacio): 'Teoría' | 'Laboratorio' {
+  return tipo === 'LABORATORIO' ? 'Laboratorio' : 'Teoría';
+}
+
+type ClaseRotulable = Pick<SesionDTO, 'codigoSeccion' | 'tipoEspacioRequerido'>;
+
+/** Rótulo corto de una clase suelta, p. ej. «Grupo 2 · Laboratorio» (en vez de «Sec. 2-LAB»). */
+export function rotuloClase(clase: ClaseRotulable): string {
+  return `Grupo ${grupoDeSeccion(clase.codigoSeccion)} · ${etiquetaTipoClase(clase.tipoEspacioRequerido)}`;
+}
+
+/** Un curso y grupo con sus clases (la de teoría y la de laboratorio). */
+export interface GrupoClases<T> {
+  codigoCurso: string;
+  nombreCurso: string;
+  grupo: string;
+  clases: T[];
+}
+
+const ORDEN_TIPO: Record<TipoEspacio, number> = { AULA_TEORICA: 0, LABORATORIO: 1 };
+
+/**
+ * Agrupa las clases por curso y grupo (Issue 3.62). Dentro de cada grupo van por hora de inicio
+ * (teoría antes que laboratorio si empiezan a la vez); los grupos van por la hora de su primera
+ * clase y, a igual hora, por código de curso y grupo.
+ */
+export function agruparClases<
+  T extends ClaseRotulable & {
+    codigoCurso: string;
+    nombreCurso: string;
+    horaInicio: string;
+  },
+>(clases: T[]): GrupoClases<T>[] {
+  const grupos = new Map<string, GrupoClases<T>>();
+
+  for (const clase of clases) {
+    const grupo = grupoDeSeccion(clase.codigoSeccion);
+    const clave = `${clase.codigoCurso}\u0000${grupo}`;
+    const existente = grupos.get(clave);
+    if (existente) {
+      existente.clases.push(clase);
+    } else {
+      grupos.set(clave, {
+        codigoCurso: clase.codigoCurso,
+        nombreCurso: clase.nombreCurso,
+        grupo,
+        clases: [clase],
+      });
+    }
+  }
+
+  return [...grupos.values()]
+    .map((g) => ({
+      ...g,
+      clases: [...g.clases].sort(
+        (a, b) =>
+          aMinutos(a.horaInicio) - aMinutos(b.horaInicio) ||
+          ORDEN_TIPO[a.tipoEspacioRequerido] - ORDEN_TIPO[b.tipoEspacioRequerido],
+      ),
+    }))
+    .sort(
+      (a, b) =>
+        aMinutos(a.clases[0].horaInicio) - aMinutos(b.clases[0].horaInicio) ||
+        a.codigoCurso.localeCompare(b.codigoCurso) ||
+        a.grupo.localeCompare(b.grupo, 'es', { numeric: true }),
+    );
 }

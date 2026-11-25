@@ -8,6 +8,8 @@ import { verificarAccesoEspacio } from './acceso.service';
 const INCLUIR_INCIDENCIA = {
   espacio: true,
   docente: true,
+  // Issue 7.19: solo si hay foto; los bytes se piden aparte.
+  imagen: { select: { id: true } },
   asignacion: { include: { seccion: { include: { curso: true } } } },
 } satisfies Prisma.IncidenciaInclude;
 
@@ -22,6 +24,7 @@ function aIncidenciaDTO(i: IncidenciaConDetalle): IncidenciaAdminDTO {
     estado: i.estado,
     descripcion: i.descripcion,
     evidencia: i.evidencia,
+    tieneImagen: Boolean(i.imagen),
     fechaReporte: i.fechaReporte,
     comentarioCierre: i.comentarioCierre,
     fechaCierre: i.fechaCierre,
@@ -56,6 +59,9 @@ export async function listarIncidencias(
       ? { espacio: { responsables: { some: { cuentaId: auth.sub } } } }
       : {};
 
+  const pagina = filtros.pagina ?? 1;
+  const limite = filtros.limite ?? 50;
+
   const incidencias = await db.incidencia.findMany({
     where: {
       estado: filtros.estado ?? EstadoIncidencia.PENDIENTE,
@@ -65,6 +71,8 @@ export async function listarIncidencias(
     },
     include: INCLUIR_INCIDENCIA,
     orderBy: { fechaReporte: 'asc' },
+    skip: (pagina - 1) * limite,
+    take: limite,
   });
 
   const peso = { ALTA: 0, MEDIA: 1, BAJA: 2 } as const;

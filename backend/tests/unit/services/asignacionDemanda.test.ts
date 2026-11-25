@@ -40,9 +40,10 @@ function resultado(seccionId: string, estado: string, extra: Record<string, unkn
 
 function prismaMock(seccion: unknown = { id: 's1', periodo: '2026-1' }, periodo = '2026-1') {
   return {
-    seccion: {
-      findUnique: jest.fn().mockResolvedValue(seccion),
-      findFirst: jest.fn().mockResolvedValue(periodo ? { periodo } : null),
+    seccion: { findUnique: jest.fn().mockResolvedValue(seccion) },
+    periodo: {
+      findFirst: jest.fn().mockResolvedValue(periodo ? { codigo: periodo } : null),
+      findUnique: jest.fn().mockResolvedValue({ estado: 'VIGENTE' }),
     },
   } as any;
 }
@@ -54,6 +55,16 @@ beforeEach(() => {
 
 describe('Asignación a demanda (Issue 2.15)', () => {
   describe('con id de sección', () => {
+    it('409 y no reasigna si la sección es de un periodo cerrado (Issue 4.64)', async () => {
+      const prisma = prismaMock();
+      prisma.periodo.findUnique.mockResolvedValue({ estado: 'CERRADO' });
+
+      await expect(ejecutarAsignacionADemanda('s1', prisma)).rejects.toMatchObject({
+        status: 409,
+      });
+      expect(individual).not.toHaveBeenCalled();
+    });
+
     it('ejecuta solo la orquestación de esa sección y resume el resultado', async () => {
       individual.mockResolvedValue(resultado('s1', 'VIGENTE'));
       const prisma = prismaMock();
@@ -199,6 +210,31 @@ describe('Asignación a demanda (Issue 2.15)', () => {
         status: 404,
       });
       expect(hayCorridaEnCurso()).toBe(false);
+    });
+
+    describe('bloqueo en base para varias instancias (Issue 5.33 / R28)', () => {
+      it('rechaza con 409 si otra instancia ya tiene el advisory lock en PostgreSQL', async () => {
+        const prisma = prismaMock();
+        prisma.$queryRaw = jest.fn().mockResolvedValue([{ locked: false }]);
+
+        await expect(ejecutarAsignacionADemanda(undefined, prisma)).rejects.toMatchObject({
+          status: 409,
+        });
+        expect(batch).not.toHaveBeenCalled();
+        expect(hayCorridaEnCurso()).toBe(false);
+      });
+
+      it('adquiere y libera el advisory lock en la base si está disponible', async () => {
+        batch.mockResolvedValue({ corridaId: 'c-adv', resultados: [] });
+        const prisma = prismaMock();
+        prisma.$queryRaw = jest.fn().mockResolvedValue([{ locked: true }]);
+
+        const res = await ejecutarAsignacionADemanda(undefined, prisma);
+
+        expect(res.corridaId).toBe('c-adv');
+        expect(prisma.$queryRaw).toHaveBeenCalledTimes(2); // lock y unlock
+        expect(hayCorridaEnCurso()).toBe(false);
+      });
     });
   });
 });

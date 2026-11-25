@@ -10,6 +10,7 @@ una tabla y el script lo reutiliza.
 ```bash
 node tools/planos/convertir-plano.mjs "<exportacion.svg>" --piso 1
 # opcional: --out <carpeta>   (por defecto tools/planos/salida/piso-1/)
+# opcional: --marco-fijo       (conserva las coordenadas y el viewBox del archivo)
 ```
 
 Sin dependencias; requiere Node 18 o superior.
@@ -22,13 +23,37 @@ Sin dependencias; requiere Node 18 o superior.
      navegador para saber qué figura es cuál.
    - `piso-N.codigos.json`: la tabla figura → código.
    - `piso-N.svg`: el plano limpio.
-3. Completar `codigo` en la tabla para los espacios reservables (aula, laboratorio y auditorio),
+3. Completar `codigo` en la tabla para los espacios reservables (aula y laboratorio),
    por ejemplo `NUE-101`, y para las escaleras y ascensores (ver más abajo).
 4. Volver a ejecutar el script: el `id` de cada figura pasa a ser su código.
 5. Copiar `piso-N.svg` a `assets/planos/`.
 
 Al cambiar el dibujo se repite desde el paso 1. El script reutiliza los códigos por **clase y
 posición** (tolerancia de 4 unidades del plano).
+
+## Planos fuente (`fuentes/`)
+
+`fuentes/piso-1.svg`, `piso-2.svg` y `piso-3.svg` son el dibujo vigente de cada piso. Se abren en
+cualquier navegador y llevan los rótulos como texto. Cada figura trae su `data-codigo` (el `id`
+final, p. ej. `NUE-101`) y su `data-nombre`, así que **no hace falta completar la tabla**:
+
+```bash
+for p in 1 2 3; do
+  node tools/planos/convertir-plano.mjs tools/planos/fuentes/piso-$p.svg --piso $p --marco-fijo --out tools/planos/salida/piso-$p
+  cp tools/planos/salida/piso-$p/piso-$p.svg assets/planos/piso-$p.svg
+done
+```
+
+- Los tres pisos comparten marco y origen: una escalera o ascensor está en las mismas coordenadas
+  en cada piso. Los pisos 2 y 3 caben dentro de la huella del piso 1 (el patio queda abierto).
+- Código de un espacio reservable: `NUE-` o `ANT-` más el número del aula (`ANT-104`; el laboratorio
+  lleva el código del aula). `Aula 208 y 209 - Aula Magna` es `ANT-208-209`.
+- Lugares que no están en la base de datos (auditorio, biblioteca, capilla, baños, administrativos,
+  comedor, etc.) llevan id y nombre pero no son reservables. Las figuras sin nombre usan el color
+  `sala`.
+- `Aula 301` y `302` del pabellón nuevo son un solo bloque en la esquina del piso 3 que no se usa para clases; se dibujan como dos aulas (mitad superior e inferior) porque la BD las tiene como espacios no habilitados.
+- Cada piso lleva además dos figuras de estructura para la maqueta 3D: `losa` (el suelo; en la planta baja incluye el patio) y `techo` (la parte construida). Salen del contorno del edificio y no se dibujan en el plano 2D.
+- La Capilla (piso 1), el Tercio (piso 2) y el Soporte técnico (piso 3) ocupan la misma columna.
 
 ## Avisos
 
@@ -53,6 +78,11 @@ El script clasifica por color de relleno. Si se cambia un color, hay que actuali
 | `#d0ffaf` | patio                                                        |
 | `#802323` | auditorio                                                    |
 | `#faff93` | biblioteca                                                   |
+| `#ffbd59` | comedor                                                      |
+| `#3a7ebf` | administrativo (oscuro)                                      |
+| `#dbe4ee` | sala sin nombre o por definir                                |
+| `#e5e7eb` / `#d6d3d1` | losa / techo del piso (estructura para la maqueta 3D)         |
+| `#ff751f` | puerta (solo una marca al dibujar: en el plano sale como abertura blanca) |
 
 Se ignoran el título, la nota adhesiva y las etiquetas. Los trazos sin relleno que no son
 rectángulos se conservan como muros (perímetro y muros interiores).
@@ -63,3 +93,22 @@ El mapa 3D permite subir y bajar entre pisos desde una escalera o un ascensor. P
 escalera del piso 1 es la misma que la del piso 2, **su figura debe llevar el mismo código en
 cada plano** (por ejemplo `NUE-escalera-1` en `piso-1.svg`, `piso-2.svg` y `piso-3.svg`). Si el
 código difiere entre pisos, el mapa los trata como escaleras distintas y no ofrece subir.
+
+## Contiguos y distancia al ascensor
+
+Los planos no tienen escala en metros, pero sí permiten saber qué aulas comparten pared y cuánto
+se camina hasta el ascensor (el pasillo es el espacio entre las aulas; ver la spec 07, §2.4):
+
+```bash
+npx tsx tools/planos/calcular-espacios.ts          # resumen
+npx tsx tools/planos/calcular-espacios.ts --json   # para volcarlo al seed
+```
+
+Trae los nombres de la base de datos, listos para la hoja «Contiguos» (solo pares del mismo tipo,
+como exige el seed) y la columna `distancia_ascensor` (unidades del plano, solo para comparar) de
+la hoja «Espacios» de `backend/prisma/data/seed-plantilla.xlsx`. Hay que volver a ejecutarlo si
+cambia el dibujo. Al correr el seed, los pares de contigüidad que ya no estén en la hoja se quitan
+de la base.
+
+El conversor decide si un lila es laboratorio o ascensor por el código de la figura cuando lo trae
+(`...ascensor...` es ascensor; cualquier otro código, laboratorio); solo usa el tamaño si no hay código.

@@ -1,6 +1,6 @@
 export interface UbicacionAccesibilidad {
   piso: number;
-  /** Distancia en metros hasta el ascensor; `null` si el espacio no la tiene registrada. */
+  /** Distancia caminando hasta el ascensor, en unidades del plano (sin escala en metros); `null` si el espacio no la tiene. */
   distanciaAscensor?: number | null;
 }
 

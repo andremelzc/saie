@@ -56,13 +56,40 @@ function prismaMock(secciones: any[] = [], alumno: any = { id: 'alu-1' }) {
       findUnique: jest.fn().mockResolvedValue(alumno),
       update: jest.fn(),
     },
-    seccion: { findFirst: jest.fn().mockResolvedValue({ periodo: '2026-1' }) },
+    periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-1' }) },
     matricula: {
       findMany: jest.fn().mockResolvedValue(secciones.map((s) => ({ seccion: s }))),
     },
     fichaMedica: { upsert: jest.fn(), findUnique: jest.fn().mockResolvedValue(null) },
+    solicitudAccesibilidad: { findFirst: jest.fn().mockResolvedValue(null) },
     $transaction: jest.fn(),
   } as any;
+}
+
+/**
+ * Transacción simulada del PATCH del perfil (Issue 3.60): `fichaPrevia` es la ficha antes del
+ * cambio y `fichaFinal` la que se lee al terminar; `pendiente` es la solicitud pendiente, si hay.
+ */
+function txPerfil({
+  fichaPrevia = null as object | null,
+  fichaFinal = null as object | null,
+  pendiente = null as object | null,
+  ultima = null as object | null,
+} = {}) {
+  return {
+    alumno: { update: jest.fn() },
+    fichaMedica: {
+      upsert: jest.fn(),
+      update: jest.fn(),
+      findUnique: jest.fn().mockResolvedValueOnce(fichaPrevia).mockResolvedValueOnce(fichaFinal),
+    },
+    matricula: { updateMany: jest.fn() },
+    solicitudAccesibilidad: {
+      findFirst: jest.fn().mockResolvedValueOnce(pendiente).mockResolvedValueOnce(ultima),
+      create: jest.fn(),
+      delete: jest.fn(),
+    },
+  };
 }
 
 describe('Horario semanal del alumno (Issue 3.10)', () => {
@@ -102,7 +129,9 @@ describe('Horario semanal del alumno (Issue 3.10)', () => {
     await obtenerHorarioAlumno('cuenta-1', undefined, prisma);
     expect(prisma.alumno.findUnique).toHaveBeenCalledWith({ where: { cuentaId: 'cuenta-1' } });
     expect(prisma.matricula.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { alumnoId: 'alu-1', seccion: { periodo: '2026-1' } } }),
+      expect.objectContaining({
+        where: { alumnoId: 'alu-1', seccion: { periodo: '2026-1', activa: true } },
+      }),
     );
   });
 
@@ -175,9 +204,27 @@ describe('Cursos matriculados del alumno (Issue 3.11)', () => {
     expect(res.cursos[1].docenteNombre).toBeNull();
   });
 
+  it('cada curso trae el asignacionId de su asignación vigente, con el que se pide la ruta', async () => {
+    const res = await listarCursosAlumno('cuenta-1', prismaMock(secciones));
+
+    expect(res.cursos.map((c) => [c.codigoCurso, c.asignacionId])).toEqual([
+      ['C1', 'asig-C1'],
+      ['C2', 'asig-C2'],
+    ]);
+  });
+
+  it('un curso sin aula asignada trae asignacionId null', async () => {
+    const res = await listarCursosAlumno(
+      'cuenta-1',
+      prismaMock([seccion('C3', [['LUNES', '08:00', '10:00']], { asignada: false })]),
+    );
+
+    expect(res.cursos[0]).toMatchObject({ asignacionId: null, estadoAsignacion: 'PENDIENTE' });
+  });
+
   it('sin periodo vigente devuelve lista vacía', async () => {
     const prisma = prismaMock(secciones);
-    prisma.seccion.findFirst.mockResolvedValue(null);
+    prisma.periodo.findFirst.mockResolvedValue(null);
     const res = await listarCursosAlumno('cuenta-1', prisma);
     expect(res).toEqual({ periodo: null, cursos: [] });
   });
@@ -262,6 +309,34 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
       condicionEspecial: null,
       contactoEmergencia: '999888777',
       condicionAccesible: false,
+      condicionAccesibleHasta: null,
+    });
+    expect(perfil.accesibilidad).toBeNull();
+  });
+
+  it('GET: trae el estado de la declaración de accesibilidad más reciente (Issue 3.60)', async () => {
+    const prisma = prismaMock();
+    prisma.alumno.findUnique.mockResolvedValue(alumnoCompleto);
+    prisma.solicitudAccesibilidad.findFirst.mockResolvedValue({
+      estado: 'RECHAZADA',
+      fechaSolicitud: new Date('2026-11-20T10:00:00.000Z'),
+      fechaResolucion: new Date('2026-11-21T10:00:00.000Z'),
+      motivoRechazo: 'Falta confirmar con Bienestar',
+      fechaFin: null,
+    });
+
+    const perfil = await obtenerPerfilAlumno('cuenta-1', prisma);
+
+    expect(prisma.solicitudAccesibilidad.findFirst).toHaveBeenCalledWith({
+      where: { alumnoId: 'alu-1' },
+      orderBy: { fechaSolicitud: 'desc' },
+    });
+    expect(perfil.accesibilidad).toEqual({
+      estado: 'RECHAZADA',
+      fechaSolicitud: '2026-11-20T10:00:00.000Z',
+      fechaResolucion: '2026-11-21T10:00:00.000Z',
+      motivoRechazo: 'Falta confirmar con Bienestar',
+      fechaFin: null,
     });
   });
 
@@ -279,20 +354,16 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
 
   it('PATCH: actualiza solo los campos enviados, sobre el alumno del token', async () => {
     const prisma = prismaMock();
-    const tx = {
-      alumno: {
-        update: jest.fn().mockResolvedValue({ ...alumnoCompleto, telefono: '911222333' }),
+    const tx = txPerfil({
+      fichaFinal: {
+        tipoSangre: 'A+',
+        alergias: null,
+        condicionEspecial: null,
+        contactoEmergencia: null,
+        condicionAccesible: false,
       },
-      fichaMedica: {
-        upsert: jest.fn().mockResolvedValue({
-          tipoSangre: 'A+',
-          alergias: null,
-          condicionEspecial: null,
-          contactoEmergencia: null,
-        }),
-        findUnique: jest.fn(),
-      },
-    };
+    });
+    tx.alumno.update.mockResolvedValue({ ...alumnoCompleto, telefono: '911222333' });
     prisma.$transaction.mockImplementation((fn: any) => fn(tx));
 
     const perfil = await actualizarPerfilAlumno(
@@ -319,10 +390,7 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
 
   it('PATCH: la ficha médica se lee/edita siempre por el id del alumno del token', async () => {
     const prisma = prismaMock();
-    const tx = {
-      alumno: { update: jest.fn() },
-      fichaMedica: { upsert: jest.fn(), findUnique: jest.fn().mockResolvedValue(null) },
-    };
+    const tx = txPerfil();
     prisma.$transaction.mockImplementation((fn: any) => fn(tx));
 
     await actualizarPerfilAlumno('cuenta-1', {}, prisma);
@@ -330,24 +398,18 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
     expect(prisma.alumno.findUnique).toHaveBeenCalledWith({ where: { cuentaId: 'cuenta-1' } });
     expect(tx.fichaMedica.findUnique).toHaveBeenCalledWith({ where: { alumnoId: 'alu-1' } });
     expect(tx.alumno.update).not.toHaveBeenCalled();
+    expect(tx.fichaMedica.upsert).not.toHaveBeenCalled();
   });
 
-  it('marcar la condición accesible propaga el flag de movilidad a las matrículas', async () => {
+  it('marcar la condición accesible crea una solicitud pendiente y no toca las matrículas (Issue 3.60)', async () => {
     const prisma = prismaMock();
-    const tx = {
-      alumno: { update: jest.fn() },
-      fichaMedica: {
-        upsert: jest.fn().mockResolvedValue({
-          tipoSangre: null,
-          alergias: null,
-          condicionEspecial: null,
-          contactoEmergencia: null,
-          condicionAccesible: true,
-        }),
-        findUnique: jest.fn().mockResolvedValue(null),
-      },
-      matricula: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
+    const pendienteNueva = {
+      estado: 'PENDIENTE',
+      fechaSolicitud: new Date('2026-11-24T10:00:00.000Z'),
+      fechaResolucion: null,
+      motivoRechazo: null,
     };
+    const tx = txPerfil({ ultima: pendienteNueva });
     prisma.$transaction.mockImplementation((fn: any) => fn(tx));
 
     const perfil = await actualizarPerfilAlumno(
@@ -356,30 +418,38 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
       prisma,
     );
 
-    expect(tx.matricula.updateMany).toHaveBeenCalledWith({
-      where: { alumnoId: 'alu-1' },
-      data: { movilidadReducida: true },
+    expect(tx.solicitudAccesibilidad.create).toHaveBeenCalledWith({
+      data: { alumnoId: 'alu-1', fechaFin: null },
     });
-    expect(perfil.fichaMedica?.condicionAccesible).toBe(true);
+    expect(tx.matricula.updateMany).not.toHaveBeenCalled();
+    // Solo venía la casilla: no se escribe la ficha.
+    expect(tx.fichaMedica.upsert).not.toHaveBeenCalled();
+    expect(perfil.accesibilidad?.estado).toBe('PENDIENTE');
   });
 
-  it('desmarcar la condición accesible solo limpia el flag si la declaración estaba activa', async () => {
+  it('marcar de nuevo con una solicitud pendiente no crea otra', async () => {
     const prisma = prismaMock();
-    const tx = {
-      alumno: { update: jest.fn() },
-      fichaMedica: {
-        upsert: jest.fn().mockResolvedValue({
-          tipoSangre: null,
-          alergias: null,
-          condicionEspecial: null,
-          contactoEmergencia: null,
-          condicionAccesible: false,
-        }),
-        // La declaración anterior estaba activa: el flag sí lo puso el alumno.
-        findUnique: jest.fn().mockResolvedValue({ condicionAccesible: true }),
-      },
-      matricula: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
-    };
+    const tx = txPerfil({ pendiente: { id: 'sol-1' } });
+    prisma.$transaction.mockImplementation((fn: any) => fn(tx));
+
+    await actualizarPerfilAlumno('cuenta-1', { fichaMedica: { condicionAccesible: true } }, prisma);
+
+    expect(tx.solicitudAccesibilidad.create).not.toHaveBeenCalled();
+  });
+
+  it('marcar con la condición ya aprobada no crea otra solicitud', async () => {
+    const prisma = prismaMock();
+    const tx = txPerfil({ fichaPrevia: { condicionAccesible: true } });
+    prisma.$transaction.mockImplementation((fn: any) => fn(tx));
+
+    await actualizarPerfilAlumno('cuenta-1', { fichaMedica: { condicionAccesible: true } }, prisma);
+
+    expect(tx.solicitudAccesibilidad.create).not.toHaveBeenCalled();
+  });
+
+  it('desmarcar retira la solicitud pendiente', async () => {
+    const prisma = prismaMock();
+    const tx = txPerfil({ pendiente: { id: 'sol-1' } });
     prisma.$transaction.mockImplementation((fn: any) => fn(tx));
 
     await actualizarPerfilAlumno(
@@ -388,6 +458,25 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
       prisma,
     );
 
+    expect(tx.solicitudAccesibilidad.delete).toHaveBeenCalledWith({ where: { id: 'sol-1' } });
+    expect(tx.matricula.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('desmarcar una condición aprobada la quita de la ficha y de las matrículas', async () => {
+    const prisma = prismaMock();
+    const tx = txPerfil({ fichaPrevia: { condicionAccesible: true } });
+    prisma.$transaction.mockImplementation((fn: any) => fn(tx));
+
+    await actualizarPerfilAlumno(
+      'cuenta-1',
+      { fichaMedica: { condicionAccesible: false } },
+      prisma,
+    );
+
+    expect(tx.fichaMedica.update).toHaveBeenCalledWith({
+      where: { alumnoId: 'alu-1' },
+      data: { condicionAccesible: false, condicionAccesibleHasta: null },
+    });
     expect(tx.matricula.updateMany).toHaveBeenCalledWith({
       where: { alumnoId: 'alu-1' },
       data: { movilidadReducida: false },
@@ -396,20 +485,7 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
 
   it('desmarcar sin declaración previa no toca el flag que puso la carga de datos', async () => {
     const prisma = prismaMock();
-    const tx = {
-      alumno: { update: jest.fn() },
-      fichaMedica: {
-        upsert: jest.fn().mockResolvedValue({
-          tipoSangre: null,
-          alergias: null,
-          condicionEspecial: null,
-          contactoEmergencia: null,
-          condicionAccesible: false,
-        }),
-        findUnique: jest.fn().mockResolvedValue(null),
-      },
-      matricula: { updateMany: jest.fn() },
-    };
+    const tx = txPerfil();
     prisma.$transaction.mockImplementation((fn: any) => fn(tx));
 
     await actualizarPerfilAlumno(
@@ -419,20 +495,18 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
     );
 
     expect(tx.matricula.updateMany).not.toHaveBeenCalled();
+    expect(tx.solicitudAccesibilidad.delete).not.toHaveBeenCalled();
   });
 
-  it('no tocar la ficha no toca las matrículas', async () => {
+  it('no tocar la casilla no toca las matrículas ni las solicitudes', async () => {
     const prisma = prismaMock();
-    const tx = {
-      alumno: { update: jest.fn() },
-      fichaMedica: { upsert: jest.fn(), findUnique: jest.fn().mockResolvedValue(null) },
-      matricula: { updateMany: jest.fn() },
-    };
+    const tx = txPerfil();
     prisma.$transaction.mockImplementation((fn: any) => fn(tx));
 
     await actualizarPerfilAlumno('cuenta-1', { fichaMedica: { tipoSangre: 'A+' } }, prisma);
 
     expect(tx.matricula.updateMany).not.toHaveBeenCalled();
+    expect(tx.solicitudAccesibilidad.create).not.toHaveBeenCalled();
   });
 
   it('la ficha médica nunca sale en la consulta pública por código (Issues 3.1–3.4)', async () => {
@@ -443,6 +517,7 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
           matriculas: [],
         }),
       },
+      periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
     } as any;
 
     const publico = await obtenerAsignacionPorAlumno('22200101', prisma);
@@ -470,7 +545,7 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
                 espacio: {
                   id: 'lab-201',
                   identificador: 'Lab 201',
-                  pabellon: 'Pabellon A',
+                  pabellon: 'Nuevo Pabellón',
                   piso: 2,
                   tipo: 'LABORATORIO',
                 },
@@ -486,7 +561,7 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
 
       expect(ruta.estado).toBe('DISPONIBLE');
       expect(ruta.movilidadReducida).toBe(true);
-      expect(ruta.pabellon).toBe('Pabellon A');
+      expect(ruta.pabellon).toBe('Nuevo Pabellón');
       expect(ruta.pisoDestino).toBe(2);
       expect(ruta.tramos.length).toBe(3);
     });

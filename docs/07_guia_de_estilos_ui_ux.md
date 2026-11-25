@@ -66,6 +66,7 @@ Para completar los estados de interacción y las variantes suaves de los badges 
 | **\#8A8578** | --saie-border | \#8A8578 | Bordes de inputs, dropdowns y áreas de carga. | 3.68:1 sobre blanco (mín. 3:1) |
 | **\#F1EDE3** | --saie-disabled | \#F1EDE3 | Fondo de campos deshabilitados. | Texto \#666666: 4.91:1 |
 | **\#E8F5E9** | --saie-success-tint / --saie-success-dark (#1B5E20) | \#E8F5E9 | Badge «Resuelto» (fondo suave y texto). | 7.00:1 |
+| **\#FDF0E1** | --saie-warning-soft / --saie-warning-strong (#92400E) | \#FDF0E1 | Fondo y texto de avisos y badges de advertencia: el naranja \#F57C00 no sirve como texto. | 6.3:1 |
 | **\#FDECEA** | --saie-danger-tint / --saie-danger-dark (#B71C1C) | \#FDECEA | Badge «Alerta activa» y hover del botón de peligro (#B71C1C). | 5.74:1 |
 
 ### 2.4 Reglas de proporción y uso
@@ -390,6 +391,7 @@ Definición de los tokens principales como variables CSS. Los tokens marcados co
 --saie-disabled: #F1EDE3;
 --saie-success-tint: #E8F5E9; --saie-success-dark: #1B5E20;
 --saie-danger-tint: #FDECEA; --saie-danger-dark: #B71C1C;
+--saie-warning-soft: #FDF0E1; --saie-warning-strong: #92400E;
 /* Forma y elevación */
 --saie-radius-input: 10px;
 --saie-radius-card: 12px;

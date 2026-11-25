@@ -1,5 +1,13 @@
-import { Prisma, PrismaClient, RolCuenta, TipoAlerta, TipoEspacio } from '@prisma/client';
+import {
+  Prisma,
+  PrismaClient,
+  RolCuenta,
+  TipoAlerta,
+  TipoEspacio,
+  TipoEventoAuditoria,
+} from '@prisma/client';
 import { z } from 'zod';
+import { emitirAlertasCreadas } from '../events/emisores';
 import { HttpError } from '../lib/http';
 import { formatearSoftware } from '../lib/software';
 import { AlertaRegistradaDTO } from '../types/alertas';
@@ -12,9 +20,18 @@ import {
 } from '../types/espacios';
 import { verificarAccesoEspacio } from './acceso.service';
 import { registrarAlertaDesdeDeteccion } from './alerta.service';
-import { evaluarCapacidadInsuficiente } from './deteccionAlertas.service';
+import {
+  CamposAuditados,
+  calcularCambios,
+  registrarAccionDePersona,
+} from './auditoriaAcciones.service';
+import {
+  cargarAsignacionesVigentesDeEspacio,
+  evaluarCapacidadInsuficiente,
+} from './deteccionAlertas.service';
 import { registrarCambioPcsMalogradas, registrarCambioSoftware } from './laboratorio.service';
 import { resolverSoftwareIds } from './software.service';
+import { vincularLaboratorioConJefatura } from './responsables.service';
 
 const CAMPOS_COORDINACION: CampoEspacio[] = [
   'identificador',
@@ -183,6 +200,27 @@ async function validarContiguos(
   return unicos;
 }
 
+/** Identificadores legibles de los espacios contiguos actuales (para la auditoría, Issue 4.58). */
+async function identificadoresContiguos(
+  espacioId: string,
+  db: Pick<Db, 'espacioContiguo'>,
+): Promise<string[]> {
+  const filas = await db.espacioContiguo.findMany({
+    where: { espacioIdA: espacioId },
+    include: { espacioB: { select: { identificador: true } } },
+  });
+  return filas.map((f) => f.espacioB.identificador);
+}
+
+async function identificadoresDe(ids: string[], db: Pick<Db, 'espacio'>): Promise<string[]> {
+  if (ids.length === 0) return [];
+  const filas = await db.espacio.findMany({
+    where: { id: { in: ids } },
+    select: { identificador: true },
+  });
+  return filas.map((f) => f.identificador);
+}
+
 /** Reemplaza el conjunto de contiguos de un espacio, guardando ambos sentidos de la relación. */
 async function reemplazarContiguos(espacioId: string, ids: string[], db: Db): Promise<void> {
   await db.espacioContiguo.deleteMany({
@@ -218,6 +256,9 @@ export async function listarEspacios(
   prisma: Pick<PrismaClient, 'espacio' | 'espacioContiguo'>,
 ): Promise<EspacioAdminDTO[]> {
   const esJefatura = auth.rol === RolCuenta.JEFATURA_LABORATORIOS;
+  const pagina = filtros.pagina ?? 1;
+  const limite = filtros.limite ?? 50;
+
   const espacios = await prisma.espacio.findMany({
     where: {
       ...(filtros.tipo && { tipo: filtros.tipo }),
@@ -230,6 +271,8 @@ export async function listarEspacios(
     },
     orderBy: [{ pabellon: 'asc' }, { piso: 'asc' }, { identificador: 'asc' }],
     include: ESPACIO_CON_SOFTWARE,
+    skip: (pagina - 1) * limite,
+    take: limite,
   });
   return Promise.all(espacios.map((e) => aEspacioDTO(e, auth.rol, prisma)));
 }
@@ -282,6 +325,11 @@ export async function crearEspacio(
         });
       }
 
+      // Issue 4.59: un laboratorio nuevo queda a cargo de Jefatura desde que se crea.
+      if (esLab) {
+        await vincularLaboratorioConJefatura(creado.id, tx);
+      }
+
       await reemplazarContiguos(creado.id, vecinos, tx);
       const conSoftware = await tx.espacio.findUniqueOrThrow({
         where: { id: creado.id },
@@ -298,6 +346,29 @@ export async function crearEspacio(
     }
     throw error;
   }
+}
+
+/** Issue 2.22 (R18): alerta con las secciones que quedaron sin aula al deshabilitar el espacio. */
+async function alertarEspacioDeshabilitado(
+  espacioId: string,
+  identificador: string,
+  tx: Prisma.TransactionClient,
+): Promise<AlertaRegistradaDTO | null> {
+  const vigentes = await cargarAsignacionesVigentesDeEspacio(espacioId, tx);
+  return registrarAlertaDesdeDeteccion(
+    TipoAlerta.CAPACIDAD,
+    espacioId,
+    identificador,
+    vigentes.map((a) => ({
+      asignacionId: a.id,
+      seccionId: a.seccionId,
+      codigoCurso: a.codigoCurso,
+      nombreCurso: a.nombreCurso,
+      codigoSeccion: a.codigoSeccion,
+      detalle: 'el espacio fue deshabilitado',
+    })),
+    tx,
+  );
 }
 
 /**
@@ -377,9 +448,32 @@ export async function actualizarEspacio(
           },
         });
 
+        const campos: CamposAuditados = {
+          identificador: { anterior: actual.identificador, nuevo: actualizado.identificador },
+          pabellon: { anterior: actual.pabellon, nuevo: actualizado.pabellon },
+          piso: { anterior: actual.piso, nuevo: actualizado.piso },
+          aforoNominal: { anterior: actual.aforoNominal, nuevo: actualizado.aforoNominal },
+          habilitado: { anterior: actual.habilitado, nuevo: actualizado.habilitado },
+          descripcionUso: {
+            anterior: actual.descripcionUso ?? null,
+            nuevo: actualizado.descripcionUso ?? null,
+          },
+        };
+
         if (vecinos) {
+          const antes = await identificadoresContiguos(actual.id, tx);
           await reemplazarContiguos(actual.id, vecinos, tx);
+          campos.contiguos = { anterior: antes, nuevo: await identificadoresDe(vecinos, tx) };
         }
+
+        // Issue 4.58: quién editó el espacio, con el valor anterior y el nuevo de cada campo.
+        await registrarAccionDePersona(tx, {
+          tipoEvento: TipoEventoAuditoria.EDICION_ESPACIO,
+          cuentaId: auth.sub,
+          espacioId: actual.id,
+          descripcion: `Espacio ${actualizado.identificador} editado`,
+          cambios: calcularCambios(campos),
+        });
 
         if (entrada.aforoNominal !== undefined && entrada.aforoNominal !== actual.aforoNominal) {
           const afectadas = await evaluarCapacidadInsuficiente(
@@ -396,6 +490,17 @@ export async function actualizarEspacio(
           );
           if (alerta) alertas.push(alerta);
         }
+
+        // Issue 2.22 (riesgo R18 de la auditoría): deshabilitar un espacio con clases deja a
+        // esas secciones sin aula. Se genera una alerta para que Coordinación las reubique.
+        if (actual.habilitado && entrada.habilitado === false) {
+          const alerta = await alertarEspacioDeshabilitado(
+            actual.id,
+            actualizado.identificador,
+            tx,
+          );
+          if (alerta) alertas.push(alerta);
+        }
       });
     } catch (error: unknown) {
       if (esConflictoUnico(error)) {
@@ -403,6 +508,8 @@ export async function actualizarEspacio(
       }
       throw error;
     }
+    // Ya confirmada la transacción (Issue 4.60). Las de PCs y software las emite su servicio.
+    emitirAlertasCreadas(alertas);
   }
 
   if (entrada.pcsMalogradas !== undefined) {

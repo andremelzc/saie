@@ -9,6 +9,8 @@ export interface SesionDTO {
   codigoCurso: string;
   nombreCurso: string;
   codigoSeccion: string;
+  /** Tipo de espacio que requiere la sección: dice si la clase es de teoría o de laboratorio. */
+  tipoEspacioRequerido: TipoEspacio;
   docenteNombre: string | null;
   diaSemana: DiaSemana;
   horaInicio: string;
@@ -26,6 +28,8 @@ export interface HorarioSemanalDTO {
 // ---------------- Alumno (Issues 3.10, 3.11, 3.12) ----------------
 
 export interface CursoMatriculadoDTO {
+  /** Asignación vigente de la sección (con ella se pide la ruta); `null` si aún no tiene aula. */
+  asignacionId: string | null;
   codigoCurso: string;
   nombreCurso: string;
   codigoSeccion: string;
@@ -63,6 +67,18 @@ export interface PerfilAlumnoDTO {
      * El motor lo traduce a `Matricula.movilidadReducida` para priorizar las aulas del Piso 1.
      */
     condicionAccesible: boolean;
+    /** Issue 3.61 (R16): último día de la condición aprobada (`AAAA-MM-DD`); `null` = no vence. */
+    condicionAccesibleHasta: string | null;
+  } | null;
+  /**
+   * Issue 3.60: la declaración de accesibilidad más reciente y su estado. `condicionAccesible`
+   * solo es `true` cuando Coordinación la aprobó; mientras tanto la solicitud está `PENDIENTE`.
+   */
+  accesibilidad: {
+    estado: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
+    fechaSolicitud: string;
+    fechaResolucion: string | null;
+    motivoRechazo: string | null;
   } | null;
 }
 
@@ -88,8 +104,31 @@ export interface AsignacionActivaDocenteDTO {
   numeroAlumnos: number;
 }
 
+/** Aula de una sección en el aviso de cambio (Issue 7.18). */
+export type EspacioCambioAulaDTO = Pick<
+  EspacioAsignadoDTO,
+  'identificador' | 'tipo' | 'pabellon' | 'piso'
+>;
+
+/**
+ * Issue 7.18 (riesgo R24): una sección del docente cambió de aula hace poco. `id` es la
+ * asignación más reciente, así el portal puede recordar qué avisos ya se leyeron; `fecha` es
+ * ISO 8601 y `espaciosNuevos` vacío significa que la sección se quedó sin aula.
+ */
+export interface CambioAulaDocenteDTO extends Pick<
+  SesionDTO,
+  'seccionId' | 'codigoCurso' | 'nombreCurso' | 'codigoSeccion' | 'tipoEspacioRequerido'
+> {
+  id: string;
+  fecha: string;
+  espaciosAnteriores: EspacioCambioAulaDTO[];
+  espaciosNuevos: EspacioCambioAulaDTO[];
+}
+
 export interface HorarioDocenteDTO extends HorarioSemanalDTO {
   asignacionesActivas: AsignacionActivaDocenteDTO[];
+  /** Issue 7.18: cambios de aula de sus secciones en los últimos días, del más reciente al más antiguo. */
+  cambiosDeAula: CambioAulaDocenteDTO[];
 }
 
 export interface EspacioExploradorDTO {

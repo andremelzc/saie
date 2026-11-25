@@ -191,6 +191,7 @@ describe('Resolución de alertas (Issue 4.7)', () => {
 
   it('Coordinación resuelve y deja RegistroAuditoria de tipo ALERTA', async () => {
     const al = alertaConDetalle({ estado: 'PENDIENTE', espacioId: 'e1' });
+    let capturado: any;
     const db = {
       $transaction: jest.fn().mockImplementation(async (fn: (tx: any) => Promise<any>) => {
         const tx = {
@@ -204,6 +205,7 @@ describe('Resolución de alertas (Issue 4.7)', () => {
           espacioResponsable: { findUnique: jest.fn() },
           registroAuditoria: { create: jest.fn() },
         };
+        capturado = tx;
         return fn(tx);
       }),
     } as any;
@@ -212,8 +214,13 @@ describe('Resolución de alertas (Issue 4.7)', () => {
 
     expect(res.estado).toBe('RESUELTA');
 
-    // Verificar que se creó el registro de auditoría
-    const tx = await db.$transaction.mock.results[0].value;
-    // La función fue llamada, lo comprobamos indirectamente: si no lanzó, el tx.registroAuditoria.create se ejecutó
+    // Issue 4.48: el asiento guarda quién resolvió como dato estructurado
+    expect(capturado.registroAuditoria.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        tipoEvento: 'ALERTA',
+        alertaId: 'al1',
+        cuentaId: authCoord.sub,
+      }),
+    });
   });
 });

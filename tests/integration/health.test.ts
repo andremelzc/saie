@@ -5,10 +5,12 @@ jest.mock("../../backend/src/lib/prisma", () => ({
   prisma: {
     $connect: jest.fn(),
     $disconnect: jest.fn(),
+    $queryRaw: jest.fn().mockResolvedValue([{ "?column?": 1 }]),
   },
   default: {
     $connect: jest.fn(),
     $disconnect: jest.fn(),
+    $queryRaw: jest.fn().mockResolvedValue([{ "?column?": 1 }]),
   },
 }));
 
@@ -23,14 +25,18 @@ describe("Integracion API - Health Check", () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("status", "ok");
+    expect(response.body).toHaveProperty("database", "ok");
     expect(response.body).toHaveProperty("service", "saie-backend");
     expect(response.body).toHaveProperty("timestamp");
   });
 
-  it("GET /api/ruta-inexistente debe responder 404", async () => {
+  it("GET /api/ruta-inexistente debe responder 404 con formato unificado", async () => {
     const response = await request(app).get("/api/ruta-inexistente");
 
     expect(response.status).toBe(404);
-    expect(response.body).toHaveProperty("error", "Not Found");
+    expect(response.body).toEqual({
+      success: false,
+      message: "La ruta solicitada no existe",
+    });
   });
 });

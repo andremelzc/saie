@@ -1,30 +1,8 @@
+import type { ResultadoReubicacionDTO } from '../types/admin';
 import { RUTAS } from '../config/rutas';
 import type { RolCuenta } from '../types/auth';
-import { ETIQUETA_ROL } from './etiquetas';
-
-export function formatearFechaAlerta(iso: string): string {
-  const fecha = new Date(iso);
-  if (Number.isNaN(fecha.getTime())) return iso;
-  return fecha.toLocaleString('es-PE', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-/** Fecha compacta para «Última carga: 12 oct, 10:32». */
-export function formatearFechaCorta(iso: string): string {
-  const fecha = new Date(iso);
-  if (Number.isNaN(fecha.getTime())) return iso;
-  return fecha.toLocaleString('es-PE', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+import { ROL } from './diccionarios';
+import { ICONOS } from '../components/ui/iconos';
 
 export interface MotivoEscalamientoInfo {
   codigo: string | null;
@@ -50,7 +28,7 @@ const MOTIVOS_ESCALAMIENTO: Record<
     accion: { etiqueta: 'Revisar espacios', to: RUTAS.espaciosAdmin },
   },
   HORARIO_BLOQUEADO: {
-    etiqueta: 'Horario bloqueado',
+    etiqueta: 'Horario ocupado',
     accion: { etiqueta: 'Revisar ocupación', to: RUTAS.espaciosAdmin },
   },
   SOFTWARE_FALTANTE: {
@@ -64,7 +42,7 @@ const MOTIVOS_ESCALAMIENTO: Record<
 };
 
 const MOTIVO_DESCONOCIDO = {
-  etiqueta: 'Motivo sin clasificar',
+  etiqueta: 'Requiere revisión',
   accion: null,
 } satisfies Omit<MotivoEscalamientoInfo, 'codigo' | 'descripcion'>;
 
@@ -89,30 +67,30 @@ export function describirMotivoEscalamiento(
   };
 }
 
-const T_INICIO = 'M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10';
-const T_ALERTA =
-  'M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z';
-const T_CARGA = 'M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12l-4 4m4-4l4 4';
-const T_ESPACIOS = 'M3 21h18M5 21V7l7-4 7 4v14M9 9h1m4 0h1M9 13h1m4 0h1M9 17h1m4 0h1';
-const T_LAB =
-  'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z';
-const T_SECCIONES =
-  'M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z';
-const T_AUDITORIA =
-  'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4';
-const T_REPORTE =
-  'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z';
+const T_INICIO = ICONOS.inicio;
+const T_ALERTA = ICONOS.alerta;
+const T_CARGA = ICONOS.subir;
+const T_ESPACIOS = ICONOS.edificio;
+const T_LAB = ICONOS.monitor;
+const T_SECCIONES = ICONOS.libro;
+const T_AUDITORIA = ICONOS.portapapeles;
+const T_REPORTE = ICONOS.documento;
+const T_MAPA = ICONOS.mapa;
 
-interface Pestana {
+/**
+ * Pestañas del panel. La barra va abajo por debajo de `lg` y arriba desde `lg`; en ambos casos
+ * mide el ancho disponible y manda a «Más» solo las que no caben (`BarraPestanas`), sin
+ * depender de un ancho en píxeles. Las listas y tablas usan tarjetas por debajo de `lg`.
+ */
+export interface Pestana {
   to: string;
   etiqueta: string;
   trazo: string;
   /**
-   * La pestaña solo aparece desde el ancho de escritorio. A 320 px la barra inferior del
-   * panel no cabe con las siete secciones, y una barra con scroll horizontal es peor que
-   * una barra de cuatro destinos: las demas se llegan desde los accesos del inicio.
+   * Pestaña secundaria: cuando la barra no cabe, es la primera que pasa al menú «Más» (de la
+   * última a la primera); después siguen las principales, de la última a la primera.
    */
-  soloEscritorio?: boolean;
+  secundaria?: boolean;
 }
 
 export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
@@ -120,7 +98,16 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
     return [
       { to: RUTAS.inicioAdmin, etiqueta: 'Inicio', trazo: T_INICIO },
       { to: RUTAS.alertasAdmin, etiqueta: 'Alertas', trazo: T_ALERTA },
-      { to: RUTAS.cambioLaboratorio, etiqueta: 'Laboratorio', trazo: T_LAB },
+      // Issue 7.11: bandeja de incidencias que reportan los docentes.
+      { to: RUTAS.incidenciasAdmin, etiqueta: 'Incidencias', trazo: T_AUDITORIA },
+      { to: RUTAS.laboratoriosAdmin, etiqueta: 'Laboratorios', trazo: T_LAB },
+      // El reporte de cambios también sale de cada tarjeta de «Laboratorios».
+      {
+        to: RUTAS.cambioLaboratorio,
+        etiqueta: 'Cambio de laboratorio',
+        trazo: ICONOS.ajustes,
+        secundaria: true,
+      },
     ];
   }
   return [
@@ -130,25 +117,85 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
       to: RUTAS.seccionesAdmin,
       etiqueta: 'Secciones',
       trazo: T_SECCIONES,
-      soloEscritorio: true,
+      secundaria: true,
     },
     { to: RUTAS.alertasAdmin, etiqueta: 'Alertas', trazo: T_ALERTA },
+    // Issue 3.60: declaraciones de accesibilidad que Coordinación confirma.
+    {
+      to: RUTAS.accesibilidadAdmin,
+      etiqueta: 'Accesibilidad',
+      trazo: ICONOS.usuarioRelleno,
+      secundaria: true,
+    },
+    // Issue 7.17: solicitudes de los docentes para dictar todo en laboratorio.
+    {
+      to: RUTAS.solicitudesLaboratorioAdmin,
+      etiqueta: 'Dictar en laboratorio',
+      trazo: T_LAB,
+      secundaria: true,
+    },
     { to: RUTAS.cargaAdmin, etiqueta: 'Carga', trazo: T_CARGA },
+    // Issue 4.64: Coordinación decide cuándo cambia el semestre.
+    { to: RUTAS.periodosAdmin, etiqueta: 'Periodos', trazo: ICONOS.calendario, secundaria: true },
     {
       to: RUTAS.auditoriaAdmin,
-      etiqueta: 'Auditoría',
+      etiqueta: 'Historial',
       trazo: T_AUDITORIA,
-      soloEscritorio: true,
+      secundaria: true,
     },
+    { to: RUTAS.mapaAdmin, etiqueta: 'Mapa', trazo: T_MAPA, secundaria: true },
     {
       to: RUTAS.reporteSalonesAdmin,
       etiqueta: 'Informe',
       trazo: T_REPORTE,
-      soloEscritorio: true,
+      secundaria: true,
     },
   ];
 }
 
-export function etiquetaRol(rol?: RolCuenta | null): string {
-  return rol ? ETIQUETA_ROL[rol] : 'Administrativo';
+/**
+ * Nombre legible del rol de la sesión (los cuatro roles, ver `utils/diccionarios.ts`). Sin sesión
+ * se rotula como «Administrativo», que es lo que ya mostraba el panel.
+ */
+export function etiquetaRol(rol?: RolCuenta): string {
+  return rol ? ROL[rol] : 'Administrativo';
+}
+
+/** Resumen del resultado de reubicar: cuántas secciones cambiaron de espacio y cuántas escalaron. */
+export function resumirReubicacion(r: ResultadoReubicacionDTO): string {
+  const enRevision = r.secciones.filter((s) => s.estado === 'ESCALADA').length;
+  const sinCambios = r.secciones.filter((s) => s.estado !== 'ESCALADA' && s.conservada).length;
+  const reubicadas = r.secciones.length - enRevision - sinCambios;
+  const partes = [
+    `${reubicadas} ${reubicadas === 1 ? 'sección reubicada' : 'secciones reubicadas'}`,
+  ];
+  if (sinCambios > 0) partes.push(`${sinCambios} sin cambios (su aula sigue sirviendo)`);
+  if (enRevision > 0) partes.push(`${enRevision} en revisión en el inicio`);
+  return `Alerta resuelta: ${partes.join(', ')}.`;
+}
+
+/**
+ * Issue 2.25 (riesgo R7 de la auditoría): una sección sin horarios no es un problema de aulas
+ * sino de datos incompletos. Se separa de las que sí esperan una decisión de Coordinación.
+ */
+export function separarDatosIncompletos<T extends { motivoEscalamiento: string | null }>(
+  secciones: T[],
+): { enRevision: T[]; datosIncompletos: T[] } {
+  const enRevision: T[] = [];
+  const datosIncompletos: T[] = [];
+  for (const s of secciones) {
+    const { codigo } = describirMotivoEscalamiento(s.motivoEscalamiento);
+    (codigo === 'SIN_HORARIOS_DEFINIDOS' ? datosIncompletos : enRevision).push(s);
+  }
+  return { enRevision, datosIncompletos };
+}
+
+/** Texto de espera de una importación grande, con el avance cuando ya se conoce (Issue 1.19). */
+export function textoAvanceImportacion(
+  avance: { procesadas: number; total: number } | null,
+): string {
+  if (!avance || avance.total === 0) {
+    return 'Importando. Puede tardar unos minutos; no cierres esta pantalla.';
+  }
+  return `Procesando ${avance.procesadas} de ${avance.total} filas. No cierres esta pantalla.`;
 }

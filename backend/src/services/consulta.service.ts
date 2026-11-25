@@ -1,3 +1,4 @@
+import { obtenerPeriodoVigente } from './periodo.service';
 import { EstadoAsignacion, PrismaClient } from '@prisma/client';
 import { marcarAccesibilidad } from '../lib/accesibilidad';
 import { minutosHastaProximaSesion } from '../lib/horario';
@@ -80,17 +81,31 @@ function resumirSeccion(seccion: SeccionConAsignacion) {
   };
 }
 
+/**
+ * Issue 3.37 — La consulta pública solo expone el nombre de pila. Acepta «Nombre Apellido» y
+ * «Apellido, Nombre»; si el nombre viene vacío devuelve una cadena vacía.
+ */
+export function soloNombreDePila(nombreCompleto: string): string {
+  const limpio = nombreCompleto.trim();
+  const tras = limpio.includes(',') ? limpio.slice(limpio.indexOf(',') + 1) : limpio;
+  return tras.trim().split(/\s+/)[0] ?? '';
+}
+
 export async function obtenerAsignacionPorAlumno(
   codigoAlumno: string,
   prisma: PrismaClient,
   ahora: Date = new Date(),
 ): Promise<ConsultaAlumnoResponseDTO | null> {
-  // 1. Buscar alumno con sus matrículas, ficha médica, secciones, horarios y asignaciones
+  // 1. Buscar alumno con sus matrículas, secciones, horarios y asignaciones.
+  // Issue 3.63 (riesgo R37 de la auditoría): la consulta es pública, así que no se lee la ficha
+  // médica. Solo se trae lo que la respuesta muestra.
+  // Issue 4.64 (R52, R37): solo se muestran las matrículas del periodo vigente.
+  const periodoVigente = await obtenerPeriodoVigente(prisma);
   const alumno = await prisma.alumno.findUnique({
     where: { codigo: codigoAlumno },
     include: {
-      fichaMedica: true,
       matriculas: {
+        where: { seccion: { periodo: periodoVigente ?? '', activa: true } },
         include: {
           seccion: {
             include: {
@@ -142,9 +157,7 @@ export async function obtenerAsignacionPorAlumno(
   return {
     alumno: {
       codigo: alumno.codigo,
-      nombre: alumno.nombre,
-      correo: alumno.correo,
-      movilidadReducida: alumno.matriculas.some((m) => m.movilidadReducida),
+      nombre: soloNombreDePila(alumno.nombre),
     },
     asignaciones: ordenarPorProximidad(
       asignacionesItems,

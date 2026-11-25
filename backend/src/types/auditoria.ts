@@ -1,4 +1,5 @@
 import { EstadoAsignacion, TipoEventoAuditoria } from '@prisma/client';
+import { CuentaConNombreDTO } from '../lib/nombresCuenta';
 
 /**
  * Auditoría e historial de asignaciones (Issue 4.32).
@@ -8,6 +9,23 @@ import { EstadoAsignacion, TipoEventoAuditoria } from '@prisma/client';
  * vigentes. Lo que faltaba era poder consultarlas: aquí se expone.
  */
 
+export interface EspacioAuditoriaDTO {
+  id: string;
+  identificador: string;
+  pabellon: string;
+  piso: number;
+}
+
+/** Persona que hizo una acción: su nombre y, si no tiene ficha, su usuario de acceso. */
+export type CuentaAuditoriaDTO = CuentaConNombreDTO;
+
+/** Un campo que cambió en una acción de persona (Issue 4.58). */
+export interface CambioAuditoriaDTO {
+  campo: string;
+  anterior: string | number | boolean | string[] | null;
+  nuevo: string | number | boolean | string[] | null;
+}
+
 export interface RegistroAuditoriaDTO {
   id: string;
   tipoEvento: TipoEventoAuditoria;
@@ -15,6 +33,25 @@ export interface RegistroAuditoriaDTO {
   fechaHora: string;
   asignacionId: string | null;
   alertaId: string | null;
+  /**
+   * Datos estructurados (Issue 4.48). Los registros anteriores a ese cambio los traen vacíos
+   * (`null` o `[]`) y se siguen leyendo por `detalle`.
+   */
+  corridaId: string | null;
+  /** Quién disparó la corrida: `DEMANDA`, `TIEMPO` o `SECCION` (asignación individual). */
+  origen: string | null;
+  /** Puntaje de cercanía entre secciones paralelas de la asignación (0 a 1), si aplica. */
+  puntaje: number | null;
+  espaciosIds: string[];
+  /** Los espacios de `espaciosIds` con su nombre legible (los eliminados no aparecen). */
+  espacios: EspacioAuditoriaDTO[];
+  /** Persona que hizo la acción, con su nombre (alerta resuelta por una cuenta). */
+  cuenta: CuentaAuditoriaDTO | null;
+  /**
+   * Qué campos cambió una persona, con su valor anterior y nuevo (Issue 4.58). `null` en los
+   * asientos del motor y de las alertas.
+   */
+  cambios: CambioAuditoriaDTO[] | null;
   /** Sección relacionada, para leer el asiento sin salir de la tabla. */
   seccion: {
     id: string;
@@ -49,6 +86,9 @@ export interface HistorialAsignacionDTO {
   estado: EstadoAsignacion;
   fechaAsignacion: string;
   corridaId: string | null;
+  /** Origen y puntaje de cercanía de la decisión (Issue 4.48); `null` en las anteriores. */
+  origen: string | null;
+  puntaje: number | null;
   motivoEscalamiento: string | null;
   espacios: { id: string; identificador: string; pabellon: string; piso: number }[];
 }

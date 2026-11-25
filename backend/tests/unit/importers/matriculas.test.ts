@@ -18,6 +18,7 @@ describe('Importador de Matrículas y Cuentas de Alumno (Issues 1.5 y 1.7)', () 
         findUnique: jest.fn().mockResolvedValue({ id: 'seccion-123', codigoSeccion: 'S1' }),
       },
       matricula: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
         upsert: jest.fn().mockResolvedValue({ id: 'matricula-123' }),
       },
     };
@@ -172,5 +173,126 @@ describe('Importador de Matrículas y Cuentas de Alumno (Issues 1.5 y 1.7)', () 
     expect(resultado.errores[0]).toContain(
       'Fila 1 (22200105 en 2020101-S1): Fallo de BD en matricula',
     );
+  });
+
+  describe('movilidad reducida declarada y periodo (Issues 3.59 y 4.64, riesgos R11 y R49)', () => {
+    const fila = (movilidadReducida: boolean, periodo = '2026-1') => ({
+      codigoAlumno: '22200101',
+      nombre: 'Juan Pérez',
+      correo: 'juan.perez@unmsm.edu.pe',
+      movilidadReducida,
+      codigoCurso: '2020101',
+      codigoSeccion: 'S1',
+      periodo,
+      crearCuentaAcceso: false,
+    });
+
+    it('conserva la movilidad reducida que el alumno declaró aunque el CSV diga que no', async () => {
+      mockPrisma.alumno.upsert.mockResolvedValue({
+        id: 'alumno-123',
+        codigo: '22200101',
+        fichaMedica: { condicionAccesible: true },
+      });
+
+      await importarMatriculas([fila(false)], mockPrisma);
+
+      expect(mockPrisma.matricula.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: { movilidadReducida: true },
+          create: expect.objectContaining({ movilidadReducida: true }),
+        }),
+      );
+    });
+
+    it('sin declaración en la ficha usa el valor del CSV', async () => {
+      mockPrisma.alumno.upsert.mockResolvedValue({
+        id: 'alumno-123',
+        codigo: '22200101',
+        fichaMedica: { condicionAccesible: false },
+      });
+
+      await importarMatriculas([fila(false)], mockPrisma);
+
+      expect(mockPrisma.matricula.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ update: { movilidadReducida: false } }),
+      );
+    });
+
+    it('normaliza un periodo en romanos antes de buscar la sección', async () => {
+      await importarMatriculas([fila(false, '2026-II')], mockPrisma);
+
+      expect(mockPrisma.seccion.findUnique).toHaveBeenCalledWith({
+        where: {
+          cursoId_codigoSeccion_periodo: {
+            cursoId: 'curso-123',
+            codigoSeccion: 'S1',
+            periodo: '2026-2',
+          },
+        },
+      });
+    });
+
+    it('rechaza la fila si el periodo no tiene un formato válido', async () => {
+      const resultado = await importarMatriculas([fila(false, '2026-III')], mockPrisma);
+
+      expect(resultado.matriculasProcesadas).toBe(0);
+      expect(resultado.errores[0]).toContain('El periodo debe tener el formato');
+    });
+  });
+
+  describe('retiros: las matrículas de la sección quedan como el archivo (Issue 1.17, R35)', () => {
+    const fila = (codigoAlumno: string) => ({
+      codigoAlumno,
+      nombre: 'Alumno',
+      correo: `${codigoAlumno}@unmsm.edu.pe`,
+      movilidadReducida: false,
+      codigoCurso: '2020101',
+      codigoSeccion: 'S1',
+      periodo: '2026-1',
+      crearCuentaAcceso: false,
+    });
+
+    it('retira a los alumnos que ya no figuran en la sección del archivo', async () => {
+      mockPrisma.alumno.upsert
+        .mockResolvedValueOnce({ id: 'al-1', fichaMedica: null })
+        .mockResolvedValueOnce({ id: 'al-2', fichaMedica: null });
+      mockPrisma.matricula.deleteMany.mockResolvedValue({ count: 3 });
+
+      const r = await importarMatriculas([fila('A1'), fila('A2')], mockPrisma);
+
+      expect(mockPrisma.matricula.deleteMany).toHaveBeenCalledWith({
+        where: { seccionId: 'seccion-123', alumnoId: { notIn: ['al-1', 'al-2'] } },
+      });
+      expect(r.matriculasRetiradas).toBe(3);
+    });
+
+    it('no toca las secciones que no aparecen en el archivo', async () => {
+      await importarMatriculas([fila('A1')], mockPrisma);
+
+      expect(mockPrisma.matricula.deleteMany).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.matricula.deleteMany.mock.calls[0][0].where.seccionId).toBe('seccion-123');
+    });
+
+    it('no retira a nadie si alguna fila falló: el archivo no se leyó completo', async () => {
+      mockPrisma.matricula.upsert
+        .mockResolvedValueOnce({ id: 'm1' })
+        .mockRejectedValueOnce(new Error('fallo'));
+
+      const r = await importarMatriculas([fila('A1'), fila('A2')], mockPrisma);
+
+      expect(r.errores).toHaveLength(1);
+      expect(mockPrisma.matricula.deleteMany).not.toHaveBeenCalled();
+      expect(r.matriculasRetiradas).toBe(0);
+    });
+
+    it('informa el avance fila por fila', async () => {
+      const avance: [number, number][] = [];
+      await importarMatriculas([fila('A1'), fila('A2')], mockPrisma, (h, t) => avance.push([h, t]));
+      expect(avance).toEqual([
+        [0, 2],
+        [1, 2],
+        [2, 2],
+      ]);
+    });
   });
 });

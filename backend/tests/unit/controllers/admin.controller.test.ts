@@ -15,6 +15,7 @@ import {
   listarEspaciosAdmin,
   listarHistorial,
   listarIncidenciasReportadas,
+  listarPeriodosAdmin,
   listarRegistrosAuditoria,
   listarSeccionesAdmin,
   obtenerEspacio,
@@ -24,7 +25,9 @@ import {
   resolverAlertaPendiente,
   resolverIncidencia,
   restablecerClaveUsuario,
+  reubicarSeccionesAlerta,
 } from '../../../src/controllers/admin.controller';
+import { reubicarSeccionesDeAlerta } from '../../../src/services/reubicacion.service';
 import {
   generarReporteAsignaciones,
   listarAuditoria as listarAuditoriaServicio,
@@ -50,6 +53,7 @@ import {
 } from '../../../src/services/laboratorio.service';
 import { obtenerOcupacionPorPiso } from '../../../src/services/ocupacion.service';
 import { restablecerClave } from '../../../src/services/restablecerClave.service';
+import { listarPeriodos } from '../../../src/services/periodo.service';
 import { listarSeccionesEscaladas } from '../../../src/services/revision.service';
 import { crearAlumno, crearDocente } from '../../../src/services/usuario.service';
 
@@ -65,6 +69,10 @@ jest.mock('../../../src/services/laboratorio.service', () => ({
 
 jest.mock('../../../src/services/ocupacion.service', () => ({
   obtenerOcupacionPorPiso: jest.fn(),
+}));
+
+jest.mock('../../../src/services/periodo.service', () => ({
+  listarPeriodos: jest.fn(),
 }));
 
 jest.mock('../../../src/services/revision.service', () => ({
@@ -107,6 +115,10 @@ jest.mock('../../../src/services/restablecerClave.service', () => {
     restablecerClave: jest.fn(),
   };
 });
+
+jest.mock('../../../src/services/reubicacion.service', () => ({
+  reubicarSeccionesDeAlerta: jest.fn(),
+}));
 
 jest.mock('../../../src/lib/prisma', () => ({
   prisma: {},
@@ -271,6 +283,31 @@ describe('Admin Controller (Sprint 4)', () => {
     });
   });
 
+  describe('reubicarSeccionesAlerta (Issue 2.22)', () => {
+    it('responde 200 con el resultado de la reubicación', async () => {
+      const data = { alertaId: 'alt-1', alertaResuelta: true, secciones: [] };
+      (reubicarSeccionesDeAlerta as jest.Mock).mockResolvedValue(data);
+      const req = { params: { id: 'alt-1' }, auth: authAdmin } as unknown as Request;
+      const res = mockResponse();
+
+      await reubicarSeccionesAlerta(req, res);
+
+      expect(reubicarSeccionesDeAlerta).toHaveBeenCalledWith('alt-1', authAdmin, expect.anything());
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true, data });
+    });
+
+    it('responde 400 si falta el id', async () => {
+      const req = { params: {}, auth: authAdmin } as unknown as Request;
+      const res = mockResponse();
+
+      await reubicarSeccionesAlerta(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(reubicarSeccionesDeAlerta).not.toHaveBeenCalled();
+    });
+  });
+
   describe('consultarMapaOcupacion', () => {
     it('debe responder 200 con ocupación por piso', async () => {
       const mockData = { pabellon: 'A', piso: 1, espacios: [] };
@@ -285,6 +322,32 @@ describe('Admin Controller (Sprint 4)', () => {
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: mockData });
+    });
+  });
+
+  describe('listarPeriodosAdmin', () => {
+    it('debe responder 200 con el vigente y los periodos', async () => {
+      const data = { vigente: '2026-2', periodos: ['2026-2', '2026-1'] };
+      (listarPeriodos as jest.Mock).mockResolvedValue(data);
+      const res = mockResponse();
+
+      await listarPeriodosAdmin({} as Request, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true, data });
+    });
+
+    it('debe responder 500 uniforme si el servicio falla', async () => {
+      (listarPeriodos as jest.Mock).mockRejectedValue(new Error('fallo'));
+      const res = mockResponse();
+
+      await listarPeriodosAdmin({} as Request, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: 'Error interno del servidor',
+      });
     });
   });
 

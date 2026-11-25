@@ -11,6 +11,9 @@ export interface EspacioMapa {
   id: string;
   tipo: TipoEspacio;
   estado: EstadoOcupacion;
+  /** Nombre visible (p. ej. «Aula 104 - Laboratorio 08»), para el cuadro que sale al apuntarlo. */
+  nombre?: string;
+  aforo?: number;
 }
 
 export interface Mapa3DProps {
@@ -24,6 +27,10 @@ export interface Mapa3DProps {
   resaltados?: string[];
   /** Piso inicial o `'todos'` para el edificio completo. Por defecto, el primer piso. */
   pisoInicial?: number | 'todos';
+  /** Se emite al cambiar de piso (o a `todos` para el edificio completo). */
+  onPisoCambiado?: (piso: number | 'todos') => void;
+  /** Orden a la cámara (p. ej. volar hasta el espacio elegido en el buscador). */
+  ordenCamara?: { tipo: 'reiniciar' | 'cenital' | 'enfocar'; id?: string; n: number } | null;
   /** Se emite con el id del espacio al hacer clic, o `null` al hacer clic en vacío. */
   onSeleccionar?: (id: string | null) => void;
   /** Avisos de datos: figuras sin espacio o espacios sin figura. Por defecto, `console.warn`. */

@@ -3,18 +3,20 @@ import { Link } from 'react-router-dom';
 import {
   BadgeEstadoClase,
   BarraProgresoClase,
-  Icono,
+  EsqueletoCarga,
+  EstadoVacio,
   PuntoEnVivo,
 } from '../components/estudiante/ElementosHorario';
 import LayoutEstudiante from '../components/estudiante/LayoutEstudiante';
-import { AvisoError } from '../components/ui/AvisoError';
+import { BotonEnlace } from '../components/ui/BotonEnlace';
+import { EstadoError } from '../components/ui/EstadoError';
 import { RUTAS } from '../config/rutas';
 import { obtenerHorario } from '../services/estudiante';
 import { mensajeDeError } from '../services/estudiante';
 import type { DiaSemana } from '../types/consulta';
 import type { HorarioSemanalDTO, SesionDTO } from '../types/horario';
+import { fechaLarga } from '../utils/fechas';
 import {
-  ABREVIATURA_DIA,
   DIAS_LECTIVOS,
   ETIQUETA_DIA,
   PALETA_CURSOS,
@@ -23,8 +25,6 @@ import {
   diaDeFecha,
   estadoDeClase,
   fechaActual,
-  fechaLarga,
-  formatearMinutos,
   formatearRango,
   minutosDeFecha,
   ordenarSesiones,
@@ -36,17 +36,6 @@ import {
   sesionesDeDia,
   todasLasSesiones,
 } from '../utils/horario';
-
-const TRAZO_CALENDARIO =
-  'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5';
-const TRAZO_PERFIL =
-  'M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z';
-const TRAZO_MAPA =
-  'M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.19.69-.19 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z';
-const TRAZO_RUTA =
-  'M9 6.75V15m6-6v8.25m0 0a3 3 0 11-6 0 3 3 0 016 0zM15 9.75a3 3 0 11-6 0 3 3 0 016 0z';
-const TRAZO_TELEGRAM =
-  'M6 12 3.269 3.126A59.768 59.768 0 0 1 21.485 12 59.77 59.77 0 0 1 3.27 20.876L5.999 12Z';
 
 const UN_MINUTO_MS = 60_000;
 
@@ -60,13 +49,44 @@ interface ProximoDia {
   sesiones: SesionDTO[];
 }
 
-/** Saludo y la clase en curso o la próxima, en una sola banda. */
+/** Barra gris translúcida sobre la tarjeta guinda (el esqueleto claro no se vería). */
+const BARRA_SOBRE_GUINDA = 'rounded bg-white/20';
+
+/**
+ * Saludo y la clase en curso o la próxima, en una sola banda.
+ *
+ * Mientras llega el horario no se sabe si hay clases: decir «Hoy no tienes clases» sería falso.
+ * Se muestra un esqueleto, y si el horario no se pudo cargar, un texto neutro.
+ */
 const TarjetaProxima: React.FC<{
   sesion: SesionDTO | null;
   hayClasesHoy: boolean;
   proximoDia: ProximoDia | null;
   ahora: number;
-}> = ({ sesion, hayClasesHoy, proximoDia, ahora }) => {
+  carga: 'cargando' | 'error' | 'listo';
+}> = ({ sesion, hayClasesHoy, proximoDia, ahora, carga }) => {
+  if (carga === 'cargando') {
+    return (
+      <div role="status" aria-busy="true" className="flex flex-col gap-3">
+        <span className="sr-only">Cargando tu horario…</span>
+        <div aria-hidden="true" className="flex flex-col gap-3">
+          <span className={`${BARRA_SOBRE_GUINDA} saie-pulso h-4 w-1/3`} />
+          <span className={`${BARRA_SOBRE_GUINDA} saie-pulso h-7 w-2/3`} />
+          <span className={`${BARRA_SOBRE_GUINDA} saie-pulso h-4 w-1/2`} />
+        </div>
+      </div>
+    );
+  }
+  if (carga === 'error') {
+    return (
+      <div className="flex h-full flex-col justify-center gap-2">
+        <h2 className="m-0 font-serif text-xl font-bold">No pudimos mostrar tu clase</h2>
+        <p className="m-0 text-sm text-white/85">
+          Tu horario no se cargó. Reintenta abajo o consúltalo en «Horario».
+        </p>
+      </div>
+    );
+  }
   if (!sesion) {
     const primera = proximoDia?.sesiones[0] ?? null;
     return (
@@ -95,10 +115,13 @@ const TarjetaProxima: React.FC<{
 
   return (
     <div className="flex h-full flex-col gap-2">
-      <p className="m-0 flex items-center gap-2 text-sm font-bold text-white/85">
-        {enCurso && <PuntoEnVivo />}
-        {enCurso ? 'Clase en curso' : 'Tu próxima clase'}
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="m-0 flex items-center gap-2 text-sm font-bold text-white/85">
+          {enCurso && <PuntoEnVivo />}
+          {enCurso ? 'Clase en curso' : 'Tu próxima clase'}
+        </p>
+        <BadgeEstadoClase estado={estado} />
+      </div>
       <h2 className="m-0 font-serif text-2xl font-bold leading-8">{sesion.nombreCurso}</h2>
       <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm text-white/90">
         <li className="flex items-center gap-2">
@@ -114,41 +137,29 @@ const TarjetaProxima: React.FC<{
   );
 };
 
-interface DatoResumen {
-  valor: string;
-  etiqueta: string;
-}
-
-/** Las cuatro cifras de la semana, en una rejilla de 2×2. */
-function datosResumen(horario: HorarioSemanalDTO): DatoResumen[] {
+/** «6 clases esta semana, en 3 días»: la carga de la semana en una frase. */
+function resumenDeSemana(horario: HorarioSemanalDTO): string {
   const r = resumenSemana(horario);
-  return [
-    {
-      valor: String(r.clases),
-      etiqueta: r.clases === 1 ? 'clase por semana' : 'clases por semana',
-    },
-    {
-      valor: String(r.cursos),
-      etiqueta: r.cursos === 1 ? 'curso matriculado' : 'cursos matriculados',
-    },
-    {
-      valor: String(r.diasConClase),
-      etiqueta: r.diasConClase === 1 ? 'día con clases' : 'días con clases',
-    },
-    { valor: formatearMinutos(r.minutos), etiqueta: 'de clase a la semana' },
-  ];
+  const dias = r.diasConClase === 1 ? '1 día' : `${r.diasConClase} días`;
+  return `${r.clases} ${r.clases === 1 ? 'clase' : 'clases'} esta semana, en ${dias}`;
 }
 
-/** Tira de lunes a sábado: cuántas clases hay cada día y cuál es hoy. */
+/** La semana de lunes a sábado, un día por fila: cuántas clases hay y cuál es hoy. */
 const SemanaDeUnVistazo: React.FC<{ horario: HorarioSemanalDTO; hoy: DiaSemana }> = ({
   horario,
   hoy,
 }) => (
-  <section aria-labelledby="titulo-semana" className="flex flex-col gap-2">
-    <h2 id="titulo-semana" className="m-0 text-sm font-bold text-saie-text">
-      Tu semana de un vistazo
-    </h2>
-    <ul className="saie-stagger m-0 grid list-none grid-cols-6 gap-2 p-0">
+  <section
+    aria-labelledby="titulo-semana"
+    className="flex min-w-0 flex-col gap-3 rounded-2xl border border-saie-divider bg-white p-4"
+  >
+    <div>
+      <h2 id="titulo-semana" className="m-0 text-base font-bold text-saie-text">
+        Tu semana de un vistazo
+      </h2>
+      <p className="m-0 mt-0.5 text-sm text-saie-muted">{resumenDeSemana(horario)}</p>
+    </div>
+    <ul className="m-0 flex list-none flex-col gap-1 p-0">
       {DIAS_LECTIVOS.map((d) => {
         const cantidad = (horario.dias[d] ?? []).length;
         const esHoy = d === hoy;
@@ -159,17 +170,20 @@ const SemanaDeUnVistazo: React.FC<{ horario: HorarioSemanalDTO; hoy: DiaSemana }
               aria-label={`${ETIQUETA_DIA[d]}${esHoy ? ', hoy' : ''}, ${
                 cantidad === 1 ? '1 clase' : `${cantidad} clases`
               }`}
-              className={`flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-center no-underline transition-all duration-200 hover:-translate-y-0.5 ${
+              className={`flex min-h-11 items-center justify-between gap-3 rounded-lg px-3 text-sm no-underline transition-colors duration-200 ${
                 esHoy
-                  ? 'border-saie-primary bg-saie-primary text-white'
-                  : 'border-saie-divider bg-white text-saie-text'
+                  ? 'bg-saie-primary font-bold text-white'
+                  : cantidad === 0
+                    ? 'text-saie-muted hover:bg-saie-primary/5'
+                    : 'font-medium text-saie-text hover:bg-saie-primary/5'
               }`}
             >
-              <span aria-hidden="true" className="text-xs font-bold">
-                {ABREVIATURA_DIA[d]}
+              <span aria-hidden="true">
+                {ETIQUETA_DIA[d]}
+                {esHoy && <span className="ml-2 text-xs font-medium opacity-85">hoy</span>}
               </span>
-              <span aria-hidden="true" className="font-serif text-xl font-bold leading-none">
-                {cantidad}
+              <span aria-hidden="true" className="tabular-nums">
+                {cantidad === 0 ? 'Sin clases' : cantidad === 1 ? '1 clase' : `${cantidad} clases`}
               </span>
             </Link>
           </li>
@@ -179,14 +193,46 @@ const SemanaDeUnVistazo: React.FC<{ horario: HorarioSemanalDTO; hoy: DiaSemana }
   </section>
 );
 
-/** Las clases del día, en tarjetas horizontales con su estado. */
+/** Esqueleto de «El resto de tu día» mientras llega el horario. */
+const EsqueletoDelDia: React.FC = () => (
+  <section aria-label="Cargando tus clases" className="flex flex-col gap-2">
+    <EsqueletoCarga texto="Cargando tus clases del día…" filas={3} />
+  </section>
+);
+
+/** Esqueleto del panel de la semana: mismas seis filas que el real, para que nada salte. */
+const EsqueletoSemana: React.FC = () => (
+  <section
+    aria-hidden="true"
+    className="flex min-w-0 flex-col gap-3 rounded-2xl border border-saie-divider bg-white p-4"
+  >
+    <div className="flex flex-col gap-2">
+      <span className="saie-esqueleto h-4 w-2/3 rounded" />
+      <span className="saie-esqueleto h-3 w-1/2 rounded" />
+    </div>
+    <div className="flex flex-col gap-1">
+      {DIAS_LECTIVOS.map((d) => (
+        <span key={d} className="saie-esqueleto block h-11 rounded-lg" />
+      ))}
+    </div>
+  </section>
+);
+
+/** Cuántas clases se listan antes de indicar que hay más (el resto está en «Mi horario»). */
+const MAX_CLASES_VISIBLES = 4;
+
+/** Las clases del día, en una lista vertical con su estado (Issue 3.38). */
 const ListaDeClases: React.FC<{
   titulo: string;
+  /** Texto breve a la derecha del título, p. ej. cuántas clases quedan. */
+  nota?: string;
   sesiones: SesionDTO[];
   horario: HorarioSemanalDTO;
   /** Minutos desde las 00:00; si es null las clases son de otro día y no llevan estado. */
   ahora: number | null;
-}> = ({ titulo, sesiones, horario, ahora }) => {
+}> = ({ titulo, nota, sesiones, horario, ahora }) => {
+  const visibles = sesiones.slice(0, MAX_CLASES_VISIBLES);
+  const ocultas = sesiones.length - visibles.length;
   const colores = useMemo(
     () => asignarColoresCursos(todasLasSesiones(horario).map((s) => s.codigoCurso)),
     [horario],
@@ -194,82 +240,65 @@ const ListaDeClases: React.FC<{
   if (sesiones.length === 0) return null;
   return (
     <section aria-labelledby="titulo-hoy" className="flex min-h-0 flex-col gap-2">
-      <h2 id="titulo-hoy" className="m-0 text-sm font-bold text-saie-text">
-        {titulo}
-      </h2>
-      <ol className="saie-stagger m-0 flex list-none gap-3 overflow-x-auto p-0 pb-1 lg:overflow-y-auto">
-        {sesiones.map((s) => {
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+        <h2 id="titulo-hoy" className="m-0 text-base font-bold text-saie-text">
+          {titulo}
+        </h2>
+        {nota && <p className="m-0 text-sm text-saie-muted">{nota}</p>}
+      </div>
+      <ol className="saie-stagger m-0 flex min-h-0 list-none flex-col gap-2 p-0 pb-1">
+        {visibles.map((s) => {
           const estado = ahora === null ? null : estadoDeClase(s, ahora);
           const color = colores[s.codigoCurso] ?? PALETA_CURSOS[0];
           return (
             <li
               key={`${s.seccionId}-${s.horaInicio}`}
-              className={`flex w-56 shrink-0 flex-col gap-1 rounded-xl border border-l-4 border-saie-divider bg-white p-3 shadow-[var(--saie-shadow-1)] ${
+              className={`flex w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-saie-divider bg-white px-4 py-3 ${
                 estado === 'FINALIZADA' ? 'opacity-60' : ''
               }`}
-              style={{ borderLeftColor: color.borde }}
             >
-              <span className="text-xs font-bold text-saie-muted">
+              <span className="w-28 shrink-0 text-sm font-bold tabular-nums text-saie-muted">
                 {formatearRango(s.horaInicio, s.horaFin)}
               </span>
-              <span className="text-sm font-bold leading-5">{s.nombreCurso}</span>
-              <span className="text-xs text-saie-muted">{resumenUbicacion(s.espacios)}</span>
-              {/* Solo se marca la clase en curso: «próxima» en todas las tarjetas no informa nada
-                  y las finalizadas ya se ven atenuadas. */}
-              {estado === 'EN_CURSO' && ahora !== null && (
-                <span className="mt-1 flex flex-col items-start gap-1.5">
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="flex items-center gap-2 text-sm font-bold leading-5">
+                  {/* El color del curso es el mismo en todas las pantallas (Issue 3.40). */}
+                  <span
+                    aria-hidden="true"
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: color.borde }}
+                  />
+                  {s.nombreCurso}
+                </span>
+                <span className="text-sm text-saie-muted">{resumenUbicacion(s.espacios)}</span>
+              </span>
+              {estado && (
+                <span className="flex flex-col gap-1.5">
                   <BadgeEstadoClase estado={estado} />
-                  <BarraProgresoClase valor={progresoClase(s, ahora)} />
+                  {estado === 'EN_CURSO' && ahora !== null && (
+                    <BarraProgresoClase valor={progresoClase(s, ahora)} />
+                  )}
                 </span>
               )}
             </li>
           );
         })}
       </ol>
+      {ocultas > 0 && (
+        <Link to={RUTAS.horarioAlumno} className="text-sm font-semibold text-saie-primary">
+          {ocultas === 1 ? 'Hay 1 clase más' : `Hay ${ocultas} clases más`}: ver mi horario
+        </Link>
+      )}
     </section>
   );
 };
 
-/** Acceso rápido a cada sección del portal: es lo que evita volver al inicio. */
-const ACCESOS = [
-  {
-    to: RUTAS.horarioAlumno,
-    titulo: 'Mi horario',
-    descripcion: 'Tu semana completa',
-    trazo: TRAZO_CALENDARIO,
-  },
-  {
-    to: RUTAS.perfilAlumno,
-    titulo: 'Mi perfil',
-    descripcion: 'Datos y ficha médica',
-    trazo: TRAZO_PERFIL,
-  },
-  {
-    to: RUTAS.mapaAlumno,
-    titulo: 'Mapa',
-    descripcion: 'Ubica tus aulas',
-    trazo: TRAZO_MAPA,
-  },
-  {
-    to: RUTAS.rutaAlumno,
-    titulo: 'Ruta',
-    descripcion: 'Cómo llegar a tu aula',
-    trazo: TRAZO_RUTA,
-  },
-  {
-    to: RUTAS.telegramAlumno,
-    titulo: 'Telegram',
-    descripcion: 'Avisos de cambios',
-    trazo: TRAZO_TELEGRAM,
-  },
-];
-
 /**
  * Issue 3.29 — inicio del área del estudiante, en modo tablero.
  *
- * Todo lo importante cabe en una pantalla: la clase en curso o la próxima, las cifras de la
- * semana, las clases de hoy y el acceso a cada sección. Lo demás vive en sus propias
- * pantallas, a un clic desde la barra de navegación.
+ * Todo lo importante cabe en una pantalla: la clase en curso o la próxima, el resto del día y la
+ * semana de un vistazo. Las demás secciones están a un clic en la barra de navegación, que ya las
+ * lista todas: el inicio no las repite.
  */
 export const InicioEstudiante: React.FC = () => {
   const [horario, setHorario] = useState<HorarioSemanalDTO | null>(null);
@@ -334,14 +363,24 @@ export const InicioEstudiante: React.FC = () => {
     [horario, hoy],
   );
   const destacada = claseDestacada(sesionesHoy, minutos);
-  const proximoDia = useMemo(
-    () => (horario && !destacada ? proximoDiaConClases(horario, hoy) : null),
-    [horario, hoy, destacada],
-  );
+  const proximoDia = horario && !destacada ? proximoDiaConClases(horario, hoy) : null;
   const hayClases = horario ? todasLasSesiones(horario).length > 0 : false;
-  const resumen = horario ? datosResumen(horario) : [];
-  // Las cifras se muestran mientras cargan y cuando hay horario; con un error no hay nada que contar.
-  const mostrarCifras = cargandoHorario || horario !== null;
+  // La clase destacada ya está en la tarjeta guinda: la lista muestra solo las siguientes.
+  const claveDestacada = destacada ? `${destacada.seccionId}-${destacada.horaInicio}` : null;
+  const siguientesHoy = sesionesHoy.filter(
+    (s) => `${s.seccionId}-${s.horaInicio}` !== claveDestacada,
+  );
+  const quedanHoy = sesionesHoy.filter((s) => estadoDeClase(s, minutos) !== 'FINALIZADA').length;
+  // Sin horario todavía no se sabe si hay clases: se muestra un esqueleto, nunca «no tienes clases».
+  const cargando = cargandoHorario && !horario && !errorHorario;
+  const estadoTarjeta = cargando
+    ? 'cargando'
+    : horario
+      ? 'listo'
+      : errorHorario
+        ? 'error'
+        : 'listo';
+  const mostrarSemana = cargando || Boolean(horario && hayClases);
 
   return (
     <LayoutEstudiante
@@ -349,129 +388,90 @@ export const InicioEstudiante: React.FC = () => {
       titulo="Área del estudiante"
       subtitulo={horario?.periodo ? `Periodo lectivo ${horario.periodo}` : undefined}
     >
-      <div className="grid content-start gap-4 lg:min-h-0 lg:flex-1">
-        {/* FILA 1 — la clase en curso o la próxima y las cifras de la semana */}
-        <div className="grid gap-4 lg:grid-cols-12">
+      {/*
+        El tablero ocupa lo que queda del `main` tras el título. Una columna principal, en el orden
+        en que se decide (qué toca ahora, qué sigue hoy), y la semana al costado como referencia.
+      */}
+      <div
+        className={`grid grid-cols-1 gap-6 lg:min-h-0 lg:flex-1 lg:items-start ${
+          mostrarSemana ? 'lg:grid-cols-12' : ''
+        }`}
+      >
+        <div
+          className={`flex min-h-0 min-w-0 flex-col gap-6 ${mostrarSemana ? 'lg:col-span-8' : ''}`}
+        >
           <section
             aria-label="Tu próxima clase"
-            className={`flex flex-col gap-3 rounded-2xl bg-gradient-to-br from-saie-primary to-saie-primary-dark p-5 text-white ${
-              mostrarCifras ? 'lg:col-span-7' : 'lg:col-span-12'
-            }`}
+            className="flex min-w-0 flex-col gap-3 rounded-2xl bg-gradient-to-br from-saie-primary to-saie-primary-dark p-5 text-white"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="m-0 text-xs text-white/80">{fechaLarga(ahora)}</p>
-                <p className="m-0 font-serif text-2xl font-bold leading-8">
-                  {saludoSegunHora(ahora)}
-                </p>
-              </div>
-            </div>
-            {/* Sin horario (cargando o con error) no se afirma nada sobre las clases de hoy. */}
-            {horario && (
-              <TarjetaProxima
-                sesion={destacada}
-                hayClasesHoy={sesionesHoy.length > 0}
-                proximoDia={proximoDia}
-                ahora={minutos}
-              />
-            )}
+            <p className="m-0 text-sm text-white/80">
+              {saludoSegunHora(ahora)} · {fechaLarga(ahora)}
+            </p>
+            <TarjetaProxima
+              sesion={destacada}
+              hayClasesHoy={sesionesHoy.length > 0}
+              proximoDia={proximoDia}
+              ahora={minutos}
+              carga={estadoTarjeta}
+            />
           </section>
 
-          {mostrarCifras && (
-            <div className="grid grid-cols-2 gap-3 lg:col-span-5 lg:grid-cols-2">
-              {cargandoHorario && !horario ? (
-                [0, 1, 2, 3].map((n) => (
-                  <div
-                    key={n}
-                    aria-hidden="true"
-                    className="saie-esqueleto h-[76px] rounded-xl border border-saie-divider"
-                  />
-                ))
-              ) : hayClases ? (
-                <dl className="col-span-2 m-0 grid grid-cols-2 divide-saie-divider rounded-2xl border border-saie-divider bg-white">
-                  {resumen.map((d, i) => (
-                    <div
-                      key={d.etiqueta}
-                      className={`flex flex-col-reverse gap-1 px-4 py-3 ${i % 2 === 0 ? 'border-r border-saie-divider' : ''} ${i < 2 ? 'border-b border-saie-divider' : ''}`}
-                    >
-                      <dt className="text-xs font-medium text-saie-muted">{d.etiqueta}</dt>
-                      <dd className="m-0 font-serif text-2xl font-bold leading-none">{d.valor}</dd>
-                    </div>
-                  ))}
-                </dl>
-              ) : (
-                <div className="col-span-2 rounded-2xl border border-dashed border-saie-divider bg-white p-4">
-                  <p className="m-0 text-sm font-bold text-saie-text">Sin clases todavía</p>
-                  <p className="m-0 mt-0.5 text-xs text-saie-muted">
-                    Cuando se asignen las aulas de tus cursos, aquí verás tus clases y las cifras de
-                    la semana.
-                  </p>
-                </div>
-              )}
-            </div>
+          {errorHorario && (
+            <EstadoError
+              mensaje={`No pudimos cargar tu horario. ${errorHorario}`}
+              onReintentar={reintentarHorario}
+            />
           )}
-        </div>
 
-        {/* FILA 2 — las clases de hoy y el acceso rápido a cada sección */}
-        <div className="grid min-h-0 gap-4 md:grid-cols-12">
-          <div className="flex min-h-0 flex-col gap-3 md:col-span-12">
-            {errorHorario && (
-              <AvisoError
-                mensaje={`No pudimos cargar tu horario. ${errorHorario}`}
-                onReintentar={reintentarHorario}
-              />
-            )}
-
-            {horario && hayClases ? (
-              sesionesHoy.length > 0 ? (
+          {cargando ? (
+            <EsqueletoDelDia />
+          ) : horario && hayClases ? (
+            sesionesHoy.length > 0 ? (
+              siguientesHoy.length > 0 ? (
                 <ListaDeClases
-                  titulo="Tu día de hoy"
-                  sesiones={sesionesHoy}
+                  titulo={destacada ? 'El resto de tu día' : 'Tu día de hoy'}
+                  nota={
+                    quedanHoy === 1 ? 'Te queda 1 clase hoy' : `Te quedan ${quedanHoy} clases hoy`
+                  }
+                  sesiones={siguientesHoy}
                   horario={horario}
                   ahora={minutos}
                 />
               ) : (
-                proximoDia && (
-                  <ListaDeClases
-                    titulo={`Lo que viene el ${ETIQUETA_DIA[proximoDia.dia].toLowerCase()}`}
-                    sesiones={proximoDia.sesiones}
-                    horario={horario}
-                    ahora={null}
-                  />
-                )
+                <p className="m-0 rounded-xl border border-dashed border-saie-divider bg-white p-3 text-sm text-saie-muted">
+                  Después de esta, no tienes más clases hoy.
+                </p>
               )
-            ) : null}
-          </div>
-
-          {/* En pantallas medianas y grandes estos destinos ya están en la barra superior. */}
-          <nav
-            aria-label="Secciones del portal del estudiante"
-            className="flex flex-col gap-2 md:hidden"
-          >
-            <h2 className="m-0 text-sm font-bold text-saie-text">Ir a</h2>
-            {ACCESOS.map((a) => (
-              <Link
-                key={a.to}
-                to={a.to}
-                className="flex items-center gap-3 rounded-xl border border-saie-divider bg-white p-2.5 text-saie-text no-underline transition-colors hover:border-saie-primary"
-              >
-                <span
-                  aria-hidden="true"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-saie-primary/10 text-saie-primary"
-                >
-                  <Icono trazo={a.trazo} className="h-4 w-4" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-bold">{a.titulo}</span>
-                  <span className="block text-xs text-saie-muted">{a.descripcion}</span>
-                </span>
-              </Link>
-            ))}
-          </nav>
+            ) : (
+              proximoDia && (
+                <ListaDeClases
+                  titulo={`Lo que viene el ${ETIQUETA_DIA[proximoDia.dia].toLowerCase()}`}
+                  sesiones={proximoDia.sesiones}
+                  horario={horario}
+                  ahora={null}
+                />
+              )
+            )
+          ) : (
+            !cargandoHorario && (
+              <EstadoVacio
+                titulo="Sin clases todavía"
+                descripcion="Cuando se asignen las aulas de tus cursos, aquí verás tus clases del día."
+                accion={
+                  <BotonEnlace to={RUTAS.horarioAlumno} variante="secundario" tamano="sm">
+                    Ver mi horario
+                  </BotonEnlace>
+                }
+              />
+            )
+          )}
         </div>
 
-        {/* FILA 3 — la semana completa en una tira */}
-        {horario && hayClases && <SemanaDeUnVistazo horario={horario} hoy={hoy} />}
+        {mostrarSemana && (
+          <div className="min-w-0 lg:col-span-4">
+            {horario ? <SemanaDeUnVistazo horario={horario} hoy={hoy} /> : <EsqueletoSemana />}
+          </div>
+        )}
       </div>
     </LayoutEstudiante>
   );

@@ -43,4 +43,4 @@
 
 * **Ejecutar Pruebas Backend:** `cd backend && npm run test`
 * **Validar Compilación TypeScript:** `cd backend && npx tsc --noEmit`
-* **Generar Cliente Prisma:** `cd backend && npx prisma generate`
+* **Generar Cliente Prisma:** `cd backend && npx prisma generate`. Ejecútalo también **después de cada `git pull`** que traiga cambios en `schema.prisma`; si no, `tsc` y las pruebas fallan por un cliente desactualizado.

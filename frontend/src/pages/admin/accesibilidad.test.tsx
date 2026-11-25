@@ -51,6 +51,9 @@ vi.mock('../../services/admin', () => ({
   obtenerAlertas: vi.fn(),
   resolverAlerta: vi.fn(),
   obtenerEscaladas: vi.fn(),
+  obtenerIncidencias: vi.fn().mockResolvedValue([]),
+  obtenerReorganizacion: vi.fn().mockResolvedValue({ disponible: false, simulacion: null }),
+  ejecutarReorganizacion: vi.fn(),
   ejecutarCorrida: vi.fn(),
   reintentarSeccion: vi.fn(),
   obtenerEspacios: vi.fn(),
@@ -195,15 +198,15 @@ describe('Accesibilidad del panel con axe (Issue 3.23)', () => {
 
   it('EspaciosAdmin no tiene violaciones de accesibilidad grave', async () => {
     const { container } = montar(<EspaciosAdmin />);
-    await screen.findByText('AULA-101');
+    await screen.findAllByText('AULA-101');
     await esperarSinViolacionesGraves(container, { nombre: 'EspaciosAdmin' });
   });
 
   it('el formulario de espacio dentro del drawer no tiene violaciones de accesibilidad grave', async () => {
     montar(<EspaciosAdmin />);
-    await screen.findByText('AULA-101');
+    await screen.findAllByText('AULA-101');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Ver detalle de AULA-101' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Ver detalle de AULA-101' })[0]);
     const drawer = await screen.findByRole('dialog');
     await esperarSinViolacionesGraves(drawer, { nombre: 'FormularioEspacio (detalle)' });
 
@@ -247,7 +250,7 @@ describe('Accesibilidad del panel con axe (Issue 3.23)', () => {
    */
   it('deja sin verificar solo las reglas que jsdom no puede resolver', async () => {
     const { container } = montar(<EspaciosAdmin />);
-    await screen.findByText('AULA-101');
+    await screen.findAllByText('AULA-101');
 
     const resultado = await auditarAccesibilidad(container);
     const sinVerificar = reglasIncompletas(resultado);

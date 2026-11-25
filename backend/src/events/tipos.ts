@@ -1,4 +1,4 @@
-import { TipoAlerta } from '@prisma/client';
+import { EstadoSolicitud, PrioridadIncidencia, TipoAlerta } from '@prisma/client';
 import { HorarioSlot } from '../services/disponibilidad.service';
 
 export interface EspacioEventoDTO {
@@ -30,10 +30,42 @@ export interface AlertaCreadaEvento {
   asignacionesAfectadas: number;
 }
 
+/** Un docente registró una incidencia (Issue 4.60). Quien escucha lee el detalle de la base. */
+export interface IncidenciaRegistradaEvento {
+  incidenciaId: string;
+  prioridad: PrioridadIncidencia;
+}
+
+/** Coordinación aprobó o rechazó la declaración de accesibilidad de un alumno (Issue 3.60). */
+export interface AccesibilidadResueltaEvento {
+  alumnoId: string;
+  estado: EstadoSolicitud;
+  /** Al aprobarla, cuántas clases quedaron en el piso 1; `null` al rechazarla. */
+  resultado: string | null;
+}
+
+/**
+ * Issue 7.17: Coordinación aprobó «dictar todo en laboratorio». La teoría se retiró y sus franjas
+ * pasaron al laboratorio, que ya se reasignó. Se avisa a los alumnos de ambas secciones.
+ */
+export interface SeccionFusionadaEvento {
+  seccionTeoriaId: string;
+  seccionLaboratorioId: string;
+  codigoCurso: string;
+  nombreCurso: string;
+  grupo: string;
+  horarios: HorarioSlot[];
+  /** Espacios del laboratorio tras reasignarlo; vacío si quedó en revisión. */
+  espacios: EspacioEventoDTO[];
+}
+
 /** Eventos internos del sistema y la forma de su contenido. */
 export interface MapaEventos {
   'asignacion.cambiada': AsignacionCambiadaEvento;
   'alerta.creada': AlertaCreadaEvento;
+  'incidencia.registrada': IncidenciaRegistradaEvento;
+  'accesibilidad.resuelta': AccesibilidadResueltaEvento;
+  'seccion.fusionada': SeccionFusionadaEvento;
 }
 
 export type NombreEvento = keyof MapaEventos;

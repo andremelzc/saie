@@ -1,9 +1,17 @@
 import crypto from 'crypto';
 import { EstadoAsignacion, TipoEspacio } from '@prisma/client';
 import { EspacioConexo } from './buscarBloqueContiguo';
-import { AsignacionOcupacionInput } from '../services/disponibilidad.service';
+import {
+  AsignacionOcupacionInput,
+  haySolapamientoHorario,
+} from '../services/disponibilidad.service';
+import { HttpError } from '../lib/http';
 import { AsignacionParalelaUbicacion } from './cercaniaParalelas';
-import { orquestarAsignacionSeccion, calcularHuellaEntradaSeccion } from './orquestadorAsignacion';
+import {
+  orquestarAsignacionSeccion,
+  calcularHuellaEntradaSeccion,
+  puedeConservarse,
+} from './orquestadorAsignacion';
 import {
   AsignacionExistenteContexto,
   ResultadoCorridaBatch,
@@ -19,6 +27,12 @@ export interface CorridaBatchInput {
   asignacionesPrevias?: AsignacionExistenteContexto[];
   corridaId?: string;
   maxEspaciosPorBloque?: number;
+  /**
+   * Issue 2.26 (riesgo R9): «Reorganizar con prioridad» al inicio del ciclo. Las secciones que
+   * estaban ESCALADAS se procesan primero y ninguna asignación se conserva por idempotencia, así
+   * las escaladas pueden ocupar aulas que tenían otras secciones (que se reubican después).
+   */
+  priorizarEscaladas?: boolean;
 }
 
 /**
@@ -45,6 +59,7 @@ export function ejecutarCorridaBatch(input: CorridaBatchInput): ResultadoCorrida
     asignacionesPrevias = [],
     corridaId = crypto.randomUUID(),
     maxEspaciosPorBloque = 4,
+    priorizarEscaladas = false,
   } = input;
 
   const mapaEspaciosPorId = new Map<string, EspacioConexo>();
@@ -63,7 +78,15 @@ export function ejecutarCorridaBatch(input: CorridaBatchInput): ResultadoCorrida
   // 2. Luego por mayor número de alumnos (mayor aforo primero)
   // 3. Laboratorios antes que aulas (mayor restricción por software)
   // 4. Desempate por ID de sección
+  // Issue 2.26: al reorganizar con prioridad, antes que todo van las que estaban escaladas.
+  const estabaEscalada = (id: string) =>
+    priorizarEscaladas && mapaPrevias.get(id)?.estado === EstadoAsignacion.ESCALADA ? 1 : 0;
   const seccionesOrdenadas = [...secciones].sort((a, b) => {
+    const escaladaPrimero = estabaEscalada(b.id) - estabaEscalada(a.id);
+    if (escaladaPrimero !== 0) {
+      return escaladaPrimero;
+    }
+
     const aMov = a.movilidadReducida ? 1 : 0;
     const bMov = b.movilidadReducida ? 1 : 0;
     if (bMov !== aMov) {
@@ -87,6 +110,23 @@ export function ejecutarCorridaBatch(input: CorridaBatchInput): ResultadoCorrida
   // Mapa de ubicaciones de secciones paralelas por cursoId
   const mapaParalelasPorCurso = new Map<string, AsignacionParalelaUbicacion[]>();
 
+  const registrarUbicacionParalela = (
+    cursoId: string,
+    seccionId: string,
+    codigoSeccion: string,
+    espacioIds: string[],
+  ) => {
+    const espacios = espacioIds
+      .map((espId) => mapaEspaciosPorId.get(espId))
+      .filter((esp): esp is EspacioConexo => esp !== undefined)
+      .map((esp) => ({ pabellon: esp.pabellon, piso: esp.piso }));
+    const ubicacion: AsignacionParalelaUbicacion = { seccionId, codigoSeccion, espacios };
+    if (!mapaParalelasPorCurso.has(cursoId)) {
+      mapaParalelasPorCurso.set(cursoId, []);
+    }
+    mapaParalelasPorCurso.get(cursoId)!.push(ubicacion);
+  };
+
   // Inicializar mapa de paralelas con asignaciones previas vigentes de secciones que no están en el lote
   const idsSeccionesEnLote = new Set(secciones.map((s) => s.id));
   for (const prev of asignacionesPrevias) {
@@ -97,6 +137,35 @@ export function ejecutarCorridaBatch(input: CorridaBatchInput): ResultadoCorrida
         espacioIds: prev.espacioIds,
         horarios: prev.horarios,
       });
+    }
+  }
+
+  // Issue 2.20 (riesgo R1 de la auditoría): las asignaciones que se van a conservar por
+  // idempotencia se reservan ANTES de recorrer el lote. Si se reservaran al llegar a su sección,
+  // una sección que cambió y se procesa antes vería libre el espacio y lo tomaría: doble reserva.
+  // Issue 2.22 (riesgo R3): solo se conserva si sus espacios siguen sirviendo a la sección.
+  // Issue 2.26: al reorganizar con prioridad no se conserva ninguna, para que las escaladas
+  // puedan tomar las aulas que tenían otras secciones.
+  const idsConservadas = new Set<string>();
+  for (const seccion of priorizarEscaladas ? [] : secciones) {
+    const previa = mapaPrevias.get(seccion.id);
+    if (
+      puedeConservarse(seccion, previa, todosLosEspacios) &&
+      !chocaConReservadas(seccion, previa.espacioIds, ocupacionesVigentes)
+    ) {
+      idsConservadas.add(seccion.id);
+      ocupacionesVigentes.push({
+        id: previa.id,
+        estado: EstadoAsignacion.VIGENTE,
+        espacioIds: previa.espacioIds,
+        horarios: seccion.horarios,
+      });
+      registrarUbicacionParalela(
+        seccion.cursoId,
+        seccion.id,
+        seccion.codigoSeccion,
+        previa.espacioIds,
+      );
     }
   }
 
@@ -122,12 +191,7 @@ export function ejecutarCorridaBatch(input: CorridaBatchInput): ResultadoCorrida
     // Idempotencia: Verificar si la asignación previa vigente sigue siendo 100% válida
     let resultado: ResultadoOrquestacion;
 
-    if (
-      asignacionPrevia &&
-      asignacionPrevia.estado === EstadoAsignacion.VIGENTE &&
-      asignacionPrevia.huellaEntrada === huellaActual &&
-      asignacionPrevia.espacioIds.length > 0
-    ) {
+    if (asignacionPrevia && idsConservadas.has(seccion.id)) {
       resultado = {
         seccionId: seccion.id,
         codigoSeccion: seccion.codigoSeccion,
@@ -149,7 +213,8 @@ export function ejecutarCorridaBatch(input: CorridaBatchInput): ResultadoCorrida
         asignacionesVigentes: ocupacionesVigentes,
         obtenerVecinosContiguos,
         paralelasAsignadas: paralelasDelCurso,
-        asignacionPrevia,
+        // La decisión de conservar ya se tomó arriba (con las reservas de toda la corrida).
+        asignacionPrevia: null,
         maxEspaciosPorBloque,
       });
 
@@ -174,36 +239,31 @@ export function ejecutarCorridaBatch(input: CorridaBatchInput): ResultadoCorrida
 
     resultados.push(resultado);
 
-    // Si fue asignada con éxito, registrar su ocupación y ubicación física para el resto de la corrida
-    if (resultado.estado === EstadoAsignacion.VIGENTE && resultado.espacioIds.length > 0) {
+    // Si fue asignada con éxito, registrar su ocupación y ubicación física para el resto de la
+    // corrida. Las conservadas ya se registraron antes del recorrido.
+    if (
+      !idsConservadas.has(seccion.id) &&
+      resultado.estado === EstadoAsignacion.VIGENTE &&
+      resultado.espacioIds.length > 0
+    ) {
       ocupacionesVigentes.push({
         id: `temp-${seccion.id}`,
         estado: EstadoAsignacion.VIGENTE,
         espacioIds: resultado.espacioIds,
         horarios: seccion.horarios,
       });
-
-      const ubicacionesEspacios = resultado.espacioIds
-        .map((espId) => {
-          const esp = mapaEspaciosPorId.get(espId);
-          if (esp) {
-            return { pabellon: esp.pabellon, piso: esp.piso };
-          }
-          return null;
-        })
-        .filter((u): u is { pabellon: string; piso: number } => u !== null);
-
-      const nuevaParalela: AsignacionParalelaUbicacion = {
-        seccionId: seccion.id,
-        codigoSeccion: seccion.codigoSeccion,
-        espacios: ubicacionesEspacios,
-      };
-
-      if (!mapaParalelasPorCurso.has(seccion.cursoId)) {
-        mapaParalelasPorCurso.set(seccion.cursoId, []);
-      }
-      mapaParalelasPorCurso.get(seccion.cursoId)!.push(nuevaParalela);
+      registrarUbicacionParalela(
+        seccion.cursoId,
+        seccion.id,
+        seccion.codigoSeccion,
+        resultado.espacioIds,
+      );
     }
+  }
+
+  const conflictos = detectarDobleReserva(resultados, secciones);
+  if (conflictos.length > 0) {
+    throw new DobleReservaError(conflictos);
   }
 
   return {
@@ -217,4 +277,82 @@ export function ejecutarCorridaBatch(input: CorridaBatchInput): ResultadoCorrida
     desglosePorTipoEspacio,
     resultados,
   };
+}
+
+/**
+ * Una asignación previa que ya choca con otra reservada (dato viejo con doble reserva) no se
+ * conserva: el motor la reasigna y la base se corrige sola, en vez de bloquear la corrida.
+ */
+function chocaConReservadas(
+  seccion: SeccionInputMotor,
+  espacioIds: string[],
+  reservadas: AsignacionOcupacionInput[],
+): boolean {
+  return reservadas.some(
+    (o) =>
+      o.espacioIds.some((id) => espacioIds.includes(id)) &&
+      o.horarios.some((ho) => seccion.horarios.some((hs) => haySolapamientoHorario(ho, hs))),
+  );
+}
+
+/** Dos secciones que la corrida dejaría en el mismo espacio a la misma hora. */
+export interface ConflictoDobleReserva {
+  espacioId: string;
+  seccionIdA: string;
+  seccionIdB: string;
+}
+
+/**
+ * Issue 2.20: la corrida no se guarda si deja una doble reserva. Es la red de seguridad del
+ * recorrido: un error lógico del motor no debe llegar a la base.
+ */
+export class DobleReservaError extends HttpError {
+  constructor(public readonly conflictos: ConflictoDobleReserva[]) {
+    super(
+      409,
+      `La corrida produjo ${conflictos.length} doble(s) reserva(s) y no se guardó`,
+      conflictos.map(
+        (c) =>
+          `Espacio ${c.espacioId}: secciones ${c.seccionIdA} y ${c.seccionIdB} a la misma hora`,
+      ),
+    );
+    this.name = 'DobleReservaError';
+  }
+}
+
+/**
+ * Issue 2.20: busca pares de asignaciones vigentes de la corrida que compartan un espacio en
+ * franjas que se solapan.
+ */
+export function detectarDobleReserva(
+  resultados: ResultadoOrquestacion[],
+  secciones: SeccionInputMotor[],
+): ConflictoDobleReserva[] {
+  const horariosPorSeccion = new Map(secciones.map((s) => [s.id, s.horarios ?? []]));
+  const vigentes = resultados.filter(
+    (r) => r.estado === EstadoAsignacion.VIGENTE && r.espacioIds.length > 0,
+  );
+  const conflictos: ConflictoDobleReserva[] = [];
+
+  for (let i = 0; i < vigentes.length; i++) {
+    for (let j = i + 1; j < vigentes.length; j++) {
+      const a = vigentes[i];
+      const b = vigentes[j];
+      const compartidos = a.espacioIds.filter((id) => b.espacioIds.includes(id));
+      if (compartidos.length === 0) continue;
+
+      const horariosA = horariosPorSeccion.get(a.seccionId) ?? [];
+      const horariosB = horariosPorSeccion.get(b.seccionId) ?? [];
+      const seSolapan = horariosA.some((ha) =>
+        horariosB.some((hb) => haySolapamientoHorario(ha, hb)),
+      );
+      if (seSolapan) {
+        for (const espacioId of compartidos) {
+          conflictos.push({ espacioId, seccionIdA: a.seccionId, seccionIdB: b.seccionId });
+        }
+      }
+    }
+  }
+
+  return conflictos;
 }

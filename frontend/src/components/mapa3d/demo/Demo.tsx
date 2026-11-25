@@ -39,18 +39,18 @@ export default function Demo() {
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-3 p-4">
       <header className="flex flex-wrap items-center gap-4">
-        <h1 className="text-xl font-semibold text-indigo-950">
+        <h1 className="text-xl font-semibold text-saie-text">
           Mapa 3D — demostración (plano borrador)
         </h1>
-        <label className="flex items-center gap-2 text-sm text-slate-700">
+        <label className="flex items-center gap-2 text-sm text-saie-text">
           <input type="checkbox" checked={bloque} onChange={(e) => setBloque(e.target.checked)} />
           Resaltar un bloque asignado
         </label>
-        <p aria-live="polite" className="text-sm text-slate-700">
+        <p aria-live="polite" className="text-sm text-saie-text">
           Seleccionado: <strong>{elegido ?? 'ninguno'}</strong>
         </p>
       </header>
-      <div className="h-[75vh] rounded-lg border border-slate-200 bg-slate-50">
+      <div className="h-[75vh] rounded-lg border border-saie-divider bg-white">
         <Mapa3DLazy
           planos={planos}
           espacios={espacios}

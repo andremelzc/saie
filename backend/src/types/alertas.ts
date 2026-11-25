@@ -57,4 +57,6 @@ export interface AlertaDTO {
 export interface FiltrosAlertas {
   tipo?: TipoAlerta;
   espacioId?: string;
+  pagina?: number;
+  limite?: number;
 }

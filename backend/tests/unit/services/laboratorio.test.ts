@@ -90,6 +90,8 @@ function prismaMock(opciones: { espacio?: any; responsable?: boolean; asignacion
       findUnique: jest.fn().mockResolvedValue(opciones.responsable ? { cuentaId: 'x' } : null),
     },
     historialEspacio: { create: jest.fn().mockResolvedValue({}) },
+    registroAuditoria: { create: jest.fn().mockResolvedValue({}) },
+    periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
     asignacion: { findMany: jest.fn().mockResolvedValue(opciones.asignaciones ?? []) },
     alerta: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -223,6 +225,24 @@ describe('Registrar cambio de software de un laboratorio (Issue 4.1 / 4.28)', ()
     });
   });
 
+  it('deja un asiento de auditoría con quién cambió el software y las listas anterior y nueva (Issue 4.58)', async () => {
+    const prisma = prismaMock();
+    await registrarCambioSoftware('L1', ['sw-docker', 'sw-git'], coordinacion, prisma);
+
+    expect(prisma.registroAuditoria.create).toHaveBeenCalledTimes(1);
+    expect(prisma.registroAuditoria.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        tipoEvento: 'CAMBIO_LABORATORIO',
+        cuentaId: 'cuenta-coord',
+        espaciosIds: ['L1'],
+        cambios: [{ campo: 'software', anterior: ['Python 3.12'], nuevo: ['Docker', 'Git'] }],
+      }),
+    });
+    const detalle = prisma.registroAuditoria.create.mock.calls[0][0].data.detalle;
+    expect(detalle).toContain('Python 3.12');
+    expect(detalle).toContain('Docker, Git');
+  });
+
   it('dispara la evaluación (Issue 4.3) y persiste la alerta (Issue 4.5) en la misma transacción', async () => {
     const prisma = prismaMock({
       asignaciones: [asignacionVigente(['sw-docker'], 20, labBase({ software: ['sw-docker'] }))],
@@ -315,6 +335,20 @@ describe('Registrar cambio de PCs malogradas (Issue 4.2)', () => {
         valorNuevo: '5',
         cuentaId: 'cuenta-coord',
       },
+    });
+  });
+
+  it('deja un asiento de auditoría con el conteo anterior y el nuevo (Issue 4.58)', async () => {
+    const prisma = prismaMock();
+    await registrarCambioPcsMalogradas('L1', 5, coordinacion, prisma);
+
+    expect(prisma.registroAuditoria.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        tipoEvento: 'CAMBIO_LABORATORIO',
+        cuentaId: 'cuenta-coord',
+        espaciosIds: ['L1'],
+        cambios: [{ campo: 'pcsMalogradas', anterior: 2, nuevo: 5 }],
+      }),
     });
   });
 

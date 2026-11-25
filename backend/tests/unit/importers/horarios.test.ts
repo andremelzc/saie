@@ -13,6 +13,7 @@ describe('Importador de Horarios (Issue 1.4)', () => {
         findUnique: jest.fn().mockResolvedValue({ id: 'seccion-123', codigoSeccion: 'S1' }),
       },
       horario: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
         upsert: jest.fn().mockResolvedValue({ id: 'horario-123' }),
       },
     };
@@ -145,5 +146,60 @@ describe('Importador de Horarios (Issue 1.4)', () => {
 
     expect(resultado.horariosProcesados).toBe(0);
     expect(resultado.errores[0]).toContain('Fallo de BD en horario');
+  });
+
+  describe('cambios de horario (Issue 1.17, R35)', () => {
+    const fila = (horaInicio: string, horaFin: string) => ({
+      codigoCurso: '2020101',
+      codigoSeccion: 'S1',
+      periodo: '2026-1',
+      diaSemana: DiaSemana.LUNES,
+      horaInicio,
+      horaFin,
+    });
+
+    it('una hora de inicio nueva reemplaza la franja vieja en lugar de sumarse', async () => {
+      mockPrisma.horario.deleteMany.mockResolvedValue({ count: 1 });
+
+      const r = await importarHorarios([fila('19:00', '21:00')], mockPrisma);
+
+      expect(mockPrisma.horario.deleteMany).toHaveBeenCalledWith({
+        where: {
+          seccionId: 'seccion-123',
+          NOT: { OR: [{ diaSemana: DiaSemana.LUNES, horaInicio: '19:00' }] },
+        },
+      });
+      expect(r.horariosRetirados).toBe(1);
+      expect(r.horariosProcesados).toBe(1);
+    });
+
+    it('conserva todas las franjas que el archivo indica para la sección', async () => {
+      await importarHorarios([fila('08:00', '10:00'), fila('10:00', '12:00')], mockPrisma);
+
+      expect(mockPrisma.horario.deleteMany.mock.calls[0][0].where.NOT.OR).toHaveLength(2);
+    });
+
+    it('no retira franjas si alguna fila falló', async () => {
+      mockPrisma.horario.upsert
+        .mockResolvedValueOnce({ id: 'h1' })
+        .mockRejectedValueOnce(new Error('fallo'));
+
+      const r = await importarHorarios(
+        [fila('08:00', '10:00'), fila('10:00', '12:00')],
+        mockPrisma,
+      );
+
+      expect(r.errores).toHaveLength(1);
+      expect(mockPrisma.horario.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('informa el avance', async () => {
+      const avance: [number, number][] = [];
+      await importarHorarios([fila('08:00', '10:00')], mockPrisma, (h, t) => avance.push([h, t]));
+      expect(avance).toEqual([
+        [0, 1],
+        [1, 1],
+      ]);
+    });
   });
 });

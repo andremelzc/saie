@@ -39,6 +39,8 @@ cd backend
 npm run dev
 ```
 
+> **Límite de intentos (Issue 1.12):** la consulta pública limita las peticiones por IP (120 por minuto por defecto) y los 300 VUs salen de una sola IP. Arranca el backend local con `RATE_LIMIT_DISABLED=true` (o sube `RATE_LIMIT_CONSULTA_MAX`); si no, k6 medirá 429 en lugar de latencia.
+
 ### 3. Ejecución del Escenario Completo (300 VUs / 5 minutos)
 ```bash
 # Desde la raíz del monorepo:

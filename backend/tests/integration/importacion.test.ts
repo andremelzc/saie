@@ -19,6 +19,8 @@ import { RolCuenta } from '@prisma/client';
 import { createApp } from '../../src/app';
 import { firmarToken } from '../../src/services/auth.service';
 import { ejecutarImportacion } from '../../src/services/importacion.service';
+import { logger } from '../../src/lib/logger';
+import { reiniciarTrabajosImportacion } from '../../src/services/trabajosImportacion';
 
 process.env.JWT_SECRET = 'secreto-de-pruebas';
 
@@ -37,6 +39,7 @@ const resultado = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  reiniciarTrabajosImportacion();
   (ejecutarImportacion as jest.Mock).mockResolvedValue(resultado);
 });
 
@@ -78,7 +81,14 @@ describe('POST /api/v1/import/:tipo (Issue 1.6)', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true, data: resultado });
-    expect(ejecutarImportacion).toHaveBeenCalledWith('horarios', filas, prismaMock);
+    // Issue 4.54: la importación recibe la cuenta que cargó el archivo.
+    expect(ejecutarImportacion).toHaveBeenCalledWith(
+      'horarios',
+      filas,
+      prismaMock,
+      'cuenta-1',
+      expect.any(Function),
+    );
   });
 
   it('importa un objeto JSON con la propiedad datos', async () => {
@@ -92,6 +102,8 @@ describe('POST /api/v1/import/:tipo (Issue 1.6)', () => {
       'docentes',
       [{ codigoDocente: 'D1' }],
       prismaMock,
+      'cuenta-1',
+      expect.any(Function),
     );
   });
 
@@ -108,6 +120,8 @@ describe('POST /api/v1/import/:tipo (Issue 1.6)', () => {
       'horarios',
       [{ codigoCurso: 'C1', diaSemana: 'MIERCOLES', horaInicio: '08:00' }],
       prismaMock,
+      'cuenta-1',
+      expect.any(Function),
     );
   });
 
@@ -168,7 +182,7 @@ describe('POST /api/v1/import/:tipo (Issue 1.6)', () => {
   });
 
   it('no filtra el detalle de un error interno', async () => {
-    const consola = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const consola = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
     (ejecutarImportacion as jest.Mock).mockRejectedValue(new Error('conexión a la base caída'));
 
     const res = await request(app)
@@ -179,5 +193,65 @@ describe('POST /api/v1/import/:tipo (Issue 1.6)', () => {
     expect(res.status).toBe(500);
     expect(JSON.stringify(res.body)).not.toContain('conexión');
     consola.mockRestore();
+  });
+});
+
+describe('Importación en segundo plano (Issue 1.19)', () => {
+  const esperarTerminado = async (id: string) => {
+    for (let i = 0; i < 20; i++) {
+      const res = await request(app)
+        .get(`/api/v1/import/trabajos/${id}`)
+        .set('Authorization', coordinacion);
+      if (res.body.data.estado !== 'EN_CURSO') return res;
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    throw new Error('la importación no terminó');
+  };
+
+  it('responde 202 con el identificador y luego entrega el resultado', async () => {
+    const res = await request(app)
+      .post('/api/v1/import/horarios/trabajos')
+      .set('Authorization', coordinacion)
+      .send([{ codigoCurso: 'C1' }]);
+
+    expect(res.status).toBe(202);
+    expect(res.body.data).toMatchObject({ tipo: 'horarios', estado: 'EN_CURSO', total: 1 });
+
+    const final = await esperarTerminado(res.body.data.id);
+    expect(final.status).toBe(200);
+    expect(final.body.data).toMatchObject({ estado: 'TERMINADO', resultado });
+  });
+
+  it('rechaza con 409 una segunda importación del mismo tipo mientras otra está en curso', async () => {
+    (ejecutarImportacion as jest.Mock).mockReturnValue(new Promise(() => undefined));
+    const primera = await request(app)
+      .post('/api/v1/import/matriculas/trabajos')
+      .set('Authorization', coordinacion)
+      .send([{}]);
+    expect(primera.status).toBe(202);
+
+    for (const ruta of ['/api/v1/import/matriculas/trabajos', '/api/v1/import/matriculas']) {
+      const segunda = await request(app).post(ruta).set('Authorization', coordinacion).send([{}]);
+      expect(segunda.status).toBe(409);
+    }
+  });
+
+  it('404 con un identificador desconocido, 404 para un tipo desconocido y 403 sin permiso', async () => {
+    const desconocido = await request(app)
+      .get('/api/v1/import/trabajos/no-existe')
+      .set('Authorization', coordinacion);
+    expect(desconocido.status).toBe(404);
+
+    const tipo = await request(app)
+      .post('/api/v1/import/otro/trabajos')
+      .set('Authorization', coordinacion)
+      .send([{}]);
+    expect(tipo.status).toBe(404);
+
+    const alumno = await request(app)
+      .post('/api/v1/import/horarios/trabajos')
+      .set('Authorization', bearer(RolCuenta.ALUMNO))
+      .send([{}]);
+    expect(alumno.status).toBe(403);
   });
 });

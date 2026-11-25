@@ -28,7 +28,11 @@ export function obtenerJwtExpiresIn(): string {
 }
 
 export function firmarToken(payload: TokenPayload): string {
-  return jwt.sign({ rol: payload.rol }, obtenerJwtSecret(), {
+  // La marca solo viaja mientras es verdadera: así los tokens normales no cambian de forma.
+  const claims = payload.debeCambiarClave
+    ? { rol: payload.rol, debeCambiarClave: true }
+    : { rol: payload.rol };
+  return jwt.sign(claims, obtenerJwtSecret(), {
     subject: payload.sub,
     expiresIn: obtenerJwtExpiresIn() as SignOptions['expiresIn'],
   });
@@ -41,7 +45,9 @@ export function verificarToken(token: string): TokenPayload | null {
     if (typeof decoded === 'string' || typeof decoded.sub !== 'string' || !decoded.rol) {
       return null;
     }
-    return { sub: decoded.sub, rol: decoded.rol as RolCuenta };
+    const payload: TokenPayload = { sub: decoded.sub, rol: decoded.rol as RolCuenta };
+    if (decoded.debeCambiarClave === true) payload.debeCambiarClave = true;
+    return payload;
   } catch {
     return null;
   }
@@ -87,7 +93,11 @@ export async function iniciarSesion(
   }
 
   return {
-    token: firmarToken({ sub: cuenta.id, rol: cuenta.rol }),
+    token: firmarToken({
+      sub: cuenta.id,
+      rol: cuenta.rol,
+      debeCambiarClave: cuenta.debeCambiarClave,
+    }),
     rol: cuenta.rol,
     debeCambiarClave: cuenta.debeCambiarClave,
     expiresIn: obtenerJwtExpiresIn(),

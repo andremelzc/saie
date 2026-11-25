@@ -39,7 +39,7 @@ const FichaSeccion: React.FC<{ seccion: CursoMatriculadoDTO }> = ({ seccion }) =
                 {seccion.horarios.map((h) => (
                   <li
                     key={`${h.diaSemana}-${h.horaInicio}`}
-                    className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-saie-text"
+                    className="rounded-full bg-white px-2.5 py-1 text-sm font-medium text-saie-text"
                   >
                     {`${ABREVIATURA_DIA[h.diaSemana]} ${formatearRango(h.horaInicio, h.horaFin)}`}
                   </li>
@@ -98,11 +98,18 @@ export const ListaMisCursos: React.FC<ListaMisCursosProps> = ({
             <li key={grupo.codigoCurso}>
               <article
                 aria-labelledby={idTitulo}
-                className="saie-lift flex flex-col gap-4 rounded-2xl border border-l-[6px] border-saie-divider bg-white p-5 shadow-[0_2px_8px_rgba(34,34,34,0.08)]"
-                style={{ borderLeftColor: color.borde }}
+                className="saie-lift flex flex-col gap-4 rounded-2xl border border-saie-divider bg-white p-5"
               >
                 <header className="flex flex-col gap-1">
-                  <h3 id={idTitulo} className="m-0 text-lg font-bold text-saie-text">
+                  <h3
+                    id={idTitulo}
+                    className="m-0 flex items-center gap-2 text-lg font-bold text-saie-text"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: color.borde }}
+                    />
                     {grupo.nombreCurso}
                   </h3>
                   <p className="m-0 text-sm text-saie-muted">

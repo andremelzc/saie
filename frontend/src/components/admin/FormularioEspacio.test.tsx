@@ -82,7 +82,7 @@ describe('Formulario de espacios (Issue 4.15)', () => {
     expect(screen.queryByLabelText(/Pabellón/)).toBeNull();
     expect(screen.queryByLabelText(/^Piso/)).toBeNull();
     expect(screen.queryByLabelText(/Capacidad \(aforo nominal\)/)).toBeNull();
-    expect(screen.getByLabelText(/PCs fuera de servicio/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/PCs malogradas/)).toBeInTheDocument();
     expect(screen.getByLabelText('Buscar software')).toBeInTheDocument();
   });
 
@@ -150,7 +150,7 @@ describe('Formulario de espacios (Issue 4.15)', () => {
 
   it('no permite dejar las PCs malogradas vacías si ya tenían valor', () => {
     montar();
-    fireEvent.change(screen.getByLabelText(/PCs fuera de servicio/), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText(/PCs malogradas/), { target: { value: '' } });
     expect(screen.getByRole('button', { name: 'Guardar cambios' })).toBeDisabled();
     expect(screen.getByText(/no se puede borrar/)).toBeInTheDocument();
   });
@@ -276,7 +276,7 @@ describe('Formulario de espacios (Issue 4.15)', () => {
     it('ofrece el tipo de espacio y no muestra software ni PCs en un aula', () => {
       montarAlta();
       expect(screen.getByLabelText('Tipo de espacio')).toBeInTheDocument();
-      expect(screen.queryByLabelText(/PCs fuera de servicio/)).toBeNull();
+      expect(screen.queryByLabelText(/PCs malogradas/)).toBeNull();
       expect(screen.queryByLabelText('Buscar software')).toBeNull();
       expect(screen.getByRole('button', { name: 'Crear espacio' })).toBeInTheDocument();
     });
@@ -286,7 +286,7 @@ describe('Formulario de espacios (Issue 4.15)', () => {
       fireEvent.change(screen.getByLabelText('Tipo de espacio'), {
         target: { value: 'LABORATORIO' },
       });
-      expect(screen.getByLabelText(/PCs fuera de servicio/)).toBeInTheDocument();
+      expect(screen.getByLabelText(/PCs malogradas/)).toBeInTheDocument();
       expect(screen.getByLabelText('Buscar software')).toBeInTheDocument();
     });
 

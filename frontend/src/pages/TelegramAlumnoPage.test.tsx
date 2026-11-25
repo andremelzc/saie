@@ -2,12 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TelegramAlumnoPage from './TelegramAlumnoPage';
+import { AuthProvider } from '../context/AuthProvider';
+import { guardarSesion } from '../services/sesion';
+import { ahoraEnSegundos, crearToken } from '../test/helpers';
 import { desvincularTelegram, obtenerTelegram } from '../services/estudiante';
 import type { EstadoTelegramDTO } from '../types/perfil';
-
-vi.mock('../context/useAuth', () => ({
-  useAuth: () => ({ sesion: { rol: 'ALUMNO' }, cerrarSesion: vi.fn() }),
-}));
 
 vi.mock('../services/estudiante', () => ({
   obtenerTelegram: vi.fn(),
@@ -26,12 +25,21 @@ const estado = (cambios: Partial<EstadoTelegramDTO> = {}): EstadoTelegramDTO => 
   ...cambios,
 });
 
-const montar = () =>
-  render(
+const montar = () => {
+  guardarSesion({
+    token: crearToken(ahoraEnSegundos() + 3600, 'ALUMNO'),
+    rol: 'ALUMNO',
+    debeCambiarClave: false,
+    expiresIn: '8h',
+  });
+  return render(
     <MemoryRouter>
-      <TelegramAlumnoPage />
+      <AuthProvider>
+        <TelegramAlumnoPage />
+      </AuthProvider>
     </MemoryRouter>,
   );
+};
 
 describe('TelegramAlumnoPage', () => {
   beforeEach(() => {
@@ -45,7 +53,7 @@ describe('TelegramAlumnoPage', () => {
 
     expect(await screen.findByText('Sin vincular')).toBeInTheDocument();
     expect(screen.getByText('22200101 miClave')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Abrir el bot en Telegram' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Abrir el bot en Telegram/ })).toHaveAttribute(
       'href',
       'https://t.me/saie_bot',
     );
@@ -59,9 +67,11 @@ describe('TelegramAlumnoPage', () => {
     montar();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Desvincular mi Telegram' }));
-    expect(screen.getByRole('group', { name: 'Confirmar desvinculación' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('alertdialog', { name: /Dejar de recibir avisos/ }),
+    ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Sí, desvincular' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, desvincular Telegram' }));
 
     await waitFor(() => expect(baja).toHaveBeenCalledTimes(1));
     expect(await screen.findByText('Sin vincular')).toBeInTheDocument();
@@ -75,7 +85,7 @@ describe('TelegramAlumnoPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Desvincular mi Telegram' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
 
-    expect(screen.queryByRole('group', { name: 'Confirmar desvinculación' })).toBeNull();
+    expect(screen.queryByRole('alertdialog', { name: /Dejar de recibir avisos/ })).toBeNull();
     expect(baja).not.toHaveBeenCalled();
   });
 
@@ -97,7 +107,7 @@ describe('TelegramAlumnoPage', () => {
     montar();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Desvincular mi Telegram' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Sí, desvincular' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, desvincular Telegram' }));
 
     const aviso = await screen.findByRole('alert');
     expect(aviso).toHaveTextContent('Inténtalo de nuevo en unos minutos.');
@@ -112,6 +122,6 @@ describe('TelegramAlumnoPage', () => {
     montar();
 
     expect(await screen.findByText(/no está configurado todavía/)).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Abrir el bot en Telegram' })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Abrir el bot en Telegram/ })).toBeNull();
   });
 });

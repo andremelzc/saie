@@ -58,8 +58,6 @@ const datosAlumno = (asignaciones: AsignacionConsultaItemDTO[]): ConsultaAlumnoR
   alumno: {
     codigo: '20200001',
     nombre: 'Alumno de Ejemplo',
-    correo: 'alumno@ejemplo.edu',
-    movilidadReducida: false,
   },
   asignaciones,
 });

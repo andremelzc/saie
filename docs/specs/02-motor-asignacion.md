@@ -38,7 +38,14 @@ El motor de asignación calcula automáticamente el mejor bloque contiguo de aul
 * **Issue 2.8 & 2.13 (Cercanía entre Secciones Paralelas):**
   * Función de puntuación de distancia física ($PuntajeCercania$) que premia bloques en el mismo piso o piso adyacente respecto a las secciones ya asignadas del mismo curso.
 * **Issue 2.9 (Desempate de Bloques Candidatos):**
-  * En caso de múltiples bloques válidos, desempata por: (1) Piso 1 si hay movilidad reducida, (2) Mayor puntuación de cercanía entre secciones paralelas, (3) Menor desperdicio de aforo residual.
+  * En caso de múltiples bloques válidos, desempata por: (1) Piso 1 si hay movilidad reducida, (2) Menor cantidad de espacios en el bloque, (3) Menor desperdicio de aforo, por tramos de `MARGEN_DESPERDICIO_ASIENTOS` (10 asientos), (4) Mayor puntuación de cercanía entre secciones paralelas, (5) Menor desperdicio exacto, (6) Menor piso, (7) Orden léxico de identificadores.
+  * **Issue 2.21 (riesgo R2 de la auditoría):** las aulas se ocupan de menor a mayor. Antes la cercanía iba antes que el desperdicio y una sección de 20 alumnos podía tomar un auditorio de 200 por estar en el mismo piso que otra sección del curso. Ahora la cercanía solo decide entre bloques de tamaño parecido (mismo tramo de desperdicio).
+* **Issue 2.20 (riesgo R1 de la auditoría — doble reserva en la corrida batch):**
+  * Las asignaciones vigentes que se conservan por idempotencia se reservan **antes** de recorrer el lote, no al llegar a su sección.
+  * `detectarDobleReserva` revisa el resultado antes de devolverlo; si dos asignaciones vigentes comparten espacio en franjas solapadas, la corrida lanza `DobleReservaError` (409) y no se guarda nada.
+* **Issue 2.22 (riesgo R3 de la auditoría — espacios que dejaron de servir):**
+  * Una asignación vigente solo se conserva por idempotencia si, además de tener la misma huella, sus espacios **siguen sirviendo** (`espaciosSiguenSirviendo`): están habilitados, son del tipo requerido, su capacidad real alcanza y, en laboratorios, tienen el software requerido. Si no, la sección se reevalúa.
+  * Aplica igual a la corrida batch y a la reasignación de una sección (`puedeConservarse`).
 
 ### 2.3 Issues 2.10 a 2.15 — Orquestación, Batch y Escalamiento
 * **Issue 2.10 (`orquestarAsignacionSeccion`):**
@@ -78,6 +85,15 @@ El motor de asignación calcula automáticamente el mejor bloque contiguo de aul
   * Un manejador que lanza un error o rechaza su promesa se captura y se registra solo el tipo de error; no afecta al emisor ni a los demás manejadores.
   * Los manejadores se conectan en `registrarManejadores()`, llamada desde `index.ts`; `createApp` no la llama.
 * **Manejadores actuales:** notificador de Telegram (Issue 3.26, ver [Spec 03](03-portal-estudiante.md) §2.4). La auditoría de alertas (Issue 5.11) será otro manejador.
+
+### 2.5 Issue 2.26 — Reorganizar con prioridad al inicio del ciclo (riesgo R9)
+
+* **Qué hace:** una corrida del periodo vigente con `priorizarEscaladas: true` (`ejecutarCorridaBatch`): las secciones que estaban `ESCALADA` se procesan primero y **ninguna asignación se conserva por idempotencia**, así las escaladas pueden tomar aulas que tenían otras secciones, que se reubican después o quedan escaladas. Solo ayuda cuando el motivo es falta de aulas o de bloque contiguo; si a una hora hay más secciones que aulas, solo cambia quién se queda fuera.
+* **Ventana:** disponible desde la `fechaInicio` del periodo vigente (registrada en Periodos, Issue 4.64) hasta `REORGANIZACION_SEMANAS` semanas después (2 por defecto). Cuántas semanas es una decisión abierta del equipo (Anexo C); fuera de la ventana la salida para una escalada es la asignación manual (2.23).
+* `GET /api/v1/asignaciones/reorganizacion` (solo Coordinación): `{ disponible, motivo, periodo, semanas, desde, hasta, simulacion }`. Si está disponible, `simulacion` calcula en memoria la reorganización (el motor es puro, no escribe) y la compara con lo actual: `{ totalEscaladas, escaladasConAula, cambianDeAula, pierdenAula }`.
+* `POST /api/v1/asignaciones/reorganizacion` (solo Coordinación): ejecuta la reorganización con el mismo candado que las demás corridas (409 si hay otra en curso o si la ventana está cerrada, con el motivo) y devuelve el mismo resumen que la corrida a demanda, con su verificación.
+* **Avisos:** además del cambio entre aulas (Issue 2.16), en la reorganización se emite `asignacion.cambiada` para la escalada que consigue aula («Antes: sin aula») y para la sección que pierde la suya («Ahora: sin aula»).
+* **Pantalla:** en el inicio de Coordinación, el botón «Reorganizar con prioridad» aparece solo con la ventana abierta y muestra lo que cambiaría antes de confirmar.
 
 ---
 

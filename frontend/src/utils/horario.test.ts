@@ -5,12 +5,16 @@ import type { SesionDTO } from '../types/horario';
 import {
   PALETA_CURSOS,
   aMinutos,
+  agruparClases,
   agruparPorCurso,
   asignarColoresCursos,
+  colorDeCurso,
   diaDeFecha,
   diaLectivoInicial,
   estadoAMostrar,
   estadoDeClase,
+  etiquetaTipoClase,
+  grupoDeSeccion,
   cuentaRegresiva,
   cursosEnFranja,
   haySolape,
@@ -22,6 +26,7 @@ import {
   ordenarSesiones,
   posicionBloque,
   resumenUbicacion,
+  rotuloClase,
   saludoSegunHora,
   todasLasSesiones,
 } from './horario';
@@ -40,6 +45,7 @@ function sesion(codigoCurso: string, horaInicio: string): SesionDTO {
     codigoCurso,
     nombreCurso: codigoCurso,
     codigoSeccion: 'A',
+    tipoEspacioRequerido: 'AULA_TEORICA',
     docenteNombre: null,
     diaSemana: 'LUNES',
     horaInicio,
@@ -118,8 +124,11 @@ describe('utilidades del horario del alumno (Issue #145 / 3.16)', () => {
     const b = asignarColoresCursos(['CC-101', 'MA-201']);
 
     expect(a).toEqual(b);
-    expect(a['CC-101']).toBe(PALETA_CURSOS[0]);
-    expect(a['MA-201']).toBe(PALETA_CURSOS[1]);
+    // El color solo depende del código: un curso no cambia de color porque otra pantalla
+    // muestre más o menos cursos (Issue 3.40).
+    expect(a['CC-101']).toBe(colorDeCurso('CC-101'));
+    expect(asignarColoresCursos(['CC-101'])['CC-101']).toBe(a['CC-101']);
+    expect(PALETA_CURSOS).toContain(a['MA-201']);
   });
 
   it('reúne todas las sesiones del horario de ejemplo', () => {
@@ -187,5 +196,40 @@ describe('franjas, resumen y progreso', () => {
     expect(siguiente?.dia).toBeDefined();
     expect(siguiente?.sesiones.length).toBeGreaterThan(0);
     expect(proximoDiaConClases({ periodo: null, vista: 'semana', dias: {} }, 'LUNES')).toBeNull();
+  });
+});
+
+describe('agrupación de teoría y laboratorio (Issue 3.62)', () => {
+  const clase = (
+    codigoCurso: string,
+    codigoSeccion: string,
+    tipoEspacioRequerido: 'AULA_TEORICA' | 'LABORATORIO',
+    horaInicio: string,
+  ) => ({ codigoCurso, nombreCurso: codigoCurso, codigoSeccion, tipoEspacioRequerido, horaInicio });
+
+  it('obtiene el grupo con o sin el sufijo -LAB y rotula el tipo', () => {
+    expect(grupoDeSeccion('2')).toBe('2');
+    expect(grupoDeSeccion('2-LAB')).toBe('2');
+    expect(etiquetaTipoClase('LABORATORIO')).toBe('Laboratorio');
+    expect(etiquetaTipoClase('AULA_TEORICA')).toBe('Teoría');
+    expect(rotuloClase({ codigoSeccion: '2-LAB', tipoEspacioRequerido: 'LABORATORIO' })).toBe(
+      'Grupo 2 · Laboratorio',
+    );
+  });
+
+  it('junta teoría y laboratorio del mismo curso y grupo, en orden de hora', () => {
+    const grupos = agruparClases([
+      clase('202SW0805', '2-LAB', 'LABORATORIO', '20:00'),
+      clase('202SW0101', '1', 'AULA_TEORICA', '08:00'),
+      clase('202SW0805', '2', 'AULA_TEORICA', '18:00'),
+      clase('202SW0805', '3', 'AULA_TEORICA', '18:00'),
+    ]);
+
+    expect(grupos.map((g) => `${g.codigoCurso}/${g.grupo}`)).toEqual([
+      '202SW0101/1',
+      '202SW0805/2',
+      '202SW0805/3',
+    ]);
+    expect(grupos[1].clases.map((c) => c.codigoSeccion)).toEqual(['2', '2-LAB']);
   });
 });

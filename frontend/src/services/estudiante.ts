@@ -1,6 +1,8 @@
-import axios from 'axios';
 import api from './api';
 import type { CursoMatriculadoDTO, HorarioSemanalDTO } from '../types/horario';
+import type { MapaOcupacionEntrada } from '../components/mapa2d/enlacePlano';
+import type { Franja } from '../components/mapa2d/franja';
+import type { RutaReferencia } from '../components/ruta/tipos';
 import type { CambiosPerfil, EstadoTelegramDTO, PerfilAlumnoDTO } from '../types/perfil';
 
 /**
@@ -55,24 +57,28 @@ export async function desvincularTelegram(): Promise<EstadoTelegramDTO> {
   return data.data;
 }
 
-/** Mensaje legible para mostrar al alumno a partir de un error de red o del backend. */
-export function mensajeDeError(error: unknown): string {
-  if (!axios.isAxiosError(error)) {
-    return 'Inténtalo de nuevo en unos minutos.';
-  }
-
-  if (!error.response) {
-    return 'Revisa tu conexión e inténtalo de nuevo.';
-  }
-
-  const { status, data } = error.response;
-  if (status === 401) return 'Tu sesión venció. Vuelve a iniciar sesión.';
-  if (status === 403) return 'No tienes permiso para hacer esta acción.';
-  if (status >= 500) {
-    return 'Algo salió mal de nuestro lado. Inténtalo de nuevo en unos minutos.';
-  }
-
-  const mensaje = (data as { message?: unknown } | undefined)?.message;
-  if (typeof mensaje === 'string' && mensaje.length > 0) return mensaje;
-  return 'Inténtalo de nuevo en unos minutos.';
+/**
+ * GET /v1/estudiante/mapa-ocupacion — estado (libre u ocupado) de cada espacio de un piso de un
+ * pabellón (Issue 3.13). Sin franja, el momento actual en hora de Lima.
+ */
+export async function obtenerMapaOcupacion(
+  pabellon: string,
+  piso: number,
+  franja: Franja | null,
+): Promise<MapaOcupacionEntrada> {
+  const { data } = await api.get<Respuesta<MapaOcupacionEntrada>>('/v1/estudiante/mapa-ocupacion', {
+    params: { pabellon, piso, ...(franja ?? {}) },
+  });
+  return data.data;
 }
+
+/** GET /v1/estudiante/ruta/:asignacionId — ruta de referencia hacia el espacio asignado (3.14 y 3.15). */
+export async function obtenerRuta(asignacionId: string): Promise<RutaReferencia> {
+  const { data } = await api.get<Respuesta<RutaReferencia>>(
+    `/v1/estudiante/ruta/${encodeURIComponent(asignacionId)}`,
+  );
+  return data.data;
+}
+
+/** Mensaje legible para mostrar a la persona usuaria (ver `services/errores.ts`). */
+export { mensajeDeError } from './errores';

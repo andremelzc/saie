@@ -1,44 +1,37 @@
 import React, { useState } from 'react';
+import { ICONOS } from '../../components/ui/iconos';
+import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import { Link } from 'react-router-dom';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import FormularioEspacio from '../../components/admin/FormularioEspacio';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
+import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
+import { FiltrosActivos } from '../../components/ui/FiltrosActivos';
+import type { FiltroActivo } from '../../components/ui/FiltrosActivos';
+import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
 import { Drawer } from '../../components/ui/Drawer';
 import { useAvisos } from '../../components/ui/useAvisos';
-import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
+import { Campo } from '../../components/ui/Campo';
+import { CLASE_CAMPO } from '../../components/ui/campos';
 import { RUTAS } from '../../config/rutas';
 import { useAuth } from '../../context/useAuth';
 import { useCarga } from '../../hooks/useCarga';
-import { usePantallaAncha } from '../../hooks/usePantallaAncha';
+import { useDetalleEnUrl } from '../../hooks/useDetalleEnUrl';
 import { obtenerEspacios } from '../../services/admin';
 import type { EspacioAdminDTO, ResultadoEdicionEspacioDTO, TipoEspacio } from '../../types/admin';
-import { ETIQUETA_TIPO_ESPACIO, ETIQUETA_TIPO_ESPACIO_PLURAL, plural } from '../../utils/etiquetas';
+import { etiquetaCampoEspacio, etiquetaTipoEspacio } from '../../utils/diccionarios';
 
 type Filtro = 'TODOS' | TipoEspacio;
 
-const TIPO_ETIQUETA = ETIQUETA_TIPO_ESPACIO;
-const TIPOS: TipoEspacio[] = ['AULA_TEORICA', 'LABORATORIO'];
-
-const ETIQUETA_CAMPO: Record<string, string> = {
-  identificador: 'el código',
-  pabellon: 'el pabellón',
-  piso: 'el piso',
-  aforoNominal: 'la capacidad',
-  contiguos: 'los espacios contiguos',
-  habilitado: 'el estado',
-  descripcionUso: 'el uso previsto',
-  softwareIds: 'el software instalado',
-  pcsMalogradas: 'las PCs fuera de servicio',
-};
 const Dato: React.FC<{ etiqueta: string; children: React.ReactNode }> = ({
   etiqueta,
   children,
 }) => (
   <div className="flex flex-col gap-0.5 border-b border-saie-divider py-2 last:border-b-0">
-    <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">{etiqueta}</dt>
+    <dt className="text-sm font-semibold text-saie-muted">{etiqueta}</dt>
     <dd className="m-0 text-sm text-saie-text">{children}</dd>
   </div>
 );
@@ -64,7 +57,7 @@ function celdaPcs(espacio: EspacioAdminDTO): React.ReactNode {
 function celdaEstado(espacio: EspacioAdminDTO): React.ReactNode {
   return (
     <BadgeEstado tono={espacio.habilitado ? 'exito' : 'peligro'}>
-      {espacio.habilitado ? 'Habilitado' : 'No asignable'}
+      {espacio.habilitado ? 'En servicio' : 'Fuera de servicio'}
     </BadgeEstado>
   );
 }
@@ -100,122 +93,116 @@ function detalleSoftware(espacio: EspacioAdminDTO): React.ReactNode {
   );
 }
 
-/** Título del drawer: el alta o el espacio que se está consultando. */
-function tituloDrawer(creando: boolean, seleccionado: EspacioAdminDTO | null): string {
+/** Título del drawer: el alta, la edición («Editar AULA-101») o el espacio que se consulta. */
+function tituloDrawer(
+  creando: boolean,
+  editando: boolean,
+  seleccionado: EspacioAdminDTO | null,
+): string {
   if (creando) return 'Nuevo espacio';
-  return seleccionado?.identificador ?? 'Espacio';
+  if (!seleccionado) return 'Espacio';
+  return editando ? `Editar ${seleccionado.identificador}` : seleccionado.identificador;
+}
+
+/** Segunda línea del drawer: tipo y ubicación del espacio. */
+function subtituloDrawer(
+  creando: boolean,
+  seleccionado: EspacioAdminDTO | null,
+): string | undefined {
+  if (creando || !seleccionado) return undefined;
+  return `${etiquetaTipoEspacio(seleccionado.tipo)} · ${seleccionado.pabellon}, piso ${seleccionado.piso}`;
 }
 
 /**
- * Listado de espacios. En escritorio es una tabla (compara filas de un vistazo) y en móvil son
- * tarjetas: una tabla de siete columnas no cabe a 320 px y obligaría a un scroll horizontal
- * dentro de la tarjeta. Nunca coexisten las dos versiones en el DOM.
+ * Listado de espacios. Desde `lg` es una tabla (compara filas de un vistazo) y por debajo son
+ * tarjetas: una tabla de siete columnas no cabe a 320 px y obligaría a un scroll horizontal. El
+ * cambio lo hace el CSS (`hidden lg:block` / `lg:hidden`), no JavaScript, así que no hay parpadeo
+ * de maquetación al cargar (Issue 3.54).
  */
 const ListadoEspacios: React.FC<{
   espacios: EspacioAdminDTO[];
   onVer: (espacio: EspacioAdminDTO) => void;
 }> = ({ espacios, onVer }) => {
-  const esPantallaAncha = usePantallaAncha();
-
-  if (!esPantallaAncha) {
-    return (
-      <ul className="m-0 flex list-none flex-col gap-3 p-0" aria-label="Listado de espacios">
-        {espacios.map((e) => (
-          <li key={e.id}>
-            <article className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4">
-              <header className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <h3 className="m-0 text-base font-bold text-saie-text">{e.identificador}</h3>
-                  <p className="m-0 text-xs text-saie-muted">
-                    {TIPO_ETIQUETA[e.tipo]} · {e.pabellon} · Piso {e.piso}
-                  </p>
-                </div>
-                {celdaEstado(e)}
-              </header>
-              <dl className="m-0 grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <dt className="text-xs text-saie-muted">Capacidad</dt>
-                  <dd className="m-0 font-medium text-saie-text">{celdaCapacidad(e)}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-saie-muted">PCs malogradas</dt>
-                  <dd className="m-0 font-medium text-saie-text">{celdaPcs(e)}</dd>
-                </div>
-              </dl>
-              <div className="flex justify-end">
-                <Boton
-                  variante="fantasma"
-                  tamano="sm"
-                  onClick={() => onVer(e)}
-                  aria-label={`Ver detalle de ${e.identificador}`}
-                >
-                  Ver
-                </Boton>
-              </div>
-            </article>
-          </li>
-        ))}
-      </ul>
-    );
-  }
-
-  return (
-    <section
+  const tarjetas = (
+    <ul
+      className="m-0 flex list-none flex-col gap-3 p-0 lg:hidden"
       aria-label="Listado de espacios"
-      className="overflow-x-auto rounded-xl border border-saie-divider bg-white"
     >
-      <table className="w-full text-left text-sm">
-        <thead className="bg-saie-canvas text-xs uppercase tracking-wide text-saie-muted">
-          <tr>
-            <th scope="col" className="px-4 py-3">
-              Espacio
-            </th>
-            <th scope="col" className="px-4 py-3">
-              Tipo
-            </th>
-            <th scope="col" className="px-4 py-3">
-              Ubicación
-            </th>
-            <th scope="col" className="px-4 py-3">
-              Capacidad
-            </th>
-            <th scope="col" className="px-4 py-3">
-              PCs malogradas
-            </th>
-            <th scope="col" className="px-4 py-3">
-              Estado
-            </th>
-            <th scope="col" className="px-4 py-3">
-              <span className="sr-only">Acciones</span>
-            </th>
-          </tr>
-        </thead>
+      {espacios.map((e) => (
+        <li key={e.id}>
+          <article className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4">
+            <header className="flex flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h3 className="m-0 text-base font-bold text-saie-text">{e.identificador}</h3>
+                <p className="m-0 text-sm text-saie-muted">
+                  {etiquetaTipoEspacio(e.tipo)} · {e.pabellon} · Piso {e.piso}
+                </p>
+              </div>
+              {celdaEstado(e)}
+            </header>
+            <dl className="m-0 grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <dt className="text-sm text-saie-muted">Capacidad</dt>
+                <dd className="m-0 font-medium text-saie-text">{celdaCapacidad(e)}</dd>
+              </div>
+              <div>
+                <dt className="text-sm text-saie-muted">PCs malogradas</dt>
+                <dd className="m-0 font-medium text-saie-text">{celdaPcs(e)}</dd>
+              </div>
+            </dl>
+            <div className="flex justify-end">
+              <Boton variante="fantasma" tamano="sm" onClick={() => onVer(e)}>
+                Ver detalle <span className="sr-only">de {`${e.identificador}`}</span>
+              </Boton>
+            </div>
+          </article>
+        </li>
+      ))}
+    </ul>
+  );
+
+  const tabla = (
+    <div className="hidden lg:block">
+      <TablaDatos etiqueta="Listado de espacios">
+        <CabeceraTabla
+          columnas={[
+            'Espacio',
+            'Tipo',
+            'Ubicación',
+            'Capacidad',
+            'PCs malogradas',
+            'Estado',
+            'Detalle',
+          ]}
+        />
         <tbody>
           {espacios.map((e) => (
             <tr key={e.id} className="border-t border-saie-divider">
               <td className="px-4 py-3 font-semibold">{e.identificador}</td>
-              <td className="px-4 py-3">{TIPO_ETIQUETA[e.tipo]}</td>
+              <td className="px-4 py-3">{etiquetaTipoEspacio(e.tipo)}</td>
               <td className="px-4 py-3">
                 {e.pabellon} · Piso {e.piso}
               </td>
-              <td className="px-4 py-3">{celdaCapacidad(e)}</td>
+              <td className="px-4 py-3 tabular-nums">{celdaCapacidad(e)}</td>
               <td className="px-4 py-3">{celdaPcs(e)}</td>
               <td className="px-4 py-3">{celdaEstado(e)}</td>
               <td className="px-4 py-3">
-                <Boton
-                  variante="fantasma"
-                  tamano="sm"
-                  onClick={() => onVer(e)}
-                  aria-label={`Ver detalle de ${e.identificador}`}
-                >
-                  Ver
+                <Boton variante="fantasma" tamano="sm" onClick={() => onVer(e)}>
+                  Ver detalle <span className="sr-only">de {`${e.identificador}`}</span>
                 </Boton>
               </td>
             </tr>
           ))}
         </tbody>
-      </table>
-    </section>
+      </TablaDatos>
+    </div>
+  );
+
+  return (
+    <>
+      {tarjetas}
+      {tabla}
+    </>
   );
 };
 
@@ -235,7 +222,7 @@ const DetalleEspacio: React.FC<{
           Datos del espacio
         </h3>
         <dl className="m-0 rounded-xl border border-saie-divider bg-white px-4">
-          <Dato etiqueta="Tipo">{TIPO_ETIQUETA[espacio.tipo]}</Dato>
+          <Dato etiqueta="Tipo">{etiquetaTipoEspacio(espacio.tipo)}</Dato>
           <Dato etiqueta="Ubicación">
             {espacio.pabellon} · Piso {espacio.piso}
           </Dato>
@@ -249,7 +236,7 @@ const DetalleEspacio: React.FC<{
           <Dato etiqueta="PCs malogradas">{detallePcs(espacio)}</Dato>
           <Dato etiqueta="Estado">
             <BadgeEstado tono={espacio.habilitado ? 'exito' : 'peligro'}>
-              {espacio.habilitado ? 'Habilitado' : 'No asignable'}
+              {espacio.habilitado ? 'En servicio' : 'Fuera de servicio'}
             </BadgeEstado>
           </Dato>
           <Dato etiqueta="Uso previsto">
@@ -292,7 +279,7 @@ const DetalleEspacio: React.FC<{
         {campos.length > 0 ? (
           <>
             <p className="m-0 text-sm text-saie-muted">
-              Puedes editar: {campos.map((campo) => ETIQUETA_CAMPO[campo] ?? campo).join(', ')}.
+              Puedes editar: {campos.map(etiquetaCampoEspacio).join(', ')}.
             </p>
             <div>
               <Boton variante="primario" tamano="sm" onClick={onEditar}>
@@ -332,15 +319,26 @@ export const EspaciosAdmin: React.FC = () => {
   const [piso, setPiso] = useState('TODOS');
   const [texto, setTexto] = useState('');
   const [soloDeshabilitados, setSoloDeshabilitados] = useState(false);
-  const [seleccionado, setSeleccionado] = useState<EspacioAdminDTO | null>(null);
+  // El detalle abierto vive en la URL (`?espacio=AULA-101`): «Atrás» lo cierra y el enlace se comparte (Issue 4.51).
+  const detalle = useDetalleEnUrl('espacio');
+  /** El espacio recién creado o editado: el listado tarda en recargarse y no debe parecer «inexistente». */
+  const [guardadoReciente, setGuardadoReciente] = useState<EspacioAdminDTO | null>(null);
   const [editando, setEditando] = useState(false);
   const [creando, setCreando] = useState(false);
   const [alertas, setAlertas] = useState<string[]>([]);
+  const [cambiosPendientes, setCambiosPendientes] = useState(false);
 
   // El alta es solo de Coordinación Académica (así lo define el endpoint del backend).
   const esCoordinacion = sesion?.rol === 'COORDINACION_ACADEMICA';
 
   const base = datos ?? [];
+  const seleccionado =
+    detalle.valor === null
+      ? null
+      : (base.find((e) => e.identificador === detalle.valor) ??
+        (guardadoReciente?.identificador === detalle.valor ? guardadoReciente : null));
+  const detalleNoEncontrado =
+    detalle.valor !== null && datos !== null && !cargando && seleccionado === null;
   const pabellones = [...new Set(base.map((e) => e.pabellon))].sort((a, b) =>
     a.localeCompare(b, 'es'),
   );
@@ -354,12 +352,48 @@ export const EspaciosAdmin: React.FC = () => {
     .filter((e) => e.identificador.toLowerCase().includes(texto.trim().toLowerCase()))
     .sort((a, b) => a.identificador.localeCompare(b.identificador, 'es', { numeric: true }));
 
-  const hayFiltros =
-    filtro !== 'TODOS' ||
-    pabellon !== 'TODOS' ||
-    piso !== 'TODOS' ||
-    soloDeshabilitados ||
-    texto.trim() !== '';
+  const nombreTipo: Record<Exclude<Filtro, 'TODOS'>, string> = {
+    AULA_TEORICA: 'Aulas teóricas',
+    LABORATORIO: 'Laboratorios',
+  };
+  const filtrosActivos: FiltroActivo[] = [
+    ...(texto.trim()
+      ? [{ id: 'q', etiqueta: 'Búsqueda', valor: texto.trim(), onQuitar: () => setTexto('') }]
+      : []),
+    ...(filtro !== 'TODOS'
+      ? [
+          {
+            id: 'tipo',
+            etiqueta: 'Tipo de espacio',
+            valor: nombreTipo[filtro],
+            onQuitar: () => setFiltro('TODOS'),
+          },
+        ]
+      : []),
+    ...(pabellon !== 'TODOS'
+      ? [
+          {
+            id: 'pabellon',
+            etiqueta: 'Pabellón',
+            valor: pabellon,
+            onQuitar: () => setPabellon('TODOS'),
+          },
+        ]
+      : []),
+    ...(piso !== 'TODOS'
+      ? [{ id: 'piso', etiqueta: 'Piso', valor: `Piso ${piso}`, onQuitar: () => setPiso('TODOS') }]
+      : []),
+    ...(soloDeshabilitados
+      ? [
+          {
+            id: 'deshabilitados',
+            etiqueta: 'Estado',
+            valor: 'Fuera de servicio',
+            onQuitar: () => setSoloDeshabilitados(false),
+          },
+        ]
+      : []),
+  ];
 
   function limpiarFiltros() {
     setFiltro('TODOS');
@@ -370,21 +404,21 @@ export const EspaciosAdmin: React.FC = () => {
   }
 
   function abrirDetalle(espacio: EspacioAdminDTO) {
-    setSeleccionado(espacio);
+    detalle.abrir(espacio.identificador);
     setEditando(false);
     setCreando(false);
     setAlertas([]);
   }
 
   function cerrarDetalle() {
-    setSeleccionado(null);
+    if (detalle.valor !== null) detalle.cerrar();
     setEditando(false);
     setCreando(false);
     setAlertas([]);
   }
 
   function abrirAlta() {
-    setSeleccionado(null);
+    if (detalle.valor !== null) detalle.cerrar();
     setEditando(false);
     setCreando(true);
     setAlertas([]);
@@ -392,7 +426,8 @@ export const EspaciosAdmin: React.FC = () => {
 
   function manejarGuardado(resultado: ResultadoEdicionEspacioDTO) {
     const esNuevo = creando;
-    setSeleccionado(resultado.espacio);
+    setGuardadoReciente(resultado.espacio);
+    detalle.reemplazar(resultado.espacio.identificador);
     setEditando(false);
     setCreando(false);
     setAlertas(resultado.alertas.map((a) => a.motivo));
@@ -412,14 +447,18 @@ export const EspaciosAdmin: React.FC = () => {
 
   // El listado tiene tres estados: cargando, sin espacios registrados y con espacios.
   const contenidoListado = (() => {
-    if (cargando && !datos) return <EsqueletoCarga texto="Cargando espacios…" />;
-    // Con un error de carga no se sabe si hay espacios: basta el aviso, sin un vacío engañoso.
-    if (error && !datos) return null;
+    if (cargando && !datos) return <EsqueletoCarga texto="Cargando espacios…" forma="tabla" />;
     if (base.length === 0) {
       return (
         <EstadoVacio
           titulo="Sin espacios registrados"
+          icono={ICONOS.edificio}
           descripcion="Cuando se carguen los espacios, aparecerán aquí."
+          accion={
+            <BotonEnlace to={RUTAS.cargaAdmin} variante="secundario" tamano="sm">
+              Ir a Carga de datos
+            </BotonEnlace>
+          }
         />
       );
     }
@@ -427,6 +466,7 @@ export const EspaciosAdmin: React.FC = () => {
       return (
         <EstadoVacio
           titulo="Sin coincidencias"
+          icono={ICONOS.edificio}
           descripcion="No hay espacios que coincidan con los filtros."
           accion={
             <Boton variante="secundario" tamano="sm" onClick={limpiarFiltros}>
@@ -448,6 +488,7 @@ export const EspaciosAdmin: React.FC = () => {
           espacios={base}
           onGuardado={manejarGuardado}
           onCancelar={cerrarDetalle}
+          onCambiosPendientes={setCambiosPendientes}
         />
       );
     }
@@ -459,6 +500,7 @@ export const EspaciosAdmin: React.FC = () => {
           espacios={base}
           onGuardado={manejarGuardado}
           onCancelar={() => setEditando(false)}
+          onCambiosPendientes={setCambiosPendientes}
         />
       );
     }
@@ -494,15 +536,14 @@ export const EspaciosAdmin: React.FC = () => {
             cargando={cargando}
             textoCargando="Actualizando…"
           >
-            Actualizar
+            Actualizar datos
           </Boton>
         </div>
       }
     >
       <section aria-label="Filtros de espacios" className="flex flex-col gap-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Buscar espacio</span>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Campo etiqueta="Buscar espacio" className="col-span-2 lg:col-span-1">
             <input
               type="search"
               placeholder="Ej. AULA-101"
@@ -510,24 +551,20 @@ export const EspaciosAdmin: React.FC = () => {
               onChange={(e) => setTexto(e.target.value)}
               className={CLASE_CAMPO}
             />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Tipo de espacio</span>
+          </Campo>
+          <Campo etiqueta="Tipo de espacio" className="col-span-2 sm:col-span-1">
             <select
               value={filtro}
               onChange={(e) => setFiltro(e.target.value as Filtro)}
               className={CLASE_CAMPO}
             >
-              <option value="TODOS">Todos</option>
-              {TIPOS.map((t) => (
-                <option key={t} value={t}>
-                  {ETIQUETA_TIPO_ESPACIO_PLURAL[t]}
-                </option>
-              ))}
+              {/* Los totales por tipo viven solo aquí, en el filtro (Issue 4.40, DEN-09). */}
+              <option value="TODOS">Todos{datos ? ` (${base.length})` : ''}</option>
+              <option value="AULA_TEORICA">Aulas teóricas{datos ? ` (${aulas})` : ''}</option>
+              <option value="LABORATORIO">Laboratorios{datos ? ` (${laboratorios})` : ''}</option>
             </select>
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Pabellón</span>
+          </Campo>
+          <Campo etiqueta="Pabellón">
             <select
               value={pabellon}
               onChange={(e) => setPabellon(e.target.value)}
@@ -540,9 +577,8 @@ export const EspaciosAdmin: React.FC = () => {
                 </option>
               ))}
             </select>
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Piso</span>
+          </Campo>
+          <Campo etiqueta="Piso">
             <select value={piso} onChange={(e) => setPiso(e.target.value)} className={CLASE_CAMPO}>
               <option value="TODOS">Todos</option>
               {pisos.map((p) => (
@@ -551,34 +587,20 @@ export const EspaciosAdmin: React.FC = () => {
                 </option>
               ))}
             </select>
-          </label>
+          </Campo>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           {datos && (
             <p className="m-0 text-sm text-saie-muted" aria-live="polite">
-              {hayFiltros ? (
-                <>
-                  <strong className="text-saie-text">{espacios.length}</strong> de {base.length}{' '}
-                  coinciden
-                </>
-              ) : (
-                <>
-                  <strong className="text-saie-text">{plural(base.length, 'espacio')}</strong> ·{' '}
-                  {plural(aulas, 'aula teórica', 'aulas teóricas')} ·{' '}
-                  {plural(laboratorios, 'laboratorio')}
-                </>
-              )}
+              <strong className="text-saie-text">{espacios.length}</strong> de {base.length}{' '}
+              coinciden
               {fueraDeServicio > 0 && (
                 <>
                   {' · '}
-                  <button
-                    type="button"
-                    onClick={() => setSoloDeshabilitados(true)}
-                    className="cursor-pointer font-semibold text-saie-danger-strong underline-offset-2 hover:underline"
-                  >
-                    {fueraDeServicio} no asignables
-                  </button>
+                  <span className="font-semibold text-saie-danger-strong">
+                    {fueraDeServicio} fuera de servicio
+                  </span>
                 </>
               )}
             </p>
@@ -591,25 +613,38 @@ export const EspaciosAdmin: React.FC = () => {
                 checked={soloDeshabilitados}
                 onChange={(e) => setSoloDeshabilitados(e.target.checked)}
               />
-              <span>Solo deshabilitados</span>
+              <span>Solo fuera de servicio</span>
             </label>
-            {hayFiltros && (
-              <Boton variante="secundario" tamano="sm" onClick={limpiarFiltros}>
-                Limpiar filtros
-              </Boton>
-            )}
           </div>
         </div>
+        <FiltrosActivos filtros={filtrosActivos} onLimpiar={limpiarFiltros} />
       </section>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
+      {detalleNoEncontrado && (
+        <Aviso tono="advertencia" className="flex flex-wrap items-center justify-between gap-3">
+          <span>
+            No encontramos el espacio «{detalle.valor}». Puede que el enlace sea antiguo o que el
+            código haya cambiado.
+          </span>
+          <Boton variante="secundario" tamano="sm" onClick={detalle.cerrar}>
+            Quitar del enlace
+          </Boton>
+        </Aviso>
+      )}
 
-      {contenidoListado}
+      <ZonaActualizable actualizando={cargando && datos !== null}>
+        {contenidoListado}
+      </ZonaActualizable>
 
       <Drawer
         abierto={seleccionado !== null || creando}
         onCerrar={cerrarDetalle}
-        titulo={tituloDrawer(creando, seleccionado)}
+        titulo={tituloDrawer(creando, editando, seleccionado)}
+        subtitulo={subtituloDrawer(creando, seleccionado)}
+        insignia={seleccionado && !creando ? celdaEstado(seleccionado) : undefined}
+        hayCambios={(creando || editando) && cambiosPendientes}
+        vista={creando ? 'crear' : editando ? 'editar' : 'detalle'}
       >
         {(seleccionado || creando) && (
           <div className="flex flex-col gap-4">

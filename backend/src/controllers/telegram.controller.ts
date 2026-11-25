@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { Request, Response } from 'express';
 import { responderError } from '../lib/http';
 import { igualesEnTiempoConstante } from '../lib/comparacion';
@@ -5,6 +6,7 @@ import { prisma } from '../lib/prisma';
 import { ActualizacionTelegram, procesarActualizacion } from '../telegram/bot.service';
 import { ClienteTelegram, crearClienteTelegram } from '../telegram/cliente';
 import { limitadorIntentos } from '../telegram/limitador';
+import { actualizacionesVistas } from '../telegram/actualizacionesVistas';
 import { enviarResumenesDiarios } from '../telegram/resumenDiario.service';
 
 let cliente: ClienteTelegram | null = null;
@@ -34,12 +36,13 @@ export async function recibirActualizacion(req: Request, res: Response): Promise
       prisma,
       cliente,
       limitador: limitadorIntentos,
+      vistas: actualizacionesVistas,
     });
   } catch (error: unknown) {
     // Solo el tipo: el mensaje podría incluir datos del alumno o el token.
-    console.error(
-      'Error procesando actualización de Telegram:',
-      error instanceof Error ? error.name : 'desconocido',
+    logger.error(
+      { tipo: error instanceof Error ? error.name : 'desconocido' },
+      'Error procesando actualización de Telegram',
     );
   }
 

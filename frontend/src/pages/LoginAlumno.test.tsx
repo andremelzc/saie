@@ -34,7 +34,7 @@ describe('LoginAlumno (Issue #151 / 3.22)', () => {
 
     const botonSubmit = screen.getByRole('button', { name: /Iniciar sesión/i });
     expect(botonSubmit).toBeInTheDocument();
-    expect(botonSubmit).toBeDisabled();
+    expect(botonSubmit).toBeEnabled();
 
     // Verificación crítica: NO debe existir opción para crear cuenta o registrarse
     expect(screen.queryByText(/crear cuenta/i)).not.toBeInTheDocument();
@@ -58,23 +58,24 @@ describe('LoginAlumno (Issue #151 / 3.22)', () => {
     expect(inputClave).toHaveAttribute('type', 'password');
   });
 
-  it('habilita el botón solo cuando ambos campos están completos', () => {
+  it('valida al salir del campo y al enviar muestra un resumen con foco en el primer error (Issue 3.41)', () => {
     renderizar(<LoginAlumno />);
 
     const inputCodigo = screen.getByLabelText(/Código de alumno/i);
     const inputClave = screen.getByLabelText(/^Contraseña/i, { selector: 'input' });
-    const botonSubmit = screen.getByRole('button', { name: /Iniciar sesión/i });
 
-    expect(botonSubmit).toBeDisabled();
+    fireEvent.blur(inputCodigo);
+    expect(inputCodigo).toHaveAttribute('aria-invalid', 'true');
+    expect(inputCodigo).toHaveAccessibleDescription(/Ingresa tu/);
 
     fireEvent.change(inputCodigo, { target: { value: '20200001' } });
-    expect(botonSubmit).toBeDisabled();
+    expect(inputCodigo).not.toHaveAttribute('aria-invalid');
 
-    fireEvent.change(inputClave, { target: { value: 'password123' } });
-    expect(botonSubmit).not.toBeDisabled();
-
-    fireEvent.change(inputCodigo, { target: { value: '   ' } });
-    expect(botonSubmit).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /Iniciar sesión/i }));
+    const resumen = screen.getByRole('alert');
+    expect(resumen).toHaveTextContent('Corrige 1 dato para continuar');
+    expect(resumen).toHaveTextContent('Ingresa tu contraseña.');
+    expect(inputClave).toHaveFocus();
   });
 
   it('envía credenciales a /v1/auth/alumno/login y ejecuta onLoginExitoso al autenticar con éxito', async () => {
@@ -113,6 +114,29 @@ describe('LoginAlumno (Issue #151 / 3.22)', () => {
     });
 
     expect(onLoginExitosoMock).toHaveBeenCalledWith(mockRespuesta);
+  });
+
+  it('muestra un mensaje claro cuando el backend responde 429 por demasiados intentos', async () => {
+    vi.mocked(api.post).mockRejectedValueOnce({
+      response: { status: 429, data: { success: false, message: 'otro texto' } },
+    });
+
+    renderizar(<LoginAlumno />);
+
+    fireEvent.change(screen.getByLabelText(/Código de alumno/i), {
+      target: { value: '20200001' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Contraseña/i, { selector: 'input' }), {
+      target: { value: 'claveErronea' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Iniciar sesión/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText('Demasiados intentos. Espera un momento e inténtalo de nuevo.'),
+    ).toBeInTheDocument();
   });
 
   it('muestra mensaje claro cuando el backend responde 401 indicando gestión por Coordinación', async () => {

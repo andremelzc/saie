@@ -1,14 +1,10 @@
 import bcrypt from 'bcrypt';
-import { randomInt } from 'crypto';
 import { PrismaClient, RolCuenta } from '@prisma/client';
 import { z } from 'zod';
 import { HttpError } from '../lib/http';
+import { generarClaveInicial } from '../lib/claves';
 
 const RONDAS_BCRYPT = 10;
-
-/** Sin caracteres ambiguos (0/O, 1/l/I): la clave se dicta o se copia a mano. */
-const ALFABETO_CLAVE = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-const LONGITUD_CLAVE_INICIAL = 10;
 
 export const RestablecerClaveSchema = z
   .object({
@@ -35,13 +31,7 @@ interface Candidato {
   cuentaId: string | null;
 }
 
-/** Clave aleatoria con generador criptográfico; nunca derivada del código del usuario. */
-export function generarClaveInicial(): string {
-  return Array.from(
-    { length: LONGITUD_CLAVE_INICIAL },
-    () => ALFABETO_CLAVE[randomInt(ALFABETO_CLAVE.length)],
-  ).join('');
-}
+export { generarClaveInicial };
 
 /** El código identifica a una sola persona; el correo puede repetirse y se trata aparte. */
 async function buscarCandidatos(usuario: string, db: Db): Promise<Candidato[]> {

@@ -141,13 +141,25 @@ describe('Autenticación JWT por rol (Issues 4.8, 3.21, 7.1)', () => {
       }
     });
 
-    it('authGuard deja pasar un token válido y expone req.auth', () => {
+    it('authGuard deja pasar un token válido y expone req.auth sin debeCambiarClave', () => {
       const token = firmarToken({ sub: 'c9', rol: RolCuenta.ALUMNO });
       const req = { headers: { authorization: `Bearer ${token}` } } as Request;
       const next = jest.fn();
       authGuard(req, respuesta(), next);
       expect(next).toHaveBeenCalled();
+      // Sin la marca: solo sub y rol
       expect(req.auth).toEqual({ sub: 'c9', rol: RolCuenta.ALUMNO });
+    });
+
+    it('authGuard rechaza con 403 un token con debeCambiarClave (Issue 4.45)', () => {
+      // Una cuenta con la marca no puede acceder a rutas protegidas por authGuard.
+      const token = firmarToken({ sub: 'c10', rol: RolCuenta.ALUMNO, debeCambiarClave: true });
+      const req = { headers: { authorization: `Bearer ${token}` } } as Request;
+      const res = respuesta();
+      const next = jest.fn();
+      authGuard(req, res, next);
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(next).not.toHaveBeenCalled();
     });
 
     it('roleGuard responde 403 si el rol no está permitido y deja pasar si lo está', () => {
@@ -197,6 +209,81 @@ describe('Autenticación JWT por rol (Issues 4.8, 3.21, 7.1)', () => {
       } finally {
         process.env.JWT_EXPIRES_IN = actualExpires;
       }
+    });
+  });
+  describe('firmarToken y verificarToken con debeCambiarClave (Issue 4.45 / #376)', () => {
+    it('firmarToken incluye debeCambiarClave en el JWT solo cuando es true', () => {
+      const tokenConMarca = firmarToken({
+        sub: 'c1',
+        rol: RolCuenta.ALUMNO,
+        debeCambiarClave: true,
+      });
+      const tokenSinMarca = firmarToken({ sub: 'c1', rol: RolCuenta.ALUMNO });
+      const tokenMarcaFalsa = firmarToken({
+        sub: 'c1',
+        rol: RolCuenta.ALUMNO,
+        debeCambiarClave: false,
+      });
+
+      const decodedConMarca = jwt.decode(tokenConMarca) as jwt.JwtPayload;
+      const decodedSinMarca = jwt.decode(tokenSinMarca) as jwt.JwtPayload;
+      const decodedMarcaFalsa = jwt.decode(tokenMarcaFalsa) as jwt.JwtPayload;
+
+      expect(decodedConMarca.debeCambiarClave).toBe(true);
+      // Cuando es false o no se proporciona, NO debe viajar en el JWT
+      expect(decodedSinMarca.debeCambiarClave).toBeUndefined();
+      expect(decodedMarcaFalsa.debeCambiarClave).toBeUndefined();
+    });
+
+    it('verificarToken devuelve debeCambiarClave=true solo cuando viaja en el JWT', () => {
+      const tokenConMarca = firmarToken({
+        sub: 'c1',
+        rol: RolCuenta.ALUMNO,
+        debeCambiarClave: true,
+      });
+      const tokenSinMarca = firmarToken({ sub: 'c1', rol: RolCuenta.ALUMNO });
+
+      const payloadConMarca = verificarToken(tokenConMarca);
+      const payloadSinMarca = verificarToken(tokenSinMarca);
+
+      expect(payloadConMarca?.debeCambiarClave).toBe(true);
+      expect(payloadSinMarca?.debeCambiarClave).toBeUndefined();
+    });
+
+    it('un token sin la marca se verifica igual que los tokens previos al cambio (retrocompatibilidad)', () => {
+      // Tokens firmados antes del Issue 4.45 no tienen debeCambiarClave en el payload.
+      // verificarToken debe seguir devolviéndolos sin errores.
+      const tokenLegacy = jwt.sign({ rol: RolCuenta.DOCENTE }, SECRET, { subject: 'c-legacy' });
+      const payload = verificarToken(tokenLegacy);
+      expect(payload).toEqual({ sub: 'c-legacy', rol: RolCuenta.DOCENTE });
+    });
+  });
+
+  describe('iniciarSesion firma el token según debeCambiarClave (Issue 4.45 / #376)', () => {
+    it('el token emitido lleva debeCambiarClave=true cuando la cuenta debe cambiarla', async () => {
+      const cuenta = crearCuenta(RolCuenta.COORDINACION_ACADEMICA, 'clave123', true);
+      const res = await iniciarSesion('usuario', 'clave123', ROLES_ADMIN, prismaCon(cuenta));
+
+      const payload = verificarToken(res.token);
+      expect(payload?.debeCambiarClave).toBe(true);
+    });
+
+    it('el token emitido NO lleva la marca cuando la cuenta ya cambió su clave', async () => {
+      const cuenta = crearCuenta(RolCuenta.ALUMNO, 'clave123', false);
+      const res = await iniciarSesion('usuario', 'clave123', [RolCuenta.ALUMNO], prismaCon(cuenta));
+
+      const decoded = jwt.decode(res.token) as jwt.JwtPayload;
+      // La marca no debe viajar en el JWT cuando la cuenta no la necesita
+      expect(decoded.debeCambiarClave).toBeUndefined();
+    });
+
+    it('el token emitido sin la marca permite acceso normal (authGuard lo deja pasar)', async () => {
+      const cuenta = crearCuenta(RolCuenta.ALUMNO, 'clave123', false);
+      const res = await iniciarSesion('usuario', 'clave123', [RolCuenta.ALUMNO], prismaCon(cuenta));
+
+      // Simular que el token se usa en authGuard
+      const payload = verificarToken(res.token);
+      expect(payload?.debeCambiarClave).toBeUndefined();
     });
   });
 });

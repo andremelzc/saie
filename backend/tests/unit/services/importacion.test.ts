@@ -1,7 +1,9 @@
 const prismaMock: any = {
-  seccion: { count: jest.fn(), findFirst: jest.fn() },
+  seccion: { count: jest.fn() },
+  periodo: { findFirst: jest.fn() },
   horario: { count: jest.fn() },
   matricula: { count: jest.fn() },
+  importacion: { create: jest.fn() },
 };
 
 jest.mock('../../../src/importers', () => ({
@@ -9,6 +11,11 @@ jest.mock('../../../src/importers', () => ({
   importarHorarios: jest.fn(),
   importarMatriculas: jest.fn(),
   importarDocentes: jest.fn(),
+}));
+
+// La validación previa (Issue 1.16) se prueba aparte; aquí se simula para aislar la orquestación.
+jest.mock('../../../src/services/validacionImportacion.service', () => ({
+  validarImportacion: jest.fn(),
 }));
 
 jest.mock('../../../src/services/asignacionDemanda.service', () => ({
@@ -33,10 +40,12 @@ import { DocenteSchema } from '../../../src/importers/docentes.importer';
 import { HorarioSchema } from '../../../src/importers/horarios.importer';
 import { MatriculaSchema } from '../../../src/importers/matriculas.importer';
 import { ejecutarAsignacionADemanda } from '../../../src/services/asignacionDemanda.service';
+import { validarImportacion } from '../../../src/services/validacionImportacion.service';
 import {
   dispararAsignacionSiPeriodoCompleto,
   ejecutarImportacion,
 } from '../../../src/services/importacion.service';
+import { logger } from '../../../src/lib/logger';
 
 const resumen = {
   modo: 'periodo',
@@ -50,7 +59,7 @@ const resumen = {
 };
 
 function periodoCon(secciones: number, horarios: number, matriculas: number) {
-  prismaMock.seccion.findFirst.mockResolvedValue({ periodo: '2026-2' });
+  prismaMock.periodo.findFirst.mockResolvedValue({ codigo: '2026-2' });
   prismaMock.seccion.count.mockResolvedValue(secciones);
   prismaMock.horario.count.mockResolvedValue(horarios);
   prismaMock.matricula.count.mockResolvedValue(matriculas);
@@ -228,7 +237,7 @@ describe('extraerFilas (Issue 1.6)', () => {
 
 describe('dispararAsignacionSiPeriodoCompleto (Issue 1.6)', () => {
   it('no dispara si no hay periodo vigente', async () => {
-    prismaMock.seccion.findFirst.mockResolvedValue(null);
+    prismaMock.periodo.findFirst.mockResolvedValue(null);
 
     const r = await dispararAsignacionSiPeriodoCompleto(prismaMock);
 
@@ -281,7 +290,7 @@ describe('dispararAsignacionSiPeriodoCompleto (Issue 1.6)', () => {
 
   it('no oculta la importación si el motor falla por un error inesperado', async () => {
     periodoCon(3, 5, 40);
-    const consola = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const consola = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
     (ejecutarAsignacionADemanda as jest.Mock).mockRejectedValue(new Error('detalle interno'));
 
     const r = await dispararAsignacionSiPeriodoCompleto(prismaMock);
@@ -294,6 +303,60 @@ describe('dispararAsignacionSiPeriodoCompleto (Issue 1.6)', () => {
 });
 
 describe('ejecutarImportacion (Issue 1.6)', () => {
+  beforeEach(() => {
+    (validarImportacion as jest.Mock).mockResolvedValue({ errores: [], advertencias: [] });
+  });
+
+  it('todo o nada: si la validación encuentra errores no llama al importador ni guarda nada (Issue 1.16)', async () => {
+    (validarImportacion as jest.Mock).mockResolvedValue({
+      errores: ['Fila 2: No existe la sección S9 para el curso C1 en el periodo 2026-2'],
+      advertencias: [],
+    });
+
+    const r = await ejecutarImportacion('horarios', [{}, {}], prismaMock);
+
+    expect(importarHorarios).not.toHaveBeenCalled();
+    expect(ejecutarAsignacionADemanda).not.toHaveBeenCalled();
+    expect(r).toMatchObject({
+      exitosa: false,
+      guardadas: false,
+      procesados: {},
+      errores: ['Fila 2: No existe la sección S9 para el curso C1 en el periodo 2026-2'],
+      asignacion: null,
+    });
+  });
+
+  it('avisa que se guardó parcialmente si el importador falla al escribir tras validar (Issue 1.16)', async () => {
+    (importarMatriculas as jest.Mock).mockResolvedValue({
+      alumnosProcesados: 1,
+      cuentasCreadas: 0,
+      matriculasProcesadas: 1,
+      errores: ['Fila 2 (A2 en C1-1): correo duplicado'],
+    });
+
+    const r = await ejecutarImportacion('matriculas', [{}, {}], prismaMock);
+
+    expect(r).toMatchObject({ exitosa: false, guardadas: false, parcial: true });
+    expect(r.asignacion).toBeNull();
+  });
+
+  it('devuelve las advertencias de la validación sin impedir el guardado (Issue 1.16)', async () => {
+    (validarImportacion as jest.Mock).mockResolvedValue({
+      errores: [],
+      advertencias: ['El docente de C1-1 y C2-1 tendría dos clases a la vez'],
+    });
+    (importarDocentes as jest.Mock).mockResolvedValue({ docentesProcesados: 1, errores: [] });
+
+    const r = await ejecutarImportacion('docentes', [{}], prismaMock);
+
+    expect(importarDocentes).toHaveBeenCalled();
+    expect(r).toMatchObject({
+      exitosa: true,
+      guardadas: true,
+      advertencias: ['El docente de C1-1 y C2-1 tendría dos clases a la vez'],
+    });
+  });
+
   it('cursos-secciones: devuelve contadores y errores del importador y encadena la asignación', async () => {
     (importarCursosYSecciones as jest.Mock).mockResolvedValue({
       cursosProcesados: 2,
@@ -360,5 +423,43 @@ describe('ejecutarImportacion (Issue 1.6)', () => {
     expect(r).toMatchObject({ exitosa: true, asignacion: null });
     expect(prismaMock.seccion.count).not.toHaveBeenCalled();
     expect(ejecutarAsignacionADemanda).not.toHaveBeenCalled();
+  });
+
+  it('registra cada importación con la cuenta que la cargó y su resultado (Issue 4.54)', async () => {
+    (importarHorarios as jest.Mock).mockResolvedValue({
+      horariosProcesados: 1,
+      errores: ['Fila 2: hora inválida'],
+    });
+
+    await ejecutarImportacion('horarios', [{}, {}], prismaMock, 'cuenta-9');
+
+    expect(prismaMock.importacion.create).toHaveBeenCalledTimes(1);
+    expect(prismaMock.importacion.create).toHaveBeenCalledWith({
+      data: {
+        tipo: 'HORARIOS',
+        cuentaId: 'cuenta-9',
+        filasRecibidas: 2,
+        filasAceptadas: 1,
+        filasRechazadas: 1,
+        resultado: 'CON_ERRORES',
+      },
+    });
+  });
+
+  it('si no se puede registrar la importación, igual devuelve su resultado (Issue 4.54)', async () => {
+    (importarDocentes as jest.Mock).mockResolvedValue({
+      docentesProcesados: 1,
+      cuentasCreadas: 1,
+      errores: [],
+    });
+    prismaMock.importacion.create.mockRejectedValueOnce(new Error('tabla no disponible'));
+    const log = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
+
+    const r = await ejecutarImportacion('docentes', [{}], prismaMock, 'cuenta-9');
+
+    expect(r).toMatchObject({ exitosa: true });
+    expect(log).toHaveBeenCalled();
+    expect(JSON.stringify(log.mock.calls)).not.toContain('tabla no disponible');
+    log.mockRestore();
   });
 });

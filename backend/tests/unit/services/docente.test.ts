@@ -3,6 +3,8 @@ import {
   CrearIncidenciaSchema,
   explorarEspacios,
   generarIdentificadorSeguimiento,
+  listarMisIncidencias,
+  cambiosDeAulaDocente,
   obtenerHorarioDocente,
   obtenerEstadoLaboratorioDocente,
   registrarIncidencia,
@@ -28,6 +30,103 @@ function espacio(
     pcsMalogradas: pcs,
   };
 }
+
+describe('Cambios de aula del docente (Issue 7.18)', () => {
+  const AHORA = new Date('2026-11-24T15:00:00.000Z');
+  const hace = (dias: number) => new Date(AHORA.getTime() - dias * 24 * 60 * 60 * 1000);
+  const lugar = (identificador: string) => ({
+    espacio: { identificador, tipo: 'LABORATORIO', pabellon: 'Nuevo', piso: 2 },
+  });
+  const asignacion = (id: string, seccionId: string, fecha: Date, aulas: string[]) => ({
+    id,
+    seccionId,
+    fechaAsignacion: fecha,
+    espacios: aulas.map(lugar),
+  });
+  const secciones = [
+    {
+      id: 'sec-lab',
+      codigoSeccion: '2-LAB',
+      tipoEspacioRequerido: 'LABORATORIO',
+      curso: { codigo: '202SW0805', nombre: 'Gestión de la Configuración' },
+    },
+  ] as any;
+  const prismaCon = (asignaciones: unknown[]) =>
+    ({ asignacion: { findMany: jest.fn().mockResolvedValue(asignaciones) } }) as any;
+
+  it('avisa si la asignación reciente tiene otra aula que la anterior', async () => {
+    const prisma = prismaCon([
+      asignacion('a2', 'sec-lab', hace(1), ['L-03']),
+      asignacion('a1', 'sec-lab', hace(20), ['L-01']),
+    ]);
+    const cambios = await cambiosDeAulaDocente(secciones, prisma, AHORA);
+
+    expect(cambios).toEqual([
+      expect.objectContaining({
+        id: 'a2',
+        codigoCurso: '202SW0805',
+        codigoSeccion: '2-LAB',
+        tipoEspacioRequerido: 'LABORATORIO',
+        espaciosAnteriores: [expect.objectContaining({ identificador: 'L-01' })],
+        espaciosNuevos: [expect.objectContaining({ identificador: 'L-03' })],
+      }),
+    ]);
+    expect(prisma.asignacion.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { seccionId: { in: ['sec-lab'] } } }),
+    );
+  });
+
+  it('avisa si la sección se quedó sin aula (escalada)', async () => {
+    const cambios = await cambiosDeAulaDocente(
+      secciones,
+      prismaCon([
+        asignacion('a2', 'sec-lab', hace(1), []),
+        asignacion('a1', 'sec-lab', hace(9), ['L-01']),
+      ]),
+      AHORA,
+    );
+    expect(cambios[0].espaciosNuevos).toEqual([]);
+  });
+
+  it('compara con la última asignación que tuvo aula, aunque haya escalados en medio', async () => {
+    const cambios = await cambiosDeAulaDocente(
+      secciones,
+      prismaCon([
+        asignacion('a3', 'sec-lab', hace(1), ['L-01']),
+        asignacion('a2', 'sec-lab', hace(2), []),
+        asignacion('a1', 'sec-lab', hace(30), ['L-01']),
+      ]),
+      AHORA,
+    );
+    expect(cambios).toEqual([]);
+  });
+
+  it('no avisa la primera asignación, ni un cambio de hace más de 7 días', async () => {
+    expect(
+      await cambiosDeAulaDocente(
+        secciones,
+        prismaCon([asignacion('a1', 'sec-lab', hace(1), ['L-01'])]),
+        AHORA,
+      ),
+    ).toEqual([]);
+    expect(
+      await cambiosDeAulaDocente(
+        secciones,
+        prismaCon([
+          asignacion('a2', 'sec-lab', hace(8), ['L-03']),
+          asignacion('a1', 'sec-lab', hace(30), ['L-01']),
+        ]),
+        AHORA,
+      ),
+    ).toEqual([]);
+  });
+
+  it('no consulta nada si el docente no tiene secciones', async () => {
+    const prisma = prismaCon([]);
+    expect(await cambiosDeAulaDocente([], prisma, AHORA)).toEqual([]);
+    expect(prisma.asignacion.findMany).not.toHaveBeenCalled();
+  });
+});
 
 describe('Horario y asignaciones activas del docente (Issue 7.2)', () => {
   function seccionDocente(codigo: string, estado: 'VIGENTE' | 'ESCALADA' | null, alumnos: number) {
@@ -64,10 +163,9 @@ describe('Horario y asignaciones activas del docente (Issue 7.2)', () => {
   function prismaMock(secciones: any[], docente: any = { id: 'doc-1' }) {
     return {
       docente: { findUnique: jest.fn().mockResolvedValue(docente) },
-      seccion: {
-        findFirst: jest.fn().mockResolvedValue({ periodo: '2026-1' }),
-        findMany: jest.fn().mockResolvedValue(secciones),
-      },
+      seccion: { findMany: jest.fn().mockResolvedValue(secciones) },
+      periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-1' }) },
+      asignacion: { findMany: jest.fn().mockResolvedValue([]) },
     } as any;
   }
 
@@ -98,7 +196,7 @@ describe('Horario y asignaciones activas del docente (Issue 7.2)', () => {
     await obtenerHorarioDocente('cuenta-d', undefined, prisma);
     expect(prisma.docente.findUnique).toHaveBeenCalledWith({ where: { cuentaId: 'cuenta-d' } });
     expect(prisma.seccion.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { docenteId: 'doc-1', periodo: '2026-1' } }),
+      expect.objectContaining({ where: { docenteId: 'doc-1', periodo: '2026-1', activa: true } }),
     );
   });
 
@@ -343,6 +441,97 @@ describe('Registrar incidencia (Issue 7.5)', () => {
       'db caída',
     );
     expect(create).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Mis incidencias (Issue 7.14)', () => {
+  const fila = (o: Record<string, unknown> = {}) => ({
+    id: 'inc-1',
+    identificadorSeguimiento: 'INC-1A2B3C4D',
+    tipo: 'EQUIPO_NO_OPERATIVO',
+    prioridad: 'ALTA',
+    estado: 'PENDIENTE',
+    descripcion: 'Tres PCs no encienden',
+    evidencia: null,
+    fechaReporte: new Date('2026-11-02T15:00:00Z'),
+    comentarioCierre: null,
+    fechaCierre: null,
+    asignacionId: 'asig-1',
+    espacio: { id: 'e1', identificador: 'L-204', pabellon: 'Nuevo', piso: 2 },
+    asignacion: {
+      seccion: { codigoSeccion: '1', curso: { codigo: 'IS101', nombre: 'Algoritmos' } },
+    },
+    ...o,
+  });
+
+  function prismaMock(docente: unknown, filas: unknown[] = []) {
+    return {
+      docente: { findUnique: jest.fn().mockResolvedValue(docente) },
+      incidencia: { findMany: jest.fn().mockResolvedValue(filas) },
+    } as any;
+  }
+
+  it('filtra por el docente de la cuenta y ordena de la más reciente a la más antigua', async () => {
+    const prisma = prismaMock({ id: 'doc-1' }, [fila()]);
+    await listarMisIncidencias('cuenta-d', prisma);
+
+    expect(prisma.docente.findUnique).toHaveBeenCalledWith({ where: { cuentaId: 'cuenta-d' } });
+    expect(prisma.incidencia.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { docenteId: 'doc-1' },
+        orderBy: { fechaReporte: 'desc' },
+      }),
+    );
+  });
+
+  it('devuelve el contrato de Jefatura sin el docente', async () => {
+    const cerrada = fila({
+      id: 'inc-2',
+      estado: 'RESUELTA',
+      comentarioCierre: 'Se reemplazaron las PCs.',
+      fechaCierre: new Date('2026-11-03T15:00:00Z'),
+    });
+    const res = await listarMisIncidencias(
+      'cuenta-d',
+      prismaMock({ id: 'doc-1' }, [fila(), cerrada]),
+    );
+
+    expect(res).toHaveLength(2);
+    expect(res[0]).toEqual({
+      id: 'inc-1',
+      identificadorSeguimiento: 'INC-1A2B3C4D',
+      tipo: 'EQUIPO_NO_OPERATIVO',
+      prioridad: 'ALTA',
+      estado: 'PENDIENTE',
+      descripcion: 'Tres PCs no encienden',
+      evidencia: null,
+      tieneImagen: false,
+      fechaReporte: new Date('2026-11-02T15:00:00Z'),
+      comentarioCierre: null,
+      fechaCierre: null,
+      espacio: { id: 'e1', identificador: 'L-204', pabellon: 'Nuevo', piso: 2 },
+      asignacion: {
+        id: 'asig-1',
+        codigoCurso: 'IS101',
+        nombreCurso: 'Algoritmos',
+        codigoSeccion: '1',
+      },
+    });
+    expect(res[0]).not.toHaveProperty('docente');
+    expect(res[1]).toMatchObject({
+      estado: 'RESUELTA',
+      comentarioCierre: 'Se reemplazaron las PCs.',
+    });
+  });
+
+  it('sin incidencias devuelve una lista vacía', async () => {
+    expect(await listarMisIncidencias('cuenta-d', prismaMock({ id: 'doc-1' }))).toEqual([]);
+  });
+
+  it('404 si la cuenta no tiene docente', async () => {
+    await expect(listarMisIncidencias('cuenta-x', prismaMock(null))).rejects.toMatchObject({
+      status: 404,
+    });
   });
 });
 

@@ -3,23 +3,30 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import PerfilAlumno from './PerfilAlumno';
+import { AuthProvider } from '../context/AuthProvider';
+import { guardarSesion } from '../services/sesion';
+import { ahoraEnSegundos, crearToken } from '../test/helpers';
 import { PERFIL_FIXTURE, PERFIL_VACIO_FIXTURE } from '../test/fixtures/perfil';
 import { aplicarCambios } from '../utils/perfil';
-
-vi.mock('../context/useAuth', () => ({
-  useAuth: () => ({ sesion: { rol: 'ALUMNO' }, cerrarSesion: vi.fn() }),
-}));
 
 type Props = Partial<React.ComponentProps<typeof PerfilAlumno>>;
 
 function renderizar(props: Props = {}) {
+  guardarSesion({
+    token: crearToken(ahoraEnSegundos() + 3600, 'ALUMNO'),
+    rol: 'ALUMNO',
+    debeCambiarClave: false,
+    expiresIn: '8h',
+  });
   return render(
     <MemoryRouter>
-      <PerfilAlumno
-        perfil={PERFIL_FIXTURE}
-        onGuardar={(cambios) => Promise.resolve(aplicarCambios(PERFIL_FIXTURE, cambios))}
-        {...props}
-      />
+      <AuthProvider>
+        <PerfilAlumno
+          perfil={PERFIL_FIXTURE}
+          onGuardar={(cambios) => Promise.resolve(aplicarCambios(PERFIL_FIXTURE, cambios))}
+          {...props}
+        />
+      </AuthProvider>
     </MemoryRouter>,
   );
 }
@@ -27,11 +34,15 @@ function renderizar(props: Props = {}) {
 const seccion = (nombre: RegExp) => screen.getByRole('region', { name: nombre });
 
 describe('PerfilAlumno (Issue 3.17)', () => {
-  it('muestra el título, los datos institucionales y el acceso al inicio', () => {
+  it('muestra el título, los datos institucionales y la navegación al inicio', () => {
     renderizar();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Mi perfil' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Inicio' })).toHaveAttribute('href', '/estudiante');
+    expect(
+      within(
+        screen.getByRole('navigation', { name: 'Navegación del área del estudiante' }),
+      ).getByRole('link', { name: 'Inicio' }),
+    ).toHaveAttribute('href', '/estudiante');
     const institucional = seccion(/Datos institucionales/i);
     expect(within(institucional).getByText('Ana Lucía Quispe Ramos')).toBeVisible();
     expect(within(institucional).getByText('22200001')).toBeVisible();
@@ -101,6 +112,24 @@ describe('PerfilAlumno (Issue 3.17)', () => {
       expect(screen.queryByText('El DNI debe tener 8 dígitos.')).not.toBeInTheDocument();
     });
 
+    it('valida al salir del campo y al guardar resume los errores (Issue 3.41)', () => {
+      const onGuardar = vi.fn();
+      renderizar({ onGuardar });
+      fireEvent.click(screen.getByRole('button', { name: /Editar datos personales/i }));
+
+      const dni = screen.getByLabelText('DNI');
+      fireEvent.change(dni, { target: { value: '12' } });
+      fireEvent.blur(dni);
+      expect(dni).toHaveAttribute('aria-invalid', 'true');
+      expect(dni).toHaveAccessibleDescription(/8 dígitos/);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+      const resumen = screen.getByRole('alert');
+      expect(resumen).toHaveTextContent('Corrige 1 dato para continuar');
+      expect(within(resumen).getByRole('link', { name: 'DNI' })).toBeInTheDocument();
+      expect(dni).toHaveFocus();
+    });
+
     it('cancelar descarta lo escrito y devuelve el foco al botón de editar', () => {
       renderizar();
       fireEvent.click(screen.getByRole('button', { name: /Editar datos personales/i }));
@@ -133,13 +162,18 @@ describe('PerfilAlumno (Issue 3.17)', () => {
     });
 
     it('si el servidor falla, avisa y mantiene lo escrito en edición', async () => {
-      const onGuardar = vi.fn(() => Promise.reject(new Error('sin red')));
+      // Un 400 con causa: se muestra la causa, no «Revisa tu conexión» (Issue 3.51).
+      const onGuardar = vi.fn(() =>
+        Promise.reject({
+          response: { status: 400, data: { success: false, message: 'El teléfono no es válido' } },
+        }),
+      );
       renderizar({ onGuardar });
       fireEvent.click(screen.getByRole('button', { name: /Editar datos personales/i }));
       fireEvent.change(screen.getByLabelText('Teléfono'), { target: { value: '911222333' } });
       fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
 
-      expect(await screen.findByRole('alert')).toHaveTextContent(/No se pudieron guardar/i);
+      expect(await screen.findByRole('alert')).toHaveTextContent('El teléfono no es válido');
       expect(screen.getByLabelText('Teléfono')).toHaveValue('911222333');
       expect(screen.getByRole('button', { name: 'Guardar cambios' })).toBeEnabled();
     });

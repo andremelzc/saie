@@ -1,14 +1,31 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { RUTAS } from '../../config/rutas';
+import { ICONOS } from '../../components/ui/iconos';
+import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
+import { EstadoAsignacion } from '../../components/ui/EstadoAsignacion';
+import { Paginador } from '../../components/ui/Paginador';
+import { FiltrosActivos } from '../../components/ui/FiltrosActivos';
+import type { FiltroActivo } from '../../components/ui/FiltrosActivos';
 import { Boton } from '../../components/ui/Boton';
-import { Drawer } from '../../components/ui/Drawer';
+import { ResumenErrores } from '../../components/ui/ResumenErrores';
+import { admiteVersionMinima } from '../../utils/catalogoSoftware';
+import { CabeceraTabla, TablaDatos } from '../../components/ui/TablaDatos';
+import { CLASE_PIE_DRAWER, Drawer } from '../../components/ui/Drawer';
 import { useAvisos } from '../../components/ui/useAvisos';
+import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
+import { Campo } from '../../components/ui/Campo';
 import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
+import { useAccion } from '../../hooks/useAccion';
+import { useDetalleEnUrl } from '../../hooks/useDetalleEnUrl';
 import { useCarga } from '../../hooks/useCarga';
-import { usePantallaAncha } from '../../hooks/usePantallaAncha';
+import { usePeriodoFiltro } from '../../hooks/usePeriodoFiltro';
+import SelectorPeriodo from '../../components/admin/SelectorPeriodo';
+import EditorHorarioSeccion from '../../components/admin/EditorHorarioSeccion';
+import { useValorDiferido } from '../../hooks/useValorDiferido';
 import {
   editarSeccion,
   obtenerCatalogoActivo,
@@ -16,34 +33,64 @@ import {
   obtenerSecciones,
 } from '../../services/admin';
 import type { DocenteParaAsignarDTO } from '../../services/admin';
-import { mensajeDeError } from '../../services/estudiante';
 import type {
   CambiosSeccion,
   ComparacionVersion,
+  ResultadoEdicionSeccionDTO,
   SeccionAdminDTO,
   SoftwareDTO,
   TipoEspacio,
 } from '../../types/admin';
-import { formatearFechaCorta } from '../../utils/admin';
+import { formatearFechaCorta } from '../../utils/fechas';
+import { formatearBloqueHorario } from '../../utils/etiquetas';
+import { etiquetaTipoEspacio } from '../../utils/diccionarios';
 import {
-  ESTADO_SECCION,
-  ETIQUETA_COMPARACION_VERSION,
-  ETIQUETA_TIPO_ESPACIO,
-  ETIQUETA_TIPO_ESPACIO_PLURAL,
-  formatearBloqueHorario,
-} from '../../utils/etiquetas';
+  aFranjas,
+  aFranjasEditables,
+  idCampoFranja,
+  mensajeGuardadoSeccion,
+  mismasFranjas,
+  textoFranja,
+  validarFranjas,
+} from '../../utils/franjasSeccion';
+import type { FranjaEditable } from '../../utils/franjasSeccion';
 
-const COMPARACIONES: ComparacionVersion[] = ['CUALQUIERA', 'MINIMA', 'EXACTA'];
-const TIPOS: TipoEspacio[] = ['AULA_TEORICA', 'LABORATORIO'];
+const COMPARACIONES: { valor: ComparacionVersion; etiqueta: string }[] = [
+  { valor: 'CUALQUIERA', etiqueta: 'Cualquier versión' },
+  { valor: 'MINIMA', etiqueta: 'Versión mínima o superior' },
+  { valor: 'EXACTA', etiqueta: 'Versión exacta' },
+];
+
+/** Tamaño de página recordado entre visitas (Issue 4.38). */
+const CLAVE_TAMANO_PAGINA = 'saie:secciones:tamanoPagina';
+const TAMANOS_PAGINA = [25, 50, 100, 200];
+const TAMANO_POR_DEFECTO = 50;
+
+function leerTamanoPagina(): number {
+  try {
+    const valor = Number(window.localStorage.getItem(CLAVE_TAMANO_PAGINA));
+    return TAMANOS_PAGINA.includes(valor) ? valor : TAMANO_POR_DEFECTO;
+  } catch {
+    return TAMANO_POR_DEFECTO;
+  }
+}
+
+function guardarTamanoPagina(tamano: number): void {
+  try {
+    window.localStorage.setItem(CLAVE_TAMANO_PAGINA, String(tamano));
+  } catch {
+    // Sin almacenamiento (modo privado, bloqueado): se usa el tamaño solo en esta visita.
+  }
+}
 
 /** El estado de la asignación en lenguaje llano: lo que le importa a quien coordina. */
 function EtiquetaEstado({ seccion }: { seccion: SeccionAdminDTO }): React.ReactNode {
-  if (!seccion.asignacion) {
-    return <BadgeEstado tono="neutro">{ESTADO_SECCION.SIN_ASIGNAR.etiqueta}</BadgeEstado>;
-  }
-  const { etiqueta, tono } =
-    ESTADO_SECCION[seccion.asignacion.estado === 'ESCALADA' ? 'EN_REVISION' : 'CON_AULA'];
-  return <BadgeEstado tono={tono}>{etiqueta}</BadgeEstado>;
+  return (
+    <EstadoAsignacion
+      estado={seccion.asignacion?.estado}
+      cantidadEspacios={seccion.asignacion?.espacios.length ?? 0}
+    />
+  );
 }
 
 /** La fila de una sección en la tabla de escritorio. */
@@ -56,10 +103,9 @@ const FilaSeccion: React.FC<{ seccion: SeccionAdminDTO; onVer: (s: SeccionAdminD
       <span className="block font-semibold text-saie-text">
         {seccion.codigoCurso} · {seccion.codigoSeccion}
       </span>
-      <span className="block text-xs text-saie-muted">
-        {seccion.nombreCurso} · {ETIQUETA_TIPO_ESPACIO[seccion.tipoEspacioRequerido]}
-      </span>
+      <span className="block text-sm text-saie-muted">{seccion.nombreCurso}</span>
     </td>
+    <td className="px-4 py-3">{etiquetaTipoEspacio(seccion.tipoEspacioRequerido)}</td>
     <td className="px-4 py-3">
       {seccion.asignacion?.espacios.length ? (
         <span className="font-medium text-saie-text">
@@ -72,18 +118,14 @@ const FilaSeccion: React.FC<{ seccion: SeccionAdminDTO; onVer: (s: SeccionAdminD
     <td className="px-4 py-3">
       {seccion.docente?.nombre ?? <span className="text-saie-muted">—</span>}
     </td>
-    <td className="px-4 py-3 text-right tabular-nums">{seccion.alumnosMatriculados}</td>
+    <td className="px-4 py-3 text-center tabular-nums">{seccion.alumnosMatriculados}</td>
     <td className="px-4 py-3">
       <EtiquetaEstado seccion={seccion} />
     </td>
     <td className="px-4 py-3">
-      <Boton
-        variante="fantasma"
-        tamano="sm"
-        onClick={() => onVer(seccion)}
-        aria-label={`Ver detalle de ${seccion.codigoCurso} ${seccion.codigoSeccion}`}
-      >
-        Ver
+      <Boton variante="fantasma" tamano="sm" onClick={() => onVer(seccion)}>
+        Ver detalle{' '}
+        <span className="sr-only">de {`${seccion.codigoCurso} ${seccion.codigoSeccion}`}</span>
       </Boton>
     </td>
   </tr>
@@ -103,15 +145,13 @@ const TarjetaSeccion: React.FC<{
         <h3 className="m-0 text-base font-bold text-saie-text">
           {seccion.codigoCurso} · {seccion.codigoSeccion}
         </h3>
-        <p className="m-0 text-xs text-saie-muted">
-          {seccion.nombreCurso} · {ETIQUETA_TIPO_ESPACIO[seccion.tipoEspacioRequerido]}
-        </p>
+        <p className="m-0 text-sm text-saie-muted">{seccion.nombreCurso}</p>
       </div>
       <EtiquetaEstado seccion={seccion} />
     </header>
     <dl className="m-0 grid grid-cols-2 gap-2 text-sm">
       <div>
-        <dt className="text-xs text-saie-muted">Aula</dt>
+        <dt className="text-sm text-saie-muted">Aula</dt>
         <dd className="m-0 font-medium text-saie-text">
           {seccion.asignacion?.espacios.length
             ? seccion.asignacion.espacios.map((e) => e.identificador).join(', ')
@@ -119,34 +159,87 @@ const TarjetaSeccion: React.FC<{
         </dd>
       </div>
       <div>
-        <dt className="text-xs text-saie-muted">Alumnos</dt>
+        <dt className="text-sm text-saie-muted">Alumnos</dt>
         <dd className="m-0 font-medium text-saie-text">{seccion.alumnosMatriculados}</dd>
+      </div>
+      <div>
+        <dt className="text-sm text-saie-muted">Docente</dt>
+        <dd className="m-0 font-medium text-saie-text">{seccion.docente?.nombre ?? '—'}</dd>
+      </div>
+      <div>
+        <dt className="text-sm text-saie-muted">Tipo</dt>
+        <dd className="m-0 font-medium text-saie-text">
+          {etiquetaTipoEspacio(seccion.tipoEspacioRequerido)}
+        </dd>
       </div>
     </dl>
     <div className="flex justify-end">
       <Boton variante="fantasma" tamano="sm" onClick={() => onVer(seccion)}>
-        Ver
+        Ver detalle{' '}
+        <span className="sr-only">de {`${seccion.codigoCurso} ${seccion.codigoSeccion}`}</span>
       </Boton>
     </div>
   </article>
 );
 
-/** Formulario de edición: tipo de aula, docente y software requerido (Issue 4.31). */
+/** ¿El software marcado en el formulario es el mismo que ya exige la sección? */
+function mismoSoftware(
+  elegidos: Record<string, ComparacionVersion>,
+  actuales: SeccionAdminDTO['softwareRequerido'],
+): boolean {
+  const ids = Object.keys(elegidos);
+  return (
+    ids.length === actuales.length && actuales.every((s) => elegidos[s.id] === s.comparacionVersion)
+  );
+}
+
+/** Formulario de edición: tipo de aula, docente, software requerido (Issue 4.31) y horario (4.62). */
 const FormularioSeccion: React.FC<{
   seccion: SeccionAdminDTO;
   docentes: DocenteParaAsignarDTO[];
   catalogo: SoftwareDTO[];
-  onGuardado: (resultado: { alertas: { motivo: string }[] }) => void;
+  onGuardado: (resultado: ResultadoEdicionSeccionDTO) => void;
   onCancelar: () => void;
-}> = ({ seccion, docentes, catalogo, onGuardado, onCancelar }) => {
+  /** Avisa al drawer si hay cambios sin guardar, para pedir confirmación al cerrarlo. */
+  onCambiosPendientes?: (hay: boolean) => void;
+}> = ({ seccion, docentes, catalogo, onGuardado, onCancelar, onCambiosPendientes }) => {
   const [tipo, setTipo] = useState<TipoEspacio>(seccion.tipoEspacioRequerido);
   const [docenteId, setDocenteId] = useState<string>(seccion.docente?.id ?? '');
   const [busqueda, setBusqueda] = useState('');
   const [elegidos, setElegidos] = useState<Record<string, ComparacionVersion>>(() =>
     Object.fromEntries(seccion.softwareRequerido.map((s) => [s.id, s.comparacionVersion])),
   );
+  const [franjas, setFranjas] = useState<FranjaEditable[]>(() =>
+    aFranjasEditables(seccion.horarios),
+  );
+  /** Issue 4.62: los errores del horario se muestran al intentar guardar y luego al corregir. */
+  const [validarHorario, setValidarHorario] = useState(false);
+  const erroresFranjas = useMemo(
+    () => (validarHorario ? validarFranjas(franjas) : {}),
+    [franjas, validarHorario],
+  );
+  const horarioCambiado = !mismasFranjas(franjas, seccion.horarios);
+  const { ejecutar } = useAccion();
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Issue 3.41: error del tipo de espacio y resumen al intentar guardar. */
+  const [errorTipo, setErrorTipo] = useState<string | null>(null);
+  const [resumenVisible, setResumenVisible] = useState(false);
+  const validarTipo = (t: TipoEspacio, software: Record<string, ComparacionVersion>) =>
+    t === 'AULA_TEORICA' && Object.keys(software).length > 0
+      ? 'Un aula teórica no tiene software: elige «Laboratorio» o quita el software marcado.'
+      : null;
+
+  const hayCambios =
+    tipo !== seccion.tipoEspacioRequerido ||
+    docenteId !== (seccion.docente?.id ?? '') ||
+    !mismoSoftware(elegidos, seccion.softwareRequerido) ||
+    horarioCambiado;
+
+  useEffect(() => {
+    onCambiosPendientes?.(hayCambios);
+    return () => onCambiosPendientes?.(false);
+  }, [hayCambios, onCambiosPendientes]);
 
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -166,46 +259,77 @@ const FormularioSeccion: React.FC<{
   const guardar = async (evento: React.FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
     if (guardando) return;
+    const errorEncontrado = validarTipo(tipo, elegidos);
+    setErrorTipo(errorEncontrado);
+    const erroresHorario = validarFranjas(franjas);
+    setValidarHorario(true);
+    const primeraFranjaConError = franjas.find((f) => erroresHorario[f.clave]);
+    if (errorEncontrado || primeraFranjaConError) {
+      setResumenVisible(true);
+      document
+        .getElementById(
+          errorEncontrado
+            ? `tipo-seccion-${seccion.id}`
+            : idCampoFranja(`horario-${seccion.id}`, primeraFranjaConError!.clave),
+        )
+        ?.focus();
+      return;
+    }
+    setResumenVisible(false);
     setGuardando(true);
     setError(null);
-    try {
-      const cambios: CambiosSeccion = {
-        tipoEspacioRequerido: tipo,
-        docenteId: docenteId === '' ? null : docenteId,
-        softwareRequerido: Object.entries(elegidos).map(([softwareId, comparacionVersion]) => ({
-          softwareId,
-          comparacionVersion,
-        })),
-      };
-      const resultado = await editarSeccion(seccion.id, cambios);
-      onGuardado(resultado);
-    } catch (e) {
-      setError(mensajeDeError(e));
-    } finally {
-      setGuardando(false);
-    }
+    const cambios: CambiosSeccion = {
+      tipoEspacioRequerido: tipo,
+      docenteId: docenteId === '' ? null : docenteId,
+      softwareRequerido: Object.entries(elegidos).map(([softwareId, comparacionVersion]) => ({
+        softwareId,
+        comparacionVersion,
+      })),
+      // Solo se envía si cambió: así un cambio de docente no dispara una reasignación.
+      ...(horarioCambiado && { horarios: aFranjas(franjas) }),
+    };
+    // El error se muestra en línea, dentro del formulario.
+    const resultado = await ejecutar(() => editarSeccion(seccion.id, cambios), {
+      avisarError: false,
+    });
+    setGuardando(false);
+    if (resultado?.ok) onGuardado(resultado.valor);
+    else if (resultado) setError(resultado.error);
   };
 
   return (
     <form onSubmit={guardar} noValidate className="flex flex-col gap-5">
       <div className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1">
-          <span className={CLASE_ETIQUETA}>Tipo de espacio que necesita</span>
-          <select
-            value={tipo}
-            onChange={(e) => setTipo(e.target.value as TipoEspacio)}
-            className={CLASE_CAMPO}
-          >
-            {TIPOS.map((t) => (
-              <option key={t} value={t}>
-                {ETIQUETA_TIPO_ESPACIO[t]}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex flex-col gap-1">
+          <Campo etiqueta="Tipo de espacio que necesita">
+            <select
+              id={`tipo-seccion-${seccion.id}`}
+              value={tipo}
+              onChange={(e) => {
+                const nuevo = e.target.value as TipoEspacio;
+                setTipo(nuevo);
+                if (errorTipo) setErrorTipo(validarTipo(nuevo, elegidos));
+              }}
+              onBlur={() => setErrorTipo(validarTipo(tipo, elegidos))}
+              aria-invalid={errorTipo ? true : undefined}
+              aria-describedby={errorTipo ? `tipo-seccion-${seccion.id}-error` : undefined}
+              className={CLASE_CAMPO}
+            >
+              <option value="AULA_TEORICA">Aula teórica</option>
+              <option value="LABORATORIO">Laboratorio</option>
+            </select>
+          </Campo>
+          {errorTipo && (
+            <p
+              id={`tipo-seccion-${seccion.id}-error`}
+              className="m-0 text-sm font-medium text-saie-danger"
+            >
+              {errorTipo}
+            </p>
+          )}
+        </div>
 
-        <label className="flex flex-col gap-1">
-          <span className={CLASE_ETIQUETA}>Docente</span>
+        <Campo etiqueta="Docente">
           <select
             value={docenteId}
             onChange={(e) => setDocenteId(e.target.value)}
@@ -218,24 +342,32 @@ const FormularioSeccion: React.FC<{
               </option>
             ))}
           </select>
-        </label>
+        </Campo>
       </div>
+
+      <EditorHorarioSeccion
+        idBase={`horario-${seccion.id}`}
+        franjas={franjas}
+        onCambiar={setFranjas}
+        errores={erroresFranjas}
+        deshabilitado={guardando}
+      />
 
       <fieldset className="m-0 flex flex-col gap-2">
         <legend className={CLASE_ETIQUETA}>Software que exige la sección</legend>
-        <p className="m-0 text-xs text-saie-muted">
-          Marca lo que el laboratorio debe tener instalado. El motor solo asigna un laboratorio que
-          cumpla con todo lo listado.
+        <p className="m-0 text-sm text-saie-muted">
+          Marca lo que el laboratorio debe tener instalado. La asignación automática solo elige un
+          laboratorio que cumpla con todo lo listado.
         </p>
         <input
           type="search"
           placeholder="Buscar software…"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          className={CLASE_CAMPO}
+          className={`${CLASE_CAMPO} sticky top-0 z-10`}
           aria-label="Buscar software del catálogo"
         />
-        <ul className="m-0 max-h-64 list-none overflow-y-auto rounded-xl border border-saie-divider bg-white p-2">
+        <ul className="m-0 list-none rounded-xl border border-saie-divider bg-white p-2">
           {filtrados.length === 0 && (
             <li className="p-3 text-sm text-saie-muted">No hay software que coincida.</li>
           )}
@@ -268,11 +400,19 @@ const FormularioSeccion: React.FC<{
                         [s.id]: e.target.value as ComparacionVersion,
                       }))
                     }
-                    className="min-h-11 rounded-lg border border-saie-border bg-white px-2 text-sm"
+                    className="min-h-11 rounded-lg border border-saie-border bg-white px-2 py-1 text-sm"
                   >
                     {COMPARACIONES.map((c) => (
-                      <option key={c} value={c}>
-                        {ETIQUETA_COMPARACION_VERSION[c]}
+                      <option
+                        key={c.valor}
+                        value={c.valor}
+                        // Spec 08 §3: «mínima» solo con versiones numéricas (3.11, 2024.1).
+                        disabled={c.valor === 'MINIMA' && !admiteVersionMinima(s.version ?? '')}
+                      >
+                        {c.etiqueta}
+                        {c.valor === 'MINIMA' && !admiteVersionMinima(s.version ?? '')
+                          ? ' (no aplica a esta versión)'
+                          : ''}
                       </option>
                     ))}
                   </select>
@@ -283,15 +423,42 @@ const FormularioSeccion: React.FC<{
         </ul>
       </fieldset>
 
+      {resumenVisible && (errorTipo || Object.keys(erroresFranjas).length > 0) && (
+        <ResumenErrores
+          errores={[
+            ...(errorTipo
+              ? [
+                  {
+                    idCampo: `tipo-seccion-${seccion.id}`,
+                    etiqueta: 'Tipo de espacio que necesita',
+                    mensaje: errorTipo,
+                  },
+                ]
+              : []),
+            ...franjas.flatMap((f, i) =>
+              erroresFranjas[f.clave]
+                ? [
+                    {
+                      idCampo: idCampoFranja(`horario-${seccion.id}`, f.clave),
+                      etiqueta: `Franja ${i + 1} (${textoFranja(f)})`,
+                      mensaje: erroresFranjas[f.clave],
+                    },
+                  ]
+                : [],
+            ),
+          ]}
+        />
+      )}
       {error && <Aviso tono="error">{error}</Aviso>}
 
-      <div className="flex flex-wrap gap-3">
-        <Boton type="submit" cargando={guardando} textoCargando="Guardando…">
+      <div className={`${CLASE_PIE_DRAWER} flex flex-wrap items-center gap-3`}>
+        <Boton type="submit" tamano="sm" cargando={guardando} textoCargando="Guardando…">
           Guardar cambios
         </Boton>
-        <Boton variante="cancelar" onClick={onCancelar} disabled={guardando}>
+        <Boton variante="cancelar" tamano="sm" onClick={onCancelar} disabled={guardando}>
           Cancelar
         </Boton>
+        {hayCambios && <BadgeEstado tono="advertencia">Cambios sin guardar</BadgeEstado>}
       </div>
     </form>
   );
@@ -306,28 +473,106 @@ const FormularioSeccion: React.FC<{
 export const SeccionesAdmin: React.FC = () => {
   const [texto, setTexto] = useState('');
   const [tipo, setTipo] = useState<'TODOS' | TipoEspacio>('TODOS');
-  const [periodo, setPeriodo] = useState('');
-  const [seleccionadaId, setSeleccionadaId] = useState<string | null>(null);
+  const filtroPeriodo = usePeriodoFiltro();
+  const periodo = filtroPeriodo.periodo;
+  const [pagina, setPagina] = useState(1);
+  const [tamanoPagina, setTamanoPagina] = useState(leerTamanoPagina);
+  // El detalle abierto vive en la URL (`?seccion=<id>`): «Atrás» lo cierra y el enlace se comparte (Issue 4.51).
+  const detalle = useDetalleEnUrl('seccion');
+  const seleccionadaId = detalle.valor;
   const [editando, setEditando] = useState(false);
+  const [cambiosPendientes, setCambiosPendientes] = useState(false);
+  /** Issue 4.62: avisos del último guardado (choque de docente…): quedan a la vista en el detalle. */
+  const [advertencias, setAdvertencias] = useState<string[]>([]);
   const { mostrar } = useAvisos();
 
-  const cargar = useCallback(async () => {
-    const listado = await obtenerSecciones({
-      q: texto.trim() || undefined,
-      tipo: tipo === 'TODOS' ? undefined : tipo,
-      periodo: periodo.trim() || undefined,
-      limite: 200,
-    });
-    return listado.items;
-  }, [texto, tipo, periodo]);
+  // Se espera una pausa al escribir para no pedir al servidor una vez por tecla (Issue 4.41).
+  const textoDiferido = useValorDiferido(texto);
 
-  const { datos, cargando, error, recargar } = useCarga(cargar);
-  const docentes = useCarga(obtenerDocentes);
-  const catalogo = useCarga(obtenerCatalogoActivo);
+  const cargar = useCallback(async () => {
+    return obtenerSecciones({
+      q: textoDiferido.trim() || undefined,
+      tipo: tipo === 'TODOS' ? undefined : tipo,
+      periodo: periodo || undefined,
+      pagina,
+      limite: tamanoPagina,
+    });
+  }, [textoDiferido, tipo, periodo, pagina, tamanoPagina]);
+
+  const {
+    datos,
+    cargando: cargandoDatos,
+    error,
+    recargar,
+    deOtraConsulta,
+  } = useCarga(cargar, {
+    clave: `secciones:${textoDiferido.trim()}|${tipo}|${periodo}|${pagina}|${tamanoPagina}`,
+    // Se espera a saber cuál es el vigente para no pedir el listado dos veces.
+    habilitado: filtroPeriodo.listo,
+  });
+  // Mientras no se sabe el periodo vigente tampoco hay datos: es carga, no «sin resultados».
+  const cargando = cargandoDatos || !filtroPeriodo.listo;
+  // Docentes y catálogo solo hacen falta al editar: no se piden hasta abrir la edición (Issue 3.49).
+  const docentes = useCarga(obtenerDocentes, { clave: 'docentes', habilitado: editando });
+  const catalogo = useCarga(obtenerCatalogoActivo, {
+    clave: 'catalogo-activo',
+    habilitado: editando,
+  });
 
   /** El listado vacío es una referencia estable: si no, invalidaría los `useMemo` de abajo. */
-  const secciones = useMemo(() => datos ?? [], [datos]);
-  const esPantallaAncha = usePantallaAncha();
+  const secciones = useMemo(() => datos?.items ?? [], [datos]);
+  /** Total real de la consulta (no solo de la página): lo devuelve el backend. */
+  const total = datos?.total ?? 0;
+
+  // Al filtrar se vuelve a la página 1: la página anterior puede no existir con el filtro nuevo.
+  const cambiarTexto = (valor: string) => {
+    setTexto(valor);
+    setPagina(1);
+  };
+  const cambiarTipo = (valor: 'TODOS' | TipoEspacio) => {
+    setTipo(valor);
+    setPagina(1);
+  };
+  const restablecerPeriodo = () => {
+    filtroPeriodo.restablecer();
+    setPagina(1);
+  };
+  const limpiarFiltros = () => {
+    setTexto('');
+    setTipo('TODOS');
+    filtroPeriodo.restablecer();
+    setPagina(1);
+  };
+  const filtrosActivos: FiltroActivo[] = [
+    ...(texto.trim()
+      ? [{ id: 'q', etiqueta: 'Búsqueda', valor: texto.trim(), onQuitar: () => cambiarTexto('') }]
+      : []),
+    ...(tipo !== 'TODOS'
+      ? [
+          {
+            id: 'tipo',
+            etiqueta: 'Tipo de espacio',
+            valor: etiquetaTipoEspacio(tipo),
+            onQuitar: () => cambiarTipo('TODOS'),
+          },
+        ]
+      : []),
+    ...(filtroPeriodo.cambiado
+      ? [
+          {
+            id: 'periodo',
+            etiqueta: 'Periodo',
+            valor: filtroPeriodo.valor,
+            onQuitar: restablecerPeriodo,
+          },
+        ]
+      : []),
+  ];
+  const cambiarTamanoPagina = (tamano: number) => {
+    setTamanoPagina(tamano);
+    guardarTamanoPagina(tamano);
+    setPagina(1);
+  };
 
   /**
    * La sección abierta se deriva del listado: así siempre muestra los datos frescos de la
@@ -339,72 +584,70 @@ export const SeccionesAdmin: React.FC = () => {
   );
 
   const abrirDetalle = (seccion: SeccionAdminDTO) => {
-    setSeleccionadaId(seccion.id);
+    detalle.abrir(seccion.id);
     setEditando(false);
+    setAdvertencias([]);
   };
 
-  const manejarGuardado = (resultado: { alertas: { motivo: string }[] }) => {
+  // Un enlace con una sección que no existe (o ya no está en el periodo) se explica, no rompe la pantalla.
+  // Con filtros activos no se avisa: la sección puede existir y solo estar fuera de la búsqueda.
+  const sinFiltros = texto === '' && tipo === 'TODOS' && !filtroPeriodo.cambiado;
+  // Solo se afirma que no existe si el listado completo cabe en la página cargada: si hay más
+  // páginas, la sección puede estar en otra.
+  const detalleNoEncontrado =
+    seleccionadaId !== null &&
+    datos !== null &&
+    !cargando &&
+    seleccionada === null &&
+    sinFiltros &&
+    total <= secciones.length;
+
+  const manejarGuardado = (resultado: ResultadoEdicionSeccionDTO) => {
     setEditando(false);
+    setAdvertencias(resultado.advertencias ?? []);
     recargar();
-    if (resultado.alertas.length > 0) {
-      mostrar(
-        'info',
-        `La sección se guardó y generó ${resultado.alertas.length} alerta(s) en el panel.`,
-      );
-    } else {
-      mostrar('exito', 'Sección actualizada.');
-    }
+    const { tono, texto } = mensajeGuardadoSeccion(resultado);
+    mostrar(tono, texto);
   };
 
   const lista =
-    error && !datos ? null : secciones.length === 0 ? (
+    secciones.length === 0 ? (
       <EstadoVacio
         titulo="Sin secciones"
+        icono={ICONOS.libro}
         descripcion="Cuando se carguen cursos y secciones, aparecerán aquí."
+        accion={
+          <BotonEnlace to={RUTAS.cargaAdmin} variante="secundario" tamano="sm">
+            Ir a Carga de datos
+          </BotonEnlace>
+        }
       />
-    ) : esPantallaAncha ? (
-      <section
-        aria-label="Listado de secciones"
-        className="overflow-x-auto rounded-xl border border-saie-divider bg-white"
-      >
-        <table className="w-full text-left text-sm">
-          <thead className="bg-saie-canvas text-xs uppercase tracking-wide text-saie-muted">
-            <tr>
-              <th scope="col" className="px-4 py-3">
-                Sección
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Aula
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Docente
-              </th>
-              <th scope="col" className="px-4 py-3 text-right">
-                Alumnos
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Estado
-              </th>
-              <th scope="col" className="px-4 py-3">
-                <span className="sr-only">Acciones</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {secciones.map((s) => (
-              <FilaSeccion key={s.id} seccion={s} onVer={abrirDetalle} />
-            ))}
-          </tbody>
-        </table>
-      </section>
     ) : (
-      <ul className="m-0 flex list-none flex-col gap-3 p-0" aria-label="Listado de secciones">
-        {secciones.map((s) => (
-          <li key={s.id}>
-            <TarjetaSeccion seccion={s} onVer={abrirDetalle} />
-          </li>
-        ))}
-      </ul>
+      // Tabla desde `lg` y tarjetas por debajo, resueltas con CSS para que no haya parpadeo (Issue 3.54).
+      <>
+        <div className="hidden lg:block">
+          <TablaDatos etiqueta="Listado de secciones">
+            <CabeceraTabla
+              columnas={['Sección', 'Tipo', 'Aula', 'Docente', 'Alumnos', 'Estado', 'Detalle']}
+            />
+            <tbody>
+              {secciones.map((s) => (
+                <FilaSeccion key={s.id} seccion={s} onVer={abrirDetalle} />
+              ))}
+            </tbody>
+          </TablaDatos>
+        </div>
+        <ul
+          className="m-0 flex list-none flex-col gap-3 p-0 lg:hidden"
+          aria-label="Listado de secciones"
+        >
+          {secciones.map((s) => (
+            <li key={s.id}>
+              <TarjetaSeccion seccion={s} onVer={abrirDetalle} />
+            </li>
+          ))}
+        </ul>
+      </>
     );
 
   return (
@@ -418,99 +661,115 @@ export const SeccionesAdmin: React.FC = () => {
           cargando={cargando}
           textoCargando="Actualizando…"
         >
-          Actualizar
+          Actualizar datos
         </Boton>
       }
     >
       <section aria-label="Filtros de secciones" className="flex flex-col gap-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Buscar sección</span>
+          <Campo etiqueta="Buscar sección">
             <input
               type="search"
               placeholder="Ej. 2020101 o Cálculo"
               value={texto}
-              onChange={(e) => setTexto(e.target.value)}
+              onChange={(e) => cambiarTexto(e.target.value)}
               className={CLASE_CAMPO}
             />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Tipo de espacio</span>
+          </Campo>
+          <Campo etiqueta="Tipo de espacio">
             <select
               value={tipo}
-              onChange={(e) => setTipo(e.target.value as 'TODOS' | TipoEspacio)}
+              onChange={(e) => cambiarTipo(e.target.value as 'TODOS' | TipoEspacio)}
               className={CLASE_CAMPO}
             >
               <option value="TODOS">Todos</option>
-              {TIPOS.map((t) => (
-                <option key={t} value={t}>
-                  {ETIQUETA_TIPO_ESPACIO_PLURAL[t]}
-                </option>
-              ))}
+              <option value="AULA_TEORICA">Aulas teóricas</option>
+              <option value="LABORATORIO">Laboratorios</option>
             </select>
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className={CLASE_ETIQUETA}>Periodo</span>
-            <input
-              type="text"
-              placeholder="Ej. 2026-2"
-              value={periodo}
-              onChange={(e) => setPeriodo(e.target.value)}
-              className={CLASE_CAMPO}
-            />
-          </label>
+          </Campo>
+          <SelectorPeriodo
+            filtro={{
+              ...filtroPeriodo,
+              elegir: (valor) => {
+                filtroPeriodo.elegir(valor);
+                setPagina(1);
+              },
+            }}
+          />
         </div>
+        <FiltrosActivos filtros={filtrosActivos} onLimpiar={limpiarFiltros} />
         <p className="m-0 text-sm text-saie-muted" aria-live="polite">
-          {secciones.length} {secciones.length === 1 ? 'sección' : 'secciones'}
+          {total} {total === 1 ? 'sección' : 'secciones'}
         </p>
       </section>
 
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      {cargando && !datos ? <EsqueletoCarga texto="Cargando secciones…" /> : lista}
+      {detalleNoEncontrado && (
+        <Aviso tono="advertencia" className="flex flex-wrap items-center justify-between gap-3">
+          <span>
+            No encontramos esa sección. Puede que el enlace sea antiguo o que ya no esté en el
+            periodo.
+          </span>
+          <Boton variante="secundario" tamano="sm" onClick={detalle.cerrar}>
+            Quitar del enlace
+          </Boton>
+        </Aviso>
+      )}
+      <ZonaActualizable actualizando={cargando && datos !== null} inerte={deOtraConsulta}>
+        {cargando && !datos ? <EsqueletoCarga texto="Cargando secciones…" forma="tabla" /> : lista}
+      </ZonaActualizable>
+
+      <Paginador
+        pagina={pagina}
+        tamano={tamanoPagina}
+        total={total}
+        onCambiarPagina={setPagina}
+        onCambiarTamano={cambiarTamanoPagina}
+        opcionesTamano={TAMANOS_PAGINA}
+        etiqueta="Paginación de secciones"
+        nombreRegistros="secciones"
+      />
 
       <Drawer
         abierto={seleccionada !== null}
         onCerrar={() => {
-          setSeleccionadaId(null);
+          detalle.cerrar();
           setEditando(false);
+          setAdvertencias([]);
         }}
         titulo={
           seleccionada ? `${seleccionada.codigoCurso} · ${seleccionada.codigoSeccion}` : 'Sección'
         }
+        subtitulo={seleccionada?.nombreCurso}
+        insignia={seleccionada && <EtiquetaEstado seccion={seleccionada} />}
+        hayCambios={editando && cambiosPendientes}
+        vista={editando ? 'editar' : 'detalle'}
       >
         {seleccionada && (
           <div className="flex flex-col gap-5">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-saie-muted">
-              <EtiquetaEstado seccion={seleccionada} />
-              {seleccionada.asignacion && (
-                <span>
-                  Asignada el {formatearFechaCorta(seleccionada.asignacion.fechaAsignacion)}
-                </span>
-              )}
-            </div>
-            <dl className="m-0 rounded-xl border border-saie-divider bg-white px-4 py-2 text-sm">
+            {!editando && advertencias.length > 0 && (
+              <Aviso tono="advertencia">
+                <p className="m-0 font-semibold">Revisa antes de seguir:</p>
+                <ul className="m-0 mt-1 flex list-disc flex-col gap-1 pl-5">
+                  {advertencias.map((a) => (
+                    <li key={a}>{a}</li>
+                  ))}
+                </ul>
+              </Aviso>
+            )}
+            <dl className="m-0 rounded-xl border border-saie-divider bg-white p-4 text-sm">
               <div className="border-b border-saie-divider py-2">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
-                  Curso
-                </dt>
-                <dd className="m-0 text-saie-text">{seleccionada.nombreCurso}</dd>
-              </div>
-              <div className="border-b border-saie-divider py-2">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
-                  Aula asignada
-                </dt>
+                <dt className="text-sm font-semibold text-saie-muted">Aula asignada</dt>
                 <dd className="m-0 text-saie-text">
                   {seleccionada.asignacion?.espacios.length
                     ? seleccionada.asignacion.espacios
                         .map((e) => `${e.identificador} (${e.pabellon}, piso ${e.piso})`)
                         .join(', ')
-                    : 'Sin aula todavía.'}
+                    : 'Sin aula: esta sección espera revisión.'}
                 </dd>
               </div>
               <div className="border-b border-saie-divider py-2">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
-                  Docente
-                </dt>
+                <dt className="text-sm font-semibold text-saie-muted">Docente</dt>
                 <dd className="m-0 text-saie-text">
                   {seleccionada.docente ? (
                     `${seleccionada.docente.nombre} (${seleccionada.docente.codigoDocente})`
@@ -520,19 +779,27 @@ export const SeccionesAdmin: React.FC = () => {
                 </dd>
               </div>
               <div className="border-b border-saie-divider py-2">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
-                  Horarios
-                </dt>
+                <dt className="text-sm font-semibold text-saie-muted">Horarios</dt>
                 <dd className="m-0 text-saie-text">
-                  {seleccionada.horarios.length === 0
-                    ? 'Sin horarios registrados.'
-                    : seleccionada.horarios.map((h) => formatearBloqueHorario(h)).join(' · ')}
+                  {seleccionada.horarios.length === 0 ? (
+                    'Sin horarios registrados.'
+                  ) : (
+                    // Un bloque por línea: con tres o más bloques una sola cadena no se lee (Issue 4.44).
+                    <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+                      {seleccionada.horarios.map((h) => (
+                        <li
+                          key={`${h.diaSemana}-${h.horaInicio}-${h.horaFin}`}
+                          className="tabular-nums"
+                        >
+                          {formatearBloqueHorario(h, false)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </dd>
               </div>
               <div className="py-2">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-saie-muted">
-                  Software requerido
-                </dt>
+                <dt className="text-sm font-semibold text-saie-muted">Software requerido</dt>
                 <dd className="m-0 text-saie-text">
                   {seleccionada.softwareRequerido.length === 0
                     ? 'No exige software: sirve cualquier aula del tipo pedido.'
@@ -543,20 +810,41 @@ export const SeccionesAdmin: React.FC = () => {
               </div>
             </dl>
 
+            {seleccionada.asignacion && (
+              <p className="m-0 text-sm text-saie-muted">
+                Asignada el {formatearFechaCorta(seleccionada.asignacion.fechaAsignacion)}
+              </p>
+            )}
+
             {editando ? (
-              <FormularioSeccion
-                seccion={seleccionada}
-                docentes={docentes.datos ?? []}
-                catalogo={catalogo.datos?.items ?? []}
-                onGuardado={manejarGuardado}
-                onCancelar={() => setEditando(false)}
-              />
+              // Docentes y catálogo se piden al abrir la edición (y salen de la caché si ya se vieron).
+              docentes.datos && catalogo.datos ? (
+                <FormularioSeccion
+                  seccion={seleccionada}
+                  docentes={docentes.datos}
+                  catalogo={catalogo.datos.items}
+                  onGuardado={manejarGuardado}
+                  onCancelar={() => setEditando(false)}
+                  onCambiosPendientes={setCambiosPendientes}
+                />
+              ) : docentes.error || catalogo.error ? (
+                <AvisoError
+                  mensaje={docentes.error ?? catalogo.error ?? ''}
+                  onReintentar={() => {
+                    if (docentes.error) docentes.recargar();
+                    if (catalogo.error) catalogo.recargar();
+                  }}
+                />
+              ) : (
+                <EsqueletoCarga texto="Cargando docentes y catálogo de software…" />
+              )
             ) : (
               <div className="flex flex-col gap-2">
                 {seleccionada.camposEditables.length > 0 ? (
                   <>
                     <p className="m-0 text-sm text-saie-muted">
-                      Puedes cambiar el tipo de aula, el docente y el software que exige la sección.
+                      Puedes cambiar el tipo de aula, el docente, el software que exige la sección y
+                      su horario.
                     </p>
                     <div>
                       <Boton variante="primario" tamano="sm" onClick={() => setEditando(true)}>

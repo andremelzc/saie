@@ -3,12 +3,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import HorarioMisCursos from './HorarioMisCursos';
+import { AuthProvider } from '../context/AuthProvider';
+import { guardarSesion } from '../services/sesion';
+import { ahoraEnSegundos, crearToken } from '../test/helpers';
 import { CURSOS_FIXTURE, HORARIO_FIXTURE } from '../test/fixtures/horario';
 import type { CursoMatriculadoDTO } from '../types/horario';
-
-vi.mock('../context/useAuth', () => ({
-  useAuth: () => ({ sesion: { rol: 'ALUMNO' }, cerrarSesion: vi.fn() }),
-}));
 
 /** Martes 13/10/2026, 10:30 (hora local). */
 const MARTES_10_30 = new Date(2026, 9, 13, 10, 30);
@@ -16,14 +15,22 @@ const MARTES_10_30 = new Date(2026, 9, 13, 10, 30);
 type Props = Partial<React.ComponentProps<typeof HorarioMisCursos>>;
 
 function renderizar(props: Props = {}) {
+  guardarSesion({
+    token: crearToken(ahoraEnSegundos() + 3600, 'ALUMNO'),
+    rol: 'ALUMNO',
+    debeCambiarClave: false,
+    expiresIn: '8h',
+  });
   return render(
     <MemoryRouter>
-      <HorarioMisCursos
-        horario={HORARIO_FIXTURE}
-        cursos={CURSOS_FIXTURE}
-        ahora={MARTES_10_30}
-        {...props}
-      />
+      <AuthProvider>
+        <HorarioMisCursos
+          horario={HORARIO_FIXTURE}
+          cursos={CURSOS_FIXTURE}
+          ahora={MARTES_10_30}
+          {...props}
+        />
+      </AuthProvider>
     </MemoryRouter>,
   );
 }
@@ -36,9 +43,9 @@ describe('HorarioMisCursos (Issue #145 / 3.16)', () => {
       screen.getByRole('heading', { level: 1, name: /Mi horario y mis cursos/i }),
     ).toBeVisible();
     expect(screen.getByText('Periodo 2026-II')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Horario' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Mis cursos' })).toHaveAttribute(
-      'aria-pressed',
+    expect(screen.getByRole('tab', { name: 'Horario' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Mis cursos' })).toHaveAttribute(
+      'aria-selected',
       'false',
     );
   });
@@ -111,15 +118,15 @@ describe('HorarioMisCursos (Issue #145 / 3.16)', () => {
       expect(screen.queryByRole('group', { name: 'Seleccionar día de la semana' })).toBeNull();
     });
 
-    it('muestra en cada bloque el curso, la sección, el tipo de espacio y el aula', () => {
+    it('muestra en cada bloque el curso, el tipo de clase, el tipo de espacio y el aula', () => {
       renderizar();
 
       fireEvent.click(screen.getByRole('button', { name: 'Semana' }));
 
       const martes = screen.getByRole('region', { name: 'Martes' });
-      expect(within(martes).getByText('MA-201 · Sec. B')).toBeVisible();
+      expect(within(martes).getByText('MA-201 · Teoría')).toBeVisible();
       expect(within(martes).getByText('Teoría A-105')).toBeVisible();
-      expect(within(martes).getByText('CC-305 · Sec. A')).toBeVisible();
+      expect(within(martes).getByText('CC-305 · Teoría')).toBeVisible();
       expect(within(martes).getByText('Lab. L-301')).toBeVisible();
 
       const viernes = screen.getByRole('region', { name: 'Viernes' });
@@ -140,7 +147,7 @@ describe('HorarioMisCursos (Issue #145 / 3.16)', () => {
     it('lista los cursos con docente, horarios y próximo espacio', () => {
       renderizar();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Mis cursos' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Mis cursos' }));
 
       expect(screen.getByText('6 cursos matriculados')).toBeVisible();
 
@@ -168,7 +175,7 @@ describe('HorarioMisCursos (Issue #145 / 3.16)', () => {
       ];
       renderizar({ cursos: conLaboratorio });
 
-      fireEvent.click(screen.getByRole('button', { name: 'Mis cursos' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Mis cursos' }));
 
       // Un solo curso (no dos secciones): el bloque es el curso.
       expect(screen.getByText('1 curso matriculado')).toBeVisible();
@@ -181,7 +188,7 @@ describe('HorarioMisCursos (Issue #145 / 3.16)', () => {
     it('avisa cuando el espacio está pendiente o la asignación está en revisión', () => {
       renderizar();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Mis cursos' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Mis cursos' }));
 
       const redaccion = screen.getByRole('article', { name: 'Redacción y Comunicación' });
       expect(within(redaccion).getByText('Sin aula asignada')).toBeVisible();
@@ -194,7 +201,7 @@ describe('HorarioMisCursos (Issue #145 / 3.16)', () => {
     it('muestra un estado vacío si no hay cursos matriculados', () => {
       renderizar({ cursos: [] });
 
-      fireEvent.click(screen.getByRole('button', { name: 'Mis cursos' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Mis cursos' }));
 
       expect(screen.getByText('Aún no tienes cursos matriculados')).toBeVisible();
     });

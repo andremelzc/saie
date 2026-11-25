@@ -4,6 +4,7 @@ import {
   altaAlumno,
   altaDocente,
   altaEspacio,
+  consultarUltimasImportaciones,
   consultarMapaOcupacion,
   consultarReporteAsignaciones,
   editarEspacio,
@@ -13,6 +14,10 @@ import {
   listarEspaciosAdmin,
   listarHistorial,
   listarIncidenciasReportadas,
+  listarPeriodosAdmin,
+  registrarPeriodoAdmin,
+  activarPeriodoAdmin,
+  cerrarPeriodoAdmin,
   listarRegistrosAuditoria,
   listarDocentes,
   listarSeccionesAdmin,
@@ -21,6 +26,7 @@ import {
   registrarPcsMalogradasLaboratorio,
   registrarSoftwareLaboratorio,
   resolverAlertaPendiente,
+  reubicarSeccionesAlerta,
   resolverIncidencia,
   restablecerClaveUsuario,
 } from '../controllers/admin.controller';
@@ -37,6 +43,16 @@ import {
   listarSolicitudesSoftware,
   rechazarSolicitudSoftware,
 } from '../controllers/solicitudSoftware.controller';
+import {
+  listarSolicitudesLaboratorioAdmin,
+  resolverSolicitudLaboratorioAdmin,
+} from '../controllers/fusionLaboratorio.controller';
+import {
+  listarAccesibilidadAdmin,
+  resolverAccesibilidadAdmin,
+} from '../controllers/accesibilidad.controller';
+
+import { verImagenIncidenciaAdmin } from '../controllers/imagenIncidencia.controller';
 
 const router = Router();
 
@@ -59,14 +75,30 @@ router.patch('/alertas/:id/resolver', resolverAlertaPendiente);
 // GET /api/v1/admin/mapa-ocupacion (Issue 4.12)
 router.get('/mapa-ocupacion', consultarMapaOcupacion);
 
+// GET /api/v1/admin/periodos (Issue 4.42)
+router.get('/periodos', listarPeriodosAdmin);
+
 // GET /api/v1/admin/secciones-escaladas (Issue 4.22)
 router.get('/secciones-escaladas', listarEscaladas);
 
 // GET /api/v1/admin/incidencias y PATCH /api/v1/admin/incidencias/:id/resolver (Issue 7.6)
 router.get('/incidencias', listarIncidenciasReportadas);
 router.patch('/incidencias/:id/resolver', resolverIncidencia);
+// Issue 7.19: la foto de la incidencia, con la misma regla de acceso que el listado.
+router.get('/incidencias/:id/imagen', verImagenIncidenciaAdmin);
 
 const soloCoordinacion = roleGuard(RolCuenta.COORDINACION_ACADEMICA);
+
+// POST /api/v1/admin/alertas/:id/reubicar (Issue 2.22). Reasignar es una acción de Coordinación.
+router.post('/alertas/:id/reubicar', soloCoordinacion, reubicarSeccionesAlerta);
+
+// Issue 4.64: gestión de periodos (solo Coordinación).
+router.post('/periodos', soloCoordinacion, registrarPeriodoAdmin);
+router.post('/periodos/:codigo/activar', soloCoordinacion, activarPeriodoAdmin);
+router.post('/periodos/:codigo/cerrar', soloCoordinacion, cerrarPeriodoAdmin);
+
+// Última carga de datos maestros por tipo (Issue 4.54). Solo Coordinación carga archivos.
+router.get('/importaciones/ultima', soloCoordinacion, consultarUltimasImportaciones);
 
 // Catálogo de software (Issue 4.28). Lectura para Coordinación y Jefatura; alta, edición y
 // baja lógica solo para Coordinación.
@@ -75,6 +107,18 @@ router.get('/software/:id', obtenerSoftware);
 router.post('/software', soloCoordinacion, altaSoftware);
 router.patch('/software/:id', soloCoordinacion, editarSoftwareCatalogo);
 router.patch('/software/:id/estado', soloCoordinacion, cambiarEstadoCatalogo);
+
+// Declaraciones de accesibilidad de los alumnos (Issue 3.60): solo Coordinación.
+router.get('/accesibilidad', soloCoordinacion, listarAccesibilidadAdmin);
+router.patch('/accesibilidad/:id/resolver', soloCoordinacion, resolverAccesibilidadAdmin);
+
+// «Dictar todo en laboratorio» (Issue 7.17): Coordinación aprueba o rechaza lo que piden los docentes.
+router.get('/solicitudes-laboratorio', soloCoordinacion, listarSolicitudesLaboratorioAdmin);
+router.patch(
+  '/solicitudes-laboratorio/:id/resolver',
+  soloCoordinacion,
+  resolverSolicitudLaboratorioAdmin,
+);
 
 // Solicitudes de software (Issue 4.29): Coordinación las revisa, aprueba o rechaza.
 router.get('/solicitudes-software', listarSolicitudesSoftware);

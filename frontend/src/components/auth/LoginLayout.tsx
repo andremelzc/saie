@@ -71,9 +71,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
             <IconoPortal portal={actual.id} className="h-4 w-4" />
             {actual.etiqueta}
           </span>
-          <p className="mt-5 mb-0 font-serif text-4xl xl:text-[44px] xl:leading-[52px] leading-[44px] font-bold">
-            {TITULARES[actual.id]}
-          </p>
+          <p className="mt-5 mb-0 text-4xl xl:text-5xl font-bold">{TITULARES[actual.id]}</p>
           <p className="mt-4 mb-0 text-lg text-white/90">{actual.descripcion}</p>
 
           <ul className="mt-6 space-y-2.5 list-none p-0">
@@ -137,7 +135,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
             <nav
               aria-label="Otros portales"
               className="saie-rise flex flex-wrap items-center justify-center gap-2 text-sm text-saie-muted"
-              style={{ animationDelay: '0.25s' }}
+              style={{ animationDelay: '0.05s' }}
             >
               <span>¿Buscas otro portal?</span>
               {otros.map((p) => (
@@ -155,7 +153,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
         </main>
 
         <footer className="relative px-4 pb-4 text-center text-xs text-saie-muted">
-          SAIE &copy; {new Date().getFullYear()} · UNMSM · Grupo 6
+          SAIE &copy; {new Date().getFullYear()} · Universidad Nacional Mayor de San Marcos
         </footer>
       </div>
     </div>

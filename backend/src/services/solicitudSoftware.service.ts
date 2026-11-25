@@ -6,6 +6,7 @@
  * instala nada: la instalación en un laboratorio sigue siendo un paso aparte de Jefatura.
  */
 
+import { asegurarPeriodoEscribible } from './periodo.service';
 import {
   CategoriaSoftware,
   ComparacionVersion,
@@ -162,11 +163,13 @@ export async function crearSolicitud(
   if (entrada.seccionId) {
     const seccion = await prisma.seccion.findUnique({
       where: { id: entrada.seccionId },
-      select: { id: true },
+      select: { id: true, periodo: true },
     });
     if (!seccion) {
       throw new HttpError(404, `La sección con ID '${entrada.seccionId}' no existe`);
     }
+    // Issue 4.64 (R50): no se piden programas para una sección de un periodo cerrado.
+    await asegurarPeriodoEscribible(prisma, seccion.periodo);
   }
 
   const { nombre: nombreFinal, version: versionFinal } = separarNombreVersion(
@@ -209,6 +212,7 @@ export async function listarSolicitudesDeDocente(
     where: { docenteId: docente.id },
     include: incluirSolicitud,
     orderBy: { fechaSolicitud: 'desc' },
+    take: 100,
   });
 
   return filas.map(aDTO);

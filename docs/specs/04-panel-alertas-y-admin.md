@@ -33,7 +33,17 @@ Todas las rutas de `/api/v1/admin/*` exigen JWT válido de `COORDINACION_ACADEMI
   * Cada alerta: `{ id, tipo, estado, motivo, fechaDeteccion, espacio: { id, identificador, pabellon, piso }, asignacionesAfectadas: [{ asignacionId, codigoCurso, nombreCurso, codigoSeccion }] }`.
 * `PATCH /api/v1/admin/alertas/:id/resolver` (Issue 4.7)
   * Marca la alerta como `RESUELTA` y deja un `RegistroAuditoria` de tipo `ALERTA`. 404 si no existe, 403 si Jefatura no es responsable del espacio, 409 si ya estaba resuelta.
+* `POST /api/v1/admin/alertas/:id/reubicar` (Issue 2.22, solo Coordinación)
+  * Reevalúa con el motor cada sección afectada por la alerta (una vez por sección) y después la marca `RESUELTA`. Cada sección termina en un espacio válido o `ESCALADA` con su motivo.
+  * Respuesta: `{ alertaId, alertaResuelta, secciones: [{ seccionId, codigoSeccion, codigoCurso, estado, espacioIds, motivoEscalamiento, conservada }] }`. 404 si no existe, 409 si ya estaba resuelta.
+  * En la pantalla de alertas, el botón «Reubicar secciones» (con confirmación) solo aparece para Coordinación.
+* **Deshabilitar un espacio con clases** (Issue 2.22, riesgo R18): al pasar `habilitado` de `true` a `false`, si el espacio tiene asignaciones vigentes se registra una alerta de tipo `CAPACIDAD` con esas secciones («el espacio fue deshabilitado»).
 * Al crearse una alerta nueva se emite `alerta.creada` ([Spec 02](02-motor-asignacion.md) §2.4).
+* **Avisos inmediatos a Jefatura** (Issue 4.60): si están configurados `TELEGRAM_BOT_TOKEN` y `TELEGRAM_CHAT_JEFATURA` (uno o varios `chat_id` separados por comas, por ejemplo el grupo de Jefatura), se envía un mensaje de Telegram por:
+  * cada alerta nueva de `SOFTWARE` o `CAPACIDAD` (`alerta.creada`): tipo, espacio, motivo y número de secciones afectadas. Las de `ACCESIBILIDAD` no se envían: son de Coordinación y mencionan movilidad reducida (RNF-11);
+  * cada incidencia de prioridad `ALTA` (`incidencia.registrada`, que emite `POST /docente/incidencias`): código de seguimiento, tipo, espacio, clase y el comienzo de la descripción.
+  * Los fallos de envío se registran sin el `chat_id` y no afectan a la operación que originó el aviso.
+* El inicio de Coordinación y el de Jefatura muestran la cifra «Incidencias pendientes» (`GET /admin/incidencias?estado=PENDIENTE`), en rojo si alguna es de prioridad alta, con enlace a la lista.
 
 ### 2.2 Mapa Visual de Ocupación por Piso (2D & 3D) (#4.11, #4.12, #4.13, #4.14, #4.15, #4.23, #4.24)
 * **Servicio `obtenerOcupacionPorPiso`** (Issue 4.11, `backend/src/services/ocupacion.service.ts`): para cada espacio del pabellón y piso en una franja, devuelve el estado:
@@ -50,6 +60,12 @@ Todas las rutas de `/api/v1/admin/*` exigen JWT válido de `COORDINACION_ACADEMI
 ### 2.3 Gestión de Espacios y Secciones Escaladas (#4.15, #4.16, #4.17, #4.18, #4.20, #4.21, #4.22, #4.25, #4.26)
 * **Espacios deshabilitados:** `Espacio.habilitado` (por defecto `true`). Un espacio con `habilitado = false` está **fuera de servicio**: el motor no lo asigna (queda fuera del grafo de contigüidad y de la consulta de disponibilidad), el explorador del docente y la vista del alumno no lo muestran, y el mapa del panel lo marca como `DESHABILITADO` (con `resumen.deshabilitados`). Solo Coordinación lo cambia, con `habilitado` en `POST` y `PATCH /api/v1/admin/espacios`. Las asignaciones vigentes de un espacio que se deshabilita después no se reubican automáticamente. `Espacio.descripcionUso` (texto opcional, máx. 120) es un rótulo visual (ej. "Sala de investigación") que el mapa muestra aunque el espacio esté deshabilitado; `PATCH` con `null` lo borra. **Aforo:** `aforoNominal` puede omitirse o ser `0` ("sin definir") solo si el espacio está deshabilitado; habilitar un espacio con aforo 0 responde 422.
   * **Vocabulario en la interfaz (Issue 4.35):** el estado se muestra como **«Habilitado» / «No asignable»** y el contador como «N no asignables». El rótulo «fuera de servicio» queda solo en la documentación técnica: lo que la persona que coordina necesita leer es el **efecto** (el motor no puede asignar ese espacio), no la causa administrativa.
+* `GET /api/v1/admin/importaciones/ultima[?tipo=cursos-secciones|horarios|matriculas|docentes]` (Issue 4.54)
+  * Solo Coordinación Académica (401 sin token, 403 para los demás roles, 400 si `tipo` no existe). Alimenta «Última carga» y el estado de cada tarjeta de Carga de datos, que antes salían del navegador.
+  * Respuesta: `{ success: true, data: { "cursos-secciones": U | null, "horarios": U | null, "matriculas": U | null, "docentes": U | null } }` con `U = { tipo, fecha, cuenta: { id, nombre } | null, filasRecibidas, filasAceptadas, filasRechazadas, resultado: "EXITOSA" | "CON_ERRORES" }`. Con `?tipo=` solo trae esa clave. `null` = ese tipo nunca se cargó; `cuenta` es `null` si la cuenta ya no existe. Registro y modelo: [Spec 01](01-setup-e-importadores.md) §2.6.
+* `GET /api/v1/admin/periodos` (Issue 4.42)
+  * Solo lectura, para Coordinación y Jefatura (401 sin token, 403 para otros roles). Alimenta el selector de periodo del panel, que sustituye al campo de texto libre.
+  * Respuesta: `{ success: true, data: { vigente: string | null, periodos: string[] } }`. `periodos` son los valores distintos de `seccion.periodo`, del más reciente al más antiguo; `vigente` es el que calcula `obtenerPeriodoVigente` (`PERIODO_VIGENTE` o el periodo más reciente con secciones). Sin secciones: `periodos` es `[]` y `vigente` es `null` (o el valor de `PERIODO_VIGENTE`, si está configurado).
 * `GET /api/v1/admin/secciones-escaladas[?periodo=2026-1]` (Issue 4.22)
   * Lista las secciones cuya asignación más reciente quedó `ESCALADA` y requieren revisión manual, las más antiguas primero. Por defecto el periodo vigente.
   * Cada elemento: `{ asignacionId, fechaEscalamiento, motivoEscalamiento, seccion: { id, codigoCurso, nombreCurso, codigoSeccion, periodo, docenteNombre, tipoEspacioRequerido, softwareRequerido: [{ id, nombre, version, comparacionVersion }], alumnosMatriculados, horarios } }`. Una sección reasignada deja de aparecer.
@@ -87,14 +103,23 @@ una ni de cambiarles el software requerido. Estas rutas lo resuelven sin reimpor
   * La asignación es la más reciente `VIGENTE` o `ESCALADA` de la sección.
 * `GET /api/v1/admin/secciones/:id` — el detalle de una sección. 404 si no existe.
 * `PATCH /api/v1/admin/secciones/:id` (**solo Coordinación Académica**; 403 para Jefatura)
-  * Cuerpo: `{ tipoEspacioRequerido?, docenteId?, softwareRequerido?: [{ softwareId, comparacionVersion }] }`.
+  * Cuerpo: `{ tipoEspacioRequerido?, docenteId?, softwareRequerido?: [{ softwareId, comparacionVersion }], horarios?: [{ diaSemana, horaInicio, horaFin }] }`.
   * `docenteId` acepta `null` para quitar al docente; un id inexistente responde 404.
   * `softwareRequerido` **reemplaza** el conjunto: los ids se resuelven contra el catálogo
     (404 si no existe, 422 si está dado de baja) y cada uno lleva su regla de comparación de
     versión (`CUALQUIERA`, `MINIMA`, `EXACTA`).
   * Si la sección ya tiene aula asignada y el software nuevo no está instalado en ella, se
     genera la alerta de software correspondiente: el cambio no se queda solo en la sección.
-  * Respuesta: `{ seccion, alertas }`.
+  * `horarios` (Issue 4.62) **reemplaza** las franjas de la sección: así se agregan, cambian y
+    quitan desde la pantalla sin recargar el CSV. Cada franja usa `HH:mm` y el inicio debe ser
+    anterior al fin; las franjas de la misma sección no pueden cruzarse (400). Si el horario
+    cambia, se registra en la auditoría (`horarios`, como «Lunes 08:00–10:00») y la sección se
+    **reasigna** con el motor; si hay una corrida en curso, el horario se guarda igual y se
+    avisa que falta reasignar. Un periodo cerrado responde 409 (Issue 4.64).
+  * Si el docente de la sección dicta otra sección del mismo periodo que se cruza con el
+    horario, se **advierte** en `advertencias` sin impedir el guardado.
+  * Respuesta: `{ seccion, alertas, advertencias, reasignacion }`; `reasignacion` es
+    `{ estado, motivoEscalamiento, conservada }` o `null` si el horario no cambió.
 * `GET /api/v1/admin/docentes` — listado mínimo (id, código, nombre, departamento) para el
   selector de docente. No expone correos ni claves.
 
@@ -107,12 +132,17 @@ Lo que faltaba era poder consultarlos.
 * `GET /api/v1/admin/auditoria[?tipo=&desde=&hasta=&pagina=&limite=]`
   * Lista paginada, de la más reciente a la más antigua. `tipo` ∈ `ASIGNACION`, `ESCALAMIENTO`,
     `ALERTA`, `VERIFICACION`.
-  * Cada asiento: `{ id, tipoEvento, detalle, fechaHora, asignacionId, alertaId,
-    seccion: { id, codigoCurso, codigoSeccion, nombreCurso } | null }`.
+  * Cada asiento: `{ id, tipoEvento, detalle, fechaHora, asignacionId, alertaId, corridaId, origen,
+    puntaje, espaciosIds[], espacios[], cuenta, seccion: { id, codigoCurso, codigoSeccion,
+    nombreCurso } | null }`.
+  * **Datos estructurados (Issue 4.48):** `RegistroAuditoria` guarda además de `detalle` (que se mantiene por compatibilidad) `corridaId`, `espaciosIds` (ids), `cuentaId`, `puntaje` y `origen` (`DEMANDA` y `TIEMPO` en las corridas batch; `SECCION` en la asignación individual). El DTO añade `espacios: [{ id, identificador, pabellon, piso }]` (los espacios eliminados conservan su id en `espaciosIds` pero no aparecen aquí) y `cuenta: { id, nombre } | null`, con el nombre del docente o alumno y, si la cuenta no tiene ficha, su usuario de acceso. Se rellenan así: asignación y escalamiento del motor (`origen`, `espaciosIds`, `puntaje`, y `corridaId` en batch), alerta resuelta (`cuentaId` de quien la resolvió) y verificación (`corridaId`). **Los registros anteriores** quedan con `null` y `[]` y se leen por `detalle`. No hay claves foráneas a propósito: la bitácora conserva el id aunque la cuenta o el espacio se eliminen; los nombres se resuelven al leer con una consulta por tabla. Migración `20261111000000_auditoria_estructurada` (solo columnas nulas o con valor por defecto, sin pérdida de datos).
+  * **Acciones de personas (Issue 4.58):** editar un espacio, una sección o el software y las PCs de un laboratorio deja un asiento con la cuenta que lo hizo. Tres tipos de evento nuevos: `EDICION_ESPACIO`, `EDICION_SECCION` y `CAMBIO_LABORATORIO` (también sirven de filtro `?tipo=`). El asiento guarda `cuentaId`, `espaciosIds` (espacio y laboratorio) o `seccionId` (sección) y `cambios: [{ campo, anterior, nuevo }]`; el DTO devuelve `cambios`, `cuenta: { id, nombre }` y, para las secciones, `seccion: { id, codigoCurso, codigoSeccion, nombreCurso }` aunque no tengan asignación. `detalle` queda en lenguaje llano («Espacio Lab 01 Mod editado: identificador: Lab 01 → Lab 01 Mod; aforoNominal: 30 → 35»), sin identificadores internos.
+    * **Qué se audita:** espacio (`identificador`, `pabellon`, `piso`, `aforoNominal`, `habilitado`, `descripcionUso` y `contiguos` por sus identificadores); sección (`docente` por nombre, `tipoEspacioRequerido` y `softwareRequerido` con la regla de versión); laboratorio (`software` como lista anterior y nueva, y `pcsMalogradas`). El software y las PCs se auditan en `laboratorio.service`, de modo que cubre tanto los endpoints de los Issues 4.1 y 4.2 como el `PATCH /admin/espacios/:id`.
+    * **Reglas:** el asiento se crea en la misma transacción que el cambio (se confirman o revierten juntos); solo lleva los campos que **realmente cambiaron** y, si ninguno cambió, no se crea; nunca incluye claves, tokens ni la ficha médica (RNF-09). Migración `20261124000000_auditoria_acciones_personas` (tres valores del enum y dos columnas nulas: `seccion_id` y `cambios`).
 * `GET /api/v1/admin/asignaciones/historial[?seccionId=&periodo=&estado=&pagina=]`
   * Historial completo de asignaciones **incluidas las `HISTORICA`**: `{ id, seccionId,
     codigoCurso, nombreCurso, codigoSeccion, periodo, estado, fechaAsignacion, corridaId,
-    motivoEscalamiento, espacios[] }`.
+    origen, puntaje, motivoEscalamiento, espacios[] }` (`origen` y `puntaje` salen del asiento de auditoría de la decisión; `null` en las anteriores al Issue 4.48).
 
 ### 2.6 Informe de salones (Issue 4.33)
 
@@ -142,6 +172,40 @@ Lo que faltaba era poder consultarlos.
   * `fallos-04-auditoria.csv` — la bitácora del motor.
 * Variables opcionales: `EXPORT_DIR` (otra carpeta) y `EXPORT_PERIODO` (un solo periodo).
 * La guía completa está en [`docs/guia-csv.md`](../guia-csv.md).
+
+---
+
+### 2.8 Declaraciones de accesibilidad (Issue 3.60)
+
+La declaración «no puedo subir a pisos superiores» que el alumno marca en su perfil ([Spec 03](03-portal-estudiante.md) §2.2) se aplica solo cuando Coordinación la aprueba. Modelo `SolicitudAccesibilidad` (tabla `solicitudes_accesibilidad`, migración `20261128000000_solicitudes_accesibilidad`, con Row Level Security): `alumnoId`, `estado` (`EstadoSolicitud`: `PENDIENTE`, `APROBADA`, `RECHAZADA`), `fechaSolicitud`, `resueltaPorId`, `fechaResolucion`, `motivoRechazo` y `resultado`. No guarda diagnósticos.
+
+* `GET /api/v1/admin/accesibilidad` (solo Coordinación): `{ periodo, pendientes, aprobadas }`. Cada declaración trae el alumno (código y nombre) y sus secciones del periodo vigente con el aula vigente y su piso: `{ seccionId, codigoCurso, nombreCurso, codigoSeccion, espacios: [{ identificador, pabellon, piso }], fueraDePiso1, sinAula }`. En `aprobadas` va la aprobación vigente de cada alumno (la ficha sigue marcada).
+* `PATCH /api/v1/admin/accesibilidad/:id/resolver` (solo Coordinación), cuerpo `{ decision: 'APROBAR' }` o `{ decision: 'RECHAZAR', motivo }` (motivo de 5 a 500 caracteres):
+  * **Aprobar:** en una transacción marca la solicitud, `FichaMedica.condicionAccesible = true` y `movilidadReducida = true` en todas las matrículas del alumno. Después reasigna cada sección del alumno en el periodo vigente con `ejecutarAsignacionADemanda` (si alguna no consigue el piso 1, el motor registra la alerta `ACCESIBILIDAD`, Issue 3.59; si una sección no se puede reasignar, por ejemplo con una corrida en curso, la aprobación se mantiene). Guarda en `resultado` cuántas clases quedaron en el piso 1 («3 de 4 clases quedaron en el piso 1; 1 clase espera revisión»).
+  * **Rechazar:** guarda el motivo; no toca la ficha ni las matrículas.
+  * En ambos casos emite `accesibilidad.resuelta`: si el alumno tiene Telegram vinculado recibe un aviso sin el motivo ni datos de su condición (RNF-11).
+  * 400 si falta el motivo del rechazo, 404 si la solicitud no existe, 409 si ya fue resuelta.
+* Pantalla `/admin/accesibilidad` (pestaña «Accesibilidad», solo Coordinación): pendientes con «Aprobar» y «Rechazar» (motivo obligatorio) y aprobadas con el piso de cada clase, resaltando las que quedaron fuera del piso 1 o sin aula.
+* **Docentes y condición temporal (Issue 3.61, riesgos R15 y R16):** la solicitud es de un alumno o de un docente (`alumnoId` o `docenteId`, exactamente uno; migración `20261130000000_accesibilidad_docentes_temporal`) y puede traer `fechaFin`. Cada declaración incluye `tipo` (`ALUMNO` o `DOCENTE`) y `fechaFin`; para un docente, `alumno` trae su código y nombre y `secciones` son las que dicta. Al aprobar la de un docente se marca `Docente.condicionAccesible` (con `condicionAccesibleHasta`) y se reasignan sus secciones: el motor pide el piso 1 si algún alumno matriculado tiene movilidad reducida **o** el docente tiene la condición (`requierePiso1`). Los docentes no tienen Telegram vinculado: no se emite `accesibilidad.resuelta`. Las condiciones con fecha de fin anterior a hoy (hora de Lima) se retiran en `POST /api/v1/asignaciones/programada`, justo antes de la corrida, que reasigna las secciones afectadas.
+
+### 2.9 «Dictar todo en laboratorio» (Issue 7.17, riesgo R22)
+
+Cada grupo de un curso son dos secciones: la de teoría (`2`) y su laboratorio (`2-LAB`). Si el docente dicta todas las horas en laboratorio, lo pide desde su portal ([Spec 05](05-portal-docente.md) §2.1) y Coordinación lo aprueba o rechaza. Modelo `SolicitudFusionLaboratorio` (tabla `solicitudes_fusion_laboratorio`, migración `20261129000000_solicitudes_fusion_laboratorio`, con Row Level Security): `docenteId`, `seccionTeoriaId`, `seccionLaboratorioId`, `justificacion`, `estado` (`EstadoSolicitud`), `fechaSolicitud`, `resueltaPorId`, `fechaResolucion`, `motivoRechazo` y `resultado`.
+
+* `GET /api/v1/admin/solicitudes-laboratorio` (solo Coordinación): `{ pendientes, resueltas }` (las 30 últimas resueltas). Cada una: `{ id, estado, justificacion, fechaSolicitud, fechaResolucion, motivoRechazo, resultado, periodo, curso: { codigo, nombre }, grupo, docente: { codigoDocente, nombre }, seccionTeoria, seccionLaboratorio }`, cada sección con `{ id, codigoSeccion, horarios }`.
+* `PATCH /api/v1/admin/solicitudes-laboratorio/:id/resolver` (solo Coordinación), cuerpo `{ decision: 'APROBAR' }` o `{ decision: 'RECHAZAR', motivo }` (motivo de 5 a 500 caracteres):
+  * **Aprobar:** en una transacción copia las franjas de la teoría al laboratorio, matricula en el laboratorio a los alumnos de la teoría que no lo estaban (con su movilidad reducida), retira la teoría (`Seccion.activa = false`, conserva su historial) y deja su asignación como `HISTORICA` (libera el aula), y registra en la auditoría el cambio de horario del laboratorio y el retiro de la teoría. Después reasigna el laboratorio: como el motor busca un espacio libre en todas las franjas de una sección, le toca el mismo laboratorio en todas. Guarda en `resultado` dónde quedó («L-01 en todas sus franjas», «quedó en revisión: …» o que falta reasignarla si había una corrida en curso) y emite `seccion.fusionada`, que avisa por Telegram a los alumnos de ambas secciones.
+  * **Rechazar:** guarda el motivo, que el docente ve en su portal.
+  * 400 si el cuerpo es inválido, 404 si no existe, 409 si ya se resolvió, si alguna sección ya no está activa, si la teoría y el laboratorio se cruzan o si el periodo está cerrado (Issue 4.64).
+* Las secciones retiradas (`activa = false`, Issues 1.17 y 7.17) ya no aparecen en el horario del alumno ni del docente, en la consulta pública ni en Telegram.
+* Pantalla `/admin/dictar-en-laboratorio` (pestaña «Dictar en laboratorio», solo Coordinación): pendientes con las franjas de la teoría y cómo quedaría el laboratorio, «Aprobar» y «Rechazar» (motivo obligatorio), y las resueltas con su resultado o motivo.
+
+## 2.1. Gestión de periodos (Issue 4.64)
+* `GET /api/v1/admin/periodos` → `{ vigente, periodos[], registrados[{ codigo, fechaInicio, fechaFin, estado }] }` (Coordinación y Jefatura).
+* `POST /api/v1/admin/periodos` (solo Coordinación): registra un periodo `EN_PREPARACION`. El código se normaliza («2027-II» → «2027-2»).
+* `POST /api/v1/admin/periodos/:codigo/activar` y `POST /api/v1/admin/periodos/:codigo/cerrar` (solo Coordinación). Activar cierra el vigente y archiva sus asignaciones; un periodo cerrado no se reactiva.
+* Pantalla «Periodos» (`/admin/periodos`) con confirmación antes de activar y cerrar.
+* `obtenerPeriodoVigente` lee la tabla `periodos`; el reintento, la consulta pública, las alertas y el mapa solo consideran el vigente.
 
 ---
 

@@ -1,0 +1,1420 @@
+{
+  "fecha": "2026-11-17T15:15:00.000Z",
+  "base": "http://localhost:5199",
+  "rutas": {
+    "inicio": {
+      "390": {
+        "titulo": "Portal del docente · SAIE",
+        "h1": "Portal del docente",
+        "anchoDocumento": 378,
+        "anchoVentana": 390,
+        "desborda": false,
+        "altoDocumento": 1210,
+        "controles": 14,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 17,
+          "ejemplos": [
+            "12px «Docente»",
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «Termina en 1 h 45 min»",
+            "12px «secciones activas»",
+            "12px «clases por semana»",
+            "12px «alumnos a cargo»",
+            "12px «de clase a la semana»",
+            "12px «Lun»"
+          ]
+        },
+        "axe": [],
+        "captura": "capturas/inicio-390.jpg"
+      },
+      "768": {
+        "titulo": "Portal del docente · SAIE",
+        "h1": "Portal del docente",
+        "anchoDocumento": 756,
+        "anchoVentana": 768,
+        "desborda": false,
+        "altoDocumento": 1052,
+        "controles": 14,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 16,
+          "ejemplos": [
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «Termina en 1 h 45 min»",
+            "12px «secciones activas»",
+            "12px «clases por semana»",
+            "12px «alumnos a cargo»",
+            "12px «de clase a la semana»",
+            "12px «Lun»",
+            "12px «Mar»"
+          ]
+        },
+        "captura": "capturas/inicio-768.jpg"
+      },
+      "1280": {
+        "titulo": "Portal del docente · SAIE",
+        "h1": "Portal del docente",
+        "anchoDocumento": 1268,
+        "anchoVentana": 1280,
+        "desborda": false,
+        "altoDocumento": 800,
+        "controles": 14,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          },
+          {
+            "control": "a «Inicio»",
+            "alto": 36,
+            "ancho": 96
+          },
+          {
+            "control": "a «Horario»",
+            "alto": 36,
+            "ancho": 110
+          },
+          {
+            "control": "a «Espacios»",
+            "alto": 36,
+            "ancho": 120
+          },
+          {
+            "control": "a «Incidencias»",
+            "alto": 36,
+            "ancho": 136
+          },
+          {
+            "control": "a «Software»",
+            "alto": 36,
+            "ancho": 120
+          }
+        ],
+        "textoMenor14": {
+          "total": 11,
+          "ejemplos": [
+            "12px «Termina en 1 h 45 min»",
+            "12px «secciones activas»",
+            "12px «clases por semana»",
+            "12px «alumnos a cargo»",
+            "12px «de clase a la semana»",
+            "12px «Lun»",
+            "12px «Mar»",
+            "12px «Mié»",
+            "12px «Jue»",
+            "12px «Vie»",
+            "12px «Sáb»"
+          ]
+        },
+        "axe": [],
+        "captura": "capturas/inicio-1280.jpg"
+      },
+      "640x400": {
+        "titulo": "Portal del docente · SAIE",
+        "h1": "Portal del docente",
+        "anchoDocumento": 628,
+        "anchoVentana": 640,
+        "desborda": false,
+        "altoDocumento": 1120,
+        "controles": 14,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 16,
+          "ejemplos": [
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «Termina en 1 h 45 min»",
+            "12px «secciones activas»",
+            "12px «clases por semana»",
+            "12px «alumnos a cargo»",
+            "12px «de clase a la semana»",
+            "12px «Lun»",
+            "12px «Mar»"
+          ]
+        },
+        "captura": "capturas/inicio-640x400.jpg"
+      }
+    },
+    "horario": {
+      "390": {
+        "titulo": "Mi horario y asignaciones · SAIE",
+        "h1": "Mi horario y asignaciones",
+        "anchoDocumento": 378,
+        "anchoVentana": 390,
+        "desborda": false,
+        "altoDocumento": 1272,
+        "controles": 18,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 7,
+          "ejemplos": [
+            "12px «Docente»",
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «Hoy»"
+          ]
+        },
+        "axe": [],
+        "captura": "capturas/horario-390.jpg"
+      },
+      "768": {
+        "titulo": "Mi horario y asignaciones · SAIE",
+        "h1": "Mi horario y asignaciones",
+        "anchoDocumento": 756,
+        "anchoVentana": 768,
+        "desborda": false,
+        "altoDocumento": 1032,
+        "controles": 18,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 6,
+          "ejemplos": [
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «Hoy»"
+          ]
+        },
+        "captura": "capturas/horario-768.jpg"
+      },
+      "1280": {
+        "titulo": "Mi horario y asignaciones · SAIE",
+        "h1": "Mi horario y asignaciones",
+        "anchoDocumento": 1268,
+        "anchoVentana": 1280,
+        "desborda": false,
+        "altoDocumento": 973,
+        "controles": 18,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          },
+          {
+            "control": "a «Inicio»",
+            "alto": 36,
+            "ancho": 96
+          },
+          {
+            "control": "a «Horario»",
+            "alto": 36,
+            "ancho": 110
+          },
+          {
+            "control": "a «Espacios»",
+            "alto": 36,
+            "ancho": 120
+          },
+          {
+            "control": "a «Incidencias»",
+            "alto": 36,
+            "ancho": 136
+          },
+          {
+            "control": "a «Software»",
+            "alto": 36,
+            "ancho": 120
+          }
+        ],
+        "textoMenor14": {
+          "total": 1,
+          "ejemplos": [
+            "12px «Hoy»"
+          ]
+        },
+        "axe": [],
+        "captura": "capturas/horario-1280.jpg"
+      },
+      "640x400": {
+        "titulo": "Mi horario y asignaciones · SAIE",
+        "h1": "Mi horario y asignaciones",
+        "anchoDocumento": 628,
+        "anchoVentana": 640,
+        "desborda": false,
+        "altoDocumento": 1056,
+        "controles": 18,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 6,
+          "ejemplos": [
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «Hoy»"
+          ]
+        },
+        "captura": "capturas/horario-640x400.jpg"
+      }
+    },
+    "horario-asignaciones": {
+      "390": {
+        "titulo": "Mi horario y asignaciones · SAIE",
+        "h1": "Mi horario y asignaciones",
+        "anchoDocumento": 378,
+        "anchoVentana": 390,
+        "desborda": false,
+        "altoDocumento": 1250,
+        "controles": 10,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 14,
+          "ejemplos": [
+            "12px «Docente»",
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «Espacio»"
+          ]
+        },
+        "axe": [],
+        "captura": "capturas/horario-asignaciones-390.jpg"
+      },
+      "768": {
+        "titulo": "Mi horario y asignaciones · SAIE",
+        "h1": "Mi horario y asignaciones",
+        "anchoDocumento": 756,
+        "anchoVentana": 768,
+        "desborda": false,
+        "altoDocumento": 1024,
+        "controles": 10,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 13,
+          "ejemplos": [
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «Espacio»"
+          ]
+        },
+        "captura": "capturas/horario-asignaciones-768.jpg"
+      },
+      "1280": {
+        "titulo": "Mi horario y asignaciones · SAIE",
+        "h1": "Mi horario y asignaciones",
+        "anchoDocumento": 1268,
+        "anchoVentana": 1280,
+        "desborda": false,
+        "altoDocumento": 903,
+        "controles": 10,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          },
+          {
+            "control": "a «Inicio»",
+            "alto": 36,
+            "ancho": 96
+          },
+          {
+            "control": "a «Horario»",
+            "alto": 36,
+            "ancho": 110
+          },
+          {
+            "control": "a «Espacios»",
+            "alto": 36,
+            "ancho": 120
+          },
+          {
+            "control": "a «Incidencias»",
+            "alto": 36,
+            "ancho": 136
+          },
+          {
+            "control": "a «Software»",
+            "alto": 36,
+            "ancho": 120
+          }
+        ],
+        "textoMenor14": {
+          "total": 8,
+          "ejemplos": [
+            "12px «Horario»",
+            "12px «Espacio»",
+            "12px «Espacios»"
+          ]
+        },
+        "axe": [],
+        "captura": "capturas/horario-asignaciones-1280.jpg"
+      },
+      "640x400": {
+        "titulo": "Mi horario y asignaciones · SAIE",
+        "h1": "Mi horario y asignaciones",
+        "anchoDocumento": 628,
+        "anchoVentana": 640,
+        "desborda": false,
+        "altoDocumento": 1006,
+        "controles": 10,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 13,
+          "ejemplos": [
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «Espacio»"
+          ]
+        },
+        "captura": "capturas/horario-asignaciones-640x400.jpg"
+      }
+    },
+    "horario-semana": {
+      "390": {
+        "titulo": "Mi horario y asignaciones · SAIE",
+        "h1": "Mi horario y asignaciones",
+        "anchoDocumento": 378,
+        "anchoVentana": 390,
+        "desborda": false,
+        "altoDocumento": 1109,
+        "controles": 17,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 26,
+          "ejemplos": [
+            "12px «Docente»",
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «08:00»",
+            "12px «09:00»",
+            "12px «10:00»",
+            "12px «11:00»",
+            "12px «12:00»",
+            "12px «13:00»"
+          ]
+        },
+        "axe": [],
+        "captura": "capturas/horario-semana-390.jpg"
+      },
+      "768": {
+        "titulo": "Mi horario y asignaciones · SAIE",
+        "h1": "Mi horario y asignaciones",
+        "anchoDocumento": 756,
+        "anchoVentana": 768,
+        "desborda": false,
+        "altoDocumento": 1109,
+        "controles": 17,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 25,
+          "ejemplos": [
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «08:00»",
+            "12px «09:00»",
+            "12px «10:00»",
+            "12px «11:00»",
+            "12px «12:00»",
+            "12px «13:00»",
+            "12px «14:00»"
+          ]
+        },
+        "captura": "capturas/horario-semana-768.jpg"
+      },
+      "1280": {
+        "titulo": "Mi horario y asignaciones · SAIE",
+        "h1": "Mi horario y asignaciones",
+        "anchoDocumento": 1268,
+        "anchoVentana": 1280,
+        "desborda": false,
+        "altoDocumento": 1082,
+        "controles": 17,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          },
+          {
+            "control": "a «Inicio»",
+            "alto": 36,
+            "ancho": 96
+          },
+          {
+            "control": "a «Horario»",
+            "alto": 36,
+            "ancho": 110
+          },
+          {
+            "control": "a «Espacios»",
+            "alto": 36,
+            "ancho": 120
+          },
+          {
+            "control": "a «Incidencias»",
+            "alto": 36,
+            "ancho": 136
+          },
+          {
+            "control": "a «Software»",
+            "alto": 36,
+            "ancho": 120
+          }
+        ],
+        "textoMenor14": {
+          "total": 20,
+          "ejemplos": [
+            "12px «08:00»",
+            "12px «09:00»",
+            "12px «10:00»",
+            "12px «11:00»",
+            "12px «12:00»",
+            "12px «13:00»",
+            "12px «14:00»",
+            "12px «15:00»",
+            "12px «16:00»",
+            "12px «17:00»",
+            "12px «08:00 – 10:00»",
+            "12px «Teoría AULA-101»"
+          ]
+        },
+        "axe": [],
+        "captura": "capturas/horario-semana-1280.jpg"
+      },
+      "640x400": {
+        "titulo": "Mi horario y asignaciones · SAIE",
+        "h1": "Mi horario y asignaciones",
+        "anchoDocumento": 628,
+        "anchoVentana": 640,
+        "desborda": false,
+        "altoDocumento": 1109,
+        "controles": 17,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 25,
+          "ejemplos": [
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «08:00»",
+            "12px «09:00»",
+            "12px «10:00»",
+            "12px «11:00»",
+            "12px «12:00»",
+            "12px «13:00»",
+            "12px «14:00»"
+          ]
+        },
+        "captura": "capturas/horario-semana-640x400.jpg"
+      }
+    },
+    "espacios": {
+      "390": {
+        "titulo": "Explorar espacios y equipos · SAIE",
+        "h1": "Explorar espacios y equipos",
+        "anchoDocumento": 378,
+        "anchoVentana": 390,
+        "desborda": false,
+        "altoDocumento": 1768,
+        "controles": 15,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 6,
+          "ejemplos": [
+            "12px «Docente»",
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»"
+          ]
+        },
+        "axe": [],
+        "captura": "capturas/espacios-390.jpg"
+      },
+      "768": {
+        "titulo": "Explorar espacios y equipos · SAIE",
+        "h1": "Explorar espacios y equipos",
+        "anchoDocumento": 756,
+        "anchoVentana": 768,
+        "desborda": false,
+        "altoDocumento": 1208,
+        "controles": 15,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 5,
+          "ejemplos": [
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»"
+          ]
+        },
+        "captura": "capturas/espacios-768.jpg"
+      },
+      "1280": {
+        "titulo": "Explorar espacios y equipos · SAIE",
+        "h1": "Explorar espacios y equipos",
+        "anchoDocumento": 1268,
+        "anchoVentana": 1280,
+        "desborda": false,
+        "altoDocumento": 1181,
+        "controles": 15,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          },
+          {
+            "control": "a «Inicio»",
+            "alto": 36,
+            "ancho": 96
+          },
+          {
+            "control": "a «Horario»",
+            "alto": 36,
+            "ancho": 110
+          },
+          {
+            "control": "a «Espacios»",
+            "alto": 36,
+            "ancho": 120
+          },
+          {
+            "control": "a «Incidencias»",
+            "alto": 36,
+            "ancho": 136
+          },
+          {
+            "control": "a «Software»",
+            "alto": 36,
+            "ancho": 120
+          }
+        ],
+        "textoMenor14": {
+          "total": 0,
+          "ejemplos": []
+        },
+        "axe": [],
+        "captura": "capturas/espacios-1280.jpg"
+      },
+      "640x400": {
+        "titulo": "Explorar espacios y equipos · SAIE",
+        "h1": "Explorar espacios y equipos",
+        "anchoDocumento": 628,
+        "anchoVentana": 640,
+        "desborda": false,
+        "altoDocumento": 1208,
+        "controles": 15,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 5,
+          "ejemplos": [
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»"
+          ]
+        },
+        "captura": "capturas/espacios-640x400.jpg"
+      }
+    },
+    "espacios-laboratorio": {
+      "390": {
+        "titulo": "Explorar espacios y equipos · SAIE",
+        "h1": "Explorar espacios y equipos",
+        "anchoDocumento": 378,
+        "anchoVentana": 390,
+        "desborda": false,
+        "altoDocumento": 1208,
+        "controles": 11,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 6,
+          "ejemplos": [
+            "12px «Docente»",
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»"
+          ]
+        },
+        "axe": [],
+        "captura": "capturas/espacios-laboratorio-390.jpg"
+      },
+      "768": {
+        "titulo": "Explorar espacios y equipos · SAIE",
+        "h1": "Explorar espacios y equipos",
+        "anchoDocumento": 756,
+        "anchoVentana": 768,
+        "desborda": false,
+        "altoDocumento": 1024,
+        "controles": 11,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 5,
+          "ejemplos": [
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»"
+          ]
+        },
+        "captura": "capturas/espacios-laboratorio-768.jpg"
+      },
+      "1280": {
+        "titulo": "Explorar espacios y equipos · SAIE",
+        "h1": "Explorar espacios y equipos",
+        "anchoDocumento": 1268,
+        "anchoVentana": 1280,
+        "desborda": false,
+        "altoDocumento": 951,
+        "controles": 11,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          },
+          {
+            "control": "a «Inicio»",
+            "alto": 36,
+            "ancho": 96
+          },
+          {
+            "control": "a «Horario»",
+            "alto": 36,
+            "ancho": 110
+          },
+          {
+            "control": "a «Espacios»",
+            "alto": 36,
+            "ancho": 120
+          },
+          {
+            "control": "a «Incidencias»",
+            "alto": 36,
+            "ancho": 136
+          },
+          {
+            "control": "a «Software»",
+            "alto": 36,
+            "ancho": 120
+          }
+        ],
+        "textoMenor14": {
+          "total": 0,
+          "ejemplos": []
+        },
+        "axe": [],
+        "captura": "capturas/espacios-laboratorio-1280.jpg"
+      },
+      "640x400": {
+        "titulo": "Explorar espacios y equipos · SAIE",
+        "h1": "Explorar espacios y equipos",
+        "anchoDocumento": 628,
+        "anchoVentana": 640,
+        "desborda": false,
+        "altoDocumento": 1054,
+        "controles": 11,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 5,
+          "ejemplos": [
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»"
+          ]
+        },
+        "captura": "capturas/espacios-laboratorio-640x400.jpg"
+      }
+    },
+    "incidencias": {
+      "390": {
+        "titulo": "Reportar una incidencia · SAIE",
+        "h1": "Reportar una incidencia",
+        "anchoDocumento": 378,
+        "anchoVentana": 390,
+        "desborda": false,
+        "altoDocumento": 1090,
+        "controles": 15,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 7,
+          "ejemplos": [
+            "12px «Docente»",
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «Elige el tipo de incidencia.»"
+          ]
+        },
+        "axe": [],
+        "captura": "capturas/incidencias-390.jpg"
+      },
+      "768": {
+        "titulo": "Reportar una incidencia · SAIE",
+        "h1": "Reportar una incidencia",
+        "anchoDocumento": 756,
+        "anchoVentana": 768,
+        "desborda": false,
+        "altoDocumento": 1024,
+        "controles": 15,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 6,
+          "ejemplos": [
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «Elige el tipo de incidencia.»"
+          ]
+        },
+        "captura": "capturas/incidencias-768.jpg"
+      },
+      "1280": {
+        "titulo": "Reportar una incidencia · SAIE",
+        "h1": "Reportar una incidencia",
+        "anchoDocumento": 1268,
+        "anchoVentana": 1280,
+        "desborda": false,
+        "altoDocumento": 847,
+        "controles": 15,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          },
+          {
+            "control": "a «Inicio»",
+            "alto": 36,
+            "ancho": 96
+          },
+          {
+            "control": "a «Horario»",
+            "alto": 36,
+            "ancho": 110
+          },
+          {
+            "control": "a «Espacios»",
+            "alto": 36,
+            "ancho": 120
+          },
+          {
+            "control": "a «Incidencias»",
+            "alto": 36,
+            "ancho": 136
+          },
+          {
+            "control": "a «Software»",
+            "alto": 36,
+            "ancho": 120
+          }
+        ],
+        "textoMenor14": {
+          "total": 1,
+          "ejemplos": [
+            "12px «Elige el tipo de incidencia.»"
+          ]
+        },
+        "axe": [],
+        "captura": "capturas/incidencias-1280.jpg"
+      },
+      "640x400": {
+        "titulo": "Reportar una incidencia · SAIE",
+        "h1": "Reportar una incidencia",
+        "anchoDocumento": 628,
+        "anchoVentana": 640,
+        "desborda": false,
+        "altoDocumento": 894,
+        "controles": 15,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 6,
+          "ejemplos": [
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «Elige el tipo de incidencia.»"
+          ]
+        },
+        "captura": "capturas/incidencias-640x400.jpg"
+      }
+    },
+    "software": {
+      "390": {
+        "titulo": "Solicitudes de software · SAIE",
+        "h1": "Solicitudes de software",
+        "anchoDocumento": 378,
+        "anchoVentana": 390,
+        "desborda": false,
+        "altoDocumento": 1520,
+        "controles": 13,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 7,
+          "ejemplos": [
+            "12px «Docente»",
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «Motivo del rechazo»"
+          ]
+        },
+        "axe": [],
+        "captura": "capturas/software-390.jpg"
+      },
+      "768": {
+        "titulo": "Solicitudes de software · SAIE",
+        "h1": "Solicitudes de software",
+        "anchoDocumento": 756,
+        "anchoVentana": 768,
+        "desborda": false,
+        "altoDocumento": 1204,
+        "controles": 13,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 6,
+          "ejemplos": [
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «Motivo del rechazo»"
+          ]
+        },
+        "captura": "capturas/software-768.jpg"
+      },
+      "1280": {
+        "titulo": "Solicitudes de software · SAIE",
+        "h1": "Solicitudes de software",
+        "anchoDocumento": 1268,
+        "anchoVentana": 1280,
+        "desborda": false,
+        "altoDocumento": 1177,
+        "controles": 13,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          },
+          {
+            "control": "a «Inicio»",
+            "alto": 36,
+            "ancho": 96
+          },
+          {
+            "control": "a «Horario»",
+            "alto": 36,
+            "ancho": 110
+          },
+          {
+            "control": "a «Espacios»",
+            "alto": 36,
+            "ancho": 120
+          },
+          {
+            "control": "a «Incidencias»",
+            "alto": 36,
+            "ancho": 136
+          },
+          {
+            "control": "a «Software»",
+            "alto": 36,
+            "ancho": 120
+          }
+        ],
+        "textoMenor14": {
+          "total": 1,
+          "ejemplos": [
+            "12px «Motivo del rechazo»"
+          ]
+        },
+        "axe": [],
+        "captura": "capturas/software-1280.jpg"
+      },
+      "640x400": {
+        "titulo": "Solicitudes de software · SAIE",
+        "h1": "Solicitudes de software",
+        "anchoDocumento": 628,
+        "anchoVentana": 640,
+        "desborda": false,
+        "altoDocumento": 1224,
+        "controles": 13,
+        "objetivosMenores44": [
+          {
+            "control": "a «Saltar al contenido»",
+            "alto": 1,
+            "ancho": 1
+          }
+        ],
+        "textoMenor14": {
+          "total": 6,
+          "ejemplos": [
+            "12px «Inicio»",
+            "12px «Horario»",
+            "12px «Espacios»",
+            "12px «Incidencias»",
+            "12px «Software»",
+            "12px «Motivo del rechazo»"
+          ]
+        },
+        "captura": "capturas/software-640x400.jpg"
+      }
+    }
+  },
+  "interacciones": {
+    "ordenTabulacionInicio": [
+      "a «Saltar al contenido» foco:3px rgb(34, 34, 34)",
+      "a «» foco:3px rgb(34, 34, 34)",
+      "button «Cerrar sesión» foco:3px rgb(255, 255, 255)",
+      "a «Inicio» foco:3px rgb(255, 255, 255)",
+      "a «Horario» foco:3px rgb(102, 102, 102)",
+      "a «Espacios» foco:3px rgb(102, 102, 102)",
+      "a «Incidencias» foco:3px rgb(102, 102, 102)",
+      "a «Software» foco:3px rgb(102, 102, 102)",
+      "a «Lunes, 1 clase» foco:3px rgb(34, 34, 34)",
+      "a «Martes, hoy, 3 clases» foco:3px rgb(255, 255, 255)",
+      "a «Miércoles, 0 clases» foco:3px rgb(34, 34, 34)",
+      "a «Jueves, 1 clase» foco:3px rgb(34, 34, 34)",
+      "a «Viernes, 0 clases» foco:3px rgb(34, 34, 34)",
+      "a «Sábado, 0 clases» foco:3px rgb(34, 34, 34)",
+      "body «Saltar al contenido Docente Cerrar sesió» foco:NINGUNO",
+      "a «Saltar al contenido» foco:3px rgb(34, 34, 34)"
+    ],
+    "focoTrasNavegar": "h1 «Mi horario y asignaciones»",
+    "regionesVivasInicio": [
+      "polite: «Termina en 1 h 45 min»",
+      "polite: «»",
+      "assertive: «»"
+    ],
+    "cuentaRegresivaCambiaCadaMinuto": {
+      "antes": "Termina en 1 h 45 min",
+      "despues": "Termina en 1 h 44 min"
+    },
+    "clicJuevesEnTira": {
+      "url": "/docente/horario",
+      "marcado": [
+        "Horario",
+        "Horario",
+        "Día",
+        "Martes, hoy, 3 clases"
+      ],
+      "titulos": [
+        "Mi horario",
+        "Martes"
+      ]
+    },
+    "focoTrasEnviarIncidencia": {
+      "activo": "body",
+      "esBody": true
+    },
+    "textoConfirmacion": "Incidencia registrada\n\nJefatura de Laboratorios ya puede verla. Guarda el código para hacerle seguimiento.\n\nCódigo de seguimiento\nINC-3F9A2C1B\nPrioridad\nPrioridad media\nUbicación\nAula teórica AULA-101\nPabellón A, piso 1\n\nClase: CC-101 · Sección 1 — Algoritmos y Estructuras de Datos\n\nReportar otra incidencia\nVolver al portal",
+    "navegarConFormularioLleno": {
+      "url": "/docente",
+      "aviso": null
+    },
+    "solicitudVacia": {
+      "errores": [
+        "Escribe el nombre del software.",
+        "Cuéntanos para qué lo necesitas: Coordinación lo usa para decidir."
+      ],
+      "foco": "button Enviar solicitud"
+    },
+    "focoLogoCabecera": {
+      "elemento": "A SAIE",
+      "outline": "3px solid rgb(34, 34, 34)",
+      "fondoCabecera": "rgb(123, 17, 19)"
+    }
+  },
+  "estados": {
+    "carga": {
+      "url": "/docente",
+      "textoVisible": "Portal del docente martes, 17 de noviembre Buenos días Cargando tu próxima clase…",
+      "alertas": [],
+      "captura": "capturas/estado-carga.jpg"
+    },
+    "vacio-inicio": {
+      "url": "/docente",
+      "textoVisible": "Portal del docente Periodo lectivo 2026-2 martes, 17 de noviembre Buenos días No tienes clases programadas Cuando se asignen aulas a tus secciones, tu próxima clase aparecerá aquí. 0 secciones activas 0 clases por semana 0 alumnos a cargo 0 min de clase a la semana Tus clases de hoy Hoy no tienes clases Revisa tu horario de la semana o el estado de tu laboratorio.",
+      "alertas": [
+        "Hoy no tienes clases\n\nRevisa tu horario de la semana o el estado de tu laboratorio."
+      ],
+      "captura": "capturas/estado-vacio-inicio.jpg"
+    },
+    "vacio-horario": {
+      "url": "/docente/horario",
+      "textoVisible": "Mi horario y asignaciones Periodo 2026-2 Horario Asignaciones Mi horario Aún no tienes clases programadas Tu horario aparecerá aquí cuando tus secciones tengan horario y aula.",
+      "alertas": [
+        "Aún no tienes clases programadas\n\nTu horario aparecerá aquí cuando tus secciones tengan horario y aula."
+      ],
+      "captura": "capturas/estado-vacio-horario.jpg"
+    },
+    "vacio-incidencias": {
+      "url": "/docente/incidencias",
+      "textoVisible": "Reportar una incidencia Informa una falla de equipos, software o del espacio. Jefatura de Laboratorios la atenderá. No tienes clases con aula asignada Las incidencias se reportan sobre el aula o laboratorio de una de tus clases. Cuando tengas una asignada, podrás hacerlo aquí.",
+      "alertas": [
+        "No tienes clases con aula asignada\n\nLas incidencias se reportan sobre el aula o laboratorio de una de tus clases. Cuando tengas una asignada, podrás hacerlo aquí."
+      ],
+      "captura": "capturas/estado-vacio-incidencias.jpg"
+    },
+    "vacio-software": {
+      "url": "/docente/solicitudes-software",
+      "textoVisible": "Solicitudes de software ¿Necesitas un software que no está en el catálogo? Pídelo aquí. Nueva solicitud Nombre del software Versión (opcional) Categoría (opcional) Sin categoría Sistema operativo Entorno de desarrollo (IDE) Lenguaje o compilador Base de datos Redes Simulación Ofimática Otro ¿Para qué lo necesitas? Curso, práctica o trabajo que lo requiere. Enviar solicitud Mis solicitudes Aún no h",
+      "alertas": [
+        "Aún no has pedido ningún software\n\nCuando envíes una solicitud, aquí verás si fue aprobada o rechazada y por qué."
+      ],
+      "captura": "capturas/estado-vacio-software.jpg"
+    },
+    "inicio-401": {
+      "url": "/login/docente",
+      "textoVisible": "Docente Portal del Docente Consulta tus aulas asignadas y reporta incidencias de equipamiento Tu sesión venció. Inicia sesión nuevamente para continuar. Código de docente * (obligatorio) Ingresa tu código de docente asignado por la Facultad. Contraseña * (obligatorio) Iniciar sesión → Las cuentas de acceso son generadas por la Facultad. Si necesitas soporte técnico, acude a Coordinación Académica.",
+      "alertas": [
+        "Tu sesión venció. Inicia sesión nuevamente para continuar."
+      ],
+      "captura": "capturas/estado-inicio-401.jpg"
+    },
+    "inicio-403": {
+      "url": "/docente",
+      "textoVisible": "Portal del docente No tienes permiso para hacer esta acción. Reintentar martes, 17 de noviembre Buenos días No pudimos cargar tu horario.",
+      "alertas": [
+        "No tienes permiso para hacer esta acción.\n\nReintentar"
+      ],
+      "captura": "capturas/estado-inicio-403.jpg"
+    },
+    "inicio-404": {
+      "url": "/docente",
+      "textoVisible": "Portal del docente No encontramos lo que buscas. Puede que ya no exista: actualiza la página. Reintentar martes, 17 de noviembre Buenos días No pudimos cargar tu horario.",
+      "alertas": [
+        "No encontramos lo que buscas. Puede que ya no exista: actualiza la página.\n\nReintentar"
+      ],
+      "captura": "capturas/estado-inicio-404.jpg"
+    },
+    "inicio-500": {
+      "url": "/docente",
+      "textoVisible": "Portal del docente Algo salió mal de nuestro lado. Inténtalo de nuevo en unos minutos. Reintentar martes, 17 de noviembre Buenos días No pudimos cargar tu horario.",
+      "alertas": [
+        "Algo salió mal de nuestro lado. Inténtalo de nuevo en unos minutos.\n\nReintentar"
+      ],
+      "captura": "capturas/estado-inicio-500.jpg"
+    },
+    "inicio-timeout": {
+      "url": "/docente",
+      "textoVisible": "Portal del docente La operación tardó más de lo esperado. Puede que se haya completado: actualiza para comprobarlo. Reintentar martes, 17 de noviembre Buenos días No pudimos cargar tu horario.",
+      "alertas": [
+        "La operación tardó más de lo esperado. Puede que se haya completado: actualiza para comprobarlo.\n\nReintentar"
+      ],
+      "captura": "capturas/estado-inicio-timeout.jpg"
+    },
+    "explorador-500": {
+      "url": "/docente/espacios",
+      "textoVisible": "Explorar espacios y equipos Busca aulas y laboratorios libres y revisa tu laboratorio antes de clase. Explorar espacios Mi laboratorio Explorador de espacios Tipo de espacio Todos Aulas teóricas Laboratorios Piso Todos Piso 1 Piso 2 Piso 3 Capacidad mínima Solo disponibles Consultar otro día u hora Algo salió mal de nuestro lado. Inténtalo de nuevo en unos minutos. Reintentar Sin espacios que coin",
+      "alertas": [
+        "Algo salió mal de nuestro lado. Inténtalo de nuevo en unos minutos.\n\nReintentar",
+        "",
+        "Sin espacios que coincidan\n\nPrueba con otro tipo, piso o franja horaria."
+      ],
+      "captura": "capturas/estado-explorador-500.jpg"
+    },
+    "software-500": {
+      "url": "/docente/solicitudes-software",
+      "textoVisible": "Solicitudes de software ¿Necesitas un software que no está en el catálogo? Pídelo aquí. Nueva solicitud Nombre del software Versión (opcional) Categoría (opcional) Sin categoría Sistema operativo Entorno de desarrollo (IDE) Lenguaje o compilador Base de datos Redes Simulación Ofimática Otro ¿Para qué lo necesitas? Curso, práctica o trabajo que lo requiere. Enviar solicitud Mis solicitudes Algo sal",
+      "alertas": [
+        "Algo salió mal de nuestro lado. Inténtalo de nuevo en unos minutos.\n\nReintentar",
+        "Aún no has pedido ningún software\n\nCuando envíes una solicitud, aquí verás si fue aprobada o rechazada y por qué."
+      ],
+      "captura": "capturas/estado-software-500.jpg"
+    },
+    "enviar-incidencia-409": {
+      "url": "/docente/incidencias",
+      "textoVisible": "Reportar una incidencia Informa una falla de equipos, software o del espacio. Jefatura de Laboratorios la atenderá. Nueva incidencia Clase afectada CC-101 · Sección 1 — Algoritmos y Estructuras de Datos CC-205 · Sección 2 — Programación Orientada a Objetos CC-310 · Sección 1 — Ingeniería de Requisitos y Modelado de Sistemas de Información Avanzado CC-412 · Sección 3 — Seminario de Tesis Espacio Au",
+      "alertas": [
+        "Inténtalo de nuevo en unos minutos."
+      ],
+      "captura": "capturas/estado-enviar-incidencia-409.jpg"
+    },
+    "enviar-incidencia-422": {
+      "url": "/docente/incidencias",
+      "textoVisible": "Reportar una incidencia Informa una falla de equipos, software o del espacio. Jefatura de Laboratorios la atenderá. Nueva incidencia Clase afectada CC-101 · Sección 1 — Algoritmos y Estructuras de Datos CC-205 · Sección 2 — Programación Orientada a Objetos CC-310 · Sección 1 — Ingeniería de Requisitos y Modelado de Sistemas de Información Avanzado CC-412 · Sección 3 — Seminario de Tesis Espacio Au",
+      "alertas": [
+        "Inténtalo de nuevo en unos minutos."
+      ],
+      "captura": "capturas/estado-enviar-incidencia-422.jpg"
+    },
+    "enviar-incidencia-500": {
+      "url": "/docente/incidencias",
+      "textoVisible": "Reportar una incidencia Informa una falla de equipos, software o del espacio. Jefatura de Laboratorios la atenderá. Nueva incidencia Clase afectada CC-101 · Sección 1 — Algoritmos y Estructuras de Datos CC-205 · Sección 2 — Programación Orientada a Objetos CC-310 · Sección 1 — Ingeniería de Requisitos y Modelado de Sistemas de Información Avanzado CC-412 · Sección 3 — Seminario de Tesis Espacio Au",
+      "alertas": [
+        "Algo salió mal de nuestro lado. Inténtalo de nuevo en unos minutos."
+      ],
+      "captura": "capturas/estado-enviar-incidencia-500.jpg"
+    },
+    "enviar-incidencia-timeout": {
+      "url": "/docente/incidencias",
+      "textoVisible": "Reportar una incidencia Informa una falla de equipos, software o del espacio. Jefatura de Laboratorios la atenderá. Nueva incidencia Clase afectada CC-101 · Sección 1 — Algoritmos y Estructuras de Datos CC-205 · Sección 2 — Programación Orientada a Objetos CC-310 · Sección 1 — Ingeniería de Requisitos y Modelado de Sistemas de Información Avanzado CC-412 · Sección 3 — Seminario de Tesis Espacio Au",
+      "alertas": [
+        "La operación tardó más de lo esperado. Puede que se haya completado: actualiza para comprobarlo."
+      ],
+      "captura": "capturas/estado-enviar-incidencia-timeout.jpg"
+    },
+    "enviar-solicitud-409": {
+      "url": "/docente/solicitudes-software",
+      "textoVisible": "Solicitudes de software ¿Necesitas un software que no está en el catálogo? Pídelo aquí. Nueva solicitud Nombre del software Versión (opcional) Categoría (opcional) Sin categoría Sistema operativo Entorno de desarrollo (IDE) Lenguaje o compilador Base de datos Redes Simulación Ofimática Otro ¿Para qué lo necesitas? Curso, práctica o trabajo que lo requiere. Ese software ya está en el catálogo, así ",
+      "alertas": [
+        "Ese software ya está en el catálogo, así que no hace falta solicitarlo. Coordinación puede añadirlo a los laboratorios que lo necesiten."
+      ],
+      "captura": "capturas/estado-enviar-solicitud-409.jpg"
+    },
+    "enviar-solicitud-422": {
+      "url": "/docente/solicitudes-software",
+      "textoVisible": "Solicitudes de software ¿Necesitas un software que no está en el catálogo? Pídelo aquí. Nueva solicitud Nombre del software Versión (opcional) Categoría (opcional) Sin categoría Sistema operativo Entorno de desarrollo (IDE) Lenguaje o compilador Base de datos Redes Simulación Ofimática Otro ¿Para qué lo necesitas? Curso, práctica o trabajo que lo requiere. Inténtalo de nuevo en unos minutos. Envia",
+      "alertas": [
+        "Inténtalo de nuevo en unos minutos."
+      ],
+      "captura": "capturas/estado-enviar-solicitud-422.jpg"
+    }
+  },
+  "login": {
+    "390": {
+      "titulo": "Portal del Docente · SAIE",
+      "h1": "Portal del Docente",
+      "anchoDocumento": 378,
+      "anchoVentana": 390,
+      "desborda": false,
+      "altoDocumento": 893,
+      "controles": 8,
+      "objetivosMenores44": [
+        {
+          "control": "a «A»",
+          "alto": 40,
+          "ancho": 103
+        },
+        {
+          "control": "button «Mostrar contraseña»",
+          "alto": 40,
+          "ancho": 44
+        }
+      ],
+      "textoMenor14": {
+        "total": 3,
+        "ejemplos": [
+          "12px «Docente»",
+          "12px «Las cuentas de acceso son generadas por »",
+          "12px «SAIE © 2026 · Universidad Nacional Mayor»"
+        ]
+      },
+      "axe": [],
+      "captura": "capturas/login-390.jpg"
+    },
+    "1280": {
+      "titulo": "Portal del Docente · SAIE",
+      "h1": "Portal del Docente",
+      "anchoDocumento": 1268,
+      "anchoVentana": 1280,
+      "desborda": false,
+      "altoDocumento": 800,
+      "controles": 8,
+      "objetivosMenores44": [
+        {
+          "control": "button «Mostrar contraseña»",
+          "alto": 40,
+          "ancho": 44
+        }
+      ],
+      "textoMenor14": {
+        "total": 5,
+        "ejemplos": [
+          "12px «Docente»",
+          "12px «Facultad de Ingeniería de Sistemas e Inf»",
+          "12px «Las cuentas de acceso son generadas por »",
+          "12px «SAIE © 2026 · Universidad Nacional Mayor»"
+        ]
+      },
+      "axe": [],
+      "captura": "capturas/login-1280.jpg"
+    }
+  }
+}

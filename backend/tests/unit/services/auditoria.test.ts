@@ -13,6 +13,13 @@ function registro(overrides: Record<string, unknown> = {}) {
     fechaHora: new Date('2026-10-01T10:00:00Z'),
     asignacionId: 'asig-1',
     alertaId: null,
+    corridaId: null,
+    espaciosIds: [],
+    cuentaId: null,
+    puntaje: null,
+    origen: null,
+    seccionId: null,
+    cambios: null,
     asignacion: {
       seccion: {
         id: 'sec-1',
@@ -32,6 +39,7 @@ function asignacion(estado: EstadoAsignacion = EstadoAsignacion.VIGENTE) {
     fechaAsignacion: new Date('2026-10-01T10:00:00Z'),
     corridaId: 'corrida-1',
     motivoEscalamiento: null,
+    auditorias: [{ origen: 'DEMANDA', puntaje: 0.8 }],
     espacios: [
       {
         espacioId: 'esp-1',
@@ -48,12 +56,20 @@ function asignacion(estado: EstadoAsignacion = EstadoAsignacion.VIGENTE) {
 
 describe('Auditoría e historial de asignaciones (Issue 4.32)', () => {
   describe('listado de auditoría', () => {
-    function dbMock(filas: unknown[] = []) {
+    function dbMock(
+      filas: unknown[] = [],
+      espacios: unknown[] = [],
+      cuentas: unknown[] = [],
+      secciones: unknown[] = [],
+    ) {
       return {
         registroAuditoria: {
           count: jest.fn().mockResolvedValue(filas.length),
           findMany: jest.fn().mockResolvedValue(filas),
         },
+        espacio: { findMany: jest.fn().mockResolvedValue(espacios) },
+        cuenta: { findMany: jest.fn().mockResolvedValue(cuentas) },
+        seccion: { findMany: jest.fn().mockResolvedValue(secciones) },
       } as any;
     }
 
@@ -65,6 +81,117 @@ describe('Auditoría e historial de asignaciones (Issue 4.32)', () => {
       expect(res.items[0].tipoEvento).toBe(TipoEventoAuditoria.ASIGNACION);
       expect(res.items[0].seccion?.codigoCurso).toBe('IS101');
       expect(res.items[0].fechaHora).toBe('2026-10-01T10:00:00.000Z');
+    });
+
+    it('los registros anteriores (sin datos estructurados) siguen funcionando y no consultan espacios ni cuentas', async () => {
+      const db = dbMock([registro()]);
+      const res = await listarAuditoria({ pagina: 1, limite: 50 }, db);
+
+      expect(res.items[0]).toMatchObject({
+        corridaId: null,
+        origen: null,
+        puntaje: null,
+        espaciosIds: [],
+        espacios: [],
+        cuenta: null,
+      });
+      expect(res.items[0].detalle).toContain('Asignación automática');
+      expect(db.espacio.findMany).not.toHaveBeenCalled();
+      expect(db.cuenta.findMany).not.toHaveBeenCalled();
+    });
+
+    it('devuelve corrida, origen, puntaje y los espacios con su nombre legible (Issue 4.48)', async () => {
+      const db = dbMock(
+        [
+          registro({
+            corridaId: 'corrida-7',
+            origen: 'TIEMPO',
+            puntaje: 0.8,
+            espaciosIds: ['esp-1', 'esp-borrado'],
+          }),
+        ],
+        [{ id: 'esp-1', identificador: 'Aula 201', pabellon: 'A', piso: 2 }],
+      );
+      const res = await listarAuditoria({ pagina: 1, limite: 50 }, db);
+
+      expect(res.items[0]).toMatchObject({
+        corridaId: 'corrida-7',
+        origen: 'TIEMPO',
+        puntaje: 0.8,
+      });
+      expect(res.items[0].espaciosIds).toEqual(['esp-1', 'esp-borrado']);
+      // Un espacio eliminado conserva su id pero no aparece con nombre.
+      expect(res.items[0].espacios).toEqual([
+        { id: 'esp-1', identificador: 'Aula 201', pabellon: 'A', piso: 2 },
+      ]);
+      expect(db.espacio.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('resuelve el nombre de la persona: docente, alumno o, si no tiene ficha, su usuario', async () => {
+      const db = dbMock(
+        [
+          registro({ id: 'a1', cuentaId: 'c-doc' }),
+          registro({ id: 'a2', cuentaId: 'c-alu' }),
+          registro({ id: 'a3', cuentaId: 'c-adm' }),
+          registro({ id: 'a4', cuentaId: 'c-borrada' }),
+        ],
+        [],
+        [
+          { id: 'c-doc', usuarioLogin: 'D001', docente: { nombre: 'Rosa Díaz' }, alumno: null },
+          { id: 'c-alu', usuarioLogin: '2020', docente: null, alumno: { nombre: 'Luis Ríos' } },
+          { id: 'c-adm', usuarioLogin: 'coordinacion', docente: null, alumno: null },
+        ],
+      );
+      const res = await listarAuditoria({ pagina: 1, limite: 50 }, db);
+
+      expect(res.items.map((i) => i.cuenta)).toEqual([
+        { id: 'c-doc', nombre: 'Rosa Díaz' },
+        { id: 'c-alu', nombre: 'Luis Ríos' },
+        { id: 'c-adm', nombre: 'coordinacion' },
+        null,
+      ]);
+      expect(db.cuenta.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('devuelve los cambios de una acción de persona, con la sección editada y quién la hizo (Issue 4.58)', async () => {
+      const cambios = [{ campo: 'docente', anterior: 'Dra. García', nuevo: 'Ing. Pérez' }];
+      const db = dbMock(
+        [
+          registro({
+            tipoEvento: TipoEventoAuditoria.EDICION_SECCION,
+            detalle: 'Sección IS101-1 editada: docente: Dra. García → Ing. Pérez',
+            asignacionId: null,
+            asignacion: null,
+            seccionId: 'sec-1',
+            cuentaId: 'c-adm',
+            cambios,
+          }),
+        ],
+        [],
+        [{ id: 'c-adm', usuarioLogin: 'coordinacion', docente: null, alumno: null }],
+        [{ id: 'sec-1', codigoSeccion: '1', curso: { codigo: 'IS101', nombre: 'Algoritmos' } }],
+      );
+      const res = await listarAuditoria({ pagina: 1, limite: 50 }, db);
+
+      expect(res.items[0]).toMatchObject({
+        tipoEvento: 'EDICION_SECCION',
+        cuenta: { id: 'c-adm', nombre: 'coordinacion' },
+        cambios,
+        seccion: {
+          id: 'sec-1',
+          codigoCurso: 'IS101',
+          codigoSeccion: '1',
+          nombreCurso: 'Algoritmos',
+        },
+      });
+      expect(db.seccion.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('los asientos del motor devuelven cambios null y no consultan secciones aparte (Issue 4.58)', async () => {
+      const db = dbMock([registro()]);
+      const res = await listarAuditoria({ pagina: 1, limite: 50 }, db);
+      expect(res.items[0].cambios).toBeNull();
+      expect(db.seccion.findMany).not.toHaveBeenCalled();
     });
 
     it('filtra por tipo de evento', async () => {
@@ -104,6 +231,16 @@ describe('Auditoría e historial de asignaciones (Issue 4.32)', () => {
       expect(res.items[0].estado).toBe(EstadoAsignacion.HISTORICA);
       expect(res.items[0].espacios[0].identificador).toBe('Aula 201');
       expect(res.items[0].corridaId).toBe('corrida-1');
+      // Issue 4.48: origen y puntaje salen del asiento de auditoría de la decisión
+      expect(res.items[0].origen).toBe('DEMANDA');
+      expect(res.items[0].puntaje).toBe(0.8);
+    });
+
+    it('una asignación anterior sin asiento estructurado devuelve origen y puntaje nulos', async () => {
+      const db = dbMock([{ ...asignacion(), auditorias: [] }]);
+      const res = await listarHistorialAsignaciones({ pagina: 1, limite: 50 }, db);
+      expect(res.items[0].origen).toBeNull();
+      expect(res.items[0].puntaje).toBeNull();
     });
 
     it('filtra por sección, periodo y estado', async () => {
@@ -129,10 +266,8 @@ describe('Auditoría e historial de asignaciones (Issue 4.32)', () => {
   describe('informe de salones (Issue 4.33)', () => {
     function dbMock(secciones: unknown[] = []) {
       return {
-        seccion: {
-          findFirst: jest.fn().mockResolvedValue({ periodo: '2026-2' }),
-          findMany: jest.fn().mockResolvedValue(secciones),
-        },
+        seccion: { findMany: jest.fn().mockResolvedValue(secciones) },
+        periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
       } as any;
     }
 
@@ -190,7 +325,8 @@ describe('Auditoría e historial de asignaciones (Issue 4.32)', () => {
 
     it('404 si no hay ningún periodo con secciones', async () => {
       const db = {
-        seccion: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn() },
+        seccion: { findMany: jest.fn() },
+        periodo: { findFirst: jest.fn().mockResolvedValue(null) },
       } as any;
       await expect(generarReporteAsignaciones(undefined, db)).rejects.toMatchObject({
         status: 404,

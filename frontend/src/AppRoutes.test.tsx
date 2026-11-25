@@ -46,84 +46,206 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
   });
 
   describe('rutas públicas', () => {
-    it('la consulta de espacios no requiere sesión (Issue 3.7)', () => {
+    it('la consulta de espacios no requiere sesión (Issue 3.7)', async () => {
       renderizar('/consulta');
 
-      expect(screen.getByRole('heading', { name: 'Consulta de espacios' })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: 'Consulta de espacios' }),
+      ).toBeInTheDocument();
     });
   });
 
   describe('rutas privadas', () => {
-    it('rechaza a un usuario sin sesión y lo lleva al login', () => {
+    it('rechaza a un usuario sin sesión y lo lleva al login', async () => {
       renderizar('/admin');
 
-      expect(screen.getByRole('heading', { name: 'Panel Administrativo' })).toBeInTheDocument();
-      expect(screen.queryByText('Área administrativa')).not.toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: 'Panel Administrativo' }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Inicio' })).not.toBeInTheDocument();
     });
 
-    it('cada área privada redirige al login de su rol cuando no hay sesión', () => {
+    it('cada área privada redirige al login de su rol cuando no hay sesión', async () => {
       const { unmount } = renderizar('/estudiante');
-      expect(screen.getByRole('heading', { name: 'Portal del Estudiante' })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: 'Portal del Estudiante' }),
+      ).toBeInTheDocument();
       unmount();
 
       renderizar('/docente');
-      expect(screen.getByRole('heading', { name: 'Portal del Docente' })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: 'Portal del Docente' }),
+      ).toBeInTheDocument();
     });
 
-    it('rechaza con un mensaje claro a un usuario con un rol no autorizado', () => {
+    it('rechaza con un mensaje claro a un usuario con un rol no autorizado', async () => {
       iniciarSesionDePrueba('ALUMNO');
       renderizar('/admin');
 
-      expect(screen.getByRole('heading', { name: 'Acceso no autorizado' })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: 'Acceso no autorizado' }),
+      ).toBeInTheDocument();
       expect(screen.getByRole('alert')).toHaveTextContent(/no tiene permiso/i);
-      expect(screen.queryByText('Área administrativa')).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Inicio' })).not.toBeInTheDocument();
     });
 
-    it('permite el acceso a un rol autorizado (Jefatura al panel administrativo)', () => {
+    it('permite el acceso a un rol autorizado (Jefatura al panel administrativo)', async () => {
       iniciarSesionDePrueba('JEFATURA_LABORATORIOS');
       vi.spyOn(api, 'get').mockResolvedValue({ data: { success: true, data: [] } } as never);
       renderizar('/admin');
 
-      expect(screen.getByRole('heading', { name: 'Área administrativa' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Inicio' })).toBeInTheDocument();
     });
   });
 
-  describe('pantallas en desarrollo', () => {
+  describe('portal docente, incidencias y laboratorios (Issues 7.8 a 7.12 y 4.16)', () => {
     it.each([
       ['DOCENTE', '/docente', 'Portal del docente'],
       ['DOCENTE', '/docente/horario', 'Mi horario y asignaciones'],
       ['DOCENTE', '/docente/espacios', 'Explorar espacios y equipos'],
       ['DOCENTE', '/docente/incidencias', 'Reportar una incidencia'],
-      ['COORDINACION_ACADEMICA', '/admin/proximamente', 'Hoja de ruta'],
-      ['COORDINACION_ACADEMICA', '/admin/mapa', 'Mapa de ocupación por piso'],
-      ['COORDINACION_ACADEMICA', '/admin/laboratorios', 'Laboratorios y equipos'],
-      ['COORDINACION_ACADEMICA', '/admin/alumnos/nuevo', 'Alta de alumnos'],
-      ['COORDINACION_ACADEMICA', '/admin/docentes/nuevo', 'Alta de docentes'],
-      ['COORDINACION_ACADEMICA', '/admin/claves', 'Claves y contraseñas'],
-      ['COORDINACION_ACADEMICA', '/admin/software', 'Catálogo de software'],
-      ['COORDINACION_ACADEMICA', '/admin/solicitudes-software', 'Solicitudes de software'],
       ['JEFATURA_LABORATORIOS', '/admin/incidencias', 'Revisión de incidencias'],
-      ['JEFATURA_LABORATORIOS', '/admin/claves', 'Claves y contraseñas'],
-    ] as const)('%s autorizado ve "%s"', (rol, ruta, titulo) => {
+      ['COORDINACION_ACADEMICA', '/admin/laboratorios', 'Laboratorios y equipos'],
+      ['JEFATURA_LABORATORIOS', '/admin/laboratorios', 'Laboratorios y equipos'],
+      ['COORDINACION_ACADEMICA', '/admin/software', 'Catálogo de software'],
+      ['JEFATURA_LABORATORIOS', '/admin/software', 'Catálogo de software'],
+    ] as const)('%s autorizado ve "%s"', async (rol, ruta, titulo) => {
       iniciarSesionDePrueba(rol);
       renderizar(ruta);
 
-      expect(screen.getByRole('heading', { name: titulo })).toBeInTheDocument();
-      expect(screen.getByRole('status')).toHaveTextContent(/próximamente/i);
+      expect(
+        await screen.findByRole('heading', { name: titulo }, { timeout: 3000 }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/próximamente/i)).toBeNull();
+    });
+  });
+
+  describe('pantallas en desarrollo', () => {
+    it.each([['COORDINACION_ACADEMICA', '/admin/proximamente', 'Hoja de ruta']] as const)(
+      '%s autorizado ve "%s"',
+      async (rol, ruta, titulo) => {
+        iniciarSesionDePrueba(rol);
+        renderizar(ruta);
+
+        expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument();
+        expect(screen.getByRole('status')).toHaveTextContent(/próximamente/i);
+      },
+    );
+
+    // Altas y claves ya no están «en desarrollo» (Issues 4.17, 4.18, 4.21 y 4.26): se comprueba el acceso.
+    it.each([
+      ['COORDINACION_ACADEMICA', '/admin/alumnos/nuevo', 'Alta de alumnos'],
+      ['COORDINACION_ACADEMICA', '/admin/docentes/nuevo', 'Alta de docentes'],
+      ['COORDINACION_ACADEMICA', '/admin/claves', 'Claves y contraseñas'],
+      ['JEFATURA_LABORATORIOS', '/admin/claves', 'Claves y contraseñas'],
+    ] as const)('%s entra a "%s"', async (rol, ruta, titulo) => {
+      iniciarSesionDePrueba(rol);
+      renderizar(ruta);
+
+      expect(await screen.findByRole('heading', { name: titulo })).toBeInTheDocument();
     });
 
-    it('un alumno no entra a las pantallas del panel', () => {
+    it('Jefatura no entra a las altas de Coordinación', async () => {
+      iniciarSesionDePrueba('JEFATURA_LABORATORIOS');
+      renderizar('/admin/alumnos/nuevo');
+
+      expect(
+        await screen.findByRole('heading', { name: 'Acceso no autorizado' }),
+      ).toBeInTheDocument();
+    });
+
+    it.each(['ALUMNO', 'DOCENTE', 'COORDINACION_ACADEMICA', 'JEFATURA_LABORATORIOS'] as const)(
+      '%s con la clave inicial pendiente ve la pantalla de cambio de clave (Issues 4.21 y 4.45)',
+      async (rol) => {
+        iniciarSesionDePrueba(rol, 3600, true);
+        renderizar('/cambiar-clave');
+
+        expect(await screen.findByRole('heading', { name: 'Cambia tu clave' })).toBeInTheDocument();
+      },
+    );
+
+    it('con la clave inicial pendiente, el resto de las rutas llevan al cambio de clave', async () => {
+      iniciarSesionDePrueba('ALUMNO', 3600, true);
+      renderizar('/estudiante');
+
+      expect(await screen.findByRole('heading', { name: 'Cambia tu clave' })).toBeInTheDocument();
+    });
+
+    it('sin sesión, el cambio de clave lleva al login', async () => {
+      renderizar('/cambiar-clave');
+
+      expect(
+        await screen.findByRole('heading', { name: 'Portal del Estudiante' }),
+      ).toBeInTheDocument();
+    });
+
+    it('Coordinación entra al mapa de ocupación por piso', async () => {
+      iniciarSesionDePrueba('COORDINACION_ACADEMICA');
+      // El mapa pide la ocupación real de cada pabellón y piso: se responde un piso vacío.
+      api.defaults.adapter = async (
+        config: InternalAxiosRequestConfig,
+      ): Promise<AxiosResponse> => ({
+        data: { success: true, data: { ...config.params, espacios: [] } },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      });
+      renderizar('/admin/mapa');
+      expect(
+        await screen.findByRole(
+          'heading',
+          { name: 'Mapa de ocupación por piso' },
+          { timeout: 5000 },
+        ),
+      ).toBeInTheDocument();
+      // El mapa pide seis consultas y dibuja los planos: con la máquina cargada pasa de 1 s.
+      expect(
+        await screen.findByRole('group', { name: /Plano del piso 1/ }, { timeout: 5000 }),
+      ).toBeInTheDocument();
+    }, 10000);
+
+    // Estas dos pantallas ya no están «en desarrollo» (Issue 4.29): se comprueba el acceso por rol.
+    it('Coordinación entra a la bandeja de solicitudes de software', async () => {
+      iniciarSesionDePrueba('COORDINACION_ACADEMICA');
+      renderizar('/admin/solicitudes-software');
+      expect(
+        await screen.findByRole('heading', { name: 'Solicitudes de software' }),
+      ).toBeInTheDocument();
+    });
+
+    it('el docente entra a sus solicitudes de software', async () => {
+      iniciarSesionDePrueba('DOCENTE');
+      renderizar('/docente/solicitudes-software');
+      expect(
+        await screen.findByRole('heading', { name: 'Solicitudes de software' }),
+      ).toBeInTheDocument();
+    });
+
+    it('un alumno no entra a las solicitudes de software del docente', async () => {
+      iniciarSesionDePrueba('ALUMNO');
+      renderizar('/docente/solicitudes-software');
+      expect(
+        await screen.findByRole('heading', { name: 'Acceso no autorizado' }),
+      ).toBeInTheDocument();
+    });
+
+    it('un alumno no entra a las pantallas del panel', async () => {
       iniciarSesionDePrueba('ALUMNO');
       renderizar('/admin/mapa');
 
-      expect(screen.getByRole('heading', { name: 'Acceso no autorizado' })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: 'Acceso no autorizado' }),
+      ).toBeInTheDocument();
     });
 
-    it('Coordinación no entra a la revisión de incidencias de Jefatura', () => {
+    it('Coordinación no entra a la revisión de incidencias de Jefatura', async () => {
       iniciarSesionDePrueba('COORDINACION_ACADEMICA');
       renderizar('/admin/incidencias');
 
-      expect(screen.getByRole('heading', { name: 'Acceso no autorizado' })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: 'Acceso no autorizado' }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -159,15 +281,17 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
         /Usuario/i,
       );
 
-      expect(await screen.findByRole('heading', { name: 'Área administrativa' })).toBeVisible();
+      expect(await screen.findByRole('heading', { name: 'Inicio' })).toBeVisible();
       expect(obtenerToken()).not.toBeNull();
     });
 
-    it('un usuario que ya tiene sesión no ve el login: va directo a su área', () => {
+    it('un usuario que ya tiene sesión no ve el login: va directo a su área', async () => {
       iniciarSesionDePrueba('ALUMNO');
       renderizar('/login/alumno');
 
-      expect(screen.getByRole('heading', { name: 'Área del estudiante' })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: 'Área del estudiante' }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -177,13 +301,13 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
       ['DOCENTE', '/docente', 'Portal del Docente'],
       ['COORDINACION_ACADEMICA', '/admin', 'Panel Administrativo'],
       ['JEFATURA_LABORATORIOS', '/admin', 'Panel Administrativo'],
-    ] as const)('borra el token y vuelve al login (%s)', (rol, ruta, tituloLogin) => {
+    ] as const)('borra el token y vuelve al login (%s)', async (rol, ruta, tituloLogin) => {
       iniciarSesionDePrueba(rol);
       renderizar(ruta);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Cerrar sesión' }));
 
-      expect(screen.getByRole('heading', { name: tituloLogin })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: tituloLogin })).toBeInTheDocument();
       expect(obtenerToken()).toBeNull();
       expect(sessionStorage.getItem('saie.sesion')).toBeNull();
       // Cerrar sesión por decisión propia no muestra el aviso de sesión vencida.
@@ -192,26 +316,34 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
   });
 
   describe('sesión vencida', () => {
-    it('un token ya vencido al abrir la app redirige al login con un mensaje claro', () => {
+    it('un token ya vencido al abrir la app redirige al login con un mensaje claro', async () => {
       iniciarSesionDePrueba('DOCENTE', -60);
       renderizar('/docente');
 
-      expect(screen.getByRole('heading', { name: 'Portal del Docente' })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: 'Portal del Docente' }),
+      ).toBeInTheDocument();
       expect(screen.getByRole('status')).toHaveTextContent(aviso);
       expect(obtenerToken()).toBeNull();
     });
 
-    it('un token que vence con la app abierta cierra la sesión sin esperar al 401', () => {
-      vi.useFakeTimers();
+    it('un token que vence con la app abierta cierra la sesión sin esperar al 401', async () => {
+      // El reloj avanza solo para que las búsquedas asíncronas (pantallas diferidas) no se queden
+      // esperando; el salto de 61 s es el que dispara el vencimiento.
+      vi.useFakeTimers({ shouldAdvanceTime: true });
       iniciarSesionDePrueba('ALUMNO', 60);
       renderizar('/estudiante');
-      expect(screen.getByRole('heading', { name: 'Área del estudiante' })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: 'Área del estudiante' }),
+      ).toBeInTheDocument();
 
       act(() => {
         vi.advanceTimersByTime(61_000);
       });
 
-      expect(screen.getByRole('heading', { name: 'Portal del Estudiante' })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: 'Portal del Estudiante' }),
+      ).toBeInTheDocument();
       expect(screen.getByRole('status')).toHaveTextContent(aviso);
       expect(obtenerToken()).toBeNull();
     });
@@ -219,7 +351,7 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
     it('un 401 del servidor en una petición autenticada cierra la sesión y avisa', async () => {
       iniciarSesionDePrueba('COORDINACION_ACADEMICA');
       renderizar('/admin');
-      expect(screen.getByRole('heading', { name: 'Área administrativa' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Inicio' })).toBeInTheDocument();
 
       api.defaults.adapter = async (config: InternalAxiosRequestConfig): Promise<AxiosResponse> => {
         const respuesta = { data: {}, status: 401, statusText: '', headers: {}, config };
@@ -231,7 +363,9 @@ describe('Rutas, sesión y roles (Issue #217 / 4.25)', () => {
       });
 
       // Vuelve al login del mismo rol (administrativo) con el mensaje de sesión vencida.
-      expect(screen.getByRole('heading', { name: 'Panel Administrativo' })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: 'Panel Administrativo' }),
+      ).toBeInTheDocument();
       expect(screen.getByRole('status')).toHaveTextContent(aviso);
       expect(obtenerToken()).toBeNull();
     });

@@ -3,6 +3,8 @@
 const prismaMock: any = {
   cuenta: { findUnique: jest.fn() },
   alumno: { findUnique: jest.fn() },
+  // Issue 3.60: el perfil trae el estado de la declaración de accesibilidad.
+  solicitudAccesibilidad: { findFirst: jest.fn().mockResolvedValue(null) },
   docente: { findUnique: jest.fn() },
   seccion: { findFirst: jest.fn(), findMany: jest.fn() },
   matricula: { findMany: jest.fn() },
@@ -18,10 +20,11 @@ const prismaMock: any = {
   espacioResponsable: { findUnique: jest.fn() },
   historialEspacio: { create: jest.fn() },
   espacioContiguo: { findMany: jest.fn() },
+  periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
   asignacion: { findUnique: jest.fn(), findMany: jest.fn(), findFirst: jest.fn() },
   alerta: { findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
 
-  incidencia: { create: jest.fn() },
+  incidencia: { create: jest.fn(), findMany: jest.fn() },
   $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn(prismaMock)),
 };
 
@@ -370,7 +373,7 @@ describe('Portal del alumno: solo rol ALUMNO (Issues 3.10–3.12)', () => {
           espacio: {
             id: 'esp-1',
             identificador: 'Aula 201',
-            pabellon: 'Pabellon A',
+            pabellon: 'Nuevo Pabellón',
             piso: 2,
             tipo: 'AULA_TEORICA',
           },
@@ -398,11 +401,17 @@ describe('Portal del alumno: solo rol ALUMNO (Issues 3.10–3.12)', () => {
   });
 });
 
-describe('Portal docente: solo rol DOCENTE (Issues 7.2, 7.3, 7.5)', () => {
+describe('Portal docente: solo rol DOCENTE (Issues 7.2, 7.3, 7.5, 7.14)', () => {
   const rutas: Array<['get' | 'post', string]> = [
     ['get', '/api/v1/docente/horario'],
     ['get', '/api/v1/docente/espacios/explorador'],
     ['post', '/api/v1/docente/incidencias'],
+    ['get', '/api/v1/docente/incidencias'],
+    // Issue 3.61: declaración de accesibilidad del docente.
+    ['get', '/api/v1/docente/accesibilidad'],
+    // Issue 7.17: «dictar todo en laboratorio».
+    ['post', '/api/v1/docente/solicitudes-laboratorio'],
+    ['get', '/api/v1/docente/solicitudes-laboratorio'],
   ];
 
   it.each(rutas)(
@@ -460,6 +469,21 @@ describe('Portal docente: solo rol DOCENTE (Issues 7.2, 7.3, 7.5)', () => {
     ]);
   });
 
+  it('mis incidencias responde 200 solo con las del docente autenticado', async () => {
+    prismaMock.docente.findUnique.mockResolvedValue({ id: 'doc-1' });
+    prismaMock.incidencia.findMany.mockResolvedValue([]);
+
+    const res = await request(app)
+      .get('/api/v1/docente/incidencias')
+      .set('Authorization', bearer(RolCuenta.DOCENTE));
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true, data: [] });
+    expect(prismaMock.incidencia.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { docenteId: 'doc-1' } }),
+    );
+  });
+
   it('crear incidencia responde 201 con el identificador de seguimiento', async () => {
     prismaMock.docente.findUnique.mockResolvedValue({ id: 'doc-1' });
     prismaMock.asignacion.findFirst.mockResolvedValue({
@@ -491,6 +515,26 @@ describe('Portal docente: solo rol DOCENTE (Issues 7.2, 7.3, 7.5)', () => {
       .post('/api/v1/docente/incidencias')
       .set('Authorization', bearer(RolCuenta.DOCENTE))
       .send({ asignacionId: 'a', espacioId: 'e', tipo: 'NO_EXISTE', descripcion: 'ok ok ok' });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('«Dictar todo en laboratorio»: Coordinación resuelve (Issue 7.17)', () => {
+  it.each([
+    ['get', '/api/v1/admin/solicitudes-laboratorio'],
+    ['patch', '/api/v1/admin/solicitudes-laboratorio/s1/resolver'],
+  ] as const)('%s %s exige token (401) y rol Coordinación (403)', async (metodo, ruta) => {
+    expect((await request(app)[metodo](ruta)).status).toBe(401);
+    for (const rol of [RolCuenta.DOCENTE, RolCuenta.JEFATURA_LABORATORIOS]) {
+      expect((await request(app)[metodo](ruta).set('Authorization', bearer(rol))).status).toBe(403);
+    }
+  });
+
+  it('el docente recibe 400 si falta la justificación', async () => {
+    const res = await request(app)
+      .post('/api/v1/docente/solicitudes-laboratorio')
+      .set('Authorization', bearer(RolCuenta.DOCENTE))
+      .send({ seccionTeoriaId: '7d3c1f9e-2b4a-4c8e-9f1d-0a6b5c4d3e2f' });
     expect(res.status).toBe(400);
   });
 });

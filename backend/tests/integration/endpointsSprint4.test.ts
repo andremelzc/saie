@@ -1,11 +1,20 @@
 const prismaMock: any = {
-  cuenta: { findUnique: jest.fn(), update: jest.fn() },
+  cuenta: { findUnique: jest.fn(), update: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
   alumno: { findUnique: jest.fn(), create: jest.fn() },
   docente: { findUnique: jest.fn(), create: jest.fn() },
   espacio: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
   espacioResponsable: { findUnique: jest.fn(), findMany: jest.fn() },
   espacioContiguo: { findMany: jest.fn(), deleteMany: jest.fn(), createMany: jest.fn() },
-  asignacion: { findUnique: jest.fn(), findMany: jest.fn() },
+  asignacion: { findUnique: jest.fn(), findMany: jest.fn(), updateMany: jest.fn() },
+  seccion: { findMany: jest.fn() },
+  periodo: {
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
+  importacion: { findFirst: jest.fn() },
   alerta: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
   incidencia: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
   registroAuditoria: { create: jest.fn() },
@@ -210,6 +219,216 @@ describe('Endpoints Sprint 4 (Issue #267)', () => {
       expect(res.body.data.pabellon).toBe('A');
       expect(res.body.data.piso).toBe(2);
       expect(res.body.data.espacios).toEqual([]);
+    });
+  });
+
+  describe('Última importación (GET /admin/importaciones/ultima, Issue 4.54)', () => {
+    const ruta = '/api/v1/admin/importaciones/ultima';
+    const coordinacion = () => bearer(RolCuenta.COORDINACION_ACADEMICA);
+
+    it('Coordinación recibe la última importación de cada tipo, con null para los que no hay', async () => {
+      prismaMock.importacion.findFirst.mockImplementation(async ({ where }: any) =>
+        where.tipo === 'MATRICULAS'
+          ? {
+              tipo: 'MATRICULAS',
+              cuentaId: 'cuenta-1',
+              fecha: new Date('2026-11-10T15:30:00Z'),
+              filasRecibidas: 10,
+              filasAceptadas: 10,
+              filasRechazadas: 0,
+              resultado: 'EXITOSA',
+            }
+          : null,
+      );
+      prismaMock.cuenta.findMany.mockResolvedValue([
+        { id: 'cuenta-1', usuarioLogin: 'coordinacion', alumno: null, docente: null },
+      ]);
+
+      const res = await request(app).get(ruta).set('Authorization', coordinacion());
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.matriculas).toMatchObject({
+        tipo: 'matriculas',
+        cuenta: { id: 'cuenta-1', nombre: 'coordinacion' },
+        filasRechazadas: 0,
+        resultado: 'EXITOSA',
+      });
+      expect(res.body.data.horarios).toBeNull();
+      expect(res.body.data.docentes).toBeNull();
+      expect(res.body.data['cursos-secciones']).toBeNull();
+    });
+
+    it('con ?tipo= devuelve solo ese tipo', async () => {
+      prismaMock.importacion.findFirst.mockResolvedValue(null);
+      const res = await request(app)
+        .get(`${ruta}?tipo=docentes`)
+        .set('Authorization', coordinacion());
+      expect(res.status).toBe(200);
+      expect(Object.keys(res.body.data)).toEqual(['docentes']);
+    });
+
+    it('400 si el tipo no existe o hay parámetros desconocidos', async () => {
+      expect(
+        (await request(app).get(`${ruta}?tipo=otro`).set('Authorization', coordinacion())).status,
+      ).toBe(400);
+      expect(
+        (await request(app).get(`${ruta}?x=1`).set('Authorization', coordinacion())).status,
+      ).toBe(400);
+    });
+
+    it('401 sin token y 403 para Jefatura, alumno y docente (solo Coordinación carga datos)', async () => {
+      expect((await request(app).get(ruta)).status).toBe(401);
+      for (const rol of [RolCuenta.JEFATURA_LABORATORIOS, RolCuenta.ALUMNO, RolCuenta.DOCENTE]) {
+        const res = await request(app).get(ruta).set('Authorization', bearer(rol));
+        expect(res.status).toBe(403);
+      }
+    });
+  });
+
+  describe('Periodos (GET /admin/periodos, Issue 4.42)', () => {
+    it('responde 200 con vigente y la lista de periodos para Coordinación y Jefatura', async () => {
+      prismaMock.periodo.findMany.mockResolvedValue([
+        { codigo: '2026-2', fechaInicio: null, fechaFin: null, estado: 'VIGENTE' },
+        { codigo: '2026-1', fechaInicio: null, fechaFin: null, estado: 'CERRADO' },
+      ]);
+
+      for (const rol of [RolCuenta.COORDINACION_ACADEMICA, RolCuenta.JEFATURA_LABORATORIOS]) {
+        const res = await request(app)
+          .get('/api/v1/admin/periodos')
+          .set('Authorization', bearer(rol));
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({
+          success: true,
+          data: {
+            vigente: '2026-2',
+            periodos: ['2026-2', '2026-1'],
+            registrados: [
+              { codigo: '2026-2', fechaInicio: null, fechaFin: null, estado: 'VIGENTE' },
+              { codigo: '2026-1', fechaInicio: null, fechaFin: null, estado: 'CERRADO' },
+            ],
+          },
+        });
+      }
+    });
+
+    it('responde 401 sin token y 403 para alumno y docente', async () => {
+      expect((await request(app).get('/api/v1/admin/periodos')).status).toBe(401);
+      for (const rol of [RolCuenta.ALUMNO, RolCuenta.DOCENTE]) {
+        const res = await request(app)
+          .get('/api/v1/admin/periodos')
+          .set('Authorization', bearer(rol));
+        expect(res.status).toBe(403);
+      }
+    });
+
+    describe('gestión (Issue 4.64)', () => {
+      const coordinacion = bearer(RolCuenta.COORDINACION_ACADEMICA);
+      const fila = (codigo: string, estado: string) => ({
+        id: `id-${codigo}`,
+        codigo,
+        estado,
+        fechaInicio: null,
+        fechaFin: null,
+      });
+
+      it('POST registra un periodo en preparación y normaliza 2027-I', async () => {
+        prismaMock.periodo.findUnique.mockResolvedValue(null);
+        prismaMock.periodo.create.mockImplementation(async ({ data }: any) => ({
+          id: 'n',
+          fechaInicio: null,
+          fechaFin: null,
+          ...data,
+        }));
+
+        const res = await request(app)
+          .post('/api/v1/admin/periodos')
+          .set('Authorization', coordinacion)
+          .send({ codigo: '2027-I' });
+
+        expect(res.status).toBe(201);
+        expect(res.body.data).toMatchObject({ codigo: '2027-1', estado: 'EN_PREPARACION' });
+      });
+
+      it('POST rechaza un código inválido con 400 sin crear nada', async () => {
+        const res = await request(app)
+          .post('/api/v1/admin/periodos')
+          .set('Authorization', coordinacion)
+          .send({ codigo: '2027-9' });
+
+        expect(res.status).toBe(400);
+        expect(prismaMock.periodo.create).not.toHaveBeenCalled();
+      });
+
+      it('activar cierra el vigente y activa el indicado', async () => {
+        const anterior = fila('2026-2', 'VIGENTE');
+        const nuevo = fila('2027-1', 'EN_PREPARACION');
+        prismaMock.periodo.findUnique.mockResolvedValue(nuevo);
+        prismaMock.periodo.findFirst.mockResolvedValue(anterior);
+        prismaMock.periodo.update.mockImplementation(async ({ where, data }: any) => ({
+          ...(where.id === nuevo.id ? nuevo : anterior),
+          ...data,
+        }));
+        prismaMock.asignacion.updateMany.mockResolvedValue({ count: 2 });
+
+        const res = await request(app)
+          .post('/api/v1/admin/periodos/2027-I/activar')
+          .set('Authorization', coordinacion);
+
+        expect(res.status).toBe(200);
+        expect(res.body.data).toMatchObject({ codigo: '2027-1', estado: 'VIGENTE' });
+        expect(prismaMock.asignacion.updateMany).toHaveBeenCalledTimes(1);
+      });
+
+      it('cerrar deja el periodo en solo consulta', async () => {
+        const vigente = fila('2026-2', 'VIGENTE');
+        prismaMock.periodo.findUnique.mockResolvedValue(vigente);
+        prismaMock.periodo.update.mockImplementation(async ({ data }: any) => ({
+          ...vigente,
+          ...data,
+        }));
+        prismaMock.asignacion.updateMany.mockResolvedValue({ count: 0 });
+
+        const res = await request(app)
+          .post('/api/v1/admin/periodos/2026-2/cerrar')
+          .set('Authorization', coordinacion);
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.estado).toBe('CERRADO');
+      });
+
+      it('activar un periodo cerrado responde 409', async () => {
+        prismaMock.periodo.findUnique.mockResolvedValue(fila('2026-1', 'CERRADO'));
+        const res = await request(app)
+          .post('/api/v1/admin/periodos/2026-1/activar')
+          .set('Authorization', coordinacion);
+        expect(res.status).toBe(409);
+      });
+
+      it('Jefatura, alumno y docente no pueden gestionar periodos (403) ni sin token (401)', async () => {
+        expect((await request(app).post('/api/v1/admin/periodos').send({})).status).toBe(401);
+        for (const rol of [RolCuenta.JEFATURA_LABORATORIOS, RolCuenta.ALUMNO, RolCuenta.DOCENTE]) {
+          for (const ruta of [
+            '/api/v1/admin/periodos',
+            '/api/v1/admin/periodos/2026-2/activar',
+            '/api/v1/admin/periodos/2026-2/cerrar',
+          ]) {
+            const res = await request(app).post(ruta).set('Authorization', bearer(rol)).send({});
+            expect(res.status).toBe(403);
+          }
+        }
+      });
+    });
+
+    it('sin periodos registrados responde lista vacía y vigente null', async () => {
+      prismaMock.periodo.findMany.mockResolvedValue([]);
+
+      const res = await request(app)
+        .get('/api/v1/admin/periodos')
+        .set('Authorization', bearer(RolCuenta.COORDINACION_ACADEMICA));
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual({ vigente: null, periodos: [], registrados: [] });
     });
   });
 

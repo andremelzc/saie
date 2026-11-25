@@ -43,4 +43,6 @@ export interface FiltrosEspacios {
   tipo?: TipoEspacio;
   pabellon?: string;
   piso?: number;
+  pagina?: number;
+  limite?: number;
 }

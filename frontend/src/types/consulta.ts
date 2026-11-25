@@ -34,8 +34,6 @@ export interface ConsultaAlumnoResponseDTO {
   alumno: {
     codigo: string;
     nombre: string;
-    correo: string;
-    movilidadReducida: boolean;
   };
   asignaciones: AsignacionConsultaItemDTO[];
 }

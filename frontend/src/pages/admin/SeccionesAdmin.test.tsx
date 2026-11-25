@@ -3,9 +3,11 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom';
 import SeccionesAdmin from './SeccionesAdmin';
 import { ProveedorAvisos } from '../../components/ui/Avisos';
+import { vaciarCacheCarga } from '../../hooks/useCarga';
 import {
   editarSeccion,
   obtenerCatalogoActivo,
+  obtenerPeriodos,
   obtenerDocentes,
   obtenerSecciones,
 } from '../../services/admin';
@@ -19,12 +21,14 @@ vi.mock('../../services/admin', () => ({
   editarSeccion: vi.fn(),
   obtenerDocentes: vi.fn(),
   obtenerCatalogoActivo: vi.fn(),
+  obtenerPeriodos: vi.fn(),
 }));
 
 const listar = vi.mocked(obtenerSecciones);
 const editar = vi.mocked(editarSeccion);
 const docentes = vi.mocked(obtenerDocentes);
 const catalogo = vi.mocked(obtenerCatalogoActivo);
+const periodos = vi.mocked(obtenerPeriodos);
 
 const seccion = (o: Partial<SeccionAdminDTO>): SeccionAdminDTO => ({
   id: 's1',
@@ -42,6 +46,13 @@ const seccion = (o: Partial<SeccionAdminDTO>): SeccionAdminDTO => ({
   ...o,
 });
 
+/**
+ * El listado se dibuja dos veces (tabla desde `lg` y tarjetas por debajo, elegidas con CSS); en
+ * jsdom no hay CSS, así que se consulta solo la tabla.
+ */
+const enLista = () =>
+  within(screen.queryByRole('region', { name: 'Listado de secciones' }) ?? document.body);
+
 const montar = () =>
   render(
     <MemoryRouter>
@@ -54,6 +65,13 @@ const montar = () =>
 describe('Gestión individual de secciones (Issue 4.31)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Sin caché entre pruebas: cada una debe pedir sus datos.
+    vaciarCacheCarga();
+    periodos.mockResolvedValue({
+      vigente: '2026-2',
+      periodos: ['2026-2', '2026-1'],
+      registrados: [],
+    });
     listar.mockResolvedValue({
       items: [
         seccion({
@@ -100,16 +118,16 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
 
   it('lista las secciones con su aula y su estado', async () => {
     montar();
-    expect(await screen.findByText('IS101 · 1')).toBeInTheDocument();
-    expect(screen.getByText('Algoritmos · Laboratorio')).toBeInTheDocument();
-    expect(screen.getByText('Lab 03')).toBeInTheDocument();
-    expect(screen.getByText('Con aula')).toBeInTheDocument();
-    expect(screen.getByText('En revisión')).toBeInTheDocument();
+    expect((await screen.findAllByText('IS101 · 1')).length).toBeGreaterThan(0);
+    expect(enLista().getByText('Algoritmos')).toBeInTheDocument();
+    expect(enLista().getByText('Lab 03')).toBeInTheDocument();
+    expect(enLista().getByText('Aula confirmada')).toBeInTheDocument();
+    expect(enLista().getByText('En revisión')).toBeInTheDocument();
   });
 
   it('filtra por búsqueda y por tipo de espacio', async () => {
     montar();
-    await screen.findByText('IS101 · 1');
+    await screen.findAllByText('IS101 · 1');
 
     fireEvent.change(screen.getByLabelText('Buscar sección'), { target: { value: 'bases' } });
     await waitFor(() =>
@@ -126,9 +144,44 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     );
   });
 
+  it('muestra cada bloque horario en su propia línea (Issue 4.44)', async () => {
+    listar.mockResolvedValue({
+      items: [
+        seccion({
+          horarios: [
+            { diaSemana: 'LUNES', horaInicio: '08:00', horaFin: '10:00' },
+            { diaSemana: 'MIERCOLES', horaInicio: '14:00', horaFin: '16:00' },
+            { diaSemana: 'VIERNES', horaInicio: '10:00', horaFin: '12:00' },
+          ],
+        }),
+      ],
+      total: 1,
+      pagina: 1,
+      limite: 50,
+    });
+    montar();
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
+    const panel = await screen.findByRole('dialog');
+    const bloques = within(panel).getAllByRole('listitem');
+    expect(bloques.map((b) => b.textContent)).toEqual(
+      expect.arrayContaining([
+        'Lunes 08:00 – 10:00',
+        'Miércoles 14:00 – 16:00',
+        'Viernes 10:00 – 12:00',
+      ]),
+    );
+  });
+
+  it('la tarjeta móvil muestra docente y tipo (Issue 4.44)', async () => {
+    montar();
+    const tarjeta = (await screen.findAllByRole('article', { name: 'IS101 · 1' }))[0];
+    expect(within(tarjeta).getByText('Dra. García')).toBeInTheDocument();
+    expect(within(tarjeta).getByText('Laboratorio')).toBeInTheDocument();
+  });
+
   it('abre el detalle de una sección y permite editarla', async () => {
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
 
     const panel = await screen.findByRole('dialog');
     expect(within(panel).getByText(/Dra\. García/)).toBeInTheDocument();
@@ -136,7 +189,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
 
     // El formulario ofrece el tipo de aula, el docente y el software requerido.
-    expect(within(panel).getByLabelText('Tipo de espacio que necesita')).toBeInTheDocument();
+    expect(await within(panel).findByLabelText('Tipo de espacio que necesita')).toBeInTheDocument();
     expect(within(panel).getByLabelText('Docente')).toBeInTheDocument();
     expect(within(panel).getByText('Software que exige la sección')).toBeInTheDocument();
   });
@@ -145,9 +198,11 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     editar.mockResolvedValue({
       seccion: seccion({}),
       alertas: [],
+      advertencias: [],
+      reasignacion: null,
     });
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
 
@@ -164,13 +219,55 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     );
   });
 
+  it('deshabilita «versión mínima» para versiones no numéricas (Issue 4.30)', async () => {
+    catalogo.mockResolvedValue({
+      items: [
+        { id: 'sw1', nombre: 'Docker', version: '24.0', activo: true },
+        { id: 'sw3', nombre: 'MATLAB', version: 'R2023b', activo: true },
+      ],
+      total: 2,
+      page: 1,
+      limit: 100,
+    });
+    montar();
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
+    const panel = await screen.findByRole('dialog');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
+    fireEvent.click(await within(panel).findByRole('checkbox', { name: /MATLAB/ }));
+    fireEvent.click(within(panel).getByRole('checkbox', { name: /Docker/ }));
+
+    const reglaMatlab = within(panel).getByLabelText('Regla de versión para MATLAB');
+    expect(within(reglaMatlab).getByRole('option', { name: /mínima.*no aplica/ })).toBeDisabled();
+    const reglaDocker = within(panel).getByLabelText('Regla de versión para Docker');
+    expect(within(reglaDocker).getByRole('option', { name: /mínima/ })).toBeEnabled();
+  });
+
+  it('no guarda software para un aula teórica y lo resume (Issue 3.41)', async () => {
+    montar();
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
+    const panel = await screen.findByRole('dialog');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
+
+    fireEvent.change(await within(panel).findByLabelText('Tipo de espacio que necesita'), {
+      target: { value: 'AULA_TEORICA' },
+    });
+    fireEvent.click(await within(panel).findByRole('checkbox', { name: /Docker/ }));
+    fireEvent.click(within(panel).getByRole('button', { name: 'Guardar cambios' }));
+
+    expect(within(panel).getByRole('alert')).toHaveTextContent('Un aula teórica no tiene software');
+    expect(within(panel).getByLabelText('Tipo de espacio que necesita')).toHaveFocus();
+    expect(editar).not.toHaveBeenCalled();
+  });
+
   it('avisa cuando el cambio genera alertas en el panel', async () => {
     editar.mockResolvedValue({
       seccion: seccion({}),
       alertas: [{ id: 'al1', tipo: 'SOFTWARE', motivo: 'Lab 03 no tiene Docker' }],
+      advertencias: [],
+      reasignacion: null,
     });
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
     fireEvent.click(await within(panel).findByRole('checkbox', { name: /Docker/ }));
@@ -187,7 +284,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
       limite: 200,
     });
     montar();
-    expect(await screen.findByText('Sin asignar')).toBeInTheDocument();
+    expect((await screen.findAllByText('Sin aula asignada')).length).toBeGreaterThan(0);
   });
 
   it('filtra el software del catálogo por su nombre', async () => {
@@ -201,7 +298,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
       limit: 100,
     });
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
 
@@ -214,19 +311,37 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     expect(within(panel).queryByRole('checkbox', { name: /Docker/ })).toBeNull();
   });
 
-  it('envía el tipo de aula, el docente y el periodo filtrado', async () => {
-    editar.mockResolvedValue({ seccion: seccion({}), alertas: [] });
+  it('el periodo es una lista con el vigente preseleccionado, no texto libre (Issue 4.43)', async () => {
     montar();
+
+    const lista = (await screen.findByLabelText('Periodo')) as HTMLSelectElement;
+    expect(lista.tagName).toBe('SELECT');
+    await waitFor(() => expect(lista.value).toBe('2026-2'));
+    expect(within(lista).getByRole('option', { name: '2026-2 (vigente)' })).toBeInTheDocument();
+    // La primera petición ya lleva el periodo vigente, no un listado sin filtro.
+    expect(listar).toHaveBeenCalledWith(expect.objectContaining({ periodo: '2026-2' }));
+    expect(listar).not.toHaveBeenCalledWith(expect.objectContaining({ periodo: undefined }));
+  });
+
+  it('envía el tipo de aula, el docente y el periodo filtrado', async () => {
+    editar.mockResolvedValue({
+      seccion: seccion({}),
+      alertas: [],
+      advertencias: [],
+      reasignacion: null,
+    });
+    montar();
+    await screen.findByRole('option', { name: '2026-1' });
     fireEvent.change(screen.getByLabelText('Periodo'), { target: { value: '2026-1' } });
     await waitFor(() =>
       expect(listar).toHaveBeenCalledWith(expect.objectContaining({ periodo: '2026-1' })),
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
 
-    fireEvent.change(within(panel).getByLabelText('Tipo de espacio que necesita'), {
+    fireEvent.change(await within(panel).findByLabelText('Tipo de espacio que necesita'), {
       target: { value: 'AULA_TEORICA' },
     });
     fireEvent.change(within(panel).getByLabelText('Docente'), { target: { value: 'd1' } });
@@ -241,9 +356,14 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
   });
 
   it('desmarcar el software lo quita de la lista a guardar', async () => {
-    editar.mockResolvedValue({ seccion: seccion({}), alertas: [] });
+    editar.mockResolvedValue({
+      seccion: seccion({}),
+      alertas: [],
+      advertencias: [],
+      reasignacion: null,
+    });
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
 
@@ -260,7 +380,7 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
   it('avisa si el backend rechaza el cambio y deja el formulario abierto', async () => {
     editar.mockRejectedValue(new Error('El laboratorio no tiene ese software'));
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
     fireEvent.click(await within(panel).findByRole('checkbox', { name: /Docker/ }));
@@ -273,37 +393,205 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
 
   it('cerrar el detalle deja de editar y hides la sección', async () => {
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
-    fireEvent.click(within(panel).getByRole('button', { name: 'Cancelar' }));
+    // Docentes y catálogo se piden al abrir la edición: el formulario aparece al llegar.
+    fireEvent.click(await within(panel).findByRole('button', { name: 'Cancelar' }));
 
     expect(within(panel).getByRole('button', { name: 'Editar sección' })).toBeInTheDocument();
   });
 
-  it('en pantallas estrechas el listado pasa a tarjetas', async () => {
-    const anchoOriginal = window.innerWidth;
-    window.innerWidth = 500;
-    window.dispatchEvent(new Event('resize'));
-
-    try {
-      montar();
-      const articulo = await screen.findByRole('article', { name: /IS101/ });
-      expect(within(articulo).getByText('IS101 · 1')).toBeInTheDocument();
-      expect(within(articulo).getByText('Lab 03')).toBeInTheDocument();
-      expect(screen.queryByRole('table')).toBeNull();
-    } finally {
-      window.innerWidth = anchoOriginal;
-      window.dispatchEvent(new Event('resize'));
-    }
+  it('ofrece la tabla (escritorio) y las tarjetas (móvil) y deja la elección al CSS', async () => {
+    montar();
+    const articulo = await screen.findByRole('article', { name: /IS101/ });
+    expect(within(articulo).getByText('IS101 · 1')).toBeInTheDocument();
+    expect(within(articulo).getByText('Lab 03')).toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeInTheDocument();
   });
 
   it('cerrar el panel de detalle lo oculta', async () => {
     montar();
-    fireEvent.click(await screen.findByRole('button', { name: /Ver detalle de IS101 1/ }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0]);
     const panel = await screen.findByRole('dialog');
     fireEvent.click(within(panel).getByRole('button', { name: 'Cerrar' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('muestra los filtros activos como chips y los limpia (Issue 4.40)', async () => {
+    montar();
+    await screen.findAllByText('IS101 · 1');
+    fireEvent.change(screen.getByLabelText('Tipo de espacio'), {
+      target: { value: 'LABORATORIO' },
+    });
+    const chips = screen.getByRole('group', { name: 'Filtros activos' });
+    expect(within(chips).getByText('Laboratorio')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+    expect(screen.queryByRole('group', { name: 'Filtros activos' })).toBeNull();
+    expect(screen.getByLabelText('Tipo de espacio')).toHaveValue('TODOS');
+  });
+
+  describe('Horario de la sección (Issue 4.62)', () => {
+    const abrirEdicion = async () => {
+      montar();
+      fireEvent.click(
+        (await screen.findAllByRole('button', { name: /Ver detalle de IS101 1/ }))[0],
+      );
+      const panel = await screen.findByRole('dialog');
+      fireEvent.click(within(panel).getByRole('button', { name: 'Editar sección' }));
+      await within(panel).findByLabelText('Día de la franja 1');
+      return panel;
+    };
+
+    it('cambia, agrega y quita franjas y envía el horario nuevo', async () => {
+      editar.mockResolvedValue({
+        seccion: seccion({}),
+        alertas: [],
+        advertencias: [],
+        reasignacion: { estado: 'VIGENTE', motivoEscalamiento: null, conservada: false },
+      });
+      const panel = await abrirEdicion();
+
+      fireEvent.change(within(panel).getByLabelText('Hora de fin de la franja 1'), {
+        target: { value: '11:00' },
+      });
+      fireEvent.click(within(panel).getByRole('button', { name: 'Agregar franja' }));
+      fireEvent.change(within(panel).getByLabelText('Día de la franja 2'), {
+        target: { value: 'JUEVES' },
+      });
+      fireEvent.click(within(panel).getByRole('button', { name: 'Agregar franja' }));
+      fireEvent.click(within(panel).getByRole('button', { name: 'Quitar la franja 3' }));
+      fireEvent.click(within(panel).getByRole('button', { name: 'Guardar cambios' }));
+
+      await waitFor(() =>
+        expect(editar).toHaveBeenCalledWith(
+          's1',
+          expect.objectContaining({
+            horarios: [
+              { diaSemana: 'LUNES', horaInicio: '08:00', horaFin: '11:00' },
+              { diaSemana: 'JUEVES', horaInicio: '08:00', horaFin: '10:00' },
+            ],
+          }),
+        ),
+      );
+      expect(
+        await screen.findByText('El horario se guardó y la sección se reasignó.'),
+      ).toBeInTheDocument();
+    });
+
+    it('no envía el horario si no cambió (no dispara una reasignación)', async () => {
+      editar.mockResolvedValue({
+        seccion: seccion({}),
+        alertas: [],
+        advertencias: [],
+        reasignacion: null,
+      });
+      const panel = await abrirEdicion();
+      fireEvent.change(within(panel).getByLabelText('Docente'), { target: { value: '' } });
+      fireEvent.click(within(panel).getByRole('button', { name: 'Guardar cambios' }));
+
+      await waitFor(() => expect(editar).toHaveBeenCalled());
+      expect(editar.mock.calls[0][1]).not.toHaveProperty('horarios');
+    });
+
+    it('rechaza un inicio igual o posterior al fin sin llamar al backend', async () => {
+      const panel = await abrirEdicion();
+      fireEvent.change(within(panel).getByLabelText('Hora de inicio de la franja 1'), {
+        target: { value: '10:00' },
+      });
+      fireEvent.click(within(panel).getByRole('button', { name: 'Guardar cambios' }));
+
+      expect(
+        within(panel).getAllByText('La hora de inicio debe ser anterior a la hora de fin.').length,
+      ).toBeGreaterThan(0);
+      expect(within(panel).getByLabelText('Día de la franja 1')).toHaveFocus();
+      expect(editar).not.toHaveBeenCalled();
+    });
+
+    it('rechaza dos franjas de la misma sección que se cruzan', async () => {
+      const panel = await abrirEdicion();
+      fireEvent.click(within(panel).getByRole('button', { name: 'Agregar franja' }));
+      fireEvent.change(within(panel).getByLabelText('Día de la franja 2'), {
+        target: { value: 'LUNES' },
+      });
+      fireEvent.change(within(panel).getByLabelText('Hora de inicio de la franja 2'), {
+        target: { value: '09:00' },
+      });
+      fireEvent.click(within(panel).getByRole('button', { name: 'Guardar cambios' }));
+
+      expect(
+        within(panel).getAllByText('Se cruza con la franja Lunes 08:00 – 10:00.').length,
+      ).toBeGreaterThan(0);
+      expect(editar).not.toHaveBeenCalled();
+    });
+
+    it('deja a la vista la advertencia de choque con otra sección del mismo docente', async () => {
+      editar.mockResolvedValue({
+        seccion: seccion({}),
+        alertas: [],
+        advertencias: [
+          'El docente también dicta IS202-3 el Lunes 09:00–11:00: se cruza con la franja Lunes 08:00–11:00',
+        ],
+        reasignacion: { estado: 'VIGENTE', motivoEscalamiento: null, conservada: true },
+      });
+      const panel = await abrirEdicion();
+      fireEvent.change(within(panel).getByLabelText('Hora de fin de la franja 1'), {
+        target: { value: '11:00' },
+      });
+      fireEvent.click(within(panel).getByRole('button', { name: 'Guardar cambios' }));
+
+      expect(
+        await within(panel).findByText(/El docente también dicta IS202-3/),
+      ).toBeInTheDocument();
+      expect(
+        await screen.findByText('El horario se guardó y la sección conserva su aula.'),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('Paginación (Issue 4.38)', () => {
+    beforeEach(() => {
+      window.localStorage.clear();
+      listar.mockImplementation(async (filtros = {}) => ({
+        items: [seccion({ id: `s-${filtros.pagina}`, codigoCurso: `P${filtros.pagina}` })],
+        total: 312,
+        pagina: filtros.pagina ?? 1,
+        limite: filtros.limite ?? 50,
+      }));
+    });
+
+    it('pide 50 por página y muestra el total real', async () => {
+      montar();
+      const nav = await screen.findByRole('navigation', { name: 'Paginación de secciones' });
+      expect(listar).toHaveBeenCalledWith(expect.objectContaining({ pagina: 1, limite: 50 }));
+      expect(nav).toHaveTextContent('Mostrando 1–50 de 312 secciones');
+      expect(screen.getByText('312 secciones')).toBeInTheDocument();
+    });
+
+    it('navega de página y vuelve a la 1 al filtrar', async () => {
+      montar();
+      fireEvent.click(await screen.findByRole('button', { name: 'Página siguiente' }));
+      await waitFor(() =>
+        expect(listar).toHaveBeenLastCalledWith(expect.objectContaining({ pagina: 2 })),
+      );
+      fireEvent.change(screen.getByLabelText('Tipo de espacio'), {
+        target: { value: 'LABORATORIO' },
+      });
+      await waitFor(() =>
+        expect(listar).toHaveBeenLastCalledWith(
+          expect.objectContaining({ pagina: 1, tipo: 'LABORATORIO' }),
+        ),
+      );
+    });
+
+    it('recuerda el tamaño de página elegido', async () => {
+      montar();
+      fireEvent.change(await screen.findByLabelText('Por página'), { target: { value: '100' } });
+      await waitFor(() =>
+        expect(listar).toHaveBeenLastCalledWith(expect.objectContaining({ limite: 100 })),
+      );
+      expect(window.localStorage.getItem('saie:secciones:tamanoPagina')).toBe('100');
+    });
   });
 });

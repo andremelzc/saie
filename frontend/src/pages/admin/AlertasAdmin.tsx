@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
 import TarjetaAlerta from '../../components/admin/TarjetaAlerta';
-import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import { ICONOS } from '../../components/ui/iconos';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
+import { SelectorSegmentado } from '../../components/ui/SelectorSegmentado';
+import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
 import { Boton } from '../../components/ui/Boton';
-import { useAvisos } from '../../components/ui/useAvisos';
 import { useAuth } from '../../context/useAuth';
-import { useCarga } from '../../hooks/useCarga';
-import { obtenerAlertas, resolverAlerta } from '../../services/admin';
-import { mensajeDeError } from '../../services/estudiante';
-import type { AlertaDTO, TipoAlerta } from '../../types/admin';
+import { useAccion } from '../../hooks/useAccion';
+import { invalidarCacheCarga, useCarga } from '../../hooks/useCarga';
+import { obtenerAlertas, resolverAlerta, reubicarSeccionesAlerta } from '../../services/admin';
+import type { AlertaDTO, ResultadoReubicacionDTO, TipoAlerta } from '../../types/admin';
 import { ETIQUETA_TIPO_ALERTA } from '../../utils/etiquetas';
+import { resumirReubicacion } from '../../utils/admin';
 
 type Filtro = 'TODAS' | TipoAlerta;
 
@@ -34,7 +37,9 @@ const ListaAlertas: React.FC<{
   filtro: Filtro;
   alertas: AlertaDTO[];
   onResolver: (id: string) => void;
+  onReubicar?: (id: string) => void;
   reintentando: string | null;
+  reubicando: string | null;
   onVerTodas: () => void;
 }> = ({
   hayAlertas,
@@ -43,13 +48,16 @@ const ListaAlertas: React.FC<{
   filtro,
   alertas,
   onResolver,
+  onReubicar,
   reintentando,
+  reubicando,
   onVerTodas,
 }) => {
   if (!error && !hayAlertas) {
     return (
       <EstadoVacio
         titulo="Sin alertas pendientes"
+        icono={ICONOS.escudo}
         descripcion="No hay alertas de software ni de capacidad en este momento."
       />
     );
@@ -70,13 +78,15 @@ const ListaAlertas: React.FC<{
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <div className="saie-stagger grid grid-cols-1 gap-4 lg:grid-cols-2">
       {alertas.map((a) => (
         <TarjetaAlerta
           key={a.id}
           alerta={a}
           onResolver={onResolver}
           resolviendo={reintentando === a.id}
+          onReubicar={onReubicar}
+          reubicando={reubicando === a.id}
         />
       ))}
     </div>
@@ -85,10 +95,12 @@ const ListaAlertas: React.FC<{
 
 export const AlertasAdmin: React.FC = () => {
   const { sesion } = useAuth();
-  const { datos, cargando, error, recargar } = useCarga(obtenerAlertas);
-  const { mostrar } = useAvisos();
+  const { datos, cargando, error, recargar } = useCarga(obtenerAlertas, { clave: 'alertas' });
+  const { ejecutar } = useAccion();
   const [resueltasLocal, setResueltasLocal] = useState<Set<string>>(new Set());
   const [enCurso, setEnCurso] = useState<string | null>(null);
+  const [reubicando, setReubicando] = useState<string | null>(null);
+  const esCoordinacion = sesion?.rol === 'COORDINACION_ACADEMICA';
   const [errorAccion, setErrorAccion] = useState<{
     mensaje: string;
     reintentar: () => void;
@@ -100,27 +112,50 @@ export const AlertasAdmin: React.FC = () => {
   const conteos: Record<Filtro, number> = {
     TODAS: base.length,
     SOFTWARE: base.filter((a) => a.tipo === 'SOFTWARE').length,
+    ACCESIBILIDAD: base.filter((a) => a.tipo === 'ACCESIBILIDAD').length,
     CAPACIDAD: base.filter((a) => a.tipo === 'CAPACIDAD').length,
   };
   const pendientes = base.filter((a) => a.estado === 'PENDIENTE').length;
   const total = base.length;
 
   async function manejarResolver(id: string) {
+    if (enCurso) return;
     setEnCurso(id);
     setErrorAccion(null);
-    try {
-      await resolverAlerta(id);
-      setResueltasLocal((prev) => new Set(prev).add(id));
-      const espacio = datos?.find((a) => a.id === id)?.espacio.identificador;
-      mostrar(
-        'exito',
+    const espacio = datos?.find((a) => a.id === id)?.espacio.identificador;
+    const resultado = await ejecutar(() => resolverAlerta(id), {
+      exito: () =>
         espacio ? `Alerta de ${espacio} marcada como resuelta.` : 'Alerta marcada como resuelta.',
-      );
-    } catch (e) {
-      setErrorAccion({ mensaje: mensajeDeError(e), reintentar: () => manejarResolver(id) });
-    } finally {
-      setEnCurso(null);
+      // El error se muestra en línea, con su «Reintentar».
+      avisarError: false,
+    });
+    if (resultado?.ok) {
+      // La caché de alertas quedó vieja: la próxima visita no debe mostrar esta como pendiente.
+      invalidarCacheCarga('alertas');
+      setResueltasLocal((prev) => new Set(prev).add(id));
+    } else if (resultado) {
+      setErrorAccion({ mensaje: resultado.error, reintentar: () => manejarResolver(id) });
     }
+    setEnCurso(null);
+  }
+
+  // Issue 2.22: reasigna las secciones afectadas y deja la alerta resuelta.
+  async function manejarReubicar(id: string) {
+    if (enCurso || reubicando) return;
+    setReubicando(id);
+    setErrorAccion(null);
+    const resultado = await ejecutar(() => reubicarSeccionesAlerta(id), {
+      exito: (r: ResultadoReubicacionDTO) => resumirReubicacion(r),
+      avisarError: false,
+    });
+    if (resultado?.ok) {
+      invalidarCacheCarga('alertas');
+      invalidarCacheCarga('escaladas');
+      setResueltasLocal((prev) => new Set(prev).add(id));
+    } else if (resultado) {
+      setErrorAccion({ mensaje: resultado.error, reintentar: () => manejarReubicar(id) });
+    }
+    setReubicando(null);
   }
 
   const subtitulo =
@@ -139,46 +174,23 @@ export const AlertasAdmin: React.FC = () => {
           cargando={cargando}
           textoCargando="Actualizando…"
         >
-          Actualizar
+          Actualizar datos
         </Boton>
       }
     >
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div
-            role="group"
-            aria-label="Filtrar por tipo"
-            className="inline-flex flex-wrap gap-1 rounded-xl border border-saie-divider bg-white p-1"
-          >
-            {(['TODAS', 'SOFTWARE', 'CAPACIDAD'] as Filtro[]).map((f) => {
-              const activo = filtro === f;
-              return (
-                <button
-                  key={f}
-                  type="button"
-                  aria-pressed={activo}
-                  aria-label={`${ETIQUETAS_FILTRO[f]} (${conteos[f]})`}
-                  onClick={() => setFiltro(f)}
-                  className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors ${
-                    activo
-                      ? 'bg-saie-primary text-white'
-                      : 'text-saie-muted hover:bg-saie-primary/5 hover:text-saie-primary'
-                  }`}
-                >
-                  <span>{ETIQUETAS_FILTRO[f]}</span>
-                  {/* El número va entre paréntesis para que el texto visible sea el mismo que
-                      el nombre accesible del botón (regla label-content-name-mismatch). */}
-                  <span
-                    className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${
-                      activo ? 'bg-white/20 text-white' : 'bg-saie-canvas text-saie-text'
-                    }`}
-                  >
-                    ({conteos[f]})
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          <SelectorSegmentado<Filtro>
+            opciones={(['TODAS', 'SOFTWARE', 'CAPACIDAD', 'ACCESIBILIDAD'] as Filtro[]).map(
+              (f) => ({
+                valor: f,
+                etiqueta: `${ETIQUETAS_FILTRO[f]} (${conteos[f]})`,
+              }),
+            )}
+            valor={filtro}
+            onCambiar={setFiltro}
+            etiquetaGrupo="Filtrar por tipo"
+          />
           {datos && (
             <p className="m-0 text-sm text-saie-muted" aria-live="polite">
               <strong className="text-saie-text">{pendientes}</strong>{' '}
@@ -194,20 +206,24 @@ export const AlertasAdmin: React.FC = () => {
       )}
       {error && <AvisoError mensaje={error} onReintentar={recargar} />}
 
-      {cargando && !datos ? (
-        <EsqueletoCarga texto="Cargando alertas…" />
-      ) : (
-        <ListaAlertas
-          hayAlertas={base.length > 0}
-          hayCoincidencias={alertas.length > 0}
-          error={Boolean(error)}
-          filtro={filtro}
-          alertas={alertas}
-          onResolver={manejarResolver}
-          reintentando={enCurso}
-          onVerTodas={() => setFiltro('TODAS')}
-        />
-      )}
+      <ZonaActualizable actualizando={cargando && datos !== null}>
+        {cargando && !datos ? (
+          <EsqueletoCarga texto="Cargando alertas…" forma="tarjeta" />
+        ) : (
+          <ListaAlertas
+            hayAlertas={base.length > 0}
+            hayCoincidencias={alertas.length > 0}
+            error={Boolean(error)}
+            filtro={filtro}
+            alertas={alertas}
+            onResolver={manejarResolver}
+            onReubicar={esCoordinacion ? manejarReubicar : undefined}
+            reintentando={enCurso}
+            reubicando={reubicando}
+            onVerTodas={() => setFiltro('TODAS')}
+          />
+        )}
+      </ZonaActualizable>
     </LayoutAdmin>
   );
 };

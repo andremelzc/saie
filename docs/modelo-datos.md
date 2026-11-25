@@ -389,6 +389,22 @@ Flujo con el que un docente propone un software que aún no está en el catálog
 
 ---
 
+### 4.22. `Periodo`
+Gestión del semestre desde Coordinación (Issue 4.64, riesgos R25 y R49–R52). Reemplaza la variable de entorno `PERIODO_VIGENTE` y el cálculo del periodo «más reciente» ordenando texto. Migración `20261126000000_periodos`: crea la tabla y registra los periodos que ya tienen secciones (el más reciente queda vigente).
+
+| Campo | Tipo | Nulable | Descripción / Regla de Negocio |
+| :--- | :--- | :---: | :--- |
+| `id` | UUID / PK | No | Identificador único. |
+| `codigo` | VARCHAR | No | **Único.** Forma `AAAA-1` o `AAAA-2` (`AAAA-0` en verano). «2026-I» y «2026-II» se normalizan a «2026-1» y «2026-2». Es el mismo texto que guarda `Seccion.periodo`. |
+| `fecha_inicio` | DATE | Sí | Inicio del semestre. |
+| `fecha_fin` | DATE | Sí | Fin del semestre; no puede ser anterior al inicio. |
+| `estado` | ENUM | No | `EN_PREPARACION` (se carga y prueba; alumnos y docentes no lo ven), `VIGENTE` (permite todo) o `CERRADO` (solo consulta). |
+| `creado_en` | TIMESTAMP | No | Fecha de registro. |
+
+> **Reglas:** (1) a lo sumo un periodo `VIGENTE`. (2) Cargar datos nunca cambia el vigente: solo «Activar periodo». (3) Activar cierra el vigente anterior en la misma transacción y pasa sus asignaciones (`VIGENTE` y `ESCALADA`) a `HISTORICA`. (4) Las importaciones y toda escritura sobre una sección exigen un periodo registrado y no cerrado. (5) Registro, activación y cierre quedan en `RegistroAuditoria` (`CAMBIO_PERIODO`).
+
+---
+
 ## 5. Reglas de Integridad y Restricciones del Negocio
 
 1. **No doble reserva de un espacio:** Un espacio no puede tener dos asignaciones con estado `VIGENTE` cuyos horarios se solapen en día y rango temporal (`hora_inicio` – `hora_fin`).

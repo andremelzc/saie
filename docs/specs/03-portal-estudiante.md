@@ -18,6 +18,7 @@ El **Portal del Estudiante** es la interfaz web/móvil responsiva donde los alum
 ### 2.1 Consulta por Alumno / Curso (#3.1, #3.2, #3.3, #3.4)
 * `GET /api/v1/consulta/alumno/:codigoAlumno`
   * Devuelve la lista de asignaciones vigentes del estudiante (Curso, Sección, Pabellón, Piso, Números de Aula/Lab, Horario y Docente).
+  * **Datos personales mínimos (Issue 3.37, RNF-09):** la ruta es pública, así que `alumno` es solo `{ codigo, nombre }`, con `nombre` reducido al **nombre de pila** (`soloNombreDePila` admite «Nombre Apellido» y «Apellido, Nombre»). **Decisión:** no se devuelven `correo` ni `movilidadReducida` (dato de salud). La consulta pública no calcula rutas accesibles: la ruta de referencia es del portal autenticado (§2.3), donde el alumno ve sus propios datos. Una prueba de integración (`consultaPublicaPrivacidad.test.ts`) falla si aparece un campo fuera de la lista.
 * `GET /api/v1/consulta/curso/:codigoCurso`
   * Devuelve la ubicación y docente asignado a cada sección de un curso.
 
@@ -25,18 +26,36 @@ El **Portal del Estudiante** es la interfaz web/móvil responsiva donde los alum
 * `GET /api/v1/estudiante/horario` (Autenticado JWT)
   * Devuelve la grilla semanal completa de asignaciones (Lunes a Sábado, 08:00 a 22:00).
 * `GET /api/v1/estudiante/cursos`
-  * Lista de cursos matriculados del ciclo actual.
+  * Lista de cursos matriculados del ciclo actual. Cada curso trae `asignacionId` (la asignación vigente de su sección, o `null` si aún no tiene aula): con él se pide la ruta de referencia.
 * `GET /api/v1/estudiante/perfil`
   * Datos personales, código, carrera y ficha médica (flag de movilidad reducida).
 * **Condición de accesibilidad declarada por el alumno (Issue 3.30):** la ficha médica tiene un
   campo booleano `condicionAccesible`: «¿tienes alguna condición física que te impide subir a
   pisos superiores o usar escaleras?». Describe un **requisito de acceso al espacio**, no un
   diagnóstico, para no obligar al alumno a declarar más de lo necesario (RNF-09).
-  * Al activarlo, el backend propaga `MovilidadReducida = true` a **todas** las matrículas del
-    alumno, que es lo que consume el motor (`reglas/accesibilidad.ts` → `priorizarBloquesPiso1`).
-    Así el alumno no necesita reimportar el CSV de matrículas para que se le priorice el Piso 1.
-  * Al desactivarlo, el flag solo se limpia si la declaración anterior estaba activa: si el
-    `movilidadReducida` lo puso una carga de datos de Coordinación, se respeta y no se toca.
+  * **Verificación por Coordinación (Issue 3.60, riesgos R12 a R14):** marcar la casilla ya no
+    aplica nada. Crea una `SolicitudAccesibilidad` en estado `PENDIENTE` (una sola pendiente por
+    alumno) y no cambia ninguna matrícula. Coordinación la aprueba o la rechaza con motivo en
+    `/admin/accesibilidad` ([Spec 04](04-panel-alertas-y-admin.md) §2.8). Solo al aprobarla se
+    marca `condicionAccesible = true` y se propaga `MovilidadReducida = true` a **todas** las
+    matrículas del alumno, que es lo que consume el motor (`reglas/accesibilidad.ts` →
+    `priorizarBloquesPiso1`), y se reasignan sus secciones del periodo vigente.
+  * Al desmarcarla se retira la solicitud pendiente, si la hay, y si la condición estaba
+    aprobada se quita de la ficha y de las matrículas (dejar de declararla no necesita
+    verificación). Si el `movilidadReducida` lo puso una carga de datos de Coordinación y no hay
+    declaración aprobada, se respeta y no se toca.
+  * `GET /api/v1/estudiante/perfil` incluye `accesibilidad: { estado, fechaSolicitud,
+    fechaResolucion, motivoRechazo } | null` (la declaración más reciente). El perfil muestra si
+    está pendiente, aprobada o no aprobada con su motivo; la casilla se ve marcada si está
+    pendiente o aprobada. Si el alumno tiene Telegram vinculado, recibe un aviso al resolverse,
+    sin el motivo ni datos de su condición.
+  * **Condición temporal (Issue 3.61, riesgo R16):** junto con la casilla, el alumno puede indicar
+    `condicionAccesibleHasta` (`AAAA-MM-DD`, opcional, no puede ser un día que ya pasó): el último
+    día en que rige. Se guarda en la solicitud (`fechaFin`) y, al aprobarla, en
+    `FichaMedica.condicionAccesibleHasta`. Al vencer, la corrida programada (Issue 2.18) quita la
+    marca de la ficha y de las matrículas antes de ejecutarse, y así reasigna sus secciones. Sin
+    fecha, la condición no vence. Una condición ya aprobada conserva su fecha: para cambiarla se
+    desmarca y se vuelve a declarar. El perfil muestra «hasta el …» o «No vence».
   * El dato nunca sale de la ficha del propio alumno (RNF-09) y **nunca llega a Telegram** (RNF-11).
   * `FichaMedica.condicionAccesible` (columna `condicion_accesible`, migración
     `20261021000000_ficha_accesible`) es la fuente de verdad de la declaración.
@@ -56,8 +75,13 @@ El **Portal del Estudiante** es la interfaz web/móvil responsiva donde los alum
   * Mapa en modo lectura: solo el estado de cada espacio del piso en la franja (sin franja, el momento actual en hora de Lima). Reutiliza `obtenerOcupacionPorPiso` (Issue 4.11, ver [Spec 04](04-panel-alertas-y-admin.md) §2.2) pero **no expone** curso, docente ni alertas.
   * `pabellon` y `piso` son obligatorios; `dia`, `horaInicio` y `horaFin` van juntos o ninguno (400 en otro caso).
   * Respuesta: `{ pabellon, piso, franja: { diaSemana, horaInicio, horaFin }, espacios: [{ id, identificador, tipo, estado: 'DISPONIBLE' | 'OCUPADO' }] }`. Un espacio con alerta se muestra según su asignación.
-* `GET /api/v1/estudiante/ruta/:asignacionId`
-  * Calcula la ruta estática de 3 tramos (Entrada Pabellón $\rightarrow$ Escalares/Elevador $\rightarrow$ Puerta del Espacio asignado).
+* `GET /api/v1/estudiante/ruta/:asignacionId` (Issues 3.14 y 3.15, rol `ALUMNO`)
+  * Expone la ruta de referencia hacia el espacio asignado de una asignación. **No reimplementa el cálculo**: `obtenerRutaAlumnoPorAsignacionId` (`alumno.service.ts`) reúne la asignación, sus espacios y el grafo de contigüidad y delega en `calcularRutaReferencia` (`rutaReferencia.service.ts`, Issue 3.14). Es la ruta estática de 3 tramos: Entrada del pabellón $\rightarrow$ Escalera o ascensor $\rightarrow$ Puerta del espacio asignado (el tramo de cambio de piso se omite si el espacio está en el piso 1).
+  * **Quién puede verla:** solo el alumno matriculado en la sección de la asignación. Una asignación inexistente responde `404` y una de una sección donde no está matriculado, `403`. Si la matrícula marca `movilidadReducida`, el tramo de cambio de piso usa el ascensor accesible en lugar de la escalera.
+  * **Respuesta `200`:** `RutaReferenciaDTO` = `{ asignacionId, estado, mensaje?, pabellon?, pisoDestino?, tiempoEstimadoTotalSegundos, tramos, movilidadReducida }`.
+    * Cada tramo es `{ orden, tipo: 'ENTRADA_PABELLON' | 'CAMBIO_PISO' | 'ESPACIO_ASIGNADO', titulo, descripcion, tiempoEstimadoSegundos, esAccesible, espacioId?, identificador?, tipoEspacio?, pabellon?, piso? }`. Un bloque de varios espacios contiguos produce un tramo `ESPACIO_ASIGNADO` por sala, en el orden del grafo.
+    * `tiempoEstimadoTotalSegundos` es la suma de los tramos, con las constantes de `TIEMPO_CAMINATA_CONFIG`: 45 s la entrada, 60 s por piso en escalera o 50 s en ascensor, 30 s hasta el primer espacio y 15 s entre espacios contiguos.
+  * **Ruta no disponible:** no es un error HTTP. Si la asignación no tiene espacios, o el espacio no tiene pabellón o piso válido, responde `200` con `estado: 'RUTA_NO_DISPONIBLE'`, un `mensaje` legible («La asignación no cuenta con espacios registrados.» o «El espacio asignado no tiene pabellón o piso válido registrado.»), `tiempoEstimadoTotalSegundos: 0` y `tramos: []`. La pantalla de ruta muestra ese `mensaje` en lugar de dibujar tramos.
 
 ### 2.4 Avisos por Telegram (#3.24, #3.25, #3.26, #3.27, #3.28)
 Canal opcional y voluntario de avisos al alumno (decisión D-06). Contexto y secretos en [`arquitectura.md`](../arquitectura.md) §5.3, §5.4, §6.3 y §8.
@@ -83,7 +107,7 @@ Canal opcional y voluntario de avisos al alumno (decisión D-06). Contexto y sec
 * `FormularioBusqueda`: Campo de código de alumno o curso con autocompletado y validación rápida.
 * `TarjetaResultado`: Card interactivo que muestra el aula/laboratorio asignado, tipo de espacio y badge de horario.
 * `GridHorarioSemanal`: Vista de calendario interactivo con colores por curso.
-* `VistaMapaRuta`: Renderizado del plano SVG con el trazado resaltado hacia el aula/laboratorio asignado.
+* `VistaMapaRuta` (`frontend/src/components/ruta/`, Issue 3.19): plano del piso con el recorrido encima (línea discontinua y puntos numerados), la entrada del pabellón como inicio, el destino resaltado, el tiempo total y los pasos escritos, cada uno con «Ver en el plano» (cambia de piso y acerca la vista). Con movilidad reducida usa el ascensor. Si el estado es `RUTA_NO_DISPONIBLE` muestra el `mensaje` y no dibuja el plano. Con el Issue 3.20 `RutaAlumnoPage` usa la respuesta real: lista las clases del alumno que tienen `asignacionId` (lo trae `GET /api/v1/estudiante/cursos`), pide `GET /api/v1/estudiante/ruta/:asignacionId` y traduce el `espacioId` (UUID) al id de la figura con `rutaConIdsDePlano` (ver [Spec 07](07-ui-ux-y-activos.md) §2.3). `rutaEjemplo.ts` queda solo como datos de demostración y de pruebas. El recorrido **sigue los pasillos** del plano (ver [Spec 07](07-ui-ux-y-activos.md) §2.4, «Pasillos»): va de la entrada al aula pasando por la escalera o el ascensor que dé el trayecto más corto caminando; el backend sigue sin entregar coordenadas, así que el dibujo es del frontend. 
 * `LoginEstudiante`: Formulario de autenticación con código de alumno y clave inicial.
 
 ### 3.2 Pantallas en modo tablero (Issue 3.29)

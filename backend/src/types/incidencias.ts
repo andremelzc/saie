@@ -9,6 +9,8 @@ export interface IncidenciaAdminDTO {
   estado: EstadoIncidencia;
   descripcion: string;
   evidencia: string | null;
+  /** Issue 7.19: tiene una foto adjunta (se pide aparte, en `/incidencias/:id/imagen`). */
+  tieneImagen: boolean;
   fechaReporte: Date;
   comentarioCierre: string | null;
   fechaCierre: Date | null;
@@ -17,8 +19,13 @@ export interface IncidenciaAdminDTO {
   asignacion: { id: string; codigoCurso: string; nombreCurso: string; codigoSeccion: string };
 }
 
+/** Incidencia vista por el docente que la reportó: el contrato de Jefatura sin `docente` (Issue 7.14). */
+export type IncidenciaDocenteDTO = Omit<IncidenciaAdminDTO, 'docente'>;
+
 export interface FiltrosIncidencias {
   estado?: EstadoIncidencia;
   prioridad?: PrioridadIncidencia;
   espacioId?: string;
+  pagina?: number;
+  limite?: number;
 }

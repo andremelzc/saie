@@ -3,7 +3,12 @@ import { RolCuenta } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { responderError } from '../lib/http';
-import { iniciarSesion, ROLES_ADMIN } from '../services/auth.service';
+import {
+  firmarToken,
+  iniciarSesion,
+  obtenerJwtExpiresIn,
+  ROLES_ADMIN,
+} from '../services/auth.service';
 import { cambiarClave, CambiarClaveSchema } from '../services/cuenta.service';
 
 // Alumno y docente inician sesión con su código; el panel usa un nombre de usuario.
@@ -46,7 +51,12 @@ export async function cambiarClaveCuenta(req: Request, res: Response): Promise<v
   try {
     const entrada = CambiarClaveSchema.parse(req.body);
     const data = await cambiarClave(req.auth!.sub, entrada, prisma);
-    res.status(200).json({ success: true, data });
+    // Token nuevo sin la marca `debeCambiarClave`: el usuario sigue usando el sistema sin volver
+    // a iniciar sesión (Issue 4.45).
+    const token = firmarToken({ sub: req.auth!.sub, rol: req.auth!.rol });
+    res
+      .status(200)
+      .json({ success: true, data: { ...data, token, expiresIn: obtenerJwtExpiresIn() } });
   } catch (error: unknown) {
     responderError(res, error);
   }

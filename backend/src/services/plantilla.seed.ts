@@ -195,7 +195,8 @@ export async function leerPlantilla(ruta: string): Promise<ResultadoLectura> {
       errores.push(`${ref}: habilitado debe ser SI o NO ('${v.habilitado}')`);
     if (piso === null || aforo === null || aforo < 0 || habilitado === null) continue;
 
-    // Columna opcional: distancia (metros) hasta el ascensor; base de la accesibilidad (R-07).
+    // Columna opcional: distancia caminando hasta el ascensor, en unidades del plano (no hay escala
+    // en metros); base de la accesibilidad (R-07). La calcula tools/planos/calcular-espacios.ts.
     let distancia: number | null = null;
     if (v.distancia_ascensor) {
       distancia = entero(v.distancia_ascensor);
@@ -564,6 +565,28 @@ export function calcularAnonimos(datos: DatosPlantilla): Array<{
     }));
 }
 
+/**
+ * Issue 4.64: los periodos de la plantilla quedan registrados. Si el sistema aún no tiene un
+ * periodo vigente (base nueva), el más reciente pasa a serlo; si ya hay uno, los demás quedan en
+ * preparación y solo Coordinación puede activarlos.
+ */
+export async function registrarPeriodosDeLaPlantilla(
+  prisma: Pick<PrismaClient, 'periodo'>,
+  periodos: string[],
+): Promise<void> {
+  const codigos = [...new Set(periodos)].sort((a, b) => a.localeCompare(b));
+  for (const codigo of codigos) {
+    await prisma.periodo.upsert({ where: { codigo }, update: {}, create: { codigo } });
+  }
+  const vigente = await prisma.periodo.findFirst({ where: { estado: 'VIGENTE' } });
+  if (!vigente && codigos.length > 0) {
+    await prisma.periodo.update({
+      where: { codigo: codigos[codigos.length - 1] },
+      data: { estado: 'VIGENTE' },
+    });
+  }
+}
+
 export async function cargarPlantilla(
   prisma: PrismaClient,
   datos: DatosPlantilla,
@@ -573,6 +596,35 @@ export async function cargarPlantilla(
 
   log('[1/6] Espacios y contigüidades...');
   const resEspacios = await sembrarEspaciosYContiguedades(prisma, datos.espacios, datos.contiguos);
+
+  // El Excel es la fuente de verdad de la contigüidad: los pares que ya no están en la hoja
+  // «Contiguos» (p. ej. tras recalcularla desde los planos) se quitan de la base.
+  const espaciosDb = await prisma.espacio.findMany({
+    select: { id: true, pabellon: true, identificador: true },
+  });
+  const idDe = new Map(espaciosDb.map((e) => [`${e.pabellon}::${e.identificador}`, e.id]));
+  const vigentes = new Set<string>();
+  for (const c of datos.contiguos) {
+    const a = idDe.get(`${c.pabellon}::${c.identificadorA}`);
+    const b = idDe.get(`${c.pabellon}::${c.identificadorB}`);
+    if (a && b) {
+      vigentes.add(`${a}|${b}`);
+      vigentes.add(`${b}|${a}`);
+    }
+  }
+  const sobrantes = (await prisma.espacioContiguo.findMany()).filter(
+    (r) => !vigentes.has(`${r.espacioIdA}|${r.espacioIdB}`),
+  );
+  if (sobrantes.length > 0) {
+    await prisma.espacioContiguo.deleteMany({
+      where: {
+        OR: sobrantes.map((r) => ({ espacioIdA: r.espacioIdA, espacioIdB: r.espacioIdB })),
+      },
+    });
+    log(
+      `      ${sobrantes.length} relaciones de contigüidad que ya no están en el Excel se quitaron.`,
+    );
+  }
 
   log('[2/6] Docentes...');
   const resDocentes = await importarDocentes(datos.docentes, prisma);
@@ -584,6 +636,10 @@ export async function cargarPlantilla(
   await sembrarCatalogoSoftware(
     prisma,
     datos.secciones.flatMap((s) => s.stackSoftwareRequerido),
+  );
+  await registrarPeriodosDeLaPlantilla(
+    prisma,
+    datos.secciones.map((x) => x.periodo),
   );
   const resCursos = await importarCursosYSecciones(
     datos.secciones.map(({ codigoDocente: _d, matriculados: _m, ...s }) => s),

@@ -47,6 +47,8 @@ enum EstadoAsignacion {
 enum TipoAlerta {
   SOFTWARE
   CAPACIDAD
+  // Issue 3.59 (riesgo R10): una sección con movilidad reducida quedó fuera del piso 1.
+  ACCESIBILIDAD
 }
 
 enum EstadoAlerta {
@@ -82,6 +84,32 @@ enum TipoEventoAuditoria {
   ESCALAMIENTO
   ALERTA
   VERIFICACION
+  // Acciones de personas (Issue 4.58): quién cambió qué, con valor anterior y nuevo.
+  EDICION_ESPACIO
+  EDICION_SECCION
+  CAMBIO_LABORATORIO
+  // Issue 4.64: registro, activación y cierre de periodos por Coordinación.
+  CAMBIO_PERIODO
+}
+
+// Issue 4.64: ciclo de vida de un periodo. Solo uno puede estar VIGENTE a la vez.
+enum EstadoPeriodo {
+  EN_PREPARACION
+  VIGENTE
+  CERRADO
+}
+
+// Flujos de carga de datos maestros (Issue 4.54).
+enum TipoArchivoImportacion {
+  CURSOS_SECCIONES
+  HORARIOS
+  MATRICULAS
+  DOCENTES
+}
+
+enum ResultadoImportacion {
+  EXITOSA
+  CON_ERRORES
 }
 
 // Catálogo de software (Spec 08): deja de ser texto libre en `Espacio` y `Seccion`.
@@ -124,7 +152,8 @@ model Espacio {
   pcsMalogradas     Int?        @map("pcs_malogradas") // Solo LABORATORIO
   habilitado        Boolean     @default(true) // false = fuera de servicio: el motor no lo asigna
   descripcionUso    String?     @map("descripcion_uso") // Rótulo visual (ej. "Sala de investigación")
-  // Distancia en metros hasta el ascensor del pabellón; base de la accesibilidad (HU-04, R-07).
+  // Distancia caminando hasta el ascensor del pabellón, en unidades del plano (no hay escala en
+  // metros: solo sirve para comparar); base de la accesibilidad (HU-04, R-07).
   distanciaAscensor Int?        @map("distancia_ascensor")
 
   // Relaciones
@@ -166,6 +195,19 @@ model Curso {
   @@map("cursos")
 }
 
+// Issue 4.64 (riesgos R25, R49–R52): el periodo vigente deja de salir de una variable de entorno o
+// del texto «más reciente»; lo decide Coordinación. `Seccion.periodo` guarda el mismo código.
+model Periodo {
+  id          String        @id @default(uuid())
+  codigo      String        @unique // AAAA-1, AAAA-2 (o AAAA-0 en verano)
+  fechaInicio DateTime?     @map("fecha_inicio") @db.Date
+  fechaFin    DateTime?     @map("fecha_fin") @db.Date
+  estado      EstadoPeriodo @default(EN_PREPARACION)
+  creadoEn    DateTime      @default(now()) @map("creado_en")
+
+  @@map("periodos")
+}
+
 model Seccion {
   id                      String      @id @default(uuid())
   cursoId                 String      @map("curso_id")
@@ -173,6 +215,9 @@ model Seccion {
   codigoSeccion           String      @map("codigo_seccion")
   periodo                 String      // ej. "2026-1"
   tipoEspacioRequerido    TipoEspacio @map("tipo_espacio_requerido")
+  // Issue 1.17 (R35): false = dejó de figurar en el último CSV de cursos y secciones de su curso.
+  // No se borra (tiene historial), pero no entra al motor y su aula queda libre.
+  activa                  Boolean     @default(true)
 
   // Relaciones
   curso        Curso        @relation(fields: [cursoId], references: [id], onDelete: Cascade)
@@ -184,6 +229,9 @@ model Seccion {
   softwareRequerido SeccionSoftware[]
   // Solicitudes de software que apuntan a esta sección (Issue 4.29).
   solicitudesSoftware SolicitudSoftware[]
+  // Issue 7.17: solicitudes de «dictar todo en laboratorio» (la de teoría y su laboratorio).
+  fusionesComoTeoria      SolicitudFusionLaboratorio[] @relation("FusionTeoria")
+  fusionesComoLaboratorio SolicitudFusionLaboratorio[] @relation("FusionLaboratorio")
 
   @@unique([cursoId, codigoSeccion, periodo])
   @@map("secciones")
@@ -234,6 +282,7 @@ model Alumno {
   cuenta      Cuenta?      @relation(fields: [cuentaId], references: [id])
   fichaMedica FichaMedica?
   matriculas  Matricula[]
+  solicitudesAccesibilidad SolicitudAccesibilidad[]
   vinculacionTelegram VinculacionTelegram?
 
   @@map("alumnos")
@@ -250,6 +299,8 @@ model FichaMedica {
   // aulas del Piso 1 (Spec 03 §2.2). No es una etiqueta de discapacidad: describe un
   // requisito de acceso al espacio, no un diagnóstico.
   condicionAccesible Boolean @default(false) @map("condicion_accesible")
+  // Issue 3.61 (R16): día en que vence una condición temporal; `null` = no vence.
+  condicionAccesibleHasta DateTime? @map("condicion_accesible_hasta") @db.Date
 
   alumno Alumno @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
 
@@ -263,12 +314,18 @@ model Docente {
   correoInstitucional String       @map("correo_institucional")
   departamento        String
   cuentaId            String?      @unique @map("cuenta_id")
+  // Issue 3.61 (R15): como el alumno, el docente declara que no puede subir a pisos superiores;
+  // solo se marca al aprobarlo Coordinación y el motor prioriza el piso 1 en sus secciones.
+  condicionAccesible      Boolean   @default(false) @map("condicion_accesible")
+  condicionAccesibleHasta DateTime? @map("condicion_accesible_hasta") @db.Date
 
   // Relaciones
   cuenta              Cuenta?             @relation(fields: [cuentaId], references: [id])
   secciones           Seccion[]
   incidencias         Incidencia[]
   solicitudesSoftware SolicitudSoftware[]
+  solicitudesAccesibilidad SolicitudAccesibilidad[]
+  solicitudesFusion   SolicitudFusionLaboratorio[]
 
   @@map("docentes")
 }
@@ -289,6 +346,8 @@ model Cuenta {
   softwareCreado       Software[]
   softwareRegistrado   EspacioSoftware[]
   solicitudesResueltas SolicitudSoftware[]
+  accesibilidadResuelta SolicitudAccesibilidad[]
+  fusionesResueltas     SolicitudFusionLaboratorio[]
 
   @@map("cuentas")
 }
@@ -329,7 +388,7 @@ model AsignacionEspacio {
 
 model Alerta {
   id             String       @id @default(uuid())
-  tipo           TipoAlerta   // SOFTWARE o CAPACIDAD
+  tipo           TipoAlerta   // SOFTWARE, CAPACIDAD o ACCESIBILIDAD
   espacioId      String       @map("espacio_id")
   motivo         String
   fechaDeteccion DateTime     @default(now()) @map("fecha_deteccion")
@@ -371,8 +430,26 @@ model Incidencia {
   docente    Docente    @relation(fields: [docenteId], references: [id], onDelete: Cascade)
   asignacion Asignacion @relation(fields: [asignacionId], references: [id], onDelete: Cascade)
   espacio    Espacio    @relation(fields: [espacioId], references: [id], onDelete: Cascade)
+  // Issue 7.19 (R45): foto que el docente adjunta como evidencia.
+  imagen     ImagenIncidencia?
 
   @@map("incidencias")
+}
+
+// Issue 7.19 (riesgo R45): la foto de una incidencia (una por incidencia). Se guarda en la propia
+// base, sin depender de un almacenamiento externo: solo JPEG, PNG o WebP de hasta 2 MB,
+// comprobados por su contenido y no solo por la extensión.
+model ImagenIncidencia {
+  id           String   @id @default(uuid())
+  incidenciaId String   @unique @map("incidencia_id")
+  tipoMime     String   @map("tipo_mime")
+  tamanoBytes  Int      @map("tamano_bytes")
+  datos        Bytes
+  creadaEn     DateTime @default(now()) @map("creada_en")
+
+  incidencia Incidencia @relation(fields: [incidenciaId], references: [id], onDelete: Cascade)
+
+  @@map("imagenes_incidencia")
 }
 
 model HistorialEspacio {
@@ -409,10 +486,43 @@ model RegistroAuditoria {
   detalle      String
   fechaHora    DateTime            @default(now()) @map("fecha_hora")
 
+  // Datos estructurados (Issue 4.48): `detalle` sigue siendo el texto de siempre y estos campos
+  // permiten mostrarlo sin interpretar cadenas. Los registros anteriores los dejan vacíos.
+  // No son claves foráneas a propósito: la bitácora conserva el id aunque la cuenta o el espacio
+  // se eliminen; los nombres se resuelven al leer.
+  corridaId   String?  @map("corrida_id")
+  espaciosIds String[] @default([]) @map("espacios_ids")
+  cuentaId    String?  @map("cuenta_id")
+  puntaje     Float?
+  origen      String?
+
+  // Acciones de personas (Issue 4.58): sección editada y lista de cambios
+  // `[{ campo, anterior, nuevo }]`. Nunca contienen claves ni datos de salud.
+  seccionId String? @map("seccion_id")
+  cambios   Json?
+
   asignacion Asignacion? @relation(fields: [asignacionId], references: [id], onDelete: SetNull)
   alerta     Alerta?     @relation(fields: [alertaId], references: [id], onDelete: SetNull)
 
+  @@index([corridaId])
   @@map("registros_auditoria")
+}
+
+// Cada carga de datos maestros queda registrada (Issue 4.54): de aquí sale la "última carga" del
+// panel, que antes vivía solo en el navegador. Sin claves foráneas, igual que la auditoría: el
+// registro sobrevive aunque la cuenta se elimine, y el nombre se resuelve al leer.
+model Importacion {
+  id               String                 @id @default(uuid())
+  tipo             TipoArchivoImportacion
+  cuentaId         String?                @map("cuenta_id")
+  fecha            DateTime               @default(now())
+  filasRecibidas   Int                    @map("filas_recibidas")
+  filasAceptadas   Int                    @map("filas_aceptadas")
+  filasRechazadas  Int                    @map("filas_rechazadas")
+  resultado        ResultadoImportacion
+
+  @@index([tipo, fecha])
+  @@map("importaciones")
 }
 
 // ==========================================
@@ -533,4 +643,62 @@ model SolicitudSoftware {
   @@index([estado])
   @@index([docenteId])
   @@map("solicitudes_software")
+}
+
+// Issue 3.60 (riesgos R12 a R14): el alumno declara en su perfil que no puede subir a pisos
+// superiores y Coordinación Académica confirma o rechaza la declaración. Solo al aprobarla se
+// marca `FichaMedica.condicionAccesible` y la movilidad reducida de sus matrículas. No guarda
+// diagnósticos: es un requisito de acceso al espacio.
+model SolicitudAccesibilidad {
+  id              String          @id @default(uuid())
+  // Issue 3.61 (R15): la declara un alumno o un docente; siempre exactamente uno de los dos.
+  alumnoId        String?         @map("alumno_id")
+  docenteId       String?         @map("docente_id")
+  // Issue 3.61 (R16): fin opcional de una condición temporal; al vencer se quita la marca.
+  fechaFin        DateTime?       @map("fecha_fin") @db.Date
+  estado          EstadoSolicitud @default(PENDIENTE)
+  fechaSolicitud  DateTime        @default(now()) @map("fecha_solicitud")
+  resueltaPorId   String?         @map("resuelta_por_id")
+  fechaResolucion DateTime?       @map("fecha_resolucion")
+  motivoRechazo   String?         @map("motivo_rechazo") // Obligatorio si estado = RECHAZADA
+  // Al aprobarla: cuántas secciones del alumno quedaron en el piso 1 tras reasignarlas.
+  resultado       String?
+
+  alumno      Alumno?  @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
+  docente     Docente? @relation(fields: [docenteId], references: [id], onDelete: Cascade)
+  resueltaPor Cuenta?  @relation(fields: [resueltaPorId], references: [id], onDelete: SetNull)
+
+  @@index([estado])
+  @@index([alumnoId])
+  @@index([docenteId])
+  @@map("solicitudes_accesibilidad")
+}
+
+// Issue 7.17 (riesgo R22): el docente pide «dictar todo en laboratorio» para su sección de teoría
+// (p. ej. `2`) y Coordinación Académica la aprueba o rechaza con motivo. Al aprobarla, las franjas
+// de la teoría pasan a su laboratorio (`2-LAB`), la teoría se retira (`activa = false`, conserva
+// su historial) y el laboratorio se reasigna: una sola sección, un mismo laboratorio en todas sus
+// franjas.
+model SolicitudFusionLaboratorio {
+  id                   String          @id @default(uuid())
+  docenteId            String          @map("docente_id")
+  seccionTeoriaId      String          @map("seccion_teoria_id")
+  seccionLaboratorioId String          @map("seccion_laboratorio_id")
+  justificacion        String
+  estado               EstadoSolicitud @default(PENDIENTE)
+  fechaSolicitud       DateTime        @default(now()) @map("fecha_solicitud")
+  resueltaPorId        String?         @map("resuelta_por_id")
+  fechaResolucion      DateTime?       @map("fecha_resolucion")
+  motivoRechazo        String?         @map("motivo_rechazo") // Obligatorio si estado = RECHAZADA
+  // Al aprobarla: dónde quedó la sección fusionada tras reasignarla.
+  resultado            String?
+
+  docente            Docente  @relation(fields: [docenteId], references: [id], onDelete: Cascade)
+  seccionTeoria      Seccion  @relation("FusionTeoria", fields: [seccionTeoriaId], references: [id], onDelete: Cascade)
+  seccionLaboratorio Seccion  @relation("FusionLaboratorio", fields: [seccionLaboratorioId], references: [id], onDelete: Cascade)
+  resueltaPor        Cuenta?  @relation(fields: [resueltaPorId], references: [id], onDelete: SetNull)
+
+  @@index([estado])
+  @@index([docenteId])
+  @@map("solicitudes_fusion_laboratorio")
 }

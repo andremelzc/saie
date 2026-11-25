@@ -1,5 +1,7 @@
 /** Contrato del perfil del alumno (backend/src/types/portal.ts y alumno.service.ts, Issue 3.12). */
 
+import type { EstadoAccesibilidadDTO } from './accesibilidad';
+
 export const TIPOS_SANGRE = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const;
 
 export interface DatosAlumnoDTO {
@@ -23,12 +25,19 @@ export interface FichaMedicaDTO {
    * escaleras. Describe un requisito de acceso al espacio, no un diagnóstico.
    */
   condicionAccesible: boolean;
+  /** Issue 3.61 (R16): último día de la condición aprobada (`AAAA-MM-DD`); `null` = no vence. */
+  condicionAccesibleHasta?: string | null;
 }
 
 export interface PerfilAlumnoDTO {
   alumno: DatosAlumnoDTO;
   /** `null` si el alumno todavía no registró su ficha médica. */
   fichaMedica: FichaMedicaDTO | null;
+  /**
+   * Issue 3.60: la declaración de accesibilidad más reciente. `condicionAccesible` solo es
+   * `true` cuando Coordinación la aprobó; mientras tanto está `PENDIENTE`.
+   */
+  accesibilidad?: EstadoAccesibilidadDTO | null;
 }
 
 /** Issue 3.28: estado de la vinculación del alumno con el bot de Telegram. */

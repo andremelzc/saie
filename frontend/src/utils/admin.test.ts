@@ -1,6 +1,7 @@
 ﻿import { describe, it, expect } from 'vitest';
 import * as adminUtils from './admin';
-import { describirMotivoEscalamiento, formatearFechaCorta } from './admin';
+import { describirMotivoEscalamiento } from './admin';
+import { formatearFechaCorta } from './fechas';
 
 describe('Utils de Administración', () => {
   it('traduce los motivos del motor sin mostrar códigos internos', () => {
@@ -10,9 +11,7 @@ describe('Utils de Administración', () => {
     expect(describirMotivoEscalamiento('[SOFTWARE_FALTANTE] Stack incompleto').etiqueta).toBe(
       'Software faltante',
     );
-    expect(describirMotivoEscalamiento('[TIPO_NUEVO] Detalle').etiqueta).toBe(
-      'Motivo sin clasificar',
-    );
+    expect(describirMotivoEscalamiento('[TIPO_NUEVO] Detalle').etiqueta).toBe('Requiere revisión');
   });
 
   it('conserva los motivos escritos a mano y completa los vacíos', () => {
@@ -23,8 +22,8 @@ describe('Utils de Administración', () => {
   });
 
   it('formatea la fecha corta de la última carga', () => {
-    // Se arma en hora local para que la comprobación no dependa del huso del runner.
-    const iso = new Date(2026, 9, 12, 10, 32).toISOString();
+    // Las fechas se muestran siempre en hora de Lima (UTC-5), sin depender del huso del equipo.
+    const iso = '2026-10-12T15:32:00.000Z';
     expect(formatearFechaCorta(iso)).toMatch(/10:32/);
     expect(formatearFechaCorta('no-es-una-fecha')).toBe('no-es-una-fecha');
   });
@@ -40,6 +39,74 @@ describe('Utils de Administración', () => {
           // Ignora parámetros requeridos
         }
       }
+    });
+  });
+
+  describe('textoAvanceImportacion (Issue 1.19)', () => {
+    it('sin avance conocido pide esperar', () => {
+      expect(adminUtils.textoAvanceImportacion(null)).toMatch(/^Importando/);
+      expect(adminUtils.textoAvanceImportacion({ procesadas: 0, total: 0 })).toMatch(/^Importando/);
+    });
+
+    it('con avance indica cuántas filas van', () => {
+      expect(adminUtils.textoAvanceImportacion({ procesadas: 2300, total: 4470 })).toBe(
+        'Procesando 2300 de 4470 filas. No cierres esta pantalla.',
+      );
+    });
+  });
+
+  describe('resumirReubicacion (Issue 2.22)', () => {
+    const seccion = (estado: 'VIGENTE' | 'ESCALADA') => ({
+      seccionId: 's',
+      codigoSeccion: '1',
+      codigoCurso: 'C1',
+      estado,
+      espacioIds: [],
+      motivoEscalamiento: null,
+      conservada: false,
+    });
+
+    it('cuenta las secciones reubicadas', () => {
+      expect(
+        adminUtils.resumirReubicacion({
+          alertaId: 'a',
+          alertaResuelta: true,
+          secciones: [seccion('VIGENTE')],
+        }),
+      ).toBe('Alerta resuelta: 1 sección reubicada.');
+    });
+
+    it('no cuenta como reubicadas las que siguen en su aula', () => {
+      expect(
+        adminUtils.resumirReubicacion({
+          alertaId: 'a',
+          alertaResuelta: true,
+          secciones: [seccion('VIGENTE'), { ...seccion('VIGENTE'), conservada: true }],
+        }),
+      ).toBe('Alerta resuelta: 1 sección reubicada, 1 sin cambios (su aula sigue sirviendo).');
+    });
+
+    it('indica las que quedaron en revisión', () => {
+      expect(
+        adminUtils.resumirReubicacion({
+          alertaId: 'a',
+          alertaResuelta: true,
+          secciones: [seccion('VIGENTE'), seccion('VIGENTE'), seccion('ESCALADA')],
+        }),
+      ).toBe('Alerta resuelta: 2 secciones reubicadas, 1 en revisión en el inicio.');
+    });
+  });
+
+  describe('separarDatosIncompletos (Issue 2.25)', () => {
+    it('separa las secciones sin horarios de las que esperan revisión', () => {
+      const sinHorario = { motivoEscalamiento: '[SIN_HORARIOS_DEFINIDOS] sin franjas' };
+      const ocupada = { motivoEscalamiento: '[HORARIO_BLOQUEADO] todo ocupado' };
+      const sinMotivo = { motivoEscalamiento: null };
+
+      expect(adminUtils.separarDatosIncompletos([sinHorario, ocupada, sinMotivo])).toEqual({
+        enRevision: [ocupada, sinMotivo],
+        datosIncompletos: [sinHorario],
+      });
     });
   });
 });

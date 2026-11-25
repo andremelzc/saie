@@ -115,6 +115,14 @@ describe('Issue 5.11 — Registro de auditoría: Asignación individual exitosa'
     const llamadaAuditoria = registroAuditoriaMock.create.mock.calls[0][0];
     expect(llamadaAuditoria.data.tipoEvento).toBe(TipoEventoAuditoria.ASIGNACION);
     expect(llamadaAuditoria.data.asignacionId).toBe('asig-nueva-1');
+    // Issue 4.48: campos estructurados además del texto
+    expect(llamadaAuditoria.data.origen).toBe('SECCION');
+    expect(Array.isArray(llamadaAuditoria.data.espaciosIds)).toBe(true);
+    expect(llamadaAuditoria.data.espaciosIds.length).toBeGreaterThan(0);
+    expect(llamadaAuditoria.data.corridaId).toBeUndefined();
+    expect(
+      llamadaAuditoria.data.puntaje === null || typeof llamadaAuditoria.data.puntaje === 'number',
+    ).toBe(true);
     expect(llamadaAuditoria.data.detalle).toBeDefined();
     expect(typeof llamadaAuditoria.data.detalle).toBe('string');
     expect(llamadaAuditoria.data.detalle.length).toBeGreaterThan(0);
@@ -287,6 +295,10 @@ describe('Issue 5.11 — Registro de auditoría: Corrida batch del periodo', () 
 
     // El detalle debe referenciar el corridaId de la corrida batch
     expect(registros[0].detalle).toContain(resultadoBatch.corridaId);
+    // Issue 4.48: lo mismo, como datos estructurados
+    expect(registros[0].corridaId).toBe(resultadoBatch.corridaId);
+    expect(registros[0].origen).toBe('DEMANDA');
+    expect(Array.isArray(registros[0].espaciosIds)).toBe(true);
   });
 
   it('3c. NO debe crear registro de auditoría para secciones conservadas por idempotencia', async () => {

@@ -1,4 +1,6 @@
+import { longitudMaxima, patron, validarCampo } from './validacion';
 import { TIPOS_SANGRE } from '../types/perfil';
+import type { EstadoAccesibilidadDTO } from '../types/accesibilidad';
 import type {
   CambiosPerfil,
   DatosAlumnoDTO,
@@ -10,31 +12,7 @@ import type {
 export type ValoresFormulario = Record<string, string>;
 export type ErroresFormulario = Record<string, string>;
 
-const MESES = [
-  'enero',
-  'febrero',
-  'marzo',
-  'abril',
-  'mayo',
-  'junio',
-  'julio',
-  'agosto',
-  'septiembre',
-  'octubre',
-  'noviembre',
-  'diciembre',
-];
-
-/** «2003-04-12» → «12 de abril de 2003». Devuelve null si no hay fecha o no es válida. */
-export function formatearFecha(iso: string | null | undefined): string | null {
-  if (!iso) return null;
-  const coincidencia = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  if (!coincidencia) return null;
-  const [, anio, mes, dia] = coincidencia;
-  const nombreMes = MESES[Number(mes) - 1];
-  if (!nombreMes) return null;
-  return `${Number(dia)} de ${nombreMes} de ${anio}`;
-}
+export { formatearFechaCivil as formatearFecha } from './fechas';
 
 /** Iniciales para el avatar: primera letra de las dos primeras palabras del nombre. */
 export function iniciales(nombre: string): string {
@@ -64,14 +42,24 @@ export function valoresDatosPersonales(alumno: DatosAlumnoDTO): ValoresFormulari
   };
 }
 
-export function valoresFichaMedica(ficha: FichaMedicaDTO | null): ValoresFormulario {
+export function valoresFichaMedica(
+  ficha: FichaMedicaDTO | null,
+  accesibilidad: EstadoAccesibilidadDTO | null = null,
+): ValoresFormulario {
+  // Issue 3.60: la casilla queda marcada si la condición está aprobada o la declaración espera la
+  // confirmación de Coordinación.
+  const declarada = ficha?.condicionAccesible === true || accesibilidad?.estado === 'PENDIENTE';
   return {
     tipoSangre: aTexto(ficha?.tipoSangre),
     alergias: aTexto(ficha?.alergias),
     condicionEspecial: aTexto(ficha?.condicionEspecial),
     contactoEmergencia: aTexto(ficha?.contactoEmergencia),
     // La casilla es binaria: el vacío es «no», para que el formulario siga siendo de texto.
-    condicionAccesible: ficha?.condicionAccesible ? 'true' : '',
+    condicionAccesible: declarada ? 'true' : '',
+    // Issue 3.61 (R16): fin de la condición aprobada o de la declaración pendiente.
+    condicionAccesibleHasta: aTexto(
+      ficha?.condicionAccesible ? ficha.condicionAccesibleHasta : accesibilidad?.fechaFin,
+    ),
   };
 }
 
@@ -95,10 +83,16 @@ const LIMITES_TEXTO = {
 } as const;
 
 function validarLongitud(valor: string, maximo: number, errores: ErroresFormulario, clave: string) {
-  if (valor.trim().length > maximo) {
-    errores[clave] = `Usa como máximo ${maximo} caracteres.`;
-  }
+  const error = validarCampo(valor, [longitudMaxima(maximo)]);
+  if (error) errores[clave] = error;
 }
+
+/** Reglas compartidas (Issue 3.41): las usa el formulario al salir de cada campo y al guardar. */
+const REGLA_DNI = patron(/^\d{8}$/, 'El DNI debe tener 8 dígitos.');
+const REGLA_TELEFONO = patron(
+  /^\+?\d{7,15}$/,
+  'El teléfono debe tener entre 7 y 15 dígitos, sin espacios ni guiones.',
+);
 
 /** Valida los datos personales con las mismas reglas que el backend (todos son opcionales). */
 export function validarDatosPersonales(
@@ -110,21 +104,47 @@ export function validarDatosPersonales(
   const fecha = (valores.fechaNacimiento ?? '').trim();
   const telefono = (valores.telefono ?? '').trim();
 
-  if (dni && !/^\d{8}$/.test(dni)) errores.dni = 'El DNI debe tener 8 dígitos.';
+  const errorDni = validarCampo(dni, [REGLA_DNI]);
+  if (errorDni) errores.dni = errorDni;
   if (fecha && !esFechaNacimientoValida(fecha, hoy)) {
     errores.fechaNacimiento = 'Ingresa una fecha de nacimiento válida.';
   }
-  if (telefono && !/^\+?\d{7,15}$/.test(telefono)) {
-    errores.telefono = 'El teléfono debe tener entre 7 y 15 dígitos, sin espacios ni guiones.';
-  }
+  const errorTelefono = validarCampo(telefono, [REGLA_TELEFONO]);
+  if (errorTelefono) errores.telefono = errorTelefono;
   validarLongitud(valores.direccion ?? '', LIMITES_TEXTO.direccion, errores, 'direccion');
   return errores;
 }
 
+/** «Hoy» en la hora local como `AAAA-MM-DD`. */
+function hoyISO(hoy: Date): string {
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoy.getDate()).padStart(2, '0');
+  return `${hoy.getFullYear()}-${mes}-${dia}`;
+}
+
+/**
+ * Issue 3.61 (R16): la fecha de fin de una condición temporal es opcional; si se escribe, debe ser
+ * una fecha real que no haya pasado.
+ */
+export function validarFechaFinCondicion(valor: string, hoy: Date = new Date()): string | null {
+  const fecha = valor.trim();
+  if (!fecha) return null;
+  const real =
+    /^\d{4}-\d{2}-\d{2}$/.test(fecha) &&
+    new Date(`${fecha}T00:00:00.000Z`).toISOString().startsWith(fecha);
+  if (!real) return 'Ingresa una fecha válida.';
+  return fecha < hoyISO(hoy) ? 'La fecha de fin no puede ser un día que ya pasó.' : null;
+}
+
 /** Valida la ficha médica con las mismas reglas que el backend (todos los campos son opcionales). */
-export function validarFichaMedica(valores: ValoresFormulario): ErroresFormulario {
+export function validarFichaMedica(
+  valores: ValoresFormulario,
+  hoy: Date = new Date(),
+): ErroresFormulario {
   const errores: ErroresFormulario = {};
   const tipo = (valores.tipoSangre ?? '').trim();
+  const errorFin = validarFechaFinCondicion(valores.condicionAccesibleHasta ?? '', hoy);
+  if (errorFin) errores.condicionAccesibleHasta = errorFin;
 
   if (tipo && !(TIPOS_SANGRE as readonly string[]).includes(tipo)) {
     errores.tipoSangre = 'Elige un tipo de sangre de la lista.';
@@ -157,13 +177,18 @@ export function cambiosDatosPersonales(valores: ValoresFormulario): CambiosPerfi
 }
 
 export function cambiosFichaMedica(valores: ValoresFormulario): CambiosPerfil {
+  const declarada = (valores.condicionAccesible ?? '') === 'true';
   return {
     fichaMedica: {
       tipoSangre: aValorOpcional(valores.tipoSangre),
       alergias: aValorOpcional(valores.alergias),
       condicionEspecial: aValorOpcional(valores.condicionEspecial),
       contactoEmergencia: aValorOpcional(valores.contactoEmergencia),
-      condicionAccesible: (valores.condicionAccesible ?? '') === 'true',
+      condicionAccesible: declarada,
+      // Issue 3.61: la fecha de fin solo acompaña a la declaración; sin casilla no se envía.
+      ...(declarada && {
+        condicionAccesibleHasta: aValorOpcional(valores.condicionAccesibleHasta),
+      }),
     },
   };
 }

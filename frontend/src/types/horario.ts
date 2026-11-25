@@ -1,4 +1,4 @@
-import type { DiaSemana, EspacioAsignadoDTO, HorarioConsultaDTO } from './consulta';
+import type { DiaSemana, EspacioAsignadoDTO, HorarioConsultaDTO, TipoEspacio } from './consulta';
 
 /** Contrato del portal del alumno (backend/src/types/portal.ts, Issues 3.10 a 3.12). */
 export type EstadoAsignacionDTO = 'VIGENTE' | 'ESCALADA' | 'PENDIENTE';
@@ -11,6 +11,8 @@ export interface SesionDTO {
   codigoCurso: string;
   nombreCurso: string;
   codigoSeccion: string;
+  /** Tipo de espacio que requiere la sección: dice si la clase es de teoría o de laboratorio. */
+  tipoEspacioRequerido: TipoEspacio;
   docenteNombre: string | null;
   diaSemana: DiaSemana;
   horaInicio: string;
@@ -26,6 +28,8 @@ export interface HorarioSemanalDTO {
 }
 
 export interface CursoMatriculadoDTO {
+  /** Asignación vigente de la sección (con ella se pide la ruta); `null` si aún no tiene aula. */
+  asignacionId?: string | null;
   codigoCurso: string;
   nombreCurso: string;
   codigoSeccion: string;

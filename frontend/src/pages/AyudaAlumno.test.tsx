@@ -1,17 +1,24 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 
 import { MemoryRouter } from 'react-router-dom';
 import AyudaAlumno from './AyudaAlumno';
-
-vi.mock('../context/useAuth', () => ({
-  useAuth: () => ({ sesion: { rol: 'ALUMNO' }, cerrarSesion: vi.fn() }),
-}));
+import { AuthProvider } from '../context/AuthProvider';
+import { guardarSesion } from '../services/sesion';
+import { ahoraEnSegundos, crearToken } from '../test/helpers';
 
 function renderizar() {
+  guardarSesion({
+    token: crearToken(ahoraEnSegundos() + 3600, 'ALUMNO'),
+    rol: 'ALUMNO',
+    debeCambiarClave: false,
+    expiresIn: '8h',
+  });
   return render(
     <MemoryRouter>
-      <AyudaAlumno />
+      <AuthProvider>
+        <AyudaAlumno />
+      </AuthProvider>
     </MemoryRouter>,
   );
 }
@@ -38,17 +45,22 @@ describe('AyudaAlumno (Issue 3.17)', () => {
     expect(within(detalle).getByText(/Solo tú, dentro de tu sesión/)).toBeInTheDocument();
   });
 
-  it('enlaza a las otras pantallas del alumno y permite volver al inicio', () => {
+  it('enlaza a las otras pantallas del alumno y permite volver al inicio por la barra de navegación', () => {
     renderizar();
 
     expect(screen.getByRole('link', { name: 'Mi perfil' })).toHaveAttribute(
       'href',
       '/estudiante/perfil',
     );
-    expect(screen.getByRole('link', { name: 'Configuración' })).toHaveAttribute(
-      'href',
-      '/estudiante/configuracion',
-    );
-    expect(screen.getByRole('link', { name: 'Inicio' })).toHaveAttribute('href', '/estudiante');
+    // La navegación del alumno también enlaza Configuración (Issue 3.34): se acota al contenido.
+    expect(
+      within(screen.getByRole('main')).getByRole('link', { name: 'Configuración' }),
+    ).toHaveAttribute('href', '/estudiante/configuracion');
+    // Volver al inicio es la pestaña «Inicio» de la barra de navegación (ya no hay un enlace aparte).
+    expect(
+      within(
+        screen.getByRole('navigation', { name: 'Navegación del área del estudiante' }),
+      ).getByRole('link', { name: 'Inicio' }),
+    ).toHaveAttribute('href', '/estudiante');
   });
 });

@@ -1,6 +1,10 @@
+import type { DiaSemana } from './consulta';
+import type { RolCuenta } from './auth';
+
 /** Contratos del panel administrativo (espejo de backend/src/types/*). */
 
-export type TipoAlerta = 'SOFTWARE' | 'CAPACIDAD';
+/** Issue 3.59: ACCESIBILIDAD = una sección con movilidad reducida quedó fuera del piso 1. */
+export type TipoAlerta = 'SOFTWARE' | 'CAPACIDAD' | 'ACCESIBILIDAD';
 export type EstadoAlerta = 'PENDIENTE' | 'RESUELTA';
 export type TipoEspacio = 'AULA_TEORICA' | 'LABORATORIO';
 
@@ -188,7 +192,44 @@ export interface ResultadoSeccionDTO {
   conservada: boolean;
 }
 
+/** Estado de una importación en segundo plano (Issue 1.19). */
+export interface TrabajoImportacionDTO {
+  id: string;
+  tipo: TipoImportacion;
+  estado: 'EN_CURSO' | 'TERMINADO' | 'FALLIDO';
+  procesadas: number;
+  total: number;
+  resultado?: ResultadoImportacionDTO;
+  error?: string;
+}
+
+/** Respuesta de POST /v1/admin/alertas/:id/reubicar (Issue 2.22). */
+export interface ResultadoReubicacionDTO {
+  alertaId: string;
+  alertaResuelta: boolean;
+  secciones: (ResultadoSeccionDTO & { codigoCurso: string })[];
+}
+
 /** Respuesta de POST /v1/asignaciones/batch y /seccion/:id (Issue 2.15). */
+/** GET /v1/asignaciones/reorganizacion (Issue 2.26): ventana al inicio del ciclo y simulación. */
+export interface VistaPreviaReorganizacionDTO {
+  disponible: boolean;
+  /** Por qué no está disponible; `null` si lo está. */
+  motivo: string | null;
+  periodo: string | null;
+  semanas: number;
+  /** AAAA-MM-DD. */
+  desde: string | null;
+  hasta: string | null;
+  /** Solo si está disponible: qué cambiaría al reorganizar. */
+  simulacion: {
+    totalEscaladas: number;
+    escaladasConAula: number;
+    cambianDeAula: number;
+    pierdenAula: number;
+  } | null;
+}
+
 export interface ResumenAsignacionDTO {
   modo: 'seccion' | 'periodo';
   periodo: string | null;
@@ -211,11 +252,34 @@ export interface ResultadoImportacionDTO {
   procesados: Record<string, number>;
   errores: string[];
   exitosa: boolean;
+  /** Issue 1.16: «todo o nada». `false` si el archivo tenía errores y no se guardó ninguna fila. */
+  guardadas?: boolean;
+  /** `true` si falló al escribir y las filas anteriores al error sí quedaron guardadas. */
+  parcial?: boolean;
+  /** Avisos que no impiden guardar, como un docente o alumno con dos clases a la vez. */
+  advertencias?: string[];
   asignacion: {
     disparada: boolean;
     motivo: string | null;
     resumen: ResumenAsignacionDTO | null;
   } | null;
+}
+
+/**
+ * POST /v1/import/:tipo/vista-previa (Issue 1.17): lo que la importación agregaría, quitaría o
+ * inactivaría con el archivo, calculado sin escribir nada.
+ */
+export interface VistaPreviaImportacionDTO {
+  tipo: TipoImportacion;
+  filasRecibidas: number;
+  /** Con errores la importación no guarda nada: no hay cambios que confirmar. */
+  errores: string[];
+  advertencias: string[];
+  cambios: Record<string, number>;
+  /** «Se quitarán 3 matrículas (alumnos que ya no figuran en su sección)». */
+  frases: string[];
+  /** Qué se quita o se reemplaza, una línea por elemento. */
+  retiros: string[];
 }
 
 // ==========================================
@@ -224,10 +288,20 @@ export interface ResultadoImportacionDTO {
 
 export type ComparacionVersion = 'CUALQUIERA' | 'EXACTA' | 'MINIMA';
 export type EstadoAsignacion = 'VIGENTE' | 'ESCALADA' | 'HISTORICA';
-export type TipoEventoAuditoria = 'ASIGNACION' | 'ESCALAMIENTO' | 'ALERTA' | 'VERIFICACION';
+export type TipoEventoAuditoria =
+  | 'ASIGNACION'
+  | 'ESCALAMIENTO'
+  | 'ALERTA'
+  | 'VERIFICACION'
+  // Acciones de personas (Issue 4.58)
+  | 'EDICION_ESPACIO'
+  | 'EDICION_SECCION'
+  | 'CAMBIO_LABORATORIO'
+  // Issue 4.64: registro, activación y cierre de periodos
+  | 'CAMBIO_PERIODO';
 
 /** Campos de una sección que el backend permite editar según el rol. */
-export type CampoSeccion = 'tipoEspacioRequerido' | 'docenteId' | 'softwareRequerido';
+export type CampoSeccion = 'tipoEspacioRequerido' | 'docenteId' | 'softwareRequerido' | 'horarios';
 
 export interface SoftwareRequeridoSeccionDTO {
   id: string;
@@ -254,7 +328,7 @@ export interface SeccionAdminDTO {
   tipoEspacioRequerido: TipoEspacio;
   docente: { id: string; codigoDocente: string; nombre: string } | null;
   alumnosMatriculados: number;
-  horarios: { diaSemana: string; horaInicio: string; horaFin: string }[];
+  horarios: { diaSemana: DiaSemana; horaInicio: string; horaFin: string }[];
   softwareRequerido: SoftwareRequeridoSeccionDTO[];
   asignacion: {
     id: string;
@@ -279,11 +353,24 @@ export interface CambiosSeccion {
   tipoEspacioRequerido?: TipoEspacio;
   docenteId?: string | null;
   softwareRequerido?: { softwareId: string; comparacionVersion: ComparacionVersion }[];
+  /** Issue 4.62: reemplaza las franjas de la sección. Si cambian, la sección se reasigna. */
+  horarios?: { diaSemana: DiaSemana; horaInicio: string; horaFin: string }[];
+}
+
+/** Issue 4.62: cómo quedó la sección al reasignarla con su horario nuevo. */
+export interface ReasignacionSeccionDTO {
+  estado: EstadoAsignacion;
+  motivoEscalamiento: string | null;
+  conservada: boolean;
 }
 
 export interface ResultadoEdicionSeccionDTO {
   seccion: SeccionAdminDTO;
   alertas: { id: string; tipo: string; motivo: string }[];
+  /** Issue 4.62: avisos que no impiden guardar (choque de docente, reasignación pendiente). */
+  advertencias: string[];
+  /** Issue 4.62: `null` si el horario no cambió. */
+  reasignacion: ReasignacionSeccionDTO | null;
 }
 
 // ==========================================
@@ -350,6 +437,33 @@ export interface ReporteSeccionDTO {
   softwareRequerido: string[];
 }
 
+/** GET /v1/admin/periodos (Issue 4.42): los periodos con secciones y el vigente. */
+export interface PeriodosDTO {
+  /** El periodo vigente, o `null` si todavía no hay secciones. */
+  vigente: string | null;
+  /** Del más reciente al más antiguo. */
+  periodos: string[];
+  /** Issue 4.64: cada periodo registrado con su estado y fechas. */
+  registrados: PeriodoDTO[];
+}
+
+/** Issue 4.64: ciclo de vida de un periodo. Solo uno puede estar vigente. */
+export type EstadoPeriodo = 'EN_PREPARACION' | 'VIGENTE' | 'CERRADO';
+
+export interface PeriodoDTO {
+  codigo: string;
+  /** `AAAA-MM-DD` o `null` si no se registró. */
+  fechaInicio: string | null;
+  fechaFin: string | null;
+  estado: EstadoPeriodo;
+}
+
+export interface NuevoPeriodoDTO {
+  codigo: string;
+  fechaInicio?: string;
+  fechaFin?: string;
+}
+
 export interface ReporteAsignacionesDTO {
   periodo: string;
   generadoEn: string;
@@ -361,4 +475,42 @@ export interface ReporteAsignacionesDTO {
     aulasDistintas: number;
     alumnos: number;
   };
+}
+
+/** POST /v1/admin/alumnos (Issue 4.17). Los datos opcionales se omiten si están vacíos. */
+export interface NuevoAlumnoDTO {
+  codigo: string;
+  nombre: string;
+  correo: string;
+  dni?: string;
+  telefono?: string;
+  direccion?: string;
+  /** Fecha ISO `AAAA-MM-DD`. */
+  fechaNacimiento?: string;
+}
+
+/** POST /v1/admin/docentes (Issue 4.18). */
+export interface NuevoDocenteDTO {
+  codigoDocente: string;
+  nombre: string;
+  correoInstitucional: string;
+  departamento: string;
+}
+
+/** Cuenta creada por un alta individual: la clave inicial es el propio código. */
+export interface UsuarioCreadoDTO {
+  id: string;
+  codigo: string;
+  nombre: string;
+  rol: RolCuenta;
+  debeCambiarClave: true;
+}
+
+/** POST /v1/admin/usuarios/restablecer-clave (Issue 4.26). La clave inicial se muestra una vez. */
+export interface ClaveRestablecidaDTO {
+  codigo: string;
+  nombre: string;
+  rol: RolCuenta;
+  claveInicial: string;
+  debeCambiarClave: true;
 }

@@ -33,7 +33,7 @@ describe('Tarjeta de alerta (Issue 4.9)', () => {
     expect(screen.getByText('Pendiente')).toBeInTheDocument();
   });
 
-  it('distingue visualmente software de capacidad', () => {
+  it('distingue software de capacidad por texto e ícono, no solo por color', () => {
     const { container } = render(
       <>
         <TarjetaAlerta alerta={base} />
@@ -41,7 +41,11 @@ describe('Tarjeta de alerta (Issue 4.9)', () => {
       </>,
     );
     const [sw, cap] = container.querySelectorAll('article');
-    expect(sw.className).not.toEqual(cap.className);
+    expect(sw).toHaveAccessibleName(/alerta de software/i);
+    expect(cap).toHaveAccessibleName(/alerta de capacidad/i);
+    expect(sw.querySelector('svg path')?.getAttribute('d')).not.toEqual(
+      cap.querySelector('svg path')?.getAttribute('d'),
+    );
   });
 
   it('pide confirmación y expone la acción solo si está pendiente', () => {
@@ -49,7 +53,7 @@ describe('Tarjeta de alerta (Issue 4.9)', () => {
     const { rerender } = render(<TarjetaAlerta alerta={base} onResolver={onResolver} />);
     fireEvent.click(screen.getByRole('button', { name: 'Marcar como resuelta' }));
     expect(onResolver).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Sí, resolver' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, marcar como resuelta' }));
     expect(onResolver).toHaveBeenCalledWith('a1');
     rerender(<TarjetaAlerta alerta={{ ...base, estado: 'RESUELTA' }} onResolver={onResolver} />);
     expect(screen.queryByRole('button', { name: 'Marcar como resuelta' })).toBeNull();
@@ -101,7 +105,7 @@ describe('Lista de alertas (Issue 4.10)', () => {
 
     const tarjeta = await screen.findByRole('article');
     fireEvent.click(within(tarjeta).getByRole('button', { name: 'Marcar como resuelta' }));
-    fireEvent.click(within(tarjeta).getByRole('button', { name: 'Sí, resolver' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, marcar como resuelta' }));
 
     await waitFor(() => expect(patch).toHaveBeenCalledWith('/v1/admin/alertas/a1/resolver'));
     expect(await screen.findByText('Alerta de LAB-301 marcada como resuelta.')).toBeInTheDocument();
@@ -163,7 +167,7 @@ describe('Lista de alertas (Issue 4.10)', () => {
 
     const tarjeta = await screen.findByRole('article');
     fireEvent.click(within(tarjeta).getByRole('button', { name: 'Marcar como resuelta' }));
-    fireEvent.click(within(tarjeta).getByRole('button', { name: 'Sí, resolver' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sí, marcar como resuelta' }));
 
     const aviso = await screen.findByRole('alert');
     expect(aviso).toHaveTextContent('Inténtalo de nuevo en unos minutos.');
@@ -171,5 +175,77 @@ describe('Lista de alertas (Issue 4.10)', () => {
 
     await waitFor(() => expect(patch).toHaveBeenCalledTimes(2));
     expect(await screen.findByText('Alerta de LAB-301 marcada como resuelta.')).toBeInTheDocument();
+  });
+
+  describe('reubicar secciones (Issue 2.22)', () => {
+    function montarCon(rol: 'COORDINACION_ACADEMICA' | 'JEFATURA_LABORATORIOS') {
+      guardarSesion({
+        token: crearToken(ahoraEnSegundos() + 3600, rol),
+        rol,
+        debeCambiarClave: false,
+        expiresIn: '8h',
+      });
+      vi.spyOn(api, 'get').mockResolvedValue({ data: { success: true, data: [base] } } as never);
+      render(
+        <MemoryRouter initialEntries={['/admin/alertas']}>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </MemoryRouter>,
+      );
+    }
+
+    it('Coordinación reubica las secciones y la alerta deja la lista', async () => {
+      const post = vi.spyOn(api, 'post').mockResolvedValue({
+        data: {
+          success: true,
+          data: {
+            alertaId: 'a1',
+            alertaResuelta: true,
+            secciones: [
+              {
+                seccionId: 's1',
+                codigoSeccion: '01',
+                codigoCurso: 'IS101',
+                estado: 'VIGENTE',
+                espacioIds: ['e2'],
+                motivoEscalamiento: null,
+                conservada: false,
+              },
+            ],
+          },
+        },
+      } as never);
+      montarCon('COORDINACION_ACADEMICA');
+
+      const tarjeta = await screen.findByRole('article');
+      fireEvent.click(within(tarjeta).getByRole('button', { name: 'Reubicar secciones' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, reubicar' }));
+
+      await waitFor(() =>
+        expect(post).toHaveBeenCalledWith('/v1/admin/alertas/a1/reubicar', {}, { timeout: 60000 }),
+      );
+      expect(await screen.findByText('Alerta resuelta: 1 sección reubicada.')).toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByRole('article')).toBeNull());
+    });
+
+    it('muestra el error si la reubicación falla', async () => {
+      vi.spyOn(api, 'post').mockRejectedValue(new Error('fallo de red'));
+      montarCon('COORDINACION_ACADEMICA');
+
+      const tarjeta = await screen.findByRole('article');
+      fireEvent.click(within(tarjeta).getByRole('button', { name: 'Reubicar secciones' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, reubicar' }));
+
+      expect(await screen.findByRole('button', { name: 'Reintentar' })).toBeInTheDocument();
+      expect(screen.getByRole('article')).toBeInTheDocument();
+    });
+
+    it('Jefatura no ve la acción de reubicar', async () => {
+      montarCon('JEFATURA_LABORATORIOS');
+
+      const tarjeta = await screen.findByRole('article');
+      expect(within(tarjeta).queryByRole('button', { name: 'Reubicar secciones' })).toBeNull();
+    });
   });
 });

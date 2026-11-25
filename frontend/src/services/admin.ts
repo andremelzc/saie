@@ -1,6 +1,16 @@
 import api from './api';
+import type { MapaOcupacionEntrada } from '../components/mapa2d/enlacePlano';
+import type { Franja } from '../components/mapa2d/franja';
+import type {
+  AlertaOcupacionDTO,
+  AsignacionOcupacionDTO,
+  EstadoOcupacionEspacio,
+  MapaOcupacionDTO,
+} from '../types/mapa';
+import type { CierreIncidenciaDTO, FiltrosIncidencias, IncidenciaAdminDTO } from '../types/docente';
 import type {
   AlertaDTO,
+  ClaveRestablecidaDTO,
   CambiosEspacio,
   CambiosSeccion,
   EspacioAdminDTO,
@@ -8,15 +18,25 @@ import type {
   ListadoHistorialDTO,
   ListadoSeccionesDTO,
   ListadoSoftwareDTO,
+  ResultadoReubicacionDTO,
+  TrabajoImportacionDTO,
+  NuevoPeriodoDTO,
+  PeriodoDTO,
+  NuevoAlumnoDTO,
+  NuevoDocenteDTO,
   NuevoEspacioDTO,
+  PeriodosDTO,
   ReporteAsignacionesDTO,
   ResultadoEdicionEspacioDTO,
   ResultadoEdicionSeccionDTO,
   ResultadoImportacionDTO,
+  VistaPreviaReorganizacionDTO,
+  VistaPreviaImportacionDTO,
   ResumenAsignacionDTO,
   SeccionesEscaladasDTO,
   TipoEspacio,
   TipoImportacion,
+  UsuarioCreadoDTO,
   TipoEventoAuditoria,
   EstadoAsignacion,
 } from '../types/admin';
@@ -29,6 +49,18 @@ import type {
 interface Respuesta<T> {
   success: boolean;
   data: T;
+}
+
+/** GET /v1/admin/mapa-ocupacion — estado completo de cada espacio de un piso de un pabellón (Issue 4.12). */
+export async function obtenerMapaOcupacionAdmin(
+  pabellon: string,
+  piso: number,
+  franja: Franja | null,
+): Promise<MapaOcupacionEntrada> {
+  const { data } = await api.get<Respuesta<MapaOcupacionEntrada>>('/v1/admin/mapa-ocupacion', {
+    params: { pabellon, piso, ...(franja ?? {}) },
+  });
+  return data.data;
 }
 
 /** GET /v1/admin/alertas — ordenadas de la más reciente a la más antigua (Issue 4.10). */
@@ -48,6 +80,19 @@ export async function resolverAlerta(id: string): Promise<void> {
   await api.patch(`/v1/admin/alertas/${encodeURIComponent(id)}/resolver`);
 }
 
+/**
+ * POST /v1/admin/alertas/:id/reubicar (Issue 2.22): reasigna las secciones afectadas por la
+ * alerta y la deja resuelta. Corre el motor una vez por sección, así que puede tardar.
+ */
+export async function reubicarSeccionesAlerta(id: string): Promise<ResultadoReubicacionDTO> {
+  const { data } = await api.post<Respuesta<ResultadoReubicacionDTO>>(
+    `/v1/admin/alertas/${encodeURIComponent(id)}/reubicar`,
+    {},
+    { timeout: 60000 },
+  );
+  return data.data;
+}
+
 /** GET /v1/admin/secciones-escaladas (Issue 4.22). */
 export async function obtenerEscaladas(): Promise<SeccionesEscaladasDTO> {
   const { data } = await api.get<Respuesta<SeccionesEscaladasDTO>>('/v1/admin/secciones-escaladas');
@@ -55,6 +100,25 @@ export async function obtenerEscaladas(): Promise<SeccionesEscaladasDTO> {
 }
 
 /** POST /v1/asignaciones/batch - corrida del periodo vigente (Issue 2.15). */
+/** GET /v1/asignaciones/reorganizacion (Issue 2.26): si se puede reorganizar y qué cambiaría. */
+export async function obtenerReorganizacion(): Promise<VistaPreviaReorganizacionDTO> {
+  const { data } = await api.get<Respuesta<VistaPreviaReorganizacionDTO>>(
+    '/v1/asignaciones/reorganizacion',
+    { timeout: 60000 },
+  );
+  return data.data;
+}
+
+/** POST /v1/asignaciones/reorganizacion (Issue 2.26): escaladas primero; 409 fuera de la ventana. */
+export async function ejecutarReorganizacion(): Promise<ResumenAsignacionDTO> {
+  const { data } = await api.post<Respuesta<ResumenAsignacionDTO>>(
+    '/v1/asignaciones/reorganizacion',
+    {},
+    { timeout: 60000 },
+  );
+  return data.data;
+}
+
 export async function ejecutarCorrida(): Promise<ResumenAsignacionDTO> {
   const { data } = await api.post<Respuesta<ResumenAsignacionDTO>>(
     '/v1/asignaciones/batch',
@@ -76,15 +140,53 @@ export async function reintentarSeccion(seccionId: string): Promise<ResumenAsign
   return data.data;
 }
 
-/** POST /v1/import/:tipo con el CSV tal cual (Issues 1.3, 1.4 y 1.5). */
+/** Espera entre consultas del avance de una importación (Issue 1.19). */
+export const INTERVALO_AVANCE_MS = 1500;
+
+/**
+ * Importa el CSV en segundo plano (Issue 1.19): el servidor responde enseguida con un trabajo y
+ * aquí se consulta su avance hasta que termina, sin límite de espera de pantalla. `onProgreso`
+ * recibe las filas procesadas y el total («2300 de 4470»).
+ */
 export async function importarCsv(
   tipo: TipoImportacion,
   contenidoCsv: string,
+  onProgreso?: (procesadas: number, total: number) => void,
 ): Promise<ResultadoImportacionDTO> {
-  const { data } = await api.post<Respuesta<ResultadoImportacionDTO>>(
-    `/v1/import/${tipo}`,
+  const { data } = await api.post<Respuesta<TrabajoImportacionDTO>>(
+    `/v1/import/${tipo}/trabajos`,
     contenidoCsv,
-    { headers: { 'Content-Type': 'text/csv' }, timeout: 120000 },
+    { headers: { 'Content-Type': 'text/csv' }, timeout: 60000 },
+  );
+  let trabajo = data.data;
+  onProgreso?.(trabajo.procesadas, trabajo.total);
+
+  while (trabajo.estado === 'EN_CURSO') {
+    await new Promise((resolver) => setTimeout(resolver, INTERVALO_AVANCE_MS));
+    const consulta = await api.get<Respuesta<TrabajoImportacionDTO>>(
+      `/v1/import/trabajos/${encodeURIComponent(trabajo.id)}`,
+    );
+    trabajo = consulta.data.data;
+    onProgreso?.(trabajo.procesadas, trabajo.total);
+  }
+
+  if (trabajo.estado === 'FALLIDO' || !trabajo.resultado) {
+    throw new Error(
+      trabajo.error ?? 'La importación falló. Revisa el archivo e inténtalo de nuevo.',
+    );
+  }
+  return trabajo.resultado;
+}
+
+/** POST /v1/import/:tipo/vista-previa (Issue 1.17): los cambios que haría el archivo, sin guardar. */
+export async function obtenerVistaPreviaImportacion(
+  tipo: TipoImportacion,
+  contenidoCsv: string,
+): Promise<VistaPreviaImportacionDTO> {
+  const { data } = await api.post<Respuesta<VistaPreviaImportacionDTO>>(
+    `/v1/import/${tipo}/vista-previa`,
+    contenidoCsv,
+    { headers: { 'Content-Type': 'text/csv' }, timeout: 60000 },
   );
   return data.data;
 }
@@ -248,6 +350,36 @@ export async function obtenerHistorial(
   return data.data;
 }
 
+/** POST /v1/admin/periodos (Issue 4.64): registra un periodo en preparación. */
+export async function registrarPeriodo(entrada: NuevoPeriodoDTO): Promise<PeriodoDTO> {
+  const { data } = await api.post<Respuesta<PeriodoDTO>>('/v1/admin/periodos', entrada);
+  return data.data;
+}
+
+/** POST /v1/admin/periodos/:codigo/activar (Issue 4.64): cierra el vigente y activa este. */
+export async function activarPeriodo(codigo: string): Promise<PeriodoDTO> {
+  const { data } = await api.post<Respuesta<PeriodoDTO>>(
+    `/v1/admin/periodos/${encodeURIComponent(codigo)}/activar`,
+    {},
+  );
+  return data.data;
+}
+
+/** POST /v1/admin/periodos/:codigo/cerrar (Issue 4.64): el periodo pasa a solo consulta. */
+export async function cerrarPeriodo(codigo: string): Promise<PeriodoDTO> {
+  const { data } = await api.post<Respuesta<PeriodoDTO>>(
+    `/v1/admin/periodos/${encodeURIComponent(codigo)}/cerrar`,
+    {},
+  );
+  return data.data;
+}
+
+/** GET /v1/admin/periodos (Issue 4.42): alimenta el selector de periodo del panel. */
+export async function obtenerPeriodos(): Promise<PeriodosDTO> {
+  const { data } = await api.get<Respuesta<PeriodosDTO>>('/v1/admin/periodos');
+  return data.data;
+}
+
 /** GET /v1/admin/reporte/asignaciones[?periodo=] (Issue 4.33). */
 export async function obtenerReporteAsignaciones(
   periodo?: string,
@@ -259,4 +391,117 @@ export async function obtenerReporteAsignaciones(
     },
   );
   return data.data;
+}
+
+/** POST /v1/admin/alumnos (Issue 4.17, solo Coordinación). 409 si el código ya existe. */
+export async function crearAlumno(campos: NuevoAlumnoDTO): Promise<UsuarioCreadoDTO> {
+  const { data } = await api.post<Respuesta<UsuarioCreadoDTO>>('/v1/admin/alumnos', campos);
+  return data.data;
+}
+
+/** POST /v1/admin/docentes (Issue 4.18, solo Coordinación). 409 si el código ya existe. */
+export async function crearDocente(campos: NuevoDocenteDTO): Promise<UsuarioCreadoDTO> {
+  const { data } = await api.post<Respuesta<UsuarioCreadoDTO>>('/v1/admin/docentes', campos);
+  return data.data;
+}
+
+/**
+ * POST /v1/admin/usuarios/restablecer-clave (Issue 4.26, solo Coordinación). `usuario` es el
+ * código o el correo. La respuesta trae la clave inicial una sola vez: no se guarda ni se
+ * vuelve a pedir.
+ */
+export async function restablecerClave(usuario: string): Promise<ClaveRestablecidaDTO> {
+  const { data } = await api.post<Respuesta<ClaveRestablecidaDTO>>(
+    '/v1/admin/usuarios/restablecer-clave',
+    { usuario },
+  );
+  return data.data;
+}
+
+/**
+ * GET /v1/admin/incidencias[?estado=&prioridad=] (Issue 7.6). Por defecto el backend devuelve
+ * las pendientes; Jefatura solo ve las de los laboratorios a su cargo.
+ */
+export async function obtenerIncidencias(
+  filtros: FiltrosIncidencias = {},
+): Promise<IncidenciaAdminDTO[]> {
+  const { data } = await api.get<Respuesta<IncidenciaAdminDTO[]>>('/v1/admin/incidencias', {
+    params: filtros,
+  });
+  return data.data;
+}
+
+/** PATCH /v1/admin/incidencias/:id/resolver (Issue 7.6): resuelve o descarta con un comentario. */
+export async function cerrarIncidencia(
+  id: string,
+  cierre: CierreIncidenciaDTO,
+): Promise<IncidenciaAdminDTO> {
+  const { data } = await api.patch<Respuesta<IncidenciaAdminDTO>>(
+    `/v1/admin/incidencias/${encodeURIComponent(id)}/resolver`,
+    cierre,
+  );
+  return data.data;
+}
+
+/**
+ * GET /v1/admin/mapa-ocupacion con el contrato completo del panel (Issue 4.12): estado, capacidad
+ * real, la sección que ocupa el espacio y sus alertas. Sin franja, el momento actual.
+ */
+async function obtenerMapaOcupacionCompleto(
+  pabellon: string,
+  piso: number,
+): Promise<MapaOcupacionDTO> {
+  const { data } = await api.get<Respuesta<MapaOcupacionDTO>>('/v1/admin/mapa-ocupacion', {
+    params: { pabellon, piso },
+  });
+  return data.data;
+}
+
+/** Clave de caché compartida por el inicio de Jefatura y el listado de laboratorios. */
+export const CLAVE_LABORATORIOS_ESTADO = 'laboratorios-estado';
+
+/** Un laboratorio con su estado en este momento (Issue 4.16). */
+export interface LaboratorioConEstadoDTO extends EspacioAdminDTO {
+  /** `null` si el mapa no devolvió el espacio. */
+  estado: EstadoOcupacionEspacio | null;
+  capacidadReal: number;
+  asignacion: AsignacionOcupacionDTO | null;
+  alertas: AlertaOcupacionDTO[];
+}
+
+/**
+ * Laboratorios visibles para la sesión (Jefatura: los suyos) con su estado ahora: se cruza
+ * GET /admin/espacios con el mapa de ocupación de cada pabellón y piso donde hay un laboratorio.
+ */
+export async function obtenerLaboratoriosConEstado(): Promise<LaboratorioConEstadoDTO[]> {
+  const espacios = await obtenerEspacios();
+  const laboratorios = espacios.filter((e) => e.tipo === 'LABORATORIO');
+  const combinaciones = [
+    ...new Map(laboratorios.map((l) => [`${l.pabellon}|${l.piso}`, l])).values(),
+  ].map((l) => ({ pabellon: l.pabellon, piso: l.piso }));
+  const mapas = await Promise.all(
+    combinaciones.map((c) => obtenerMapaOcupacionCompleto(c.pabellon, c.piso)),
+  );
+  const porId = new Map(mapas.flatMap((m) => m.espacios).map((e) => [e.id, e]));
+  return laboratorios.map((lab) => {
+    const o = porId.get(lab.id);
+    return {
+      ...lab,
+      estado: o?.estado ?? null,
+      capacidadReal: o?.capacidadReal ?? Math.max(0, lab.aforoNominal - (lab.pcsMalogradas ?? 0)),
+      asignacion: o?.asignacion ?? null,
+      alertas: o?.alertas ?? [],
+    };
+  });
+}
+
+/**
+ * GET /v1/admin/incidencias/:id/imagen (Issue 7.19): la foto de la incidencia. Se pide con el
+ * token, por eso llega como `Blob` y no se puede enlazar directo en un `<img>`.
+ */
+export async function obtenerImagenIncidencia(id: string): Promise<Blob> {
+  const { data } = await api.get<Blob>(`/v1/admin/incidencias/${encodeURIComponent(id)}/imagen`, {
+    responseType: 'blob',
+  });
+  return data;
 }

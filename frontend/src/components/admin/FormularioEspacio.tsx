@@ -1,11 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Aviso } from '../ui/Aviso';
 import { BadgeEstado } from '../ui/BadgeEstado';
 import { Boton } from '../ui/Boton';
 import { CLASE_AYUDA, CLASE_CAMPO, CLASE_ETIQUETA } from '../ui/campos';
+import { CLASE_PIE_DRAWER } from '../ui/Drawer';
 import { useCarga } from '../../hooks/useCarga';
 import { crearEspacio, editarEspacio, obtenerCatalogoActivo } from '../../services/admin';
-import { mensajeDeError } from '../../services/estudiante';
+import { useAccion } from '../../hooks/useAccion';
 import type {
   CampoEspacio,
   CambiosEspacio,
@@ -63,6 +64,8 @@ export interface FormularioEspacioProps {
   espacios: EspacioAdminDTO[];
   onGuardado: (resultado: ResultadoEdicionEspacioDTO) => void;
   onCancelar: () => void;
+  /** Avisa al drawer si hay cambios sin guardar, para pedir confirmación al cerrarlo. */
+  onCambiosPendientes?: (hay: boolean) => void;
 }
 
 function estadoInicial(espacio: EspacioAdminDTO): EstadoFormulario {
@@ -471,7 +474,7 @@ const GrupoCapacidad: React.FC<{
       ) : (
         <p id="ayuda-aforo" className={CLASE_AYUDA}>
           Al cambiarla se revisa si las secciones asignadas siguen cabiendo y se genera la alerta
-          correspondiente. Deja 0 solo si el espacio queda deshabilitado.
+          correspondiente. Deja 0 solo si el espacio queda fuera de servicio.
         </p>
       )}
     </div>
@@ -482,8 +485,8 @@ const GrupoCapacidad: React.FC<{
       onCambio={(marcada) => cambiar('habilitado', marcada)}
     >
       <span className="font-semibold text-saie-text">Espacio en servicio</span>
-      <span className="block text-xs text-saie-muted">
-        Si lo deshabilitas, el motor deja de asignarlo y queda fuera de la consulta de
+      <span className="block text-sm text-saie-muted">
+        Si lo pones fuera de servicio, el sistema deja de asignarlo y queda fuera de la consulta de
         disponibilidad.
       </span>
     </Casilla>
@@ -548,7 +551,7 @@ const GrupoLaboratorio: React.FC<{
       return <p className="m-0 text-sm text-saie-muted">{mensajeVacio}</p>;
     }
     return (
-      <ul className="m-0 flex max-h-56 list-none flex-col gap-1 overflow-auto p-0">
+      <ul className="m-0 flex list-none flex-col gap-1 p-0">
         {softwareFiltrado.map((s) => (
           <li key={s.id}>
             <Casilla
@@ -573,7 +576,7 @@ const GrupoLaboratorio: React.FC<{
 
       <div className="flex flex-col gap-1">
         <EtiquetaCampo htmlFor="espacio-pcs" obligatorio={original.pcsMalogradas !== ''}>
-          PCs fuera de servicio
+          PCs malogradas
         </EtiquetaCampo>
         <input
           id="espacio-pcs"
@@ -614,7 +617,7 @@ const GrupoLaboratorio: React.FC<{
           value={busquedaSoftware}
           placeholder="Nombre o versión…"
           onChange={(e) => onBusquedaSoftware(e.target.value)}
-          className={CLASE_CAMPO}
+          className={`${CLASE_CAMPO} sticky top-0 z-10`}
         />
         {contenido}
       </div>
@@ -657,12 +660,12 @@ const GrupoContiguos: React.FC<{
         value={busquedaContiguos}
         placeholder="Buscar por código…"
         onChange={(e) => onBusquedaContiguos(e.target.value)}
-        className={CLASE_CAMPO}
+        className={`${CLASE_CAMPO} sticky top-0 z-10`}
       />
       {sinCoincidencias ? (
         <p className="m-0 text-sm text-saie-muted">{mensajeVacio}</p>
       ) : (
-        <ul className="m-0 flex max-h-56 list-none flex-col gap-1 overflow-auto p-0">
+        <ul className="m-0 flex list-none flex-col gap-1 p-0">
           {contiguosFiltrados.map((e) => (
             <li key={e.id}>
               <Casilla
@@ -690,6 +693,7 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
   espacios,
   onGuardado,
   onCancelar,
+  onCambiosPendientes,
 }) => {
   const original = useMemo(
     () => (modo === 'editar' && espacio ? estadoInicial(espacio) : estadoInicialAlta()),
@@ -698,6 +702,7 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
   const [form, setForm] = useState<EstadoFormulario>(original);
   const [busquedaSoftware, setBusquedaSoftware] = useState('');
   const [busquedaContiguos, setBusquedaContiguos] = useState('');
+  const { ejecutar } = useAccion();
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -717,6 +722,14 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
   );
   const cambios = useMemo(() => calcularCambios(form, original, campos), [form, original, campos]);
   const hayCambios = modo === 'crear' ? true : Object.keys(cambios).length > 0;
+  // En el alta «hayCambios» siempre es verdadero (hay un espacio por crear): para decidir si se
+  // pide confirmación al cerrar se compara con el formulario vacío.
+  const sinGuardar = JSON.stringify(form) !== JSON.stringify(original);
+
+  useEffect(() => {
+    onCambiosPendientes?.(sinGuardar);
+    return () => onCambiosPendientes?.(false);
+  }, [sinGuardar, onCambiosPendientes]);
   const hayErrores = Object.keys(errores).length > 0;
 
   const candidatos = useMemo(
@@ -776,19 +789,20 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
     if (guardando || !hayCambios || hayErrores) return;
     setGuardando(true);
     setError(null);
-    try {
-      if (modo === 'crear') {
-        const creado = await crearEspacio(espacioNuevo(form));
-        onGuardado({ espacio: creado, alertas: [] });
-        return;
-      }
-      const resultado = await editarEspacio(espacio!.id, cambios);
-      onGuardado(resultado);
-    } catch (e) {
-      setError(mensajeDeError(e));
-    } finally {
-      setGuardando(false);
-    }
+    // El error se muestra en línea, dentro del formulario.
+    const salida = await ejecutar(
+      async () => {
+        if (modo === 'crear') {
+          const creado = await crearEspacio(espacioNuevo(form));
+          return { espacio: creado, alertas: [] };
+        }
+        return editarEspacio(espacio!.id, cambios);
+      },
+      { avisarError: false },
+    );
+    setGuardando(false);
+    if (salida?.ok) onGuardado(salida.valor);
+    else if (salida) setError(salida.error);
   }
 
   const motivoDeshabilitado = motivoDeGuardado(hayCambios, hayErrores);
@@ -864,7 +878,9 @@ export const FormularioEspacio: React.FC<FormularioEspacioProps> = ({
 
       {error && <Aviso tono="error">{error}</Aviso>}
 
-      <footer className="flex flex-col gap-3 border-t border-saie-divider pt-4 sm:flex-row sm:items-start sm:justify-between">
+      <footer
+        className={`${CLASE_PIE_DRAWER} flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between`}
+      >
         <div className="flex min-w-0 flex-col gap-2">
           {hayCambios ? (
             <BadgeEstado tono="advertencia">

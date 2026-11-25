@@ -13,8 +13,8 @@ describe('consultasBot.service', () => {
       vinculacionTelegram: {
         findUnique: jest.fn(),
       },
-      seccion: {
-        findFirst: jest.fn().mockResolvedValue({ periodo: '2026-1' }),
+      periodo: {
+        findFirst: jest.fn().mockResolvedValue({ codigo: '2026-1' }),
       },
       matricula: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -79,6 +79,62 @@ describe('consultasBot.service', () => {
     expect(res).toContain('CC-101 - Algoritmos');
     expect(res).toContain('Aula 101');
     expect(res).toContain('08:00 - 10:00');
+  });
+
+  it('agrupa teoría y laboratorio del mismo grupo con /hoy y rotula el tipo (Issue 3.62)', async () => {
+    prisma.vinculacionTelegram.findUnique.mockResolvedValue({
+      activo: true,
+      alumnoId: 'al-1',
+      alumno: { id: 'al-1', nombre: 'Juan' },
+    });
+
+    const curso = { codigo: '202SW0805', nombre: 'Gestión de la Configuración' };
+    prisma.matricula.findMany.mockResolvedValue([
+      {
+        seccion: {
+          id: 'sec-lab',
+          codigoSeccion: '2-LAB',
+          tipoEspacioRequerido: 'LABORATORIO',
+          curso,
+          docente: null,
+          horarios: [{ diaSemana: DiaSemana.JUEVES, horaInicio: '20:00', horaFin: '22:00' }],
+          asignaciones: [
+            {
+              estado: 'VIGENTE',
+              espacios: [{ espacio: { identificador: 'Laboratorio 01', pabellon: 'N', piso: 2 } }],
+            },
+          ],
+        },
+      },
+      {
+        seccion: {
+          id: 'sec-teo',
+          codigoSeccion: '2',
+          tipoEspacioRequerido: 'AULA_TEORICA',
+          curso,
+          docente: null,
+          horarios: [{ diaSemana: DiaSemana.JUEVES, horaInicio: '18:00', horaFin: '20:00' }],
+          asignaciones: [
+            {
+              estado: 'VIGENTE',
+              espacios: [{ espacio: { identificador: 'Aula 105', pabellon: 'A', piso: 1 } }],
+            },
+          ],
+        },
+      },
+    ]);
+
+    const fecha = new Date('2026-10-22T15:00:00.000Z'); // Jueves 10:00 Lima
+    const res = await consultarClasesHoy('123', prisma, fecha);
+
+    expect(res.match(/202SW0805/g)).toHaveLength(1);
+    expect(res).toContain('202SW0805 - Gestión de la Configuración (Grupo 2)');
+    expect(res).toContain('• Teoría: 18:00 - 20:00 | 📍 Aula 105');
+    expect(res).toContain('• Laboratorio: 20:00 - 22:00 | 📍 Laboratorio 01');
+    expect(res).not.toContain('2-LAB');
+
+    const proxima = await consultarClaseActual('123', prisma, fecha);
+    expect(proxima).toContain('(Grupo 2 · Teoría)');
   });
 
   it('detecta si el alumno está actualmente en clase con /ahora', async () => {

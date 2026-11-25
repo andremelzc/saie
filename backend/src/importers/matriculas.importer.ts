@@ -1,6 +1,10 @@
 import { PrismaClient, RolCuenta } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
+import { generarClaveInicial } from '../lib/claves';
+import { CredencialInicialDTO } from './docentes.importer';
+import { periodoSchema } from '../lib/periodo';
+import type { ProgresoImportacion } from '../types/importacion';
 
 export const MatriculaSchema = z.object({
   codigoAlumno: z.string().min(1, 'El código del alumno es requerido'),
@@ -9,7 +13,7 @@ export const MatriculaSchema = z.object({
   movilidadReducida: z.boolean().default(false),
   codigoCurso: z.string().min(1, 'El código del curso es requerido'),
   codigoSeccion: z.string().min(1, 'El código de la sección es requerido'),
-  periodo: z.string().min(1, 'El periodo es requerido'),
+  periodo: periodoSchema,
   crearCuentaAcceso: z.boolean().default(true),
 });
 
@@ -19,19 +23,27 @@ export interface ResultadoImportacionMatriculas {
   alumnosProcesados: number;
   cuentasCreadas: number;
   matriculasProcesadas: number;
+  /** Issue 1.17 (R35): matrículas que ya no figuran en el archivo de su sección (retiros). */
+  matriculasRetiradas: number;
   errores: string[];
+  clavesIniciales?: CredencialInicialDTO[];
 }
 
 export async function importarMatriculas(
   datos: unknown[],
   prisma: PrismaClient,
+  onProgreso?: ProgresoImportacion,
 ): Promise<ResultadoImportacionMatriculas> {
   let alumnosProcesados = 0;
   let cuentasCreadas = 0;
   let matriculasProcesadas = 0;
+  // Issue 1.17: alumnos que el archivo indica para cada sección, para retirar a los demás.
+  const enArchivo = new Map<string, Set<string>>();
   const errores: string[] = [];
+  const clavesIniciales: CredencialInicialDTO[] = [];
 
   for (let i = 0; i < datos.length; i++) {
+    onProgreso?.(i, datos.length);
     const validacion = MatriculaSchema.safeParse(datos[i]);
 
     if (!validacion.success) {
@@ -56,20 +68,48 @@ export async function importarMatriculas(
 
       if (crearCuentaAcceso) {
         const usuarioLogin = codigoAlumno;
-        const claveInicialHash = await bcrypt.hash(codigoAlumno, 10);
+        const cuentaExistente = prisma.cuenta.findUnique
+          ? await prisma.cuenta.findUnique({ where: { usuarioLogin } })
+          : null;
 
-        const cuenta = await prisma.cuenta.upsert({
-          where: { usuarioLogin },
-          update: {},
-          create: {
+        if (!cuentaExistente) {
+          const claveInicial = generarClaveInicial();
+          const claveInicialHash = await bcrypt.hash(claveInicial, 10);
+
+          let cuenta;
+          if (prisma.cuenta.create) {
+            cuenta = await prisma.cuenta.create({
+              data: {
+                rol: RolCuenta.ALUMNO,
+                usuarioLogin,
+                claveHash: claveInicialHash,
+                debeCambiarClave: true,
+              },
+            });
+          } else {
+            cuenta = await prisma.cuenta.upsert({
+              where: { usuarioLogin },
+              update: {},
+              create: {
+                rol: RolCuenta.ALUMNO,
+                usuarioLogin,
+                claveHash: claveInicialHash,
+                debeCambiarClave: true,
+              },
+            });
+          }
+          cuentaId = cuenta.id;
+          cuentasCreadas++;
+          clavesIniciales.push({
+            codigo: codigoAlumno,
+            nombre,
+            correo,
             rol: RolCuenta.ALUMNO,
-            usuarioLogin,
-            claveHash: claveInicialHash,
-            debeCambiarClave: true,
-          },
-        });
-        cuentaId = cuenta.id;
-        cuentasCreadas++;
+            claveInicial,
+          });
+        } else {
+          cuentaId = cuentaExistente.id;
+        }
       }
 
       // 2. Crear o actualizar Alumno
@@ -86,8 +126,13 @@ export async function importarMatriculas(
           correo,
           ...(cuentaId ? { cuentaId } : {}),
         },
+        include: { fichaMedica: { select: { condicionAccesible: true } } },
       });
       alumnosProcesados++;
+
+      // Issue 3.59 (riesgo R11 de la auditoría): la importación nunca borra la movilidad reducida
+      // que el alumno declaró en su ficha. La matrícula la lleva si lo indica el CSV o la ficha.
+      const movilidadFinal = movilidadReducida || alumno.fichaMedica?.condicionAccesible === true;
 
       // 3. Buscar Sección
       const curso = await prisma.curso.findUnique({
@@ -124,19 +169,43 @@ export async function importarMatriculas(
             seccionId: seccion.id,
           },
         },
-        update: { movilidadReducida },
+        update: { movilidadReducida: movilidadFinal },
         create: {
           alumnoId: alumno.id,
           seccionId: seccion.id,
-          movilidadReducida,
+          movilidadReducida: movilidadFinal,
         },
       });
       matriculasProcesadas++;
+      const alumnosDeSeccion = enArchivo.get(seccion.id) ?? new Set<string>();
+      alumnosDeSeccion.add(alumno.id);
+      enArchivo.set(seccion.id, alumnosDeSeccion);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       errores.push(`Fila ${i + 1} (${codigoAlumno} en ${codigoCurso}-${codigoSeccion}): ${msg}`);
     }
   }
 
-  return { alumnosProcesados, cuentasCreadas, matriculasProcesadas, errores };
+  // Issue 1.17: las matrículas de cada sección del archivo quedan exactamente como el archivo. Las
+  // secciones que no aparecen no se tocan (se puede cargar por partes). Si alguna fila falló no se
+  // retira a nadie: el archivo no se pudo leer completo.
+  let matriculasRetiradas = 0;
+  if (errores.length === 0) {
+    for (const [seccionId, alumnoIds] of enArchivo) {
+      const { count } = await prisma.matricula.deleteMany({
+        where: { seccionId, alumnoId: { notIn: [...alumnoIds] } },
+      });
+      matriculasRetiradas += count;
+    }
+  }
+  onProgreso?.(datos.length, datos.length);
+
+  return {
+    alumnosProcesados,
+    cuentasCreadas,
+    matriculasProcesadas,
+    matriculasRetiradas,
+    errores,
+    clavesIniciales,
+  };
 }

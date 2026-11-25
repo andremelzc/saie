@@ -1,24 +1,45 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
-import { ResumenVerificacion } from '../../components/admin/VeredictoVerificacion';
-import { EsqueletoCarga } from '../../components/estudiante/ElementosHorario';
+import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
+import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
+import { BotonEnlace } from '../../components/ui/BotonEnlace';
+import { DialogoConfirmacion } from '../../components/ui/DialogoConfirmacion';
+import { Drawer } from '../../components/ui/Drawer';
 import { RUTAS } from '../../config/rutas';
 import { useAuth } from '../../context/useAuth';
+import { useAccion } from '../../hooks/useAccion';
 import { useCarga } from '../../hooks/useCarga';
 import {
   ejecutarCorrida,
+  CLAVE_LABORATORIOS_ESTADO,
   obtenerAlertas,
   obtenerEscaladas,
+  obtenerIncidencias,
+  obtenerLaboratoriosConEstado,
+  obtenerMapaOcupacionAdmin,
   reintentarSeccion,
 } from '../../services/admin';
-import { mensajeDeError } from '../../services/estudiante';
-import type { ResumenAsignacionDTO, SeccionEscaladaDTO } from '../../types/admin';
-import { describirMotivoEscalamiento, formatearFechaCorta } from '../../utils/admin';
-import { ETIQUETA_TIPO_ALERTA } from '../../utils/etiquetas';
+import VistaMapa from '../../components/mapa2d/VistaMapa';
+import { ENLACE_PLANOS } from '../../components/mapa2d/ocupacionReal';
+import { EstadoError } from '../../components/ui/EstadoError';
+import { useOcupacionMapa } from '../../hooks/useOcupacionMapa';
+import type {
+  ResumenAsignacionDTO,
+  ResultadoVerificacionDTO,
+  SeccionEscaladaDTO,
+} from '../../types/admin';
+import { describirMotivoEscalamiento, separarDatosIncompletos } from '../../utils/admin';
+import { formatearFechaCorta } from '../../utils/fechas';
+import { plural } from '../../utils/texto';
+import { fraseDeMotivoAlerta } from '../../utils/textoMotor';
+import { ICONOS } from '../../components/ui/iconos';
+import { TEXTOS_ASIGNACION } from '../../config/textos';
+import { Metrica, TiraMetricas } from '../../components/admin/Metrica';
+import ReorganizacionPrioridad from '../../components/admin/ReorganizacionPrioridad';
 
 /**
  * Issue 4.20 — inicio de Coordinación Académica.
@@ -27,6 +48,32 @@ import { ETIQUETA_TIPO_ALERTA } from '../../utils/etiquetas';
  * scrollear. Las listas largas (las secciones que esperan revisión) llevan su propio scroll
  * interno y el resto son tarjetas fijas.
  */
+
+/** Incidencias de los docentes que Jefatura aún no cerró (Issue 4.60). */
+const obtenerIncidenciasPendientes = () => obtenerIncidencias({ estado: 'PENDIENTE' });
+
+/**
+ * Cifra de incidencias pendientes en el inicio de Coordinación y de Jefatura (Issue 4.60): una
+ * incidencia de prioridad alta no debe esperar a que alguien entre a buscarla.
+ */
+const MetricaIncidencias: React.FC = () => {
+  const incidencias = useCarga(obtenerIncidenciasPendientes, { clave: 'incidencias:pendientes' });
+  const total = incidencias.datos?.length ?? null;
+  // Rojo si alguna pendiente es de prioridad alta; ámbar si solo hay de prioridad media o baja.
+  const altas = incidencias.datos?.filter((i) => i.prioridad === 'ALTA').length ?? 0;
+  return (
+    <Metrica
+      etiqueta="Incidencias pendientes"
+      valor={total}
+      cargando={incidencias.cargando && !incidencias.datos}
+      sinDato={incidencias.error ? 'no disponible' : undefined}
+      tono={altas > 0 ? 'peligro' : total ? 'advertencia' : 'neutro'}
+      icono={ICONOS.portapapeles}
+      to={RUTAS.incidenciasAdmin}
+      textoEnlace="Ver incidencias"
+    />
+  );
+};
 
 /**
  * Enlace de acceso a una pantalla del panel. El nombre accesible es el contenido visible
@@ -42,7 +89,7 @@ const Acceso: React.FC<{ to: string; titulo: string; descripcion: string; trazo:
 }) => (
   <Link
     to={to}
-    className="group flex items-center gap-3 rounded-xl border border-saie-divider bg-white px-3 py-2.5 no-underline transition-colors hover:border-saie-primary"
+    className="group flex items-start gap-3 rounded-xl border border-saie-divider bg-white p-3 no-underline transition-colors hover:border-saie-primary"
   >
     <span
       aria-hidden="true"
@@ -62,22 +109,54 @@ const Acceso: React.FC<{ to: string; titulo: string; descripcion: string; trazo:
     </span>
     <span className="min-w-0 flex-1">
       <span className="block text-sm font-bold text-saie-text">{titulo}</span>
-      <span className="block text-xs text-saie-muted">{descripcion}</span>
+      <span className="block text-sm text-saie-muted">{descripcion}</span>
     </span>
   </Link>
 );
 
-/** Métrica del tablero: cifra grande y etiqueta corta. */
-const Metrica: React.FC<{ valor: number | string; etiqueta: string; tono?: string }> = ({
-  valor,
-  etiqueta,
-  tono = 'text-saie-text',
-}) => (
-  <div className="rounded-xl border border-saie-divider bg-white p-3">
-    <p className={`m-0 font-serif text-3xl font-bold leading-none ${tono}`}>{valor}</p>
-    <p className="m-0 mt-1 text-xs font-medium text-saie-muted">{etiqueta}</p>
-  </div>
+/** Acceso compacto del tablero: solo icono y título; la descripción vive en la pestaña. */
+const Atajo: React.FC<{ to: string; titulo: string; trazo: string }> = ({ to, titulo, trazo }) => (
+  <Link
+    to={to}
+    className="flex min-w-0 items-center gap-2.5 rounded-xl border border-saie-divider bg-white p-2 no-underline transition-colors hover:border-saie-primary"
+  >
+    <span
+      aria-hidden="true"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-saie-primary/10 text-saie-primary"
+    >
+      <svg
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        viewBox="0 0 24 24"
+      >
+        <path d={trazo} />
+      </svg>
+    </span>
+    <span className="min-w-0 break-words text-sm font-semibold leading-tight text-saie-text">
+      {titulo}
+    </span>
+  </Link>
 );
+
+/** Texto del distintivo del verificador según el resultado de la corrida. */
+function textoVerificador(verificacion: ResultadoVerificacionDTO | null): string {
+  if (!verificacion) return TEXTOS_ASIGNACION.distintivoSinNada;
+  if (verificacion.conforme) {
+    return `Conforme · ${verificacion.totalRevisadas} revisadas`;
+  }
+  return `No conforme · ${plural(verificacion.totalViolaciones, 'incumplimiento', 'incumplimientos')}`;
+}
+
+/** Colores del distintivo del verificador. */
+function claseVerificador(verificacion: ResultadoVerificacionDTO | null): string {
+  if (!verificacion) return 'bg-white/15 text-white';
+  if (verificacion.conforme) return 'bg-saie-success-soft text-saie-success-strong';
+  return 'bg-saie-danger-soft text-saie-danger-strong';
+}
 
 /** Resultado de reintentar una sección: sigue en revisión, se le asignó aula o conserva la suya. */
 function textoResultadoSeccion(resumen: ResumenAsignacionDTO): string {
@@ -100,42 +179,45 @@ const FilaEscalada: React.FC<{
   const alumnos = seccion.seccion.alumnosMatriculados;
 
   return (
-    <li className="flex flex-col gap-2 border-b border-saie-divider py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+    <li className="flex flex-col gap-3 border-b border-saie-divider py-2.5 last:border-b-0 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <p className="m-0 text-sm font-semibold text-saie-text sm:truncate">
           {seccion.seccion.codigoCurso} · {seccion.seccion.codigoSeccion} —{' '}
           {seccion.seccion.nombreCurso}
         </p>
-        <p className="m-0 flex flex-wrap items-center gap-2 text-xs text-saie-muted">
-          {/*
-            El código del motivo es interno (lo escribe el motor): no se muestra, pero queda en
-            el título del distintivo por si hay que pasarlo a soporte técnico.
-          */}
-          <span title={motivo.codigo ? `Código de soporte: ${motivo.codigo}` : undefined}>
-            <BadgeEstado tono="advertencia">{motivo.etiqueta}</BadgeEstado>
-          </span>
+        <p className="m-0 flex flex-wrap items-center gap-2 text-sm text-saie-muted">
+          <BadgeEstado tono="advertencia">{motivo.etiqueta}</BadgeEstado>
           <span className="min-w-0 sm:truncate">{motivo.descripcion}</span>
           <span>
             {alumnos} {alumnos === 1 ? 'alumno' : 'alumnos'}
           </span>
         </p>
+        {/*
+          El código del motivo es interno (lo escribe el motor). Se muestra plegado y bajo una
+          etiqueta de "soporte" para que la persona que coordina lea primero la causa en
+          lenguaje llano y solo abra el código si necesita pasarlo a soporte técnico.
+        */}
+        {motivo.codigo && (
+          <details className="w-fit text-sm text-saie-muted">
+            <summary className="cursor-pointer py-3.5">Código de soporte</summary>
+            <span className="font-mono text-sm">{motivo.codigo}</span>
+          </details>
+        )}
       </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+      <div className="grid shrink-0 grid-cols-1 gap-2 min-[480px]:grid-cols-2 sm:flex sm:flex-wrap sm:items-center">
         {motivo.accion && (
-          <Link
-            to={motivo.accion.to}
-            className="inline-flex min-h-11 items-center rounded-xl border border-saie-primary bg-white px-4 text-sm font-medium text-saie-primary no-underline hover:bg-saie-primary/5"
-          >
+          <BotonEnlace to={motivo.accion.to} variante="secundario" tamano="sm" anchoCompleto>
             {motivo.accion.etiqueta}
-          </Link>
+          </BotonEnlace>
         )}
         <Boton
-          variante="fantasma"
+          variante="secundario"
           tamano="sm"
           onClick={() => onReintentar(seccion)}
           cargando={reintentando}
           textoCargando="Reintentando…"
           disabled={deshabilitado}
+          anchoCompleto
           title={
             motivo.codigo === 'SIN_HORARIOS_DEFINIDOS'
               ? 'Vuelve a intentar después de cargar el horario'
@@ -149,23 +231,62 @@ const FilaEscalada: React.FC<{
   );
 };
 
+/** «Esperan revisión» sin contar las secciones que solo tienen datos incompletos. */
+function restarDatosIncompletos(total: number | null, incompletos: number): number | null {
+  return total === null ? null : Math.max(0, total - incompletos);
+}
+
+/**
+ * Issue 2.25 (riesgo R7): secciones que no entran al motor porque les faltan los horarios. No
+ * esperan una decisión de Coordinación sino una carga de datos, así que no se mezclan con las
+ * escaladas ni ofrecen «Reintentar».
+ */
+const DatosIncompletos: React.FC<{ secciones: SeccionEscaladaDTO[] }> = ({ secciones }) => {
+  if (secciones.length === 0) return null;
+  return (
+    <section
+      aria-labelledby="titulo-datos-incompletos"
+      className="flex flex-col gap-2 border-t border-saie-divider pt-3"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 id="titulo-datos-incompletos" className="m-0 text-sm font-bold text-saie-text">
+          Datos incompletos: falta cargar horarios ({secciones.length})
+        </h3>
+        <BotonEnlace to={`${RUTAS.cargaAdmin}#carga-horarios`} variante="secundario" tamano="sm">
+          Cargar horarios
+        </BotonEnlace>
+      </div>
+      <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+        {secciones.map((s) => (
+          <li
+            key={s.asignacionId}
+            className="rounded-md bg-saie-canvas px-2 py-1 text-sm text-saie-text"
+          >
+            {s.seccion.codigoCurso} · {s.seccion.codigoSeccion} — {s.seccion.nombreCurso}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+};
+
 /** Lista de secciones que el motor dejó sin aula, con scroll interno. */
 const ListaEscaladas: React.FC<{
   secciones: SeccionEscaladaDTO[];
   cargando: boolean;
-  /** La carga falló: el aviso de error ya lo explica y no se afirma que no haya pendientes. */
-  sinDatos?: boolean;
   reintentando: string | null;
   onReintentar: (seccion: SeccionEscaladaDTO) => void;
-}> = ({ secciones, cargando, sinDatos = false, reintentando, onReintentar }) => {
+}> = ({ secciones, cargando, reintentando, onReintentar }) => {
   if (cargando) return <EsqueletoCarga texto="Cargando secciones pendientes…" />;
-  if (sinDatos) return null;
 
   if (secciones.length === 0) {
     return (
-      <p className="m-0 rounded-xl border border-dashed border-saie-divider bg-saie-canvas p-6 text-center text-sm text-saie-muted">
-        No hay secciones pendientes de revisión. Todas tienen un espacio asignado.
-      </p>
+      <EstadoVacio
+        compacto
+        titulo="Nada por revisar"
+        icono={ICONOS.escudo}
+        descripcion="No hay secciones pendientes de revisión. Todas tienen un espacio asignado."
+      />
     );
   }
 
@@ -184,99 +305,171 @@ const ListaEscaladas: React.FC<{
   );
 };
 
-/** Alertas que se listan en el inicio de Jefatura; el resto está en el centro de alertas. */
-const MAX_ALERTAS_INICIO = 5;
-
-/** Jefatura: resumen de sus alertas y acceso al formulario de laboratorio (Issue 4.19). */
+/**
+ * Inicio de Jefatura de Laboratorios (Issue 4.16): laboratorios activos, PCs operativas e
+ * inoperativas, la alerta más reciente, accesos y el mapa de ocupación con sus laboratorios
+ * resaltados (componente del mapa de los Issues 4.13 y 4.14).
+ */
 const InicioJefatura: React.FC = () => {
-  const { datos, cargando, error, recargar } = useCarga(obtenerAlertas);
-  // Las cifras cuentan solo lo que sigue pendiente: una alerta resuelta ya no pide atención.
-  const pendientes = datos?.filter((a) => a.estado === 'PENDIENTE') ?? [];
+  const alertas = useCarga(obtenerAlertas, { clave: 'alertas' });
+  const labs = useCarga(obtenerLaboratoriosConEstado, { clave: CLAVE_LABORATORIOS_ESTADO });
+  const mapa = useOcupacionMapa(obtenerMapaOcupacionAdmin, 'admin', null);
+  const [seleccionado, setSeleccionado] = useState<string | null>(null);
+  const [pisoElegido, setPisoElegido] = useState<number | 'todos' | null>(null);
+
+  const pendientes = (alertas.datos ?? []).filter((a) => a.estado === 'PENDIENTE');
+  // `obtenerAlertas` ya las devuelve de la más reciente a la más antigua.
+  const destacada = pendientes[0] ?? null;
+  const laboratorios = labs.datos ?? [];
+  const activos = laboratorios.filter((l) => l.habilitado);
+  const inoperativas = activos.reduce((t, l) => t + (l.pcsMalogradas ?? 0), 0);
+  const operativas = activos.reduce((t, l) => t + l.capacidadReal, 0);
+  const resaltados = laboratorios
+    .map((l) => ENLACE_PLANOS.idDeEspacio(l.pabellon, l.identificador))
+    .filter((id): id is string => id !== null);
+  const pisoInicial = laboratorios.length > 0 ? Math.min(...laboratorios.map((l) => l.piso)) : 1;
+  const error = alertas.error ?? labs.error;
+  const reintentar = () => {
+    alertas.recargar();
+    labs.recargar();
+  };
+  const cargandoTodo = (alertas.cargando && !alertas.datos) || (labs.cargando && !labs.datos);
 
   return (
-    <LayoutAdmin titulo="Área administrativa" subtitulo="Estado de tus laboratorios">
-      <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-3">
-        <li>
-          <Metrica
-            valor={pendientes.length}
-            etiqueta="Alertas pendientes"
-            tono={pendientes.length > 0 ? 'text-saie-danger' : 'text-saie-text'}
-          />
-        </li>
-        <li>
-          <Metrica
-            valor={pendientes.filter((a) => a.tipo === 'SOFTWARE').length}
-            etiqueta="De software"
-          />
-        </li>
-        <li>
-          <Metrica
-            valor={pendientes.filter((a) => a.tipo === 'CAPACIDAD').length}
-            etiqueta="De capacidad"
-          />
-        </li>
-      </ul>
+    <LayoutAdmin titulo="Inicio" subtitulo="Jefatura de Laboratorios">
+      <TiraMetricas etiqueta="Resumen de laboratorios" className="grid-cols-2 lg:grid-cols-5">
+        <Metrica
+          etiqueta="Alertas pendientes"
+          valor={pendientes.length}
+          cargando={alertas.cargando && !alertas.datos}
+          tono={pendientes.length > 0 ? 'peligro' : 'neutro'}
+          icono={ICONOS.alerta}
+          to={RUTAS.alertasAdmin}
+          textoEnlace="Ver alertas"
+          principal={pendientes.length > 0}
+        />
+        <MetricaIncidencias />
+        <Metrica
+          etiqueta="Laboratorios activos"
+          valor={`${activos.length}/${laboratorios.length}`}
+          cargando={labs.cargando && !labs.datos}
+          icono={ICONOS.monitor}
+          to={RUTAS.laboratoriosAdmin}
+          textoEnlace="Ver laboratorios"
+        />
+        <Metrica
+          etiqueta="PCs operativas"
+          valor={operativas}
+          cargando={labs.cargando && !labs.datos}
+          tono="exito"
+          icono={ICONOS.checkCirculo}
+        />
+        <Metrica
+          etiqueta="PCs inoperativas"
+          valor={inoperativas}
+          cargando={labs.cargando && !labs.datos}
+          tono={inoperativas > 0 ? 'peligro' : 'neutro'}
+          icono={ICONOS.errorCirculo}
+        />
+      </TiraMetricas>
 
-      {error && <AvisoError mensaje={error} onReintentar={recargar} />}
-      {cargando && !datos ? (
+      {error && <AvisoError mensaje={error} onReintentar={reintentar} />}
+      {cargandoTodo ? (
         <EsqueletoCarga texto="Cargando resumen…" />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-12">
-          {/* Lo que pide atención: las alertas pendientes más recientes, sin abrir otra pantalla */}
-          <section
-            aria-labelledby="titulo-recientes"
-            className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-5 lg:col-span-8"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 id="titulo-recientes" className="m-0 text-sm font-bold text-saie-text">
-                Pendientes más recientes
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <div className="flex min-w-0 flex-col gap-4 lg:col-span-5">
+            <section
+              aria-labelledby="titulo-alerta-destacada"
+              className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-4"
+            >
+              <h2 id="titulo-alerta-destacada" className="m-0 text-base font-bold">
+                Alerta más reciente
               </h2>
-              {pendientes.length > MAX_ALERTAS_INICIO && (
-                <Link
-                  to={RUTAS.alertasAdmin}
-                  className="text-sm font-semibold text-saie-primary no-underline hover:underline"
-                >
-                  Ver todas →
-                </Link>
-              )}
-            </div>
-            {pendientes.length === 0 ? (
-              <p className="m-0 rounded-xl border border-dashed border-saie-divider bg-saie-canvas p-6 text-center text-sm text-saie-muted">
-                No hay alertas pendientes en tus laboratorios.
-              </p>
-            ) : (
-              <ul className="m-0 list-none divide-y divide-saie-divider p-0">
-                {pendientes.slice(0, MAX_ALERTAS_INICIO).map((a) => (
-                  <li key={a.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
-                    <span className="w-20 shrink-0 text-sm font-bold text-saie-text">
-                      {a.espacio.identificador}
-                    </span>
-                    <BadgeEstado tono="neutro" conIcono={false}>
-                      {ETIQUETA_TIPO_ALERTA[a.tipo]}
+              {destacada ? (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <BadgeEstado tono="advertencia">
+                      {destacada.tipo === 'SOFTWARE' ? 'Software' : 'Capacidad'}
                     </BadgeEstado>
-                    <span className="min-w-0 flex-1 truncate text-sm text-saie-muted">
-                      {a.motivo}
+                    <span className="text-sm font-semibold">{destacada.espacio.identificador}</span>
+                    <span className="text-sm text-saie-muted">
+                      {formatearFechaCorta(destacada.fechaDeteccion)}
                     </span>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+                  <p className="m-0 text-sm">{fraseDeMotivoAlerta(destacada.motivo)}</p>
+                  <BotonEnlace
+                    to={RUTAS.alertasAdmin}
+                    variante="fantasma"
+                    tamano="sm"
+                    className="self-start"
+                  >
+                    Ver todas las alertas →
+                  </BotonEnlace>
+                </>
+              ) : (
+                <p className="m-0 text-sm text-saie-muted">
+                  No hay alertas pendientes en tus laboratorios.
+                </p>
+              )}
+            </section>
+
+            <nav aria-label="Accesos de Jefatura" className="grid gap-3">
+              <Acceso
+                to={RUTAS.laboratoriosAdmin}
+                titulo="Ver todos mis laboratorios"
+                descripcion="Búsqueda y filtros por piso y estado, con aforo real."
+                trazo={ICONOS.monitor}
+              />
+              <Acceso
+                to={RUTAS.alertasAdmin}
+                titulo="Alertas de mis laboratorios"
+                descripcion="Revisa y marca como resueltas las alertas."
+                trazo={ICONOS.alerta}
+              />
+              <Acceso
+                to={RUTAS.cambioLaboratorio}
+                titulo="Reportar cambio de laboratorio"
+                descripcion="Software instalado y PCs malogradas o reparadas."
+                trazo={ICONOS.ajustes}
+              />
+              <Acceso
+                to={RUTAS.softwareAdmin}
+                titulo="Catálogo de software"
+                descripcion="Consulta qué software pueden tener los laboratorios."
+                trazo={ICONOS.libro}
+              />
+              <Acceso
+                to={RUTAS.clavesAdmin}
+                titulo="Cambiar mi clave"
+                descripcion="Actualiza la clave de acceso a tu cuenta."
+                trazo={ICONOS.escudo}
+              />
+            </nav>
+          </div>
+
+          <section
+            aria-labelledby="titulo-vista-mapa"
+            className="flex min-w-0 flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4 lg:col-span-7"
+          >
+            <h2 id="titulo-vista-mapa" className="m-0 text-base font-bold">
+              Tus laboratorios en el mapa de ocupación
+            </h2>
+            {mapa.error ? (
+              <EstadoError mensaje={mapa.error} onReintentar={mapa.recargar} />
+            ) : !mapa.datos ? (
+              <EsqueletoCarga texto="Cargando el mapa…" />
+            ) : (
+              <VistaMapa
+                espacios={mapa.datos.espacios}
+                seleccionado={seleccionado}
+                onSeleccionar={setSeleccionado}
+                resaltados={resaltados}
+                piso={pisoElegido ?? pisoInicial}
+                onPisoCambiado={setPisoElegido}
+              />
             )}
           </section>
-
-          <div className="flex flex-col gap-3 lg:col-span-4">
-            <Acceso
-              to={RUTAS.alertasAdmin}
-              titulo="Alertas de mis laboratorios"
-              descripcion="Revisa y marca como resueltas las alertas."
-              trazo="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
-            />
-            <Acceso
-              to={RUTAS.cambioLaboratorio}
-              titulo="Reportar cambio de laboratorio"
-              descripcion="Software instalado y PCs malogradas o reparadas."
-              trazo="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-            />
-          </div>
         </div>
       )}
     </LayoutAdmin>
@@ -285,12 +478,17 @@ const InicioJefatura: React.FC = () => {
 
 /** Issue 4.20 — inicio de Coordinación Académica, en modo tablero. */
 const InicioCoordinacion: React.FC = () => {
-  const escaladas = useCarga(obtenerEscaladas);
-  const alertas = useCarga(obtenerAlertas);
+  const escaladas = useCarga(obtenerEscaladas, { clave: 'escaladas' });
+  const alertas = useCarga(obtenerAlertas, { clave: 'alertas' });
+  const accionCorrida = useAccion();
+  const accionSeccion = useAccion();
   const [corriendo, setCorrida] = useState(false);
   const [confirmandoCorrida, setConfirmandoCorrida] = useState(false);
+  const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [reintentando, setReintentando] = useState<string | null>(null);
   const [resumenCorrida, setResumenCorrida] = useState<ResumenAsignacionDTO | null>(null);
+  /** Corrida anterior de esta sesión, para el delta de las métricas. */
+  const [resumenAnterior, setResumenAnterior] = useState<ResumenAsignacionDTO | null>(null);
   const [resultadoSeccion, setResultadoSeccion] = useState<{
     resumen: ResumenAsignacionDTO;
     seccion: SeccionEscaladaDTO;
@@ -299,244 +497,352 @@ const InicioCoordinacion: React.FC = () => {
   const [errorAccion, setErrorAccion] = useState<{
     mensaje: string;
     reintentar: () => void;
+    etiqueta?: string;
   } | null>(null);
+  /** El servidor respondió 409: ya hay una corrida en curso (Issue 4.56). */
+  const [otraCorrida, setOtraCorrida] = useState(false);
 
   const pendientes = alertas.datos?.filter((a) => a.estado === 'PENDIENTE').length ?? 0;
+  const delta = (campo: 'asignadas' | 'mantenidas' | 'escaladas') =>
+    resumenCorrida && resumenAnterior ? resumenCorrida[campo] - resumenAnterior[campo] : null;
   const periodo = escaladas.datos?.periodo ?? resumenCorrida?.periodo ?? '—';
-  const secciones = escaladas.datos?.secciones ?? [];
+  // Issue 2.25: las secciones sin horarios van aparte, como «datos incompletos».
+  const { enRevision: secciones, datosIncompletos } = separarDatosIncompletos(
+    escaladas.datos?.secciones ?? [],
+  );
+
+  /** Vuelve a pedir lo que la corrida pudo cambiar y libera el botón si ya no hay otra en curso. */
+  function comprobarCorrida() {
+    setOtraCorrida(false);
+    setErrorAccion(null);
+    escaladas.recargar();
+    alertas.recargar();
+  }
 
   async function correr() {
-    if (corriendo) return;
+    if (corriendo || otraCorrida) return;
     setConfirmandoCorrida(false);
     setResultadoSeccion(null);
     setCorrida(true);
     setErrorAccion(null);
-    try {
-      const resumen = await ejecutarCorrida();
-      setResumenCorrida(resumen);
-      setUltimaCorrida(new Date().toISOString());
-      // La corrida crea y resuelve alertas: hay que volver a pedirlas, no solo las escaladas.
-      escaladas.recargar();
-      alertas.recargar();
-    } catch (e) {
-      setErrorAccion({ mensaje: mensajeDeError(e), reintentar: correr });
-    } finally {
-      setCorrida(false);
+    const resultado = await accionCorrida.ejecutar(
+      async () => {
+        const resumen = await ejecutarCorrida();
+        setResumenAnterior(resumenCorrida);
+        setResumenCorrida(resumen);
+        setUltimaCorrida(new Date().toISOString());
+        // La corrida crea y resuelve alertas: hay que volver a pedirlas, no solo las escaladas.
+        escaladas.recargar();
+        alertas.recargar();
+      },
+      // El error se muestra en línea, con su «Reintentar».
+      { avisarError: false },
+    );
+    if (resultado && !resultado.ok) {
+      if (resultado.estado === 409) {
+        // Otra corrida sigue en curso: no se lanza una segunda hasta comprobarlo.
+        setOtraCorrida(true);
+        setErrorAccion({
+          mensaje: resultado.error,
+          reintentar: comprobarCorrida,
+          etiqueta: 'Comprobar de nuevo',
+        });
+      } else if (resultado.tiempoAgotado) {
+        // No se afirma que falló: pudo terminar. Se ofrece actualizar, no repetirla.
+        setErrorAccion({
+          mensaje: resultado.error,
+          reintentar: comprobarCorrida,
+          etiqueta: 'Actualizar datos',
+        });
+      } else {
+        setErrorAccion({ mensaje: resultado.error, reintentar: correr });
+      }
     }
+    setCorrida(false);
   }
 
   async function reintentar(seccion: SeccionEscaladaDTO) {
     if (reintentando) return;
     setReintentando(seccion.seccion.id);
     setErrorAccion(null);
-    try {
-      // El resultado de una sección no es la corrida del periodo: se muestra aparte.
-      const resumen = await reintentarSeccion(seccion.seccion.id);
-      setResultadoSeccion({ resumen, seccion });
-      escaladas.recargar();
-      alertas.recargar();
-    } catch (e) {
-      setErrorAccion({ mensaje: mensajeDeError(e), reintentar: () => reintentar(seccion) });
-    } finally {
-      setReintentando(null);
+    const resultado = await accionSeccion.ejecutar(
+      async () => {
+        // El resultado de una sección no es la corrida del periodo: se muestra aparte.
+        const resumen = await reintentarSeccion(seccion.seccion.id);
+        setResultadoSeccion({ resumen, seccion });
+        escaladas.recargar();
+        alertas.recargar();
+      },
+      { avisarError: false },
+    );
+    if (resultado && !resultado.ok) {
+      setErrorAccion({ mensaje: resultado.error, reintentar: () => reintentar(seccion) });
     }
+    setReintentando(null);
   }
 
-  const totalEnRevision = escaladas.datos?.total;
-
   return (
-    <LayoutAdmin
-      dashboard
-      titulo="Área administrativa"
-      subtitulo="Estado de la asignación de aulas"
-    >
+    <LayoutAdmin dashboard titulo="Inicio" subtitulo="Coordinación Académica">
       {/*
-        El tablero ocupa lo que queda del `main` (una columna flex) tras el título: con
-        `lg:h-full` sumaba el 100 % de `main` al título y la última fila quedaba recortada.
+        El tablero ocupa lo que queda del `main` (que es una columna flex) una vez descontados
+        el título y los espacios. Antes iba con `lg:h-full`, que sumaba el 100 % de `main` al
+        título y desbordaba: `main` recorta con `lg:overflow-hidden` y la última fila quedaba
+        inalcanzable, sin scroll para recuperarla.
       */}
-      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-12 lg:grid-rows-[auto_1fr]">
-        {/* Qué está pasando: la asignación del periodo y su acción principal */}
-        <section
-          aria-label="Estado de la asignación"
-          className="flex flex-col gap-3 rounded-2xl bg-gradient-to-br from-saie-primary to-saie-primary-dark p-5 text-white lg:col-span-8"
-        >
-          <div className="flex flex-wrap items-start justify-between gap-3">
+      <div
+        aria-busy={corriendo}
+        className="grid grid-cols-1 gap-4 lg:min-h-0 lg:flex-1 lg:grid-rows-[auto_auto_1fr]"
+      >
+        {/*
+          FILA 1 — las cifras que mueven una decisión (Issue 4.52). «Esperan revisión» es la
+          principal y es la única vez que aparece esa cifra en el tablero; cada métrica lleva a
+          su lista y mientras carga muestra un esqueleto.
+        */}
+        <TiraMetricas etiqueta="Resumen de la asignación" className="grid-cols-2 lg:grid-cols-5">
+          <Metrica
+            etiqueta="Esperan revisión"
+            valor={restarDatosIncompletos(
+              resumenCorrida?.escaladas ?? escaladas.datos?.total ?? null,
+              datosIncompletos.length,
+            )}
+            cargando={escaladas.cargando && !escaladas.datos && !resumenCorrida}
+            delta={delta('escaladas')}
+            tono="advertencia"
+            icono={ICONOS.alerta}
+            to="#titulo-atencion"
+            textoEnlace="Ver secciones en revisión"
+            principal
+          />
+          <Metrica
+            etiqueta="Alertas pendientes"
+            valor={pendientes}
+            cargando={alertas.cargando && !alertas.datos}
+            tono={pendientes > 0 ? 'peligro' : 'neutro'}
+            icono={ICONOS.errorCirculo}
+            to={RUTAS.alertasAdmin}
+            textoEnlace="Ver alertas"
+          />
+          <MetricaIncidencias />
+          <Metrica
+            etiqueta="Con aula nueva"
+            valor={resumenCorrida?.asignadas ?? null}
+            delta={delta('asignadas')}
+            sinDato="tras asignar"
+            tono="exito"
+            icono={ICONOS.checkCirculo}
+            to={RUTAS.auditoriaAdmin}
+            textoEnlace="Ver historial"
+          />
+          <Metrica
+            etiqueta="Conservan la suya"
+            valor={resumenCorrida?.mantenidas ?? null}
+            delta={delta('mantenidas')}
+            sinDato="tras asignar"
+            icono={ICONOS.edificio}
+            to={RUTAS.auditoriaAdmin}
+            textoEnlace="Ver historial"
+          />
+        </TiraMetricas>
+
+        {/* FILA 2 — estado de la corrida y veredicto del verificador */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          {/*
+            La tarjeta guinda se estira hasta la altura de la del verificador, que es la que
+            crece al abrir el detalle de las reglas. Por eso reparte su contenido con
+            `justify-between`: el estado arriba y la acción abajo. Antes llevaba
+            `justify-center` y el texto quedaba flotando en medio de un bloque vacío de color.
+          */}
+          <section
+            aria-label="Estado de la asignación"
+            className="flex flex-col justify-between gap-3 rounded-2xl bg-gradient-to-br from-saie-primary to-saie-primary-dark p-4 text-white lg:col-span-8"
+          >
             <div className="min-w-0">
-              <h2 className="m-0 text-sm font-medium text-white/80">
-                Asignación de aulas · Periodo {periodo}
-              </h2>
-              <p role="status" aria-live="polite" className="m-0 mt-1 text-base font-semibold">
+              <p className="m-0 text-sm text-white/80">Asignación de aulas · Periodo {periodo}</p>
+              <p role="status" aria-live="polite" className="m-0 mt-0.5 text-sm">
                 {resumenCorrida
-                  ? `${resumenCorrida.asignadas} con aula nueva · ${resumenCorrida.mantenidas} conservan la suya · ${resumenCorrida.escaladas} de ${resumenCorrida.totalSecciones} esperan revisión`
-                  : 'Las aulas se recalculan tras cada carga de datos o cuando ejecutas la asignación.'}
+                  ? `Asignación terminada: se revisaron ${plural(resumenCorrida.totalSecciones, 'sección', 'secciones')} del periodo.`
+                  : 'Asigna las aulas del periodo para ver cuántas secciones cambian o conservan su aula.'}
               </p>
               {ultimaCorrida && (
-                <p className="m-0 mt-1 text-xs text-white/75">
-                  Última asignación: {formatearFechaCorta(ultimaCorrida)}
+                <p className="m-0 mt-1 text-sm text-white/75">
+                  Última actualización: {formatearFechaCorta(ultimaCorrida)}
                 </p>
               )}
             </div>
-            {!confirmandoCorrida && (
-              <Boton
-                variante="secundario"
-                onClick={() => setConfirmandoCorrida(true)}
-                disabled={corriendo}
-                cargando={corriendo}
-                textoCargando="Asignando…"
-                className="border-white! bg-white! text-saie-primary! hover:bg-saie-canvas!"
-              >
-                Asignar aulas del periodo
-              </Boton>
-            )}
-          </div>
 
-          {confirmandoCorrida && (
-            <div className="rounded-xl bg-white p-3 text-saie-text">
-              <p className="m-0 text-sm">
-                Se volverán a asignar las aulas de las secciones del periodo {periodo}. Las
-                asignaciones que siguen siendo válidas se conservan y no se duplican aulas.
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-start gap-2">
                 <Boton
-                  variante="primario"
-                  tamano="sm"
-                  onClick={correr}
+                  variante="claro"
+                  onClick={() => setConfirmandoCorrida(true)}
+                  disabled={corriendo || otraCorrida}
+                  aria-describedby="motivo-corrida"
                   cargando={corriendo}
                   textoCargando="Asignando…"
                 >
-                  Sí, asignar aulas
-                </Boton>
-                <Boton
-                  variante="cancelar"
-                  tamano="sm"
-                  onClick={() => setConfirmandoCorrida(false)}
-                  disabled={corriendo}
-                >
-                  Cancelar
+                  Asignar aulas del periodo
                 </Boton>
               </div>
+              <p id="motivo-corrida" className="m-0 text-sm text-white/85">
+                {corriendo
+                  ? 'Esto puede tardar hasta 1 min. No cierres esta pantalla.'
+                  : otraCorrida
+                    ? 'Hay otra asignación en curso. Espera a que termine y pulsa «Comprobar de nuevo».'
+                    : ''}
+              </p>
             </div>
-          )}
+          </section>
 
-          {resumenCorrida && <ResumenVerificacion verificacion={resumenCorrida.verificacion} />}
-        </section>
-
-        {/* Qué requiere atención: dos cifras, cada una con su salida */}
-        <section
-          aria-labelledby="titulo-resumen"
-          className="flex flex-col gap-3 rounded-2xl border border-saie-divider bg-white p-5 lg:col-span-4"
-        >
-          <h2 id="titulo-resumen" className="m-0 text-sm font-bold text-saie-text">
-            Requieren tu atención
-          </h2>
-          <div className="flex items-baseline justify-between gap-2 border-b border-saie-divider pb-3">
-            <p className="m-0 text-sm text-saie-muted">
-              <strong className="font-serif text-3xl text-saie-warning-strong">
-                {totalEnRevision ?? '…'}
-              </strong>{' '}
-              <span>secciones sin aula</span>
-            </p>
-          </div>
-          <div className="flex items-baseline justify-between gap-2">
-            <p className="m-0 text-sm text-saie-muted">
-              <strong className="font-serif text-3xl text-saie-danger">{pendientes}</strong>{' '}
-              <span>alertas pendientes</span>
-            </p>
-            <Link
-              to={RUTAS.alertasAdmin}
-              className="text-sm font-semibold text-saie-primary no-underline hover:underline"
-            >
-              Ver alertas →
-            </Link>
-          </div>
-        </section>
-
-        {/* Qué hacer: las secciones a resolver, una por una */}
-        <section
-          aria-labelledby="titulo-atencion"
-          className="flex min-h-0 flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-5 lg:col-span-12"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 id="titulo-atencion" className="m-0 text-sm font-bold text-saie-text">
-              Secciones que requieren revisión
+          <section
+            aria-label={TEXTOS_ASIGNACION.tituloComprobacion}
+            className="flex flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-4"
+          >
+            <h2 className="m-0 text-base font-bold text-saie-text">
+              {TEXTOS_ASIGNACION.tituloComprobacion}
             </h2>
-            {secciones.length > 0 && (
-              <Link
-                to={RUTAS.seccionesAdmin}
-                className="text-sm font-semibold text-saie-primary no-underline hover:underline"
-              >
-                Ver todas las secciones →
-              </Link>
+            {resumenCorrida ? (
+              <>
+                <p className="m-0 text-sm text-saie-muted">
+                  {resumenCorrida.verificacion
+                    ? `${resumenCorrida.verificacion.totalRevisadas} asignaciones revisadas contra las 7 reglas de asignación.`
+                    : 'Esta asignación no dejó resultados que comprobar.'}
+                </p>
+                <span
+                  className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ${claseVerificador(resumenCorrida.verificacion)}`}
+                >
+                  {textoVerificador(resumenCorrida.verificacion)}
+                </span>
+                {/* El detalle de las siete reglas abre un drawer: el tablero no crece y no se
+                    esconde tras un scroll dentro de la tarjeta. Se muestra también sin
+                    verificación para explicar que no hubo nada que revisar. */}
+                <Boton
+                  variante="secundario"
+                  tamano="sm"
+                  onClick={() => setDetalleAbierto(true)}
+                  className="w-fit!"
+                >
+                  Ver el detalle de las reglas
+                </Boton>
+              </>
+            ) : (
+              <p className="m-0 text-sm text-saie-muted">
+                Corre la asignación para ver el veredicto: comprueba que no haya doble reservas, que
+                el aula tenga capacidad y el software necesario.
+              </p>
             )}
-          </div>
-          {escaladas.error && (
-            <AvisoError mensaje={escaladas.error} onReintentar={escaladas.recargar} />
-          )}
-          {errorAccion && (
-            <AvisoError mensaje={errorAccion.mensaje} onReintentar={errorAccion.reintentar} />
-          )}
-          {resultadoSeccion && (
-            <Aviso tono="info" role="status">
-              <p className="m-0 font-semibold">
-                Nuevo intento para {resultadoSeccion.seccion.seccion.codigoCurso} ·{' '}
-                {resultadoSeccion.seccion.seccion.codigoSeccion}
-              </p>
-              <p className="m-0 mt-0.5 text-sm">
-                {textoResultadoSeccion(resultadoSeccion.resumen)}
-              </p>
-            </Aviso>
-          )}
-          <div className="min-h-0 flex-1 lg:overflow-y-auto">
-            <ListaEscaladas
-              secciones={secciones}
-              cargando={escaladas.cargando && !escaladas.datos}
-              sinDatos={Boolean(escaladas.error) && !escaladas.datos}
-              reintentando={reintentando}
-              onReintentar={reintentar}
-            />
-          </div>
-        </section>
+          </section>
+        </div>
 
-        {/*
-          Accesos a las demás pantallas. En escritorio ya están en la barra superior, así que
-          solo se muestran en móvil, donde varias no caben en la barra inferior.
-        */}
-        <nav aria-labelledby="titulo-accesos" className="flex flex-col gap-2 md:hidden">
-          <h2 id="titulo-accesos" className="m-0 text-sm font-bold text-saie-text">
-            Ir a
-          </h2>
-          <Acceso
-            to={RUTAS.cargaAdmin}
-            titulo="Carga de datos"
-            descripcion="Cursos, horarios, matrículas y docentes."
-            trazo="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12l-4 4m4-4l4 4"
-          />
-          <Acceso
-            to={RUTAS.espaciosAdmin}
-            titulo="Espacios"
-            descripcion="Aulas y laboratorios, capacidad y estado."
-            trazo="M3 21h18M5 21V7l7-4 7 4v14M9 9h1m4 0h1M9 13h1m4 0h1M9 17h1m4 0h1"
-          />
-          <Acceso
-            to={RUTAS.seccionesAdmin}
-            titulo="Secciones"
-            descripcion="Gestión individual de cada curso del periodo."
-            trazo="M4 19.5A2.5 2.5 0 016.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"
-          />
-          <Acceso
-            to={RUTAS.auditoriaAdmin}
-            titulo="Auditoría"
-            descripcion="Historial de asignaciones y registro del motor."
-            trazo="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-          />
-          <Acceso
-            to={RUTAS.reporteSalonesAdmin}
-            titulo="Informe de salones"
-            descripcion="El cuadro de aulas, listo para presentar."
-            trazo="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
-        </nav>
+        {/* FILA 3 — lo que hay que resolver y los accesos a las demás pantallas */}
+        <div className="grid min-h-0 grid-cols-1 gap-4 lg:grid-cols-12">
+          <section
+            aria-labelledby="titulo-atencion"
+            className="flex min-h-0 flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-8"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2
+                id="titulo-atencion"
+                tabIndex={-1}
+                className="m-0 scroll-mt-24 text-base font-bold text-saie-text"
+              >
+                Secciones que requieren revisión
+              </h2>
+              {/* Issue 2.26: solo aparece en las primeras semanas del ciclo. */}
+              <ReorganizacionPrioridad
+                deshabilitado={corriendo || otraCorrida}
+                onTerminar={() => {
+                  escaladas.recargar();
+                  alertas.recargar();
+                }}
+              />
+            </div>
+            {escaladas.error && (
+              <AvisoError mensaje={escaladas.error} onReintentar={escaladas.recargar} />
+            )}
+            {errorAccion && (
+              <AvisoError
+                mensaje={errorAccion.mensaje}
+                onReintentar={errorAccion.reintentar}
+                etiquetaAccion={errorAccion.etiqueta}
+              />
+            )}
+            {resultadoSeccion && (
+              <Aviso tono="info" role="status">
+                <p className="m-0 font-semibold">
+                  Nuevo intento para {resultadoSeccion.seccion.seccion.codigoCurso} ·{' '}
+                  {resultadoSeccion.seccion.seccion.codigoSeccion}
+                </p>
+                <p className="m-0 mt-0.5 text-sm">
+                  {textoResultadoSeccion(resultadoSeccion.resumen)}
+                </p>
+              </Aviso>
+            )}
+            <div className="min-h-0 flex-1 lg:overflow-y-auto">
+              <ListaEscaladas
+                secciones={secciones}
+                cargando={escaladas.cargando && !escaladas.datos}
+                reintentando={reintentando}
+                onReintentar={reintentar}
+              />
+            </div>
+            <DatosIncompletos secciones={datosIncompletos} />
+          </section>
+
+          {/*
+            La columna derecha solo tiene los accesos: «Requieren tu atención» repetía las dos
+            cifras que ya están en la fila de métricas y obligaba a ocultar la columna tras un
+            scroll propio para que el tablero cabiera en 1280×800. La grilla de dos columnas
+            deja los cinco accesos a la vista sin scroll alguno.
+          */}
+          <section
+            aria-labelledby="titulo-accesos"
+            className="flex min-h-0 flex-col gap-2 rounded-2xl border border-saie-divider bg-white p-4 lg:col-span-4"
+          >
+            <h2 id="titulo-accesos" className="m-0 text-base font-bold text-saie-text">
+              Accesos
+            </h2>
+            <div className="grid min-h-0 gap-2 sm:grid-cols-2 lg:grid-cols-2">
+              <Atajo to={RUTAS.laboratoriosAdmin} titulo="Laboratorios" trazo={ICONOS.monitor} />
+              <Atajo
+                to={RUTAS.altaAlumnoAdmin}
+                titulo="Alta de alumnos"
+                trazo={ICONOS.graduacion}
+              />
+              <Atajo to={RUTAS.altaDocenteAdmin} titulo="Alta de docentes" trazo={ICONOS.pizarra} />
+              <Atajo to={RUTAS.clavesAdmin} titulo="Claves" trazo={ICONOS.escudo} />
+              <Atajo
+                to={RUTAS.softwareAdmin}
+                titulo="Catálogo de software"
+                trazo={ICONOS.monitor}
+              />
+            </div>
+          </section>
+        </div>
       </div>
+
+      {/*
+        El detalle de las siete reglas vive en un drawer: es información de consulta que
+        aparece a petición, no algo que deba caber en el tablero. El drawer trae consigo el
+        cierre con Escape, el foco atrapado y el bloqueo del scroll del fondo.
+      */}
+      <DialogoConfirmacion
+        abierto={confirmandoCorrida}
+        titulo="¿Asignar las aulas del periodo?"
+        descripcion={`Se volverán a asignar las aulas de las secciones del periodo ${periodo}. Las asignaciones que siguen siendo válidas se conservan y no se duplican aulas.`}
+        textoConfirmar="Sí, asignar aulas"
+        cargando={corriendo}
+        textoCargando="Asignando…"
+        onConfirmar={correr}
+        onCancelar={() => setConfirmandoCorrida(false)}
+      />
+
+      <Drawer
+        abierto={detalleAbierto}
+        onCerrar={() => setDetalleAbierto(false)}
+        titulo={TEXTOS_ASIGNACION.tituloComprobacion}
+      >
+        <VeredictoVerificacion verificacion={resumenCorrida?.verificacion ?? null} ocultarTitulo />
+      </Drawer>
     </LayoutAdmin>
   );
 };

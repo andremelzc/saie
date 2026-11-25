@@ -11,6 +11,8 @@ export interface Punto {
 export interface FiguraPlano {
   id: string;
   clase: string;
+  /** `data-nombre` del plano (p. ej. «Aula 104 - Laboratorio 08»); vacío si no lo trae. */
+  nombre: string;
   shapes: Shape[];
 }
 
@@ -55,7 +57,9 @@ export function leerPlano(svgTexto: string): PlanoGeometria {
     if (!id || !clase) continue;
 
     const shapes = SVGLoader.createShapes(trazo);
-    if (shapes.length > 0) figuras.push({ id, clase, shapes });
+    if (shapes.length > 0) {
+      figuras.push({ id, clase, nombre: nodo.getAttribute('data-nombre') ?? '', shapes });
+    }
   }
 
   return { figuras, muros, caja: { x, y, ancho, alto } };

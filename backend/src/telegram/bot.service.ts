@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { ClienteTelegram } from './cliente';
 import { LimitadorIntentos } from './limitador';
 import { desvincularChat, vincularChat } from './vinculacion.service';
+import { ActualizacionesVistas } from './actualizacionesVistas';
 import {
   consultarClaseActual,
   consultarClasesHoy,
@@ -22,6 +23,8 @@ export interface DependenciasBot {
   prisma: PrismaClient;
   cliente: ClienteTelegram;
   limitador: LimitadorIntentos;
+  /** Issue 3.64: descarta las actualizaciones que Telegram entrega repetidas. */
+  vistas?: ActualizacionesVistas;
 }
 
 export const MENSAJES = {
@@ -95,8 +98,10 @@ async function ignorandoErrores(tarea: Promise<void>): Promise<void> {
  */
 export async function procesarActualizacion(
   actualizacion: ActualizacionTelegram,
-  { prisma, cliente, limitador }: DependenciasBot,
+  { prisma, cliente, limitador, vistas }: DependenciasBot,
 ): Promise<void> {
+  if (vistas?.yaVista(actualizacion.update_id)) return;
+
   const mensaje = actualizacion.message;
   if (!mensaje?.text || mensaje.chat.type !== 'private') return;
 

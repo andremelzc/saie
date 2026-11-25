@@ -1,27 +1,41 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import AuditoriaAdmin from './AuditoriaAdmin';
 import ReporteSalones from './ReporteSalones';
 import { ProveedorAvisos } from '../../components/ui/Avisos';
 import {
   obtenerAuditoria,
+  obtenerEspacios,
   obtenerHistorial,
+  obtenerPeriodos,
   obtenerReporteAsignaciones,
+  obtenerSecciones,
 } from '../../services/admin';
+import { vaciarCacheCarga } from '../../hooks/useCarga';
+import type { EspacioAdminDTO, ListadoSeccionesDTO } from '../../types/admin';
 
 vi.mock('../../context/useAuth', () => ({
   useAuth: () => ({ sesion: { rol: 'COORDINACION_ACADEMICA' }, cerrarSesion: vi.fn() }),
 }));
 vi.mock('../../services/admin', () => ({
+  obtenerEspacios: vi.fn(),
+  obtenerSecciones: vi.fn(),
   obtenerAuditoria: vi.fn(),
   obtenerHistorial: vi.fn(),
   obtenerReporteAsignaciones: vi.fn(),
+  obtenerPeriodos: vi.fn(),
 }));
 
 const auditoria = vi.mocked(obtenerAuditoria);
 const historial = vi.mocked(obtenerHistorial);
 const reporte = vi.mocked(obtenerReporteAsignaciones);
+const espacios = vi.mocked(obtenerEspacios);
+const secciones = vi.mocked(obtenerSecciones);
+const periodos = vi.mocked(obtenerPeriodos);
+
+const UUID_AULA = '6f1c2a3b-4d5e-4f60-8a71-9b8c7d6e5f40';
+const UUID_CORRIDA = '11111111-2222-4333-8444-555555555555';
 
 const montar = (pantalla: React.ReactElement) =>
   render(
@@ -33,6 +47,20 @@ const montar = (pantalla: React.ReactElement) =>
 describe('Auditoria e historial (Issue 4.32)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    periodos.mockResolvedValue({
+      vigente: '2026-2',
+      periodos: ['2026-2', '2026-1'],
+      registrados: [],
+    });
+    vaciarCacheCarga();
+    espacios.mockResolvedValue([
+      {
+        id: UUID_AULA,
+        identificador: 'Aula 102',
+        pabellon: 'C',
+        piso: 3,
+      } as EspacioAdminDTO,
+    ]);
     historial.mockResolvedValue({
       items: [
         {
@@ -79,14 +107,42 @@ describe('Auditoria e historial (Issue 4.32)', () => {
   it('muestra el historial de asignaciones con su estado', async () => {
     montar(<AuditoriaAdmin />);
 
-    expect(await screen.findByText('IS101 · 1')).toBeInTheDocument();
-    expect(screen.getAllByText('Reemplazada').length).toBeGreaterThan(0);
-    expect(screen.getByText('Lab 03')).toBeInTheDocument();
+    expect((await screen.findAllByText('IS101 · 1')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Anterior').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Lab 03').length).toBeGreaterThan(0);
+  });
+
+  it('agrupa por corrida con un resumen legible y sin mostrar el UUID', async () => {
+    montar(<AuditoriaAdmin />);
+    await screen.findAllByText('IS101 · 1');
+
+    expect(
+      screen.getByRole('heading', { level: 3, name: /^Asignación automática del .* · 1 asignada/ }),
+    ).toBeVisible();
+    expect(screen.queryByText('c1')).not.toBeInTheDocument();
+  });
+
+  it('el historial parte del periodo vigente y deja elegir «todos» diciéndolo (Issue 4.43)', async () => {
+    montar(<AuditoriaAdmin />);
+    await screen.findAllByText('IS101 · 1');
+
+    const lista = screen.getByLabelText('Periodo') as HTMLSelectElement;
+    expect(lista.value).toBe('2026-2');
+    expect(historial).toHaveBeenCalledWith(expect.objectContaining({ periodo: '2026-2' }));
+
+    fireEvent.change(lista, { target: { value: '__todos__' } });
+    await waitFor(() =>
+      expect(historial).toHaveBeenLastCalledWith(expect.objectContaining({ periodo: undefined })),
+    );
+    expect(screen.getByText('Se muestran los registros de todos los periodos.')).toBeVisible();
+    expect(screen.getByRole('group', { name: 'Filtros activos' })).toHaveTextContent(
+      'Todos los periodos',
+    );
   });
 
   it('filtra el historial por periodo y estado', async () => {
     montar(<AuditoriaAdmin />);
-    await screen.findByText('IS101 · 1');
+    await screen.findAllByText('IS101 · 1');
 
     fireEvent.change(screen.getByLabelText('Periodo'), { target: { value: '2026-1' } });
     await waitFor(() =>
@@ -101,6 +157,53 @@ describe('Auditoria e historial (Issue 4.32)', () => {
     );
   });
 
+  it('pagina el historial de a 50 con el total real y vuelve a la página 1 al filtrar (Issue 4.39)', async () => {
+    historial.mockResolvedValue({
+      items: [],
+      total: 120,
+      pagina: 1,
+      limite: 50,
+    });
+    montar(<AuditoriaAdmin />);
+    await waitFor(() =>
+      expect(historial).toHaveBeenCalledWith(expect.objectContaining({ pagina: 1, limite: 50 })),
+    );
+    expect(await screen.findByText(/120/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Página siguiente' }));
+    await waitFor(() =>
+      expect(historial).toHaveBeenCalledWith(expect.objectContaining({ pagina: 2, limite: 50 })),
+    );
+
+    fireEvent.change(screen.getByLabelText('Estado'), { target: { value: 'ESCALADA' } });
+    await waitFor(() =>
+      expect(historial).toHaveBeenLastCalledWith(
+        expect.objectContaining({ pagina: 1, estado: 'ESCALADA' }),
+      ),
+    );
+  });
+
+  it('pagina el registro de actividad y reinicia la página al cambiar el filtro (Issue 4.39)', async () => {
+    auditoria.mockResolvedValue({ items: [], total: 75, pagina: 1, limite: 50 });
+    montar(<AuditoriaAdmin />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Registro de actividad' }));
+    await waitFor(() =>
+      expect(auditoria).toHaveBeenCalledWith(expect.objectContaining({ pagina: 1, limite: 50 })),
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Página siguiente' }));
+    await waitFor(() =>
+      expect(auditoria).toHaveBeenCalledWith(expect.objectContaining({ pagina: 2, limite: 50 })),
+    );
+
+    fireEvent.change(screen.getByLabelText('Tipo de evento'), { target: { value: 'ALERTA' } });
+    await waitFor(() =>
+      expect(auditoria).toHaveBeenLastCalledWith(
+        expect.objectContaining({ pagina: 1, tipo: 'ALERTA' }),
+      ),
+    );
+  });
+
   it('muestra el estado vacio cuando no hay historial', async () => {
     historial.mockResolvedValue({ items: [], total: 0, pagina: 1, limite: 200 });
     montar(<AuditoriaAdmin />);
@@ -110,11 +213,11 @@ describe('Auditoria e historial (Issue 4.32)', () => {
 
   it('cambia a la vista de auditoría y filtra por tipo de evento', async () => {
     montar(<AuditoriaAdmin />);
-    await screen.findByText('IS101 · 1');
+    await screen.findAllByText('IS101 · 1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Auditoría' }));
-    expect(await screen.findByText('Asignación automática exitosa')).toBeInTheDocument();
-    expect(screen.getByText('IS101 · 1')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Registro de actividad' }));
+    expect((await screen.findAllByText('Asignación automática exitosa')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('IS101 · 1').length).toBeGreaterThan(0);
 
     fireEvent.change(screen.getByLabelText('Tipo de evento'), {
       target: { value: 'ALERTA' },
@@ -128,15 +231,182 @@ describe('Auditoria e historial (Issue 4.32)', () => {
     auditoria.mockResolvedValue({ items: [], total: 0, pagina: 1, limite: 200 });
     montar(<AuditoriaAdmin />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Auditoría' }));
-    expect(await screen.findByText(/Sin asientos de auditoría/)).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('tab', { name: 'Registro de actividad' }));
+    expect(await screen.findByText(/Sin actividad registrada/)).toBeInTheDocument();
+  });
+
+  it('muestra cada registro como una frase con el aula y su ubicación, sin UUID (Issue 4.49)', async () => {
+    auditoria.mockResolvedValue({
+      items: [
+        {
+          id: 'au2',
+          tipoEvento: 'ASIGNACION',
+          detalle: `[Origen: MANUAL] Corrida Batch [${UUID_CORRIDA}] - Asignada a: [${UUID_AULA}]`,
+          fechaHora: '2026-10-12T15:32:00Z',
+          asignacionId: 'a1',
+          alertaId: null,
+          seccion: { id: 's1', codigoCurso: 'CC-101', codigoSeccion: '1', nombreCurso: 'Intro' },
+        },
+      ],
+      total: 1,
+      pagina: 1,
+      limite: 200,
+    });
+    montar(<AuditoriaAdmin />);
+    fireEvent.click(await screen.findByRole('tab', { name: 'Registro de actividad' }));
+
+    const frases = await screen.findAllByText('CC-101 · 1 pasó a Aula 102 (Pabellón C, piso 3)');
+    expect(frases.length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^Asignación automática del /).length).toBeGreaterThan(0);
+    // El UUID solo existe dentro del bloque plegable «Detalle técnico».
+    for (const nodo of screen.queryAllByText(new RegExp(UUID_AULA))) {
+      expect(nodo.closest('details')).not.toBeNull();
+    }
+    expect(screen.getAllByText('Detalle técnico').length).toBeGreaterThan(0);
+  });
+
+  it('busca una sección y muestra solo sus registros (Issue 4.46)', async () => {
+    secciones.mockResolvedValue({
+      items: [
+        {
+          id: 's1',
+          codigoCurso: 'IS101',
+          nombreCurso: 'Algoritmos',
+          codigoSeccion: '1',
+          periodo: '2026-2',
+        },
+      ],
+      total: 1,
+      pagina: 1,
+      limite: 8,
+    } as unknown as ListadoSeccionesDTO);
+    montar(<AuditoriaAdmin />);
+    await screen.findAllByText('IS101 · 1');
+
+    fireEvent.change(screen.getByLabelText('Sección o curso'), { target: { value: 'IS1' } });
+    await waitFor(() =>
+      expect(secciones).toHaveBeenCalledWith(expect.objectContaining({ q: 'IS1' })),
+    );
+    fireEvent.click(
+      within(await screen.findByRole('list', { name: 'Secciones encontradas' })).getByRole(
+        'button',
+        { name: /IS101 · 1/ },
+      ),
+    );
+
+    await waitFor(() =>
+      expect(historial).toHaveBeenCalledWith(expect.objectContaining({ seccionId: 's1' })),
+    );
+    expect(screen.getByRole('button', { name: /Quitar filtro Sección/ })).toBeInTheDocument();
+  });
+
+  it('filtra por rango de fechas y avisa si el rango está al revés (Issue 4.46)', async () => {
+    montar(<AuditoriaAdmin />);
+    await screen.findAllByText('IS101 · 1');
+
+    fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '2026-10-05' } });
+    // La asignación es del 1 de octubre: queda fuera del rango.
+    expect(await screen.findByText('Sin coincidencias')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Registro de actividad' }));
+    await waitFor(() =>
+      expect(auditoria).toHaveBeenCalledWith(
+        expect.objectContaining({ desde: new Date('2026-10-05T00:00:00').toISOString() }),
+      ),
+    );
+
+    fireEvent.change(screen.getByLabelText('Hasta'), { target: { value: '2026-10-01' } });
+    expect(await screen.findByText(/posterior a «Hasta»/)).toBeInTheDocument();
+  });
+
+  it('avisa que el filtro de fechas solo alcanza a la página visible cuando hay más páginas', async () => {
+    const unaPagina = await historial();
+    historial.mockResolvedValue({ ...unaPagina, total: 120, limite: 50 });
+    montar(<AuditoriaAdmin />);
+    await screen.findAllByText('IS101 · 1');
+    expect(screen.queryByText(/El filtro de fechas se aplica solo/)).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '2026-09-01' } });
+    expect(
+      await screen.findByText(/El filtro de fechas se aplica solo a las 1 asignaciones/),
+    ).toBeVisible();
+  });
+
+  it('abre la línea de tiempo de la sección al pulsar una fila (Issue 4.46)', async () => {
+    historial.mockImplementation(async (filtros) =>
+      filtros?.seccionId
+        ? {
+            items: [
+              {
+                id: 'a3',
+                seccionId: 's1',
+                codigoCurso: 'IS101',
+                nombreCurso: 'Algoritmos',
+                codigoSeccion: '1',
+                periodo: '2026-2',
+                estado: 'VIGENTE',
+                fechaAsignacion: '2026-10-03T10:00:00Z',
+                corridaId: 'c2',
+                motivoEscalamiento: null,
+                espacios: [{ id: 'e2', identificador: 'Lab 05', pabellon: 'A', piso: 3 }],
+              },
+              {
+                id: 'a1',
+                seccionId: 's1',
+                codigoCurso: 'IS101',
+                nombreCurso: 'Algoritmos',
+                codigoSeccion: '1',
+                periodo: '2026-2',
+                estado: 'HISTORICA',
+                fechaAsignacion: '2026-10-01T10:00:00Z',
+                corridaId: 'c1',
+                motivoEscalamiento: null,
+                espacios: [{ id: 'e1', identificador: 'Lab 03', pabellon: 'A', piso: 2 }],
+              },
+            ],
+            total: 2,
+            pagina: 1,
+            limite: 200,
+          }
+        : {
+            items: [
+              {
+                id: 'a1',
+                seccionId: 's1',
+                codigoCurso: 'IS101',
+                nombreCurso: 'Algoritmos',
+                codigoSeccion: '1',
+                periodo: '2026-2',
+                estado: 'HISTORICA',
+                fechaAsignacion: '2026-10-01T10:00:00Z',
+                corridaId: 'c1',
+                motivoEscalamiento: null,
+                espacios: [{ id: 'e1', identificador: 'Lab 03', pabellon: 'A', piso: 2 }],
+              },
+            ],
+            total: 1,
+            pagina: 1,
+            limite: 200,
+          },
+    );
+    montar(<AuditoriaAdmin />);
+    await screen.findAllByText('IS101 · 1');
+
+    fireEvent.click(
+      screen.getAllByRole('button', { name: /IS101 · 1: ver su línea de tiempo/ })[0],
+    );
+    const linea = await screen.findByRole('list', { name: 'Línea de tiempo de la sección' });
+    const pasos = within(linea).getAllByRole('listitem');
+    expect(pasos[0]).toHaveTextContent('Asignada a Lab 03');
+    expect(pasos[1]).toHaveTextContent('Reasignada a Lab 05');
+    expect(pasos[1]).toHaveTextContent(/actual/);
   });
 
   it('avisa si la auditoría no se puede cargar', async () => {
     auditoria.mockRejectedValue(new Error('sin red'));
     montar(<AuditoriaAdmin />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Auditoría' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Registro de actividad' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
   });
 });
@@ -144,6 +414,12 @@ describe('Auditoria e historial (Issue 4.32)', () => {
 describe('Informe de salones (Issue 4.33)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    periodos.mockResolvedValue({
+      vigente: '2026-2',
+      periodos: ['2026-2', '2026-1'],
+      registrados: [],
+    });
+    vaciarCacheCarga();
     reporte.mockResolvedValue({
       periodo: '2026-2',
       generadoEn: '2026-10-20T10:00:00Z',
@@ -187,10 +463,24 @@ describe('Informe de salones (Issue 4.33)', () => {
     montar(<ReporteSalones />);
 
     expect(await screen.findByText('Cuadro de asignación de aulas')).toBeInTheDocument();
-    expect(screen.getByText('Algoritmos')).toBeInTheDocument();
-    expect(screen.getByText('Lab 03')).toBeInTheDocument();
-    expect(screen.getByText('A · piso 2')).toBeInTheDocument();
-    expect(screen.getByText('Docker 24.0')).toBeInTheDocument();
+    // El cuadro se dibuja como tabla (desde `lg` y al imprimir) y como tarjetas (móvil); en jsdom
+    // no hay CSS, así que se consulta la tabla.
+    const tabla = within(screen.getByRole('region', { name: 'Cuadro de asignación de aulas' }));
+    expect(tabla.getByText('Algoritmos')).toBeInTheDocument();
+    expect(tabla.getByText('Lab 03')).toBeInTheDocument();
+    expect(tabla.getByText('A · piso 2')).toBeInTheDocument();
+    expect(tabla.getByText('Docker 24.0')).toBeInTheDocument();
+  });
+
+  it('ofrece tarjetas del cuadro para pantallas estrechas (Issue 3.54)', async () => {
+    montar(<ReporteSalones />);
+    await screen.findByText('Cuadro de asignación de aulas');
+
+    const tarjetas = screen
+      .getAllByRole('listitem')
+      .filter((li) => li.textContent?.includes('Algoritmos'));
+    expect(tarjetas.length).toBeGreaterThan(0);
+    expect(tarjetas[0]).toHaveTextContent('Lab 03');
   });
 
   it('avisa de las secciones que todavía no tienen aula', async () => {
@@ -223,10 +513,39 @@ describe('Informe de salones (Issue 4.33)', () => {
 
     montar(<ReporteSalones />);
     await screen.findByText('Cuadro de asignación de aulas');
-    fireEvent.click(screen.getByRole('button', { name: 'Descargar PDF' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Imprimir o guardar como PDF' }));
 
     expect(imprimir).toHaveBeenCalled();
     vi.unstubAllGlobals();
+  });
+
+  it('muestra el estado vacío con su acción si el periodo no tiene secciones (Issue 4.57)', async () => {
+    reporte.mockResolvedValue({
+      periodo: '2026-2',
+      generadoEn: '2026-10-20T10:00:00Z',
+      secciones: [],
+      totales: { secciones: 0, asignadas: 0, sinAula: 0, aulasDistintas: 0, alumnos: 0 },
+    });
+    montar(<ReporteSalones />);
+
+    expect(await screen.findByText('No hay secciones en este periodo')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ir a Carga de datos' })).toHaveAttribute(
+      'href',
+      '/admin/carga',
+    );
+    expect(screen.queryByRole('table')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Imprimir o guardar como PDF' })).toBeDisabled();
+  });
+
+  it('trata el 404 «sin periodo» como estado vacío, no como error (Issue 4.57)', async () => {
+    reporte.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 404, data: { success: false, message: 'No hay periodo' } },
+    });
+    montar(<ReporteSalones />);
+
+    expect(await screen.findByText('No hay secciones en este periodo')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('avisa si el informe no se puede cargar', async () => {

@@ -1,10 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
+import LayoutEstudiante from '../components/estudiante/LayoutEstudiante';
 import { RUTAS } from '../config/rutas';
-
-const TRAZO_AYUDA =
-  'M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z';
 
 interface Pregunta {
   pregunta: string;
@@ -83,7 +80,7 @@ const GRUPOS: GrupoPreguntas[] = [
         pregunta: '¿Puedo agrandar el texto o quitar las animaciones?',
         respuesta: (
           <>
-            Sí, desde <Link to="/estudiante/configuracion">Configuración</Link>. Los cambios se
+            Sí, desde <Link to={RUTAS.configuracionAlumno}>Configuración</Link>. Los cambios se
             guardan en este dispositivo.
           </>
         ),
@@ -102,29 +99,23 @@ const GRUPOS: GrupoPreguntas[] = [
  * solo lectura y no necesita datos del backend. Es alcanzable desde el inicio del alumno.
  */
 export const AyudaAlumno: React.FC = () => (
-  <div className="min-h-screen bg-saie-canvas text-saie-text">
-    <CabeceraPantalla
-      titulo="Ayuda"
-      subtitulo="Respuestas a las dudas más comunes."
-      trazoIcono={TRAZO_AYUDA}
-      ancho="max-w-4xl"
-    />
-
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-6">
+  <LayoutEstudiante titulo="Ayuda" subtitulo="Respuestas a las dudas más comunes.">
+    {/* Los temas entran de uno en uno y cada respuesta se despliega con un fundido corto. */}
+    <div className="saie-stagger flex flex-col gap-6">
       {GRUPOS.map((grupo) => (
         <section
           key={grupo.id}
           aria-labelledby={`ayuda-${grupo.id}`}
           className="flex flex-col gap-3"
         >
-          <h2 id={`ayuda-${grupo.id}`} className="m-0 text-xl font-bold">
+          <h2 id={`ayuda-${grupo.id}`} className="m-0 font-serif text-xl font-bold">
             {grupo.titulo}
           </h2>
           <div className="flex flex-col gap-3">
             {grupo.preguntas.map((p) => (
               <details
                 key={p.pregunta}
-                className="group rounded-2xl border border-saie-divider bg-white shadow-[0_2px_8px_rgba(34,34,34,0.06)]"
+                className="saie-acordeon group rounded-2xl border border-saie-divider bg-white"
               >
                 <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 py-3 text-base font-medium marker:content-none focus-visible:outline-3 focus-visible:outline-saie-text [&::-webkit-details-marker]:hidden">
                   <span>{p.pregunta}</span>
@@ -143,13 +134,12 @@ export const AyudaAlumno: React.FC = () => (
           </div>
         </section>
       ))}
+    </div>
 
-      <p className="m-0 rounded-2xl border border-saie-divider bg-white p-5 text-sm text-saie-muted">
-        ¿No encontraste lo que buscabas? Acércate a la oficina académica de la Facultad de
-        Ingeniería.
-      </p>
-    </main>
-  </div>
+    <p className="m-0 rounded-2xl border border-saie-divider bg-white p-5 text-sm text-saie-muted">
+      ¿No encontraste lo que buscabas? Acércate a la oficina académica de la Facultad de Ingeniería.
+    </p>
+  </LayoutEstudiante>
 );
 
 export default AyudaAlumno;

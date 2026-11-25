@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { PrismaClient } from '@prisma/client';
 import { HttpError } from '../lib/http';
 import {
@@ -10,19 +11,30 @@ import {
   AsignacionEncadenadaDTO,
   ResultadoImportacionDTO,
   TipoImportacion,
+  ProgresoImportacion,
 } from '../types/importacion';
 import { ejecutarAsignacionADemanda } from './asignacionDemanda.service';
+import { registrarImportacion } from './importacionRegistro.service';
+import { validarImportacion } from './validacionImportacion.service';
 import { obtenerPeriodoVigente } from './periodo.service';
 
 interface ResultadoImportador {
   procesados: Record<string, number>;
   errores: string[];
+  clavesIniciales?: {
+    codigo: string;
+    nombre: string;
+    correo: string;
+    rol: string;
+    claveInicial: string;
+  }[];
 }
 
 async function correrImportador(
   tipo: TipoImportacion,
   filas: unknown[],
   prisma: PrismaClient,
+  onProgreso?: ProgresoImportacion,
 ): Promise<ResultadoImportador> {
   switch (tipo) {
     case 'cursos-secciones': {
@@ -30,16 +42,20 @@ async function correrImportador(
       return { procesados, errores };
     }
     case 'horarios': {
-      const { errores, ...procesados } = await importarHorarios(filas, prisma);
+      const { errores, ...procesados } = await importarHorarios(filas, prisma, onProgreso);
       return { procesados, errores };
     }
     case 'matriculas': {
-      const { errores, ...procesados } = await importarMatriculas(filas, prisma);
-      return { procesados, errores };
+      const { errores, clavesIniciales, ...procesados } = await importarMatriculas(
+        filas,
+        prisma,
+        onProgreso,
+      );
+      return { procesados, errores, clavesIniciales };
     }
     case 'docentes': {
-      const { errores, ...procesados } = await importarDocentes(filas, prisma);
-      return { procesados, errores };
+      const { errores, clavesIniciales, ...procesados } = await importarDocentes(filas, prisma);
+      return { procesados, errores, clavesIniciales };
     }
   }
 }
@@ -87,7 +103,10 @@ export async function dispararAsignacionSiPeriodoCompleto(
     if (error instanceof HttpError) {
       return { disparada: false, motivo: error.message, resumen: null };
     }
-    console.error('Error al encadenar la asignación:', error instanceof Error ? error.name : '');
+    logger.error(
+      { tipo: error instanceof Error ? error.name : '' },
+      'Error al encadenar la asignación',
+    );
     return {
       disparada: false,
       motivo: 'La asignación falló; puedes reintentarla desde POST /api/v1/asignaciones/batch',
@@ -99,17 +118,53 @@ export async function dispararAsignacionSiPeriodoCompleto(
 /**
  * Issue 1.6: ejecuta un flujo de importación y, si terminó sin filas rechazadas, encadena la
  * corrida de asignación (salvo docentes, que no afectan la asignación).
+ *
+ * Issue 4.54: el resultado queda registrado con la cuenta que cargó el archivo (`cuentaId`). Si el
+ * registro falla no se oculta el resultado de la importación, que ya quedó guardada: solo se avisa
+ * en el log.
  */
 export async function ejecutarImportacion(
   tipo: TipoImportacion,
   filas: unknown[],
   prisma: PrismaClient,
+  cuentaId: string | null = null,
+  onProgreso?: ProgresoImportacion,
 ): Promise<ResultadoImportacionDTO> {
-  const { procesados, errores } = await correrImportador(tipo, filas, prisma);
+  // Issue 1.16 (riesgo R34 de la auditoría): todo o nada. Se valida el archivo completo antes de
+  // escribir; si hay al menos un error, no se guarda ninguna fila.
+  const validacion = await validarImportacion(tipo, filas, prisma);
+  const { procesados, errores, clavesIniciales }: ResultadoImportador =
+    validacion.errores.length > 0
+      ? { procesados: {}, errores: validacion.errores }
+      : await correrImportador(tipo, filas, prisma, onProgreso);
   const exitosa = errores.length === 0;
+  // La validación previa no cubre los fallos al escribir (por ejemplo, un correo ya usado por otro
+  // alumno): si el importador falla a medias, las filas anteriores sí quedaron guardadas y se avisa.
+  const parcial =
+    !exitosa && validacion.errores.length === 0 && Object.values(procesados).some((n) => n > 0);
+
+  try {
+    await registrarImportacion(prisma, { tipo, cuentaId, filasRecibidas: filas.length, errores });
+  } catch (error: unknown) {
+    logger.error(
+      { tipo, causa: error instanceof Error ? error.name : 'desconocido' },
+      'No se pudo registrar la importación',
+    );
+  }
 
   const asignacion =
     exitosa && tipo !== 'docentes' ? await dispararAsignacionSiPeriodoCompleto(prisma) : null;
 
-  return { tipo, filasRecibidas: filas.length, procesados, errores, exitosa, asignacion };
+  return {
+    tipo,
+    filasRecibidas: filas.length,
+    procesados,
+    errores,
+    exitosa,
+    guardadas: exitosa,
+    ...(parcial ? { parcial: true } : {}),
+    ...(validacion.advertencias.length > 0 ? { advertencias: validacion.advertencias } : {}),
+    asignacion,
+    ...(clavesIniciales && clavesIniciales.length > 0 ? { clavesIniciales } : {}),
+  };
 }

@@ -1,3 +1,4 @@
+import { CuentaConNombreDTO } from '../lib/nombresCuenta';
 import { ResumenAsignacionDTO } from './asignacionDemanda';
 
 /** Flujos de carga independientes de datos maestros (Issues 1.3, 1.4, 1.5 y 1.8). */
@@ -18,6 +19,9 @@ export interface AsignacionEncadenadaDTO {
   resumen: ResumenAsignacionDTO | null;
 }
 
+/** Avance de una importación: filas leídas hasta ahora y total (Issue 1.19). */
+export type ProgresoImportacion = (procesadas: number, total: number) => void;
+
 export interface ResultadoImportacionDTO {
   tipo: TipoImportacion;
   filasRecibidas: number;
@@ -27,6 +31,56 @@ export interface ResultadoImportacionDTO {
   errores: string[];
   /** `true` si ninguna fila fue rechazada. */
   exitosa: boolean;
+  /**
+   * Issue 1.16: la importación es «todo o nada». `true` si se guardaron las filas; `false` si el
+   * archivo tenía al menos un error y no se guardó ninguna.
+   */
+  guardadas: boolean;
+  /** `true` si falló al escribir y las filas anteriores al error sí quedaron guardadas. */
+  parcial?: boolean;
+  /** Avisos que no impiden guardar, como un docente o alumno con dos clases a la vez (R36). */
+  advertencias?: string[];
   /** `null` si la importación no encadena asignación (docentes) o tuvo filas rechazadas. */
   asignacion: AsignacionEncadenadaDTO | null;
+  /** Claves iniciales generadas para cuentas nuevas creadas en esta importación (se muestra una sola vez). */
+  clavesIniciales?: {
+    codigo: string;
+    nombre: string;
+    correo: string;
+    rol: string;
+    claveInicial: string;
+  }[];
 }
+
+/**
+ * Issue 1.17 (R35): lo que la importación cambiaría, calculado sin escribir nada. Coordinación lo
+ * revisa antes de confirmar. Cada contador es lo que el importador hará con el mismo archivo.
+ */
+export interface VistaPreviaImportacionDTO {
+  tipo: TipoImportacion;
+  filasRecibidas: number;
+  /** Si hay errores, la importación no guardaría nada (Issue 1.16): no hay nada que confirmar. */
+  errores: string[];
+  advertencias: string[];
+  /** Por ejemplo `{ matriculasNuevas: 12, matriculasRetiradas: 3 }`. */
+  cambios: Record<string, number>;
+  /** Los mismos cambios en frases («Se quitarán 3 matrículas (retiros)»), en orden de lectura. */
+  frases: string[];
+  /** Detalle de lo que se quita o se reemplaza, para que Coordinación lo pueda revisar. */
+  retiros: string[];
+}
+
+/** Última importación de un tipo de archivo (Issue 4.54). */
+export interface UltimaImportacionDTO {
+  tipo: TipoImportacion;
+  fecha: string;
+  /** Persona que la cargó; `null` si la cuenta ya no existe. */
+  cuenta: CuentaConNombreDTO | null;
+  filasRecibidas: number;
+  filasAceptadas: number;
+  filasRechazadas: number;
+  resultado: 'EXITOSA' | 'CON_ERRORES';
+}
+
+/** La última importación de cada tipo; `null` si ese tipo nunca se cargó. */
+export type UltimasImportacionesDTO = Record<TipoImportacion, UltimaImportacionDTO | null>;

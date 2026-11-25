@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import { Manejador, MapaEventos, NombreEvento } from './tipos';
 
 type ManejadorGenerico = (contenido: never) => void | Promise<void>;
@@ -35,7 +36,7 @@ export class BusEventos {
           await (manejador as Manejador<K>)(contenido);
         } catch (error: unknown) {
           const tipo = error instanceof Error ? error.name : 'desconocido';
-          console.error(`[eventos] El manejador de '${evento}' falló: ${tipo}`);
+          logger.error({ evento, tipo }, 'El manejador de un evento falló');
         }
       }),
     );

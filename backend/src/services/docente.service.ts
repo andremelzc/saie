@@ -9,6 +9,7 @@ import {
   TipoIncidencia,
 } from '@prisma/client';
 import { z } from 'zod';
+import { bus } from '../events/bus';
 import { HttpError } from '../lib/http';
 import {
   agruparPorDia,
@@ -27,8 +28,11 @@ import {
   HorarioSlot,
 } from './disponibilidad.service';
 import { obtenerPeriodoVigente } from './periodo.service';
+import { IncidenciaDocenteDTO } from '../types/incidencias';
 import {
   AsignacionActivaDocenteDTO,
+  CambioAulaDocenteDTO,
+  EspacioCambioAulaDTO,
   EstadoLaboratorioDocenteDTO,
   EspacioExploradorDTO,
   ExploradorEspaciosDTO,
@@ -47,9 +51,92 @@ export async function obtenerDocenteDeCuenta(
   return docente;
 }
 
+/** Días durante los que el portal muestra un cambio de aula (Issue 7.18). */
+export const DIAS_AVISO_CAMBIO_AULA = 7;
+const MS_DIA = 24 * 60 * 60 * 1000;
+
+interface SeccionParaAviso {
+  id: string;
+  codigoSeccion: string;
+  tipoEspacioRequerido: TipoEspacio;
+  curso: { codigo: string; nombre: string };
+}
+
+function mismosEspacios(a: EspacioCambioAulaDTO[], b: EspacioCambioAulaDTO[]): boolean {
+  const clave = (l: EspacioCambioAulaDTO[]) =>
+    l
+      .map((e) => e.identificador)
+      .sort((x, y) => x.localeCompare(y))
+      .join('|');
+  return clave(a) === clave(b);
+}
+
+/**
+ * Issue 7.18 (riesgo R24): el aviso de cambio de aula por Telegram solo llega a los alumnos; el
+ * docente podía llegar al aula anterior. Aquí se detectan los cambios recientes de sus secciones
+ * para mostrarlos en su portal.
+ *
+ * Hay cambio cuando la asignación más reciente de la sección es de los últimos
+ * `DIAS_AVISO_CAMBIO_AULA` días y sus espacios difieren de los de la última asignación anterior
+ * que tuvo aula. La primera asignación de una sección no es un cambio: no había aula antes.
+ */
+export async function cambiosDeAulaDocente(
+  secciones: SeccionParaAviso[],
+  prisma: Pick<PrismaClient, 'asignacion'>,
+  ahora: Date = new Date(),
+): Promise<CambioAulaDocenteDTO[]> {
+  if (secciones.length === 0) return [];
+
+  const asignaciones = await prisma.asignacion.findMany({
+    where: { seccionId: { in: secciones.map((s) => s.id) } },
+    orderBy: { fechaAsignacion: 'desc' },
+    select: {
+      id: true,
+      seccionId: true,
+      fechaAsignacion: true,
+      espacios: {
+        select: {
+          espacio: { select: { identificador: true, tipo: true, pabellon: true, piso: true } },
+        },
+      },
+    },
+  });
+
+  const desde = ahora.getTime() - DIAS_AVISO_CAMBIO_AULA * MS_DIA;
+  const cambios: CambioAulaDocenteDTO[] = [];
+
+  for (const seccion of secciones) {
+    const historial = asignaciones.filter((a) => a.seccionId === seccion.id);
+    const [ultima, ...anteriores] = historial;
+    if (!ultima || ultima.fechaAsignacion.getTime() < desde) continue;
+
+    const previa = anteriores.find((a) => a.espacios.length > 0);
+    if (!previa) continue;
+
+    const espaciosNuevos = ultima.espacios.map((e) => e.espacio);
+    const espaciosAnteriores = previa.espacios.map((e) => e.espacio);
+    if (mismosEspacios(espaciosNuevos, espaciosAnteriores)) continue;
+
+    cambios.push({
+      id: ultima.id,
+      seccionId: seccion.id,
+      codigoCurso: seccion.curso.codigo,
+      nombreCurso: seccion.curso.nombre,
+      codigoSeccion: seccion.codigoSeccion,
+      tipoEspacioRequerido: seccion.tipoEspacioRequerido,
+      fecha: ultima.fechaAsignacion.toISOString(),
+      espaciosAnteriores,
+      espaciosNuevos,
+    });
+  }
+
+  return cambios.sort((a, b) => b.fecha.localeCompare(a.fecha));
+}
+
 /**
  * Issue 7.2: horario del docente autenticado (por día o semana completa) y la lista de sus
- * asignaciones activas del periodo vigente, con número de alumnos matriculados.
+ * asignaciones activas del periodo vigente, con número de alumnos matriculados. Issue 7.18:
+ * también los cambios de aula recientes de sus secciones.
  */
 export async function obtenerHorarioDocente(
   cuentaId: string,
@@ -61,7 +148,8 @@ export async function obtenerHorarioDocente(
 
   const secciones = periodo
     ? await prisma.seccion.findMany({
-        where: { docenteId: docente.id, periodo },
+        // Una sección retirada (Issues 1.17 y 7.17) ya no tiene clases.
+        where: { docenteId: docente.id, periodo, activa: true },
         include: {
           ...INCLUIR_SECCION_CON_ASIGNACION,
           _count: { select: { matriculas: true } },
@@ -96,6 +184,7 @@ export async function obtenerHorarioDocente(
     vista: dia ? 'dia' : 'semana',
     dias: agruparPorDia(construirSesiones(secciones), dia),
     asignacionesActivas,
+    cambiosDeAula: await cambiosDeAulaDocente(secciones, prisma),
   };
 }
 
@@ -142,6 +231,7 @@ export async function explorarEspacios(
       ...(filtros.piso !== undefined && { piso: filtros.piso }),
     },
     orderBy: [{ pabellon: 'asc' }, { piso: 'asc' }, { identificador: 'asc' }],
+    take: 200,
   });
 
   const vigentes = await prisma.asignacion.findMany({
@@ -210,6 +300,8 @@ export const CrearIncidenciaSchema = z
 export type CrearIncidenciaInput = z.infer<typeof CrearIncidenciaSchema>;
 
 export interface IncidenciaRegistradaDTO {
+  /** Issue 7.19: con él se adjunta la foto (`POST /docente/incidencias/:id/imagen`). */
+  id: string;
   identificadorSeguimiento: string;
   estado: 'PENDIENTE';
   fechaReporte: Date;
@@ -269,7 +361,14 @@ export async function registrarIncidencia(
         },
       });
 
+      // Issue 4.60: Jefatura recibe un aviso inmediato de las incidencias de prioridad alta.
+      void bus.emitir('incidencia.registrada', {
+        incidenciaId: incidencia.id,
+        prioridad: incidencia.prioridad,
+      });
+
       return {
+        id: incidencia.id,
         identificadorSeguimiento: incidencia.identificadorSeguimiento,
         estado: 'PENDIENTE',
         fechaReporte: incidencia.fechaReporte,
@@ -282,6 +381,60 @@ export async function registrarIncidencia(
 
   // Inalcanzable: el bucle devuelve o lanza.
   throw new HttpError(500, 'No se pudo generar el identificador de seguimiento');
+}
+
+// ---------------------------------------------------------------------------
+// Issue 7.14 — Consultar mis incidencias
+// ---------------------------------------------------------------------------
+
+const INCLUIR_INCIDENCIA_DOCENTE = {
+  espacio: true,
+  // Issue 7.19: solo si hay foto; los bytes se piden aparte.
+  imagen: { select: { id: true } },
+  asignacion: { include: { seccion: { include: { curso: true } } } },
+} satisfies Prisma.IncidenciaInclude;
+
+/**
+ * Issue 7.14: incidencias reportadas por el docente autenticado, de la más reciente a la más
+ * antigua. El filtro por `docenteId` sale de la cuenta del token: nunca ve las de otra persona.
+ */
+export async function listarMisIncidencias(
+  cuentaId: string,
+  prisma: Pick<PrismaClient, 'docente' | 'incidencia'>,
+): Promise<IncidenciaDocenteDTO[]> {
+  const docente = await obtenerDocenteDeCuenta(cuentaId, prisma);
+
+  const incidencias = await prisma.incidencia.findMany({
+    where: { docenteId: docente.id },
+    include: INCLUIR_INCIDENCIA_DOCENTE,
+    orderBy: { fechaReporte: 'desc' },
+  });
+
+  return incidencias.map((i) => ({
+    id: i.id,
+    identificadorSeguimiento: i.identificadorSeguimiento,
+    tipo: i.tipo,
+    prioridad: i.prioridad,
+    estado: i.estado,
+    descripcion: i.descripcion,
+    evidencia: i.evidencia,
+    tieneImagen: Boolean(i.imagen),
+    fechaReporte: i.fechaReporte,
+    comentarioCierre: i.comentarioCierre,
+    fechaCierre: i.fechaCierre,
+    espacio: {
+      id: i.espacio.id,
+      identificador: i.espacio.identificador,
+      pabellon: i.espacio.pabellon,
+      piso: i.espacio.piso,
+    },
+    asignacion: {
+      id: i.asignacionId,
+      codigoCurso: i.asignacion.seccion.curso.codigo,
+      nombreCurso: i.asignacion.seccion.curso.nombre,
+      codigoSeccion: i.asignacion.seccion.codigoSeccion,
+    },
+  }));
 }
 
 // ---------------------------------------------------------------------------

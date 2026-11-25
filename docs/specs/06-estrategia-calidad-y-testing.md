@@ -46,12 +46,21 @@ Especifica la infraestructura de pruebas automatizadas del proyecto SAIE, incluy
 
 ---
 
-## 3. Pipeline CI/CD y Quality Gates (#5.10a, #5.10b, #5.18)
-* **Workflow:** `.github/workflows/ci.yml`
-* **Pasos:**
+## 3. Pipeline CI/CD, Quality Gates y Rollback (#5.10a, #5.10b, #5.18, #5.24, #5.26)
+* **Workflows:** `.github/workflows/ci.yml` (Integración Continua) y `.github/workflows/cd.yml` (Despliegue Continuo).
+* **Pasos CI:**
   1. Linting (`npm run lint`) & Formato (`npm run format:check`).
   2. Ejecución de pruebas unitarias/parametrizadas (`npm run test:coverage`).
   3. Quality Gate de SonarCloud: Cobertura global $\ge 85\%$ y 0 bugs críticos.
+* **Pasos CD:**
+  1. Quality Gate reutilizando `ci.yml`.
+  2. Migraciones Prisma en Supabase (`npm run prisma:deploy`).
+  3. Webhook de despliegue en Render (Backend).
+  4. Despliegue en Vercel CLI (Frontend).
+  5. Verificación de salud (#5.24): `/api/health` en Backend y acceso HTTP en Frontend.
+  6. Resumen de ejecución y alerta de reversión en `$GITHUB_STEP_SUMMARY`.
+* **Procedimiento de Rollback (#5.26):**
+  * Ante fallos en la verificación de salud o en tiempo de ejecución, se ejecuta el [Runbook de Rollback](../runbook_rollback.md) para Render (reversión de commit o rollback en dashboard), Vercel (*Instant Rollback*) y Supabase (`prisma migrate resolve`).
 
 ---
 

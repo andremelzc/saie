@@ -8,6 +8,13 @@ import {
   ORDEN_DIAS,
 } from '../lib/horario';
 import { obtenerPeriodoVigente } from '../services/periodo.service';
+import {
+  agruparClases,
+  encabezadoGrupo,
+  etiquetaTipoClase,
+  rotuloClase,
+} from '../lib/clasesAgrupadas';
+import { SesionDTO } from '../types/portal';
 
 export const NOMBRE_DIA: Record<DiaSemana, string> = {
   LUNES: 'Lunes',
@@ -18,6 +25,30 @@ export const NOMBRE_DIA: Record<DiaSemana, string> = {
   SABADO: 'Sábado',
   DOMINGO: 'Domingo',
 };
+
+function listarEspacios(sesion: SesionDTO): string {
+  return sesion.espacios.length > 0
+    ? sesion.espacios.map((e) => e.identificador).join(', ')
+    : 'Aula por confirmar';
+}
+
+/**
+ * Líneas de un día con las clases agrupadas por curso y grupo (Issue 3.62):
+ *
+ *   202SW0805 - Nombre del curso (Grupo 2)
+ *     • Teoría: 18:00 - 20:00 | 📍 105
+ *     • Laboratorio: 20:00 - 22:00 | 📍 L-01
+ */
+function lineasAgrupadas(sesiones: SesionDTO[], sangria = ''): string[] {
+  return agruparClases(sesiones).flatMap((grupo, i) => [
+    ...(i > 0 ? [''] : []),
+    `${sangria}${encabezadoGrupo(grupo)}`,
+    ...grupo.clases.map(
+      (c) =>
+        `${sangria}  • ${etiquetaTipoClase(c.tipoEspacioRequerido)}: ${c.horaInicio} - ${c.horaFin} | 📍 ${listarEspacios(c)}`,
+    ),
+  ]);
+}
 
 /**
  * Obtiene las sesiones del periodo vigente para el alumno vinculado a este chat.
@@ -38,7 +69,7 @@ async function obtenerSesionesAlumno(chatId: string, prisma: PrismaClient) {
   }
 
   const matriculas = await prisma.matricula.findMany({
-    where: { alumnoId: vinculacion.alumnoId, seccion: { periodo } },
+    where: { alumnoId: vinculacion.alumnoId, seccion: { periodo, activa: true } },
     include: { seccion: { include: INCLUIR_SECCION_CON_ASIGNACION } },
   });
 
@@ -69,15 +100,9 @@ export async function consultarClasesHoy(
     return `Hoy ${NOMBRE_DIA[dia]} no tienes clases programadas. ¡Que tengas un buen día!`;
   }
 
-  const lineas = clasesHoy.map((c) => {
-    const espacios =
-      c.espacios.length > 0
-        ? c.espacios.map((e) => e.identificador).join(', ')
-        : 'Aula por confirmar';
-    return `• ${c.horaInicio} - ${c.horaFin} | ${c.codigoCurso} - ${c.nombreCurso} (Sec. ${c.codigoSeccion})\n  📍 ${espacios}`;
-  });
-
-  return [`📚 Tus clases de hoy (${NOMBRE_DIA[dia]}):`, '', ...lineas].join('\n');
+  return [`📚 Tus clases de hoy (${NOMBRE_DIA[dia]}):`, '', ...lineasAgrupadas(clasesHoy)].join(
+    '\n',
+  );
 }
 
 /**
@@ -116,7 +141,7 @@ export async function consultarClaseActual(
     return [
       '🔔 En este momento estás en horario de clase:',
       '',
-      `📖 Curso: ${enCurso.codigoCurso} - ${enCurso.nombreCurso} (Sec. ${enCurso.codigoSeccion})`,
+      `📖 Curso: ${enCurso.codigoCurso} - ${enCurso.nombreCurso} (${rotuloClase(enCurso)})`,
       `📍 Espacio: ${espacios}`,
       `⏰ Horario: ${enCurso.horaInicio} - ${enCurso.horaFin} (termina en ${minutosRestantes} min)`,
       enCurso.docenteNombre ? `👨‍🏫 Docente: ${enCurso.docenteNombre}` : null,
@@ -139,7 +164,7 @@ export async function consultarClaseActual(
       '☕ No tienes clase en este momento.',
       '',
       'Tu próxima clase de hoy es:',
-      `📖 Curso: ${proxima.codigoCurso} - ${proxima.nombreCurso} (Sec. ${proxima.codigoSeccion})`,
+      `📖 Curso: ${proxima.codigoCurso} - ${proxima.nombreCurso} (${rotuloClase(proxima)})`,
       `📍 Espacio: ${espacios}`,
       `⏰ Horario: ${proxima.horaInicio} - ${proxima.horaFin} (comienza en ${minutosParaEmpezar} min)`,
       proxima.docenteNombre ? `👨‍🏫 Docente: ${proxima.docenteNombre}` : null,
@@ -181,14 +206,7 @@ export async function consultarHorarioSemanal(
 
     bloques.push('');
     bloques.push(`🗓 ${NOMBRE_DIA[d].toUpperCase()}`);
-    for (const c of clasesDia) {
-      const espacios =
-        c.espacios.length > 0
-          ? c.espacios.map((e) => e.identificador).join(', ')
-          : 'Aula por confirmar';
-      bloques.push(`  • ${c.horaInicio} - ${c.horaFin} | ${c.codigoCurso} - ${c.nombreCurso}`);
-      bloques.push(`    📍 ${espacios}`);
-    }
+    bloques.push(...lineasAgrupadas(clasesDia, '  '));
   }
 
   return bloques.join('\n');

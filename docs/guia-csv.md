@@ -33,6 +33,11 @@ Variables opcionales:
 Los archivos se escriben con **BOM** y separador **punto y coma**: es lo que Excel en español
 abre sin romper los acentos ni convertir los códigos de curso en fechas.
 
+**Al guardar un CSV propio desde Excel**, elige **«CSV UTF-8 (delimitado por comas)»**. Si usas la
+opción «CSV (delimitado por comas)», Excel guarda en Windows-1252: la pantalla de Carga de datos
+lo detecta y lo lee bien, pero conviene UTF-8. Cualquier fila con caracteres dañados («�») se
+rechaza y no se guarda nada.
+
 ---
 
 ## 2. Los archivos que se pueden volver a subir
@@ -51,7 +56,7 @@ estado actual y de base para preparar el siguiente periodo.
 | `pcsMalogradas` | Solo laboratorios |
 | `habilitado` | `sí` / `no`. Un espacio deshabilitado no se asigna (aparece como «no asignable» en el panel) |
 | `descripcionUso` | Rótulo opcional (ej. «Sala de investigación») |
-| `distanciaAscensor` | Metros hasta el ascensor: base de la regla de accesibilidad |
+| `distanciaAscensor` | Distancia caminando hasta el ascensor, en unidades del plano (no hay escala en metros): base de la regla de accesibilidad. La calcula `tools/planos/calcular-espacios.ts` |
 | `softwareInstalado` | Software del catálogo, separado por ` \| ` |
 | `contiguos` | Códigos de los espacios contiguos, separados por ` \| ` |
 

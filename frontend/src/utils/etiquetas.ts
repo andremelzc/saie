@@ -45,6 +45,7 @@ export const ETIQUETA_TIPO_ESPACIO_PLURAL: Record<TipoEspacio, string> = {
 export const ETIQUETA_TIPO_ALERTA: Record<TipoAlerta, string> = {
   SOFTWARE: 'Software',
   CAPACIDAD: 'Capacidad',
+  ACCESIBILIDAD: 'Accesibilidad',
 };
 
 export const ESTADO_ALERTA: Record<EstadoAlerta, EstadoVisual> = {
@@ -83,6 +84,10 @@ export const EVENTO_AUDITORIA: Record<TipoEventoAuditoria, EstadoVisual> = {
   ESCALAMIENTO: { etiqueta: 'Enviada a revisión', tono: 'advertencia' },
   ALERTA: { etiqueta: 'Alerta', tono: 'peligro' },
   VERIFICACION: { etiqueta: 'Verificación', tono: 'info' },
+  EDICION_ESPACIO: { etiqueta: 'Espacio editado', tono: 'neutro' },
+  EDICION_SECCION: { etiqueta: 'Sección editada', tono: 'neutro' },
+  CAMBIO_LABORATORIO: { etiqueta: 'Laboratorio editado', tono: 'neutro' },
+  CAMBIO_PERIODO: { etiqueta: 'Periodo modificado', tono: 'info' },
 };
 
 export const ETIQUETA_COMPARACION_VERSION: Record<ComparacionVersion, string> = {

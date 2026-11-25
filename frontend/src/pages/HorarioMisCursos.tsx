@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import CabeceraPantalla from '../components/estudiante/CabeceraPantalla';
-import { EsqueletoCarga, EstadoVacio, Icono } from '../components/estudiante/ElementosHorario';
+import LayoutEstudiante from '../components/estudiante/LayoutEstudiante';
+import { EstadoError } from '../components/ui/EstadoError';
+import { EsqueletoCarga, EstadoVacio } from '../components/estudiante/ElementosHorario';
 import GridHorarioSemanal from '../components/estudiante/GridHorarioSemanal';
 import HorarioDia from '../components/estudiante/HorarioDia';
 import ListaMisCursos from '../components/estudiante/ListaMisCursos';
-import SelectorSegmentado from '../components/estudiante/SelectorSegmentado';
-import type { OpcionSegmentada } from '../components/estudiante/SelectorSegmentado';
+import SelectorSegmentado from '../components/ui/SelectorSegmentado';
+import { idPanelPestana, idPestana } from '../components/ui/idsPestanas';
+import type { OpcionSegmentada } from '../components/ui/SelectorSegmentado';
 import type { DiaSemana } from '../types/consulta';
 import type { CursoMatriculadoDTO, HorarioSemanalDTO, VistaHorario } from '../types/horario';
 import {
@@ -33,9 +35,6 @@ const OPCIONES_VISTA: OpcionSegmentada<VistaHorario>[] = [
   { valor: 'semana', etiqueta: 'Semana' },
 ];
 
-const TRAZO_CALENDARIO =
-  'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5';
-const TRAZO_ALERTA = 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
 const UN_MINUTO_MS = 60_000;
 
 export interface HorarioMisCursosProps {
@@ -93,24 +92,10 @@ export const HorarioMisCursos: React.FC<HorarioMisCursosProps> = ({
 
     if (error) {
       return (
-        <div
-          role="alert"
-          className="flex flex-col items-start gap-3 rounded-xl border border-saie-danger/30 bg-saie-danger-soft p-4 text-sm font-medium text-saie-danger-strong"
-        >
-          <p className="m-0 flex items-start gap-2">
-            <Icono trazo={TRAZO_ALERTA} className="mt-0.5 h-5 w-5 shrink-0" />
-            <span>{`No pudimos cargar tu información. ${error}`}</span>
-          </p>
-          {onReintentar && (
-            <button
-              type="button"
-              onClick={onReintentar}
-              className="min-h-11 cursor-pointer rounded-xl bg-saie-primary px-5 text-sm font-medium text-white hover:bg-saie-primary-dark"
-            >
-              Reintentar
-            </button>
-          )}
-        </div>
+        <EstadoError
+          mensaje={`No pudimos cargar tu información. ${error}`}
+          onReintentar={onReintentar}
+        />
       );
     }
 
@@ -136,13 +121,6 @@ export const HorarioMisCursos: React.FC<HorarioMisCursosProps> = ({
 
     return (
       <div className="flex flex-col gap-5">
-        <SelectorSegmentado
-          opciones={OPCIONES_VISTA}
-          valor={vista}
-          onCambiar={setVista}
-          etiquetaGrupo="Tipo de vista del horario"
-          className="self-start"
-        />
         {vista === 'dia' ? (
           <HorarioDia
             horario={horario}
@@ -160,31 +138,41 @@ export const HorarioMisCursos: React.FC<HorarioMisCursosProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-saie-canvas text-saie-text">
-      <CabeceraPantalla
-        titulo="Mi horario y mis cursos"
-        subtitulo={horario.periodo ? `Periodo ${horario.periodo}` : undefined}
-        trazoIcono={TRAZO_CALENDARIO}
-      />
-
-      <main className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-6">
+    <LayoutEstudiante
+      titulo="Mi horario y mis cursos"
+      subtitulo={horario.periodo ? `Periodo ${horario.periodo}` : 'Periodo académico sin definir'}
+    >
+      {/* Los dos selectores comparten fila: la sección a la izquierda y, si hay horario, día o semana. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <SelectorSegmentado
           opciones={OPCIONES_SECCION}
           valor={seccion}
           onCambiar={setSeccion}
           etiquetaGrupo="Secciones de la pantalla"
-          className="self-start"
+          idBase="mis-cursos"
         />
-        <section aria-labelledby="titulo-seccion">
-          <h2 id="titulo-seccion" className="sr-only">
-            {seccion === 'horario' ? 'Mi horario' : 'Mis cursos matriculados'}
-          </h2>
-          <div key={seccion} className="saie-fundido">
-            {renderCuerpo()}
-          </div>
-        </section>
-      </main>
-    </div>
+        {seccion === 'horario' && hayHorario && !cargando && !error && (
+          <SelectorSegmentado
+            opciones={OPCIONES_VISTA}
+            valor={vista}
+            onCambiar={setVista}
+            etiquetaGrupo="Tipo de vista del horario"
+          />
+        )}
+      </div>
+      <section
+        role="tabpanel"
+        id={idPanelPestana('mis-cursos', seccion)}
+        aria-labelledby={idPestana('mis-cursos', seccion)}
+      >
+        <h2 id="titulo-seccion" className="sr-only">
+          {seccion === 'horario' ? 'Mi horario' : 'Mis cursos matriculados'}
+        </h2>
+        <div key={seccion} className="saie-fundido">
+          {renderCuerpo()}
+        </div>
+      </section>
+    </LayoutEstudiante>
   );
 };
 

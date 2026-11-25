@@ -14,6 +14,16 @@ import { filtrosDeMapa, MapaOcupacionQuerySchema } from '../lib/franja';
 import { obtenerOcupacionPorPiso } from '../services/ocupacion.service';
 import { listarSeccionesEscaladas } from '../services/revision.service';
 import {
+  activarPeriodo,
+  cerrarPeriodo,
+  listarPeriodos,
+  NuevoPeriodoSchema,
+  registrarPeriodo,
+} from '../services/periodo.service';
+import { periodoSchema } from '../lib/periodo';
+import { obtenerUltimasImportaciones } from '../services/importacionRegistro.service';
+import { TIPOS_IMPORTACION } from '../types/importacion';
+import {
   actualizarEspacio,
   ActualizarEspacioSchema,
   crearEspacio,
@@ -51,6 +61,7 @@ import {
   registrarCambioPcsMalogradas,
   registrarCambioSoftware,
 } from '../services/laboratorio.service';
+import { reubicarSeccionesDeAlerta } from '../services/reubicacion.service';
 
 const LaboratorioParamSchema = z.object({
   id: z.string().min(1, 'El id del laboratorio es requerido'),
@@ -60,10 +71,14 @@ const AlertaParamSchema = z.object({
   id: z.string().min(1, 'El id de la alerta es requerido'),
 });
 
-const AlertasQuerySchema = z.object({
-  tipo: z.enum(TipoAlerta, { error: 'El tipo de alerta no es válido' }).optional(),
-  espacioId: z.string().trim().min(1).optional(),
-});
+const AlertasQuerySchema = z
+  .object({
+    tipo: z.enum(TipoAlerta, { error: 'El tipo de alerta no es válido' }).optional(),
+    espacioId: z.string().trim().min(1).optional(),
+    pagina: z.coerce.number().int().min(1).default(1),
+    limite: z.coerce.number().int().min(1).max(200).default(50),
+  })
+  .strict();
 
 const CambioSoftwareSchema = z.object({
   softwareIds: z
@@ -114,7 +129,7 @@ export async function registrarPcsMalogradasLaboratorio(
 /** Issue 4.6 — GET /api/v1/admin/alertas[?tipo=SOFTWARE|CAPACIDAD&espacioId=...] */
 export async function listarAlertas(req: Request, res: Response): Promise<void> {
   try {
-    const filtros = AlertasQuerySchema.parse(req.query);
+    const filtros = AlertasQuerySchema.parse(req.query ?? {});
     const data = await listarAlertasActivas(filtros, req.auth!, prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
@@ -127,6 +142,20 @@ export async function resolverAlertaPendiente(req: Request, res: Response): Prom
   try {
     const { id } = AlertaParamSchema.parse(req.params);
     const data = await resolverAlerta(id, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/**
+ * Issue 2.22 — POST /api/v1/admin/alertas/:id/reubicar (solo Coordinación)
+ * Reevalúa con el motor cada sección afectada por la alerta y la marca resuelta.
+ */
+export async function reubicarSeccionesAlerta(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = AlertaParamSchema.parse(req.params);
+    const data = await reubicarSeccionesDeAlerta(id, req.auth!, prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);
@@ -147,35 +176,105 @@ export async function consultarMapaOcupacion(req: Request, res: Response): Promi
   }
 }
 
-const EscaladasQuerySchema = z.object({
-  periodo: z
-    .string()
-    .trim()
-    .regex(/^\d{4}-\d+$/, 'El periodo debe tener formato AAAA-N (ej. 2026-1)')
-    .optional(),
-});
+const UltimaImportacionQuerySchema = z
+  .object({
+    tipo: z.enum(TIPOS_IMPORTACION, { error: 'El tipo de importación no es válido' }).optional(),
+  })
+  .strict();
 
-/** Issue 4.22 — GET /api/v1/admin/secciones-escaladas[?periodo=2026-1] */
-export async function listarEscaladas(req: Request, res: Response): Promise<void> {
+/** Issue 4.54 — GET /api/v1/admin/importaciones/ultima[?tipo=cursos-secciones] */
+export async function consultarUltimasImportaciones(req: Request, res: Response): Promise<void> {
   try {
-    const { periodo } = EscaladasQuerySchema.parse(req.query);
-    const data = await listarSeccionesEscaladas(periodo, prisma);
+    const { tipo } = UltimaImportacionQuerySchema.parse(req.query ?? {});
+    const data = await obtenerUltimasImportaciones(tipo, prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);
   }
 }
 
-const IncidenciasQuerySchema = z.object({
-  estado: z.enum(EstadoIncidencia, { error: 'El estado no es válido' }).optional(),
-  prioridad: z.enum(PrioridadIncidencia, { error: 'La prioridad no es válida' }).optional(),
-  espacioId: z.string().trim().min(1).optional(),
-});
+/** Issue 4.42 — GET /api/v1/admin/periodos → { vigente, periodos[] } */
+export async function listarPeriodosAdmin(_req: Request, res: Response): Promise<void> {
+  try {
+    const data = await listarPeriodos(prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.64 — POST /api/v1/admin/periodos (solo Coordinación): registra un periodo en preparación. */
+export async function registrarPeriodoAdmin(req: Request, res: Response): Promise<void> {
+  try {
+    const entrada = NuevoPeriodoSchema.parse(req.body);
+    const data = await registrarPeriodo(entrada, req.auth!, prisma);
+    res.status(201).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+const PeriodoParamSchema = z.object({ codigo: periodoSchema });
+
+/** Issue 4.64 — POST /api/v1/admin/periodos/:codigo/activar: cierra el vigente y activa este. */
+export async function activarPeriodoAdmin(req: Request, res: Response): Promise<void> {
+  try {
+    const { codigo } = PeriodoParamSchema.parse(req.params);
+    const data = await activarPeriodo(codigo, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.64 — POST /api/v1/admin/periodos/:codigo/cerrar: el periodo pasa a solo consulta. */
+export async function cerrarPeriodoAdmin(req: Request, res: Response): Promise<void> {
+  try {
+    const { codigo } = PeriodoParamSchema.parse(req.params);
+    const data = await cerrarPeriodo(codigo, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+const EscaladasQuerySchema = z
+  .object({
+    periodo: z
+      .string()
+      .trim()
+      .regex(/^\d{4}-\d+$/, 'El periodo debe tener formato AAAA-N (ej. 2026-1)')
+      .optional(),
+    pagina: z.coerce.number().int().min(1).default(1),
+    limite: z.coerce.number().int().min(1).max(200).default(50),
+  })
+  .strict();
+
+/** Issue 4.22 — GET /api/v1/admin/secciones-escaladas[?periodo=2026-1] */
+export async function listarEscaladas(req: Request, res: Response): Promise<void> {
+  try {
+    const { periodo, pagina, limite } = EscaladasQuerySchema.parse(req.query ?? {});
+    const data = await listarSeccionesEscaladas(periodo, prisma, { pagina, limite });
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+const IncidenciasQuerySchema = z
+  .object({
+    estado: z.enum(EstadoIncidencia, { error: 'El estado no es válido' }).optional(),
+    prioridad: z.enum(PrioridadIncidencia, { error: 'La prioridad no es válida' }).optional(),
+    espacioId: z.string().trim().min(1).optional(),
+    pagina: z.coerce.number().int().min(1).default(1),
+    limite: z.coerce.number().int().min(1).max(200).default(50),
+  })
+  .strict();
 
 /** Issue 7.6 — GET /api/v1/admin/incidencias[?estado=&prioridad=&espacioId=] */
 export async function listarIncidenciasReportadas(req: Request, res: Response): Promise<void> {
   try {
-    const filtros = IncidenciasQuerySchema.parse(req.query);
+    const filtros = IncidenciasQuerySchema.parse(req.query ?? {});
     const data = await listarIncidencias(filtros, req.auth!, prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
@@ -219,11 +318,15 @@ export async function altaDocente(req: Request, res: Response): Promise<void> {
   }
 }
 
-const EspaciosQuerySchema = z.object({
-  tipo: z.enum(TipoEspacio, { error: 'El tipo de espacio no es válido' }).optional(),
-  pabellon: z.string().trim().min(1).optional(),
-  piso: z.coerce.number().int('El piso debe ser un entero').optional(),
-});
+const EspaciosQuerySchema = z
+  .object({
+    tipo: z.enum(TipoEspacio, { error: 'El tipo de espacio no es válido' }).optional(),
+    pabellon: z.string().trim().min(1).optional(),
+    piso: z.coerce.number().int('El piso debe ser un entero').optional(),
+    pagina: z.coerce.number().int().min(1).default(1),
+    limite: z.coerce.number().int().min(1).max(200).default(50),
+  })
+  .strict();
 
 const EspacioParamSchema = z.object({
   id: z.string().min(1, 'El id del espacio es requerido'),
@@ -232,7 +335,7 @@ const EspacioParamSchema = z.object({
 /** Issue 4.15 — GET /api/v1/admin/espacios[?tipo=&pabellon=&piso=] */
 export async function listarEspaciosAdmin(req: Request, res: Response): Promise<void> {
   try {
-    const filtros = EspaciosQuerySchema.parse(req.query);
+    const filtros = EspaciosQuerySchema.parse(req.query ?? {});
     const data = await listarEspacios(filtros, req.auth!, prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
@@ -314,10 +417,17 @@ export async function obtenerSeccion(req: Request, res: Response): Promise<void>
   }
 }
 
+const DocentesQuerySchema = z
+  .object({
+    limite: z.coerce.number().int().min(1).max(200).default(50),
+  })
+  .strict();
+
 /** Issue 4.31 — GET /api/v1/admin/docentes (listado mínimo para asignar docente a una sección). */
 export async function listarDocentes(req: Request, res: Response): Promise<void> {
   try {
-    const data = await listarDocentesParaAsignar(prisma);
+    const { limite } = DocentesQuerySchema.parse(req.query ?? {});
+    const data = await listarDocentesParaAsignar(prisma, limite);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);

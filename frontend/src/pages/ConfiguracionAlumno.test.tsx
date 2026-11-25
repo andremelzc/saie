@@ -81,7 +81,7 @@ describe('ConfiguracionAlumno (Issue 3.17)', () => {
     fireEvent.click(screen.getByRole('switch', { name: 'Texto grande' }));
 
     expect(screen.getByRole('status')).toHaveTextContent('Cambio guardado en este dispositivo.');
-    // «Cerrar sesión» vive solo en la cabecera común, no se repite en el contenido.
+    // La cabecera común del alumno ya trae «Cerrar sesión» (Issue 3.33); el contenido no lo repite.
     expect(screen.getAllByRole('button', { name: 'Cerrar sesión' })).toHaveLength(1);
     expect(
       within(screen.getByRole('main')).queryByRole('button', { name: 'Cerrar sesión' }),

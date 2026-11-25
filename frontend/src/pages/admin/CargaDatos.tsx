@@ -1,21 +1,30 @@
-import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { RUTAS } from '../../config/rutas';
 import LayoutAdmin from '../../components/admin/LayoutAdmin';
 import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
-import { SelectorSegmentado } from '../../components/estudiante/SelectorSegmentado';
+import { SelectorSegmentado } from '../../components/ui/SelectorSegmentado';
+import { idPanelPestana, idPestana } from '../../components/ui/idsPestanas';
 import { Acordeon } from '../../components/ui/Acordeon';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
+import { DialogoConfirmacion } from '../../components/ui/DialogoConfirmacion';
 import { Drawer } from '../../components/ui/Drawer';
 import { PLANTILLAS, descargarPlantilla } from '../../config/plantillas';
 import type { PlantillaCSV } from '../../config/plantillas';
-import { usePantallaAncha } from '../../hooks/usePantallaAncha';
-import { importarCsv } from '../../services/admin';
-import { mensajeDeError } from '../../services/estudiante';
-import type { ResultadoImportacionDTO, TipoImportacion } from '../../types/admin';
-import { formatearFechaCorta } from '../../utils/admin';
-import { textoResumenVerificacion } from '../../utils/etiquetas';
+import { useAccion } from '../../hooks/useAccion';
+import { importarCsv, obtenerVistaPreviaImportacion } from '../../services/admin';
+import type {
+  ResultadoImportacionDTO,
+  TipoImportacion,
+  VistaPreviaImportacionDTO,
+} from '../../types/admin';
+import { leerArchivoCsv } from '../../utils/archivoCsv';
+import { textoAvanceImportacion } from '../../utils/admin';
+import { agruparErroresPorTipo } from '../../utils/erroresImportacion';
+import { formatearFechaCorta } from '../../utils/fechas';
+import { plural } from '../../utils/texto';
 
 /**
  * Issue 1.9 — cuatro flujos de carga independientes. Las zonas van primero y en orden; la guía
@@ -80,23 +89,37 @@ function textoSecciones(cantidad: number): string {
   return cantidad === 1 ? '1 sección' : `${cantidad} secciones`;
 }
 
-function leerUltimaCarga(tipo: TipoImportacion): string | null {
+/** Última carga de un tipo registrada en este navegador: fecha y resultado. */
+interface UltimaCarga {
+  fecha: string;
+  estado: Exclude<EstadoFlujo, 'sin-cargar'>;
+}
+
+/**
+ * Issue 4.55 — la última carga se recuerda junto con su resultado, así el distintivo y la fecha
+ * no se contradicen («Sin cargar» con una fecha de última carga). Mientras el servidor no exponga
+ * la última carga (Issue 4.54) el dato es de este navegador y la pantalla lo dice. Las entradas
+ * antiguas (solo la fecha) se leen como una carga correcta.
+ */
+function leerUltimaCarga(tipo: TipoImportacion): UltimaCarga | null {
   try {
-    return localStorage.getItem(`${CLAVE_ALMACEN}${tipo}`);
+    const crudo = localStorage.getItem(`${CLAVE_ALMACEN}${tipo}`);
+    if (!crudo) return null;
+    if (crudo.startsWith('{')) {
+      const valor = JSON.parse(crudo) as Partial<UltimaCarga>;
+      if (typeof valor.fecha !== 'string') return null;
+      return {
+        fecha: valor.fecha,
+        estado: valor.estado === 'con-errores' ? 'con-errores' : 'cargado',
+      };
+    }
+    return Number.isNaN(Date.parse(crudo)) ? null : { fecha: crudo, estado: 'cargado' };
   } catch {
     return null;
   }
 }
 
-function leerArchivo(archivo: File): Promise<string> {
-  if (typeof archivo.text === 'function') return archivo.text();
-  return new Promise((resolve, reject) => {
-    const lector = new FileReader();
-    lector.onload = () => resolve(String(lector.result ?? ''));
-    lector.onerror = () => reject(lector.error);
-    lector.readAsText(archivo);
-  });
-}
+const TIPOS_CARGA: TipoImportacion[] = ['cursos-secciones', 'horarios', 'matriculas', 'docentes'];
 
 function descargarErrores(tipo: TipoImportacion, errores: string[]) {
   if (typeof URL.createObjectURL !== 'function') return;
@@ -114,13 +137,6 @@ function descargarErrores(tipo: TipoImportacion, errores: string[]) {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-const ESTADOS_INICIALES: Record<TipoImportacion, EstadoFlujo> = {
-  'cursos-secciones': 'sin-cargar',
-  horarios: 'sin-cargar',
-  matriculas: 'sin-cargar',
-  docentes: 'sin-cargar',
-};
-
 /** Distintivo del estado de una zona de carga. */
 function insigniaDeEstado(
   estado: EstadoFlujo,
@@ -133,6 +149,16 @@ function insigniaDeEstado(
 }
 
 /** Resumen de lo que hizo la asignación tras la carga. */
+/**
+ * Filas que quedaron guardadas. Desde el Issue 1.16 la carga es «todo o nada»: con algún error no
+ * se guarda ninguna. Si el backend todavía no informa `guardadas`, se usa el cálculo anterior.
+ */
+function filasGuardadas(resultado: ResultadoImportacionDTO): number {
+  if (resultado.guardadas === undefined) return resultado.filasRecibidas - resultado.errores.length;
+  if (resultado.parcial) return Math.max(0, resultado.filasRecibidas - resultado.errores.length);
+  return resultado.guardadas ? resultado.filasRecibidas : 0;
+}
+
 function textoAsignacion(asignacion: NonNullable<ResultadoImportacionDTO['asignacion']>): string {
   const resumen = asignacion.resumen;
   if (!asignacion.disparada || !resumen) {
@@ -178,7 +204,7 @@ const ZonaArchivo: React.FC<{
           <span className="max-w-full break-all font-semibold text-saie-primary">
             {archivo.name}
           </span>
-          <span id={idAyuda} className="text-xs text-saie-muted">
+          <span className="text-sm text-saie-muted">
             {(archivo.size / 1024).toFixed(1)} KB · listo para importar
           </span>
         </>
@@ -186,9 +212,6 @@ const ZonaArchivo: React.FC<{
         <>
           <span className="font-semibold text-saie-primary">
             Arrastra tu CSV o elige un archivo
-          </span>
-          <span id={idAyuda} className="text-xs text-saie-muted">
-            Archivo .csv de hasta 10 MB, con los nombres de las columnas en la primera fila
           </span>
         </>
       )}
@@ -202,17 +225,21 @@ const ZonaArchivo: React.FC<{
         onChange={(e) => onSeleccionar(e.target.files?.[0] ?? null)}
       />
     </label>
+    <p id={idAyuda} className="m-0 text-sm text-saie-muted">
+      Se aceptan archivos .csv de hasta 10 MB. La primera fila debe tener los nombres de las
+      columnas.
+    </p>
 
     {archivo && (
       <div className="flex justify-end">
-        <button
-          type="button"
+        <Boton
+          variante="fantasma"
+          tamano="sm"
           onClick={() => onSeleccionar(null)}
           disabled={enviando}
-          className="min-h-11 cursor-pointer rounded-lg px-2 text-sm font-semibold text-saie-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
         >
           Quitar archivo
-        </button>
+        </Boton>
       </div>
     )}
   </>
@@ -228,32 +255,16 @@ const PanelResultado: React.FC<{
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-saie-canvas p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <output className="m-0 block text-sm font-bold text-saie-text">
-          {resultado.exitosa
-            ? 'Carga completada sin errores'
-            : `La carga tiene ${textoFilasConProblemas(resultado.errores.length)}`}
-        </output>
-        <BadgeEstado tono={resultado.exitosa ? 'exito' : 'advertencia'}>
-          {resultado.exitosa ? 'Sin errores' : `${resultado.errores.length} con problemas`}
-        </BadgeEstado>
-      </div>
-      <p className="m-0 text-sm text-saie-muted">
-        {/*
-          Cada importador genera una entrada por fila rechazada (las varias incidencias de
-          validación de una misma fila se unen en un solo mensaje), así que la resta es
-          exacta: son las filas que sí se guardaron.
-        */}
-        {resultado.filasRecibidas} filas leídas ·{' '}
-        {resultado.filasRecibidas - resultado.errores.length} guardadas
-        {resultado.errores.length > 0 && ` · ${resultado.errores.length} con problemas`}
-      </p>
-
+      {/*
+        El resumen («N filas leídas · M guardadas») está una sola vez, en la tarjeta de la zona
+        de carga. Aquí solo va el detalle (Issue 4.53). Desde el Issue 1.16 la carga es «todo o
+        nada»: si hay errores no se guarda ninguna fila.
+      */}
       {Object.keys(resultado.procesados).length > 0 && (
         <dl className="m-0 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
           {Object.entries(resultado.procesados).map(([clave, valor]) => (
             <div key={clave} className="rounded-lg bg-white px-3 py-2">
-              <dt className="text-xs text-saie-muted">
+              <dt className="text-sm text-saie-muted">
                 {ETIQUETAS_PROCESADOS[clave] ?? humanizar(clave)}
               </dt>
               <dd className="m-0 text-lg font-bold text-saie-text">{valor}</dd>
@@ -265,10 +276,21 @@ const PanelResultado: React.FC<{
       {conProblemas && (
         <>
           <Aviso tono="advertencia">
-            {tipo !== 'docentes' && (
-              <strong>No se asignaron aulas porque el archivo tiene filas con problemas. </strong>
+            {resultado.parcial ? (
+              <>
+                <strong>El archivo falló a medias: las filas sin problema ya se guardaron. </strong>
+                Corrige las filas de la lista y sube el archivo de nuevo; repetir la carga no
+                duplica datos
+              </>
+            ) : (
+              <>
+                <strong>
+                  No se guardó ninguna fila porque el archivo tiene filas con problemas.{' '}
+                </strong>
+                Corrige todas las filas de la lista y sube el archivo de nuevo
+              </>
             )}
-            Corrige esas filas y sube el archivo de nuevo; las demás ya se guardaron.
+            {tipo !== 'docentes' ? '; después se asignarán las aulas.' : '.'}
           </Aviso>
           <div className="flex flex-wrap gap-2">
             <Boton
@@ -282,22 +304,65 @@ const PanelResultado: React.FC<{
               Corregir y volver a subir
             </Boton>
           </div>
-          {/*
-            Sin tope de altura ni scroll interno: la lista vive en el drawer y es el drawer
-            el que se desplaza. Un scroll dentro de la tarjeta escondía las filas y era un
-            parche para que el tablero no creciera.
-          */}
-          <ul className="m-0 list-disc pl-5 text-sm text-saie-text">
-            {resultado.errores.map((e, i) => (
-              <li key={i}>{e}</li>
+          <ErroresAgrupados errores={resultado.errores} />
+        </>
+      )}
+
+      {resultado.advertencias && resultado.advertencias.length > 0 && (
+        <Aviso tono="info">
+          <strong>Revisa estos avisos. </strong>
+          El archivo se guardó, pero conviene revisarlos:
+          <ul className="m-0 mt-1 list-disc pl-5">
+            {resultado.advertencias.slice(0, FILAS_POR_GRUPO).map((a) => (
+              <li key={a}>{a}</li>
             ))}
           </ul>
-        </>
+          {resultado.advertencias.length > FILAS_POR_GRUPO && (
+            <p className="m-0 mt-1">
+              Y {resultado.advertencias.length - FILAS_POR_GRUPO} aviso(s) más.
+            </p>
+          )}
+        </Aviso>
       )}
 
       {resultado.asignacion && (
         <p className="m-0 text-sm text-saie-text">{textoAsignacion(resultado.asignacion)}</p>
       )}
+    </div>
+  );
+};
+
+/** Cuántas filas de cada tipo de error se listan; el resto se descarga en el CSV. */
+const FILAS_POR_GRUPO = 20;
+
+/**
+ * Los errores de la importación agrupados por tipo, con su conteo (Issue 4.53). Cada grupo muestra
+ * solo sus primeras filas: un archivo de miles de filas con problemas no debe pintar miles de
+ * líneas. «Descargar errores (CSV)» trae todos.
+ */
+const ErroresAgrupados: React.FC<{ errores: string[] }> = ({ errores }) => {
+  const grupos = useMemo(() => agruparErroresPorTipo(errores), [errores]);
+  return (
+    <div className="flex flex-col gap-2">
+      {grupos.map((grupo, i) => (
+        <Acordeon
+          key={grupo.tipo}
+          titulo={`${grupo.tipo} (${textoFilasConProblemas(grupo.errores.length)})`}
+          abiertoInicial={i === 0}
+        >
+          <ul className="m-0 list-disc pl-5 text-sm text-saie-text">
+            {grupo.errores.slice(0, FILAS_POR_GRUPO).map((e, j) => (
+              <li key={j}>{e}</li>
+            ))}
+          </ul>
+          {grupo.errores.length > FILAS_POR_GRUPO && (
+            <p className="m-0 mt-2 text-sm text-saie-muted">
+              Se muestran las primeras {FILAS_POR_GRUPO} de {grupo.errores.length}. Descarga el CSV
+              para ver todas.
+            </p>
+          )}
+        </Acordeon>
+      ))}
     </div>
   );
 };
@@ -328,17 +393,13 @@ const ResumenResultado: React.FC<{
         </BadgeEstado>
       </div>
       <p className="m-0 text-sm text-saie-muted">
-        {resultado.filasRecibidas} filas leídas ·{' '}
-        {resultado.filasRecibidas - resultado.errores.length} guardadas
+        {resultado.filasRecibidas} filas leídas · {filasGuardadas(resultado)} guardadas
         {resultado.errores.length > 0 && ` · ${resultado.errores.length} con problemas`}
+        {(resultado.advertencias?.length ?? 0) > 0 &&
+          ` · ${resultado.advertencias!.length} ${resultado.advertencias!.length === 1 ? 'aviso' : 'avisos'}`}
       </p>
       {resultado.asignacion && (
         <p className="m-0 text-sm text-saie-text">{textoAsignacion(resultado.asignacion)}</p>
-      )}
-      {resultado.asignacion?.resumen && (
-        <p className="m-0 text-sm font-semibold text-saie-text">
-          {textoResumenVerificacion(resultado.asignacion.resumen.verificacion)}
-        </p>
       )}
       <div className="flex flex-wrap gap-2">
         <Boton variante="secundario" tamano="sm" onClick={onAbrir}>
@@ -354,12 +415,51 @@ const ResumenResultado: React.FC<{
   );
 };
 
+/** Cuántos retiros se listan en la confirmación; el resto se resume. */
+const MAX_RETIROS_VISIBLES = 8;
+
+/** Lo que la importación cambiaría (Issue 1.17): frases y, si se quita algo, qué se quita. */
+export const DescripcionVistaPrevia: React.FC<{ vista: VistaPreviaImportacionDTO }> = ({
+  vista,
+}) => {
+  const restantes = vista.retiros.length - MAX_RETIROS_VISIBLES;
+  return (
+    <div className="flex flex-col gap-3">
+      <ul className="m-0 flex list-disc flex-col gap-1 pl-5">
+        {vista.frases.map((frase) => (
+          <li key={frase}>{frase}.</li>
+        ))}
+      </ul>
+      {vista.retiros.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <p className="m-0 font-semibold">Se quitará:</p>
+          <ul className="m-0 flex list-none flex-col gap-0.5 p-0 text-saie-muted">
+            {vista.retiros.slice(0, MAX_RETIROS_VISIBLES).map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+          {restantes > 0 && (
+            <p className="m-0 text-saie-muted">
+              y {plural(restantes, 'cambio más', 'cambios más')}.
+            </p>
+          )}
+        </div>
+      )}
+      {vista.advertencias.length > 0 && (
+        <p className="m-0 text-saie-muted">
+          {plural(vista.advertencias.length, 'aviso', 'avisos')}: los verás en el resultado.
+        </p>
+      )}
+    </div>
+  );
+};
+
 export const ZonaCarga: React.FC<{
   tipo: TipoImportacion;
   titulo: string;
   descripcion: string;
   estado: EstadoFlujo;
-  ultimaCarga: string | null;
+  ultimaCarga: UltimaCarga | null;
   onEstado: (tipo: TipoImportacion, estado: EstadoFlujo, fecha: string) => void;
   onSiguiente?: () => void;
   etiquetaSiguiente?: string;
@@ -375,12 +475,19 @@ export const ZonaCarga: React.FC<{
 }) => {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
+  const { ejecutar } = useAccion();
   const [enviando, setEnviando] = useState(false);
+  const [avance, setAvance] = useState<{ procesadas: number; total: number } | null>(null);
   const [resultado, setResultado] = useState<ResultadoImportacionDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [errorArchivo, setErrorArchivo] = useState<string | null>(null);
   // El detalle del resultado vive en un drawer: la tarjeta solo conserva el resumen.
   const [detalleAbierto, setDetalleAbierto] = useState(false);
+  // Issue 1.17: vista previa a la espera de que Coordinación la confirme.
+  const [previa, setPrevia] = useState<{
+    contenido: string;
+    vista: VistaPreviaImportacionDTO;
+  } | null>(null);
   const idInput = `archivo-${tipo}`;
   const idAyuda = `ayuda-${tipo}`;
 
@@ -420,23 +527,61 @@ export const ZonaCarga: React.FC<{
     setError(null);
   }
 
+  /**
+   * Issue 1.17 (R35): antes de importar se pide la vista previa (qué se agrega, qué se quita y qué
+   * secciones quedan inactivas) y Coordinación la confirma. Si el archivo tiene errores no hay
+   * nada que confirmar: se importa directamente y el resultado los lista, como antes.
+   */
   async function enviar() {
     if (!archivo || enviando) return;
     setEnviando(true);
     setError(null);
     setResultado(null);
-    try {
-      const respuesta = await importarCsv(tipo, await leerArchivo(archivo));
-      setResultado(respuesta);
-      // El archivo ya se procesó: se suelta para no invitar a importarlo dos veces.
-      setArchivo(null);
-      onEstado(tipo, respuesta.exitosa ? 'cargado' : 'con-errores', new Date().toISOString());
-    } catch (e) {
-      setError(mensajeDeError(e));
-    } finally {
+    setAvance(null);
+    const salida = await ejecutar(
+      async () => {
+        const contenido = await leerArchivoCsv(archivo);
+        return { contenido, vista: await obtenerVistaPreviaImportacion(tipo, contenido) };
+      },
+      { avisarError: false },
+    );
+    if (!salida?.ok) {
+      if (salida) setError(salida.error);
       setEnviando(false);
-      limpiarInput();
+      return;
     }
+    if (salida.valor.vista.errores.length > 0) {
+      await importar(salida.valor.contenido);
+      return;
+    }
+    setPrevia(salida.valor);
+    setEnviando(false);
+  }
+
+  async function importar(contenido: string) {
+    setEnviando(true);
+    setAvance(null);
+    // El error se muestra en línea, junto a la zona de carga.
+    const salida = await ejecutar(
+      () => importarCsv(tipo, contenido, (procesadas, total) => setAvance({ procesadas, total })),
+      { avisarError: false },
+    );
+    setAvance(null);
+    if (salida?.ok) {
+      setResultado(salida.valor);
+      onEstado(tipo, salida.valor.exitosa ? 'cargado' : 'con-errores', new Date().toISOString());
+    } else if (salida) {
+      setError(salida.error);
+    }
+    setEnviando(false);
+    limpiarInput();
+  }
+
+  function confirmarPrevia() {
+    if (!previa) return;
+    const { contenido } = previa;
+    setPrevia(null);
+    void importar(contenido);
   }
 
   function corregir() {
@@ -458,22 +603,21 @@ export const ZonaCarga: React.FC<{
       id={`carga-${tipo}`}
       tabIndex={-1}
       aria-label={titulo}
-      className="flex scroll-mt-24 flex-col gap-3 rounded-2xl border border-saie-divider bg-white p-5 focus:outline-3 focus:outline-offset-2 focus:outline-saie-primary"
+      aria-busy={enviando}
+      className="flex h-full scroll-mt-24 flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-sm focus:outline-3 focus:outline-offset-2 focus:outline-saie-primary"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="m-0 text-base font-bold text-saie-text">{titulo}</h2>
           <p className="m-0 text-sm text-saie-muted">{descripcion}</p>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <BadgeEstado tono={insignia.tono}>{insignia.texto}</BadgeEstado>
-          {ultimaCarga && (
-            <span className="text-xs text-saie-muted">
-              Última carga: {formatearFechaCorta(ultimaCarga)}
-            </span>
-          )}
-        </div>
+        <BadgeEstado tono={insignia.tono}>{insignia.texto}</BadgeEstado>
       </div>
+      {ultimaCarga && (
+        <p className="m-0 text-sm text-saie-muted">
+          Última carga en este navegador: {formatearFechaCorta(ultimaCarga.fecha)}
+        </p>
+      )}
 
       <ZonaArchivo
         idInput={idInput}
@@ -485,11 +629,18 @@ export const ZonaCarga: React.FC<{
         onSeleccionar={seleccionar}
       />
 
+      {/* Región viva siempre presente: si se montara con el texto, el lector no lo anunciaría. */}
+      <p role="status" className={enviando ? 'm-0 text-sm text-saie-muted' : 'sr-only'}>
+        {enviando ? textoAvanceImportacion(avance) : ''}
+      </p>
       {errorArchivo && <Aviso tono="error">{errorArchivo}</Aviso>}
       {error && <Aviso tono="error">{error}</Aviso>}
 
       <div className="mt-auto flex flex-col gap-2">
         <Boton
+          // Solo la zona con archivo elegido tiene el botón principal: las cuatro cargas son
+          // independientes y la vista no debe tener cuatro primarios a la vez.
+          variante={archivo ? 'primario' : 'secundario'}
           onClick={enviar}
           disabled={!archivo || enviando}
           cargando={enviando}
@@ -512,6 +663,16 @@ export const ZonaCarga: React.FC<{
         />
       )}
 
+      <DialogoConfirmacion
+        abierto={previa !== null}
+        titulo="¿Importar este archivo?"
+        descripcion={previa && <DescripcionVistaPrevia vista={previa.vista} />}
+        textoConfirmar="Confirmar e importar"
+        variante={previa && previa.vista.retiros.length > 0 ? 'peligro' : 'primario'}
+        onConfirmar={confirmarPrevia}
+        onCancelar={() => setPrevia(null)}
+      />
+
       {/*
         El detalle del resultado (procesados, errores descargables y veredicto del verificador)
         se consulta bajo demanda en el drawer: no se apila dentro de la tarjeta ni desplaza
@@ -520,7 +681,8 @@ export const ZonaCarga: React.FC<{
       <Drawer
         abierto={detalleAbierto}
         onCerrar={() => setDetalleAbierto(false)}
-        titulo={`Resultado de la carga · ${titulo}`}
+        titulo="Resultado de la carga"
+        subtitulo={titulo}
       >
         {resultado ? (
           <div className="flex flex-col gap-4">
@@ -597,28 +759,28 @@ const GuiaCarga: React.FC = () => (
       <section>
         <h3 className="m-0 text-base font-bold text-saie-text">2. El periodo académico</h3>
         <p className="m-0 mt-2">
-          Cada fila lleva su <strong>periodo</strong> (por ejemplo, 2026-2). Un mismo curso puede
-          existir en varios periodos a la vez: el periodo no se borra, se agrega.
+          Cada fila lleva su <strong>periodo</strong> (por ejemplo, 2026-2; también se acepta
+          2026-II). Solo se puede cargar en un periodo <strong>registrado</strong> en la pantalla{' '}
+          <Link to={RUTAS.periodosAdmin}>Periodos</Link> que no esté cerrado.
         </p>
         <p className="m-0 mt-3">
-          El <strong>periodo actual</strong> es el semestre que el sistema está asignando.
-          Normalmente es el más reciente que hayas cargado; si tu institución lo fija manualmente,
-          se usa el valor que haya configurado la persona administradora.
+          El <strong>periodo vigente</strong> es el semestre que el sistema asigna y que ven alumnos
+          y docentes. Cargar datos nunca lo cambia: solo cambia al activar otro periodo en Periodos.
         </p>
         <ul className="m-0 mt-3 pl-5">
           <li>
-            <strong>Volver a subir el semestre en curso:</strong> usa los mismos archivos y el mismo
-            periodo. Las secciones, horarios y matrículas se actualizan en el sitio y las
-            asignaciones que siguen siendo válidas se conservan.
+            <strong>Volver a subir el semestre en curso:</strong> usa el mismo periodo. Para cada
+            sección incluida en el archivo, sus matrículas y horarios pasan a ser exactamente los
+            del archivo: los alumnos que ya no figuran quedan retirados. Las asignaciones que siguen
+            siendo válidas se conservan.
           </li>
           <li>
-            <strong>Abrir un semestre nuevo:</strong> sube los archivos con el nuevo periodo (por
-            ejemplo, 2027-1). Se agregan las secciones nuevas y los datos del semestre anterior
-            quedan intactos. Como el nuevo periodo es el más reciente, pasa a ser el actual.
+            <strong>Preparar un semestre nuevo:</strong> registra primero el periodo (por ejemplo,
+            2027-1) en Periodos y luego sube sus archivos. Queda en preparación: nadie lo ve hasta
+            que lo actives.
           </li>
           <li>
-            <strong>Asignar un semestre anterior:</strong> pídele a la persona administradora que
-            indique el periodo actual; no lo cambies desde la carga.
+            <strong>Semestres cerrados:</strong> son de solo consulta; la carga los rechaza.
           </li>
         </ul>
       </section>
@@ -629,7 +791,7 @@ const GuiaCarga: React.FC = () => (
         </h3>
         <p className="m-0 mt-2">
           Si la carga termina sin filas con problemas, el sistema{' '}
-          <strong>asigna las aulas del periodo actual</strong>. La asignación solo se hace si ese
+          <strong>asigna las aulas del periodo vigente</strong>. La asignación solo se hace si ese
           periodo ya tiene secciones, horarios y matrículas cargados; si falta algo, el resultado lo
           explica.
         </p>
@@ -686,12 +848,8 @@ const GuiaCarga: React.FC = () => (
 
 /** Tarjeta de una plantilla: descarga del CSV y detalle de sus columnas. */
 const TarjetaPlantilla: React.FC<{ plantilla: PlantillaCSV }> = ({ plantilla }) => {
-  // En pantallas estrechas las columnas se apilan en una lista: una tabla de cuatro columnas no
-  // cabe a 320 px. Solo existe una de las dos versiones en el DOM.
-  const esPantallaAncha = usePantallaAncha(640);
-
   return (
-    <article className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-[var(--saie-shadow-1)]">
+    <article className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-5 shadow-sm">
       <header className="flex flex-col gap-1">
         <h3 className="m-0 text-base font-bold text-saie-text">{plantilla.titulo}</h3>
         <p className="m-0 text-sm text-saie-muted">{plantilla.descripcion}</p>
@@ -704,64 +862,60 @@ const TarjetaPlantilla: React.FC<{ plantilla: PlantillaCSV }> = ({ plantilla }) 
       </div>
 
       <Acordeon titulo={`Ver columnas (${plantilla.columnas.length})`}>
-        {esPantallaAncha ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-saie-canvas uppercase tracking-wide text-saie-muted">
-                <tr>
-                  <th scope="col" className="px-2 py-2">
-                    Columna
-                  </th>
-                  <th scope="col" className="px-2 py-2">
-                    Obligatoria
-                  </th>
-                  <th scope="col" className="px-2 py-2">
-                    Qué es
-                  </th>
-                  <th scope="col" className="px-2 py-2">
-                    Ejemplo
-                  </th>
+        {/* Tabla desde `sm` y lista apilada por debajo: una tabla de cuatro columnas no cabe a 320 px. */}
+        <div className="hidden overflow-x-auto sm:block">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-saie-canvas text-saie-muted">
+              <tr>
+                <th scope="col" className="px-2 py-2">
+                  Columna
+                </th>
+                <th scope="col" className="px-2 py-2">
+                  Obligatoria
+                </th>
+                <th scope="col" className="px-2 py-2">
+                  Qué es
+                </th>
+                <th scope="col" className="px-2 py-2">
+                  Ejemplo
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {plantilla.columnas.map((columna) => (
+                <tr key={columna.nombre} className="border-t border-saie-divider align-top">
+                  <td className="px-2 py-2 font-mono font-semibold text-saie-text">
+                    {columna.nombre}
+                  </td>
+                  <td className="px-2 py-2 text-saie-muted">{columna.obligatorio ? 'Sí' : 'No'}</td>
+                  <td className="px-2 py-2 text-saie-muted">{columna.descripcion}</td>
+                  <td className="px-2 py-2 font-mono text-saie-muted">{columna.ejemplo}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {plantilla.columnas.map((columna) => (
-                  <tr key={columna.nombre} className="border-t border-saie-divider align-top">
-                    <td className="px-2 py-2 font-mono font-semibold text-saie-text">
-                      {columna.nombre}
-                    </td>
-                    <td className="px-2 py-2 text-saie-muted">
-                      {columna.obligatorio ? 'Sí' : 'No'}
-                    </td>
-                    <td className="px-2 py-2 text-saie-muted">{columna.descripcion}</td>
-                    <td className="px-2 py-2 font-mono text-saie-muted">{columna.ejemplo}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <dl className="m-0 flex flex-col gap-3">
-            {plantilla.columnas.map((columna) => (
-              <div
-                key={columna.nombre}
-                className="rounded-lg border border-saie-divider bg-saie-canvas p-3"
-              >
-                <dt className="font-mono font-semibold text-saie-text">
-                  {columna.nombre}{' '}
-                  <span className="font-sans text-xs font-normal text-saie-muted">
-                    ({columna.obligatorio ? 'obligatoria' : 'opcional'})
-                  </span>
-                </dt>
-                <dd className="m-0 mt-1 text-sm text-saie-text">
-                  {columna.descripcion}
-                  <span className="mt-1 block font-mono text-xs text-saie-muted">
-                    Ejemplo: {columna.ejemplo}
-                  </span>
-                </dd>
-              </div>
-            ))}
-          </dl>
-        )}
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <dl className="m-0 flex flex-col gap-3 sm:hidden">
+          {plantilla.columnas.map((columna) => (
+            <div
+              key={columna.nombre}
+              className="rounded-lg border border-saie-divider bg-saie-canvas p-3"
+            >
+              <dt className="font-mono font-semibold text-saie-text">
+                {columna.nombre}{' '}
+                <span className="font-sans text-sm font-normal text-saie-muted">
+                  ({columna.obligatorio ? 'obligatoria' : 'opcional'})
+                </span>
+              </dt>
+              <dd className="m-0 mt-1 text-sm text-saie-text">
+                {columna.descripcion}
+                <span className="mt-1 block font-mono text-sm text-saie-muted">
+                  Ejemplo: {columna.ejemplo}
+                </span>
+              </dd>
+            </div>
+          ))}
+        </dl>
       </Acordeon>
     </article>
   );
@@ -797,19 +951,21 @@ export const CargaDatos: React.FC = () => {
   const { hash } = useLocation();
   const [guiaAbierta, setGuiaAbierta] = useState(false);
   const [pestanaAyuda, setPestanaAyuda] = useState<Ayuda>('guia');
-  const [estados, setEstados] = useState<Record<TipoImportacion, EstadoFlujo>>(ESTADOS_INICIALES);
-  const [ultimas, setUltimas] = useState<Record<TipoImportacion, string | null>>(() => ({
-    'cursos-secciones': leerUltimaCarga('cursos-secciones'),
-    horarios: leerUltimaCarga('horarios'),
-    matriculas: leerUltimaCarga('matriculas'),
-    docentes: leerUltimaCarga('docentes'),
-  }));
+  // El estado de cada zona sale de la misma fuente que su fecha: nunca «Sin cargar» con fecha.
+  const [ultimas, setUltimas] = useState<Record<TipoImportacion, UltimaCarga | null>>(
+    () =>
+      Object.fromEntries(TIPOS_CARGA.map((t) => [t, leerUltimaCarga(t)])) as Record<
+        TipoImportacion,
+        UltimaCarga | null
+      >,
+  );
 
   function marcarEstado(tipo: TipoImportacion, estado: EstadoFlujo, fecha: string) {
-    setEstados((prev) => ({ ...prev, [tipo]: estado }));
-    setUltimas((prev) => ({ ...prev, [tipo]: fecha }));
+    if (estado === 'sin-cargar') return;
+    const ultima: UltimaCarga = { fecha, estado };
+    setUltimas((prev) => ({ ...prev, [tipo]: ultima }));
     try {
-      localStorage.setItem(`${CLAVE_ALMACEN}${tipo}`, fecha);
+      localStorage.setItem(`${CLAVE_ALMACEN}${tipo}`, JSON.stringify(ultima));
     } catch {
       // El almacenamiento puede estar deshabilitado; la pantalla sigue funcionando.
     }
@@ -832,22 +988,30 @@ export const CargaDatos: React.FC = () => {
   return (
     <LayoutAdmin
       titulo="Carga de datos"
-      subtitulo="Sigue el orden 1 → 4. Cada carga es independiente y se puede repetir sin duplicar datos."
+      subtitulo="Sube un archivo por vez. Cada carga es independiente y se puede repetir."
       acciones={
         <Boton variante="secundario" onClick={() => setGuiaAbierta(true)}>
           Guía y plantillas
         </Boton>
       }
     >
-      <section aria-label="Cargar un archivo" className="flex flex-col gap-3">
-        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+      <p className="m-0 rounded-xl border border-saie-divider bg-white px-4 py-3 text-sm text-saie-muted">
+        Sigue el orden 1 → 2 → 3 → 4. Si un archivo tiene filas con problemas, las demás sí se
+        guardan, pero no se asignan aulas en ese periodo.
+      </p>
+
+      <section aria-labelledby="titulo-zonas" className="flex flex-col gap-3">
+        <h2 id="titulo-zonas" className="m-0 text-lg font-bold text-saie-text">
+          Cargar un archivo
+        </h2>
+        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
           {FLUJOS.map((flujo, indice) => {
             const siguiente = FLUJOS[indice + 1];
             return (
               <ZonaCarga
                 key={flujo.tipo}
                 {...flujo}
-                estado={estados[flujo.tipo]}
+                estado={ultimas[flujo.tipo]?.estado ?? 'sin-cargar'}
                 ultimaCarga={ultimas[flujo.tipo]}
                 onEstado={marcarEstado}
                 onSiguiente={siguiente ? () => irAZona(siguiente.tipo) : undefined}
@@ -864,6 +1028,7 @@ export const CargaDatos: React.FC = () => {
         abierto={guiaAbierta}
         onCerrar={() => setGuiaAbierta(false)}
         titulo="Guía y plantillas"
+        tamano="lg"
       >
         <div className="flex flex-col gap-4">
           <SelectorSegmentado<Ayuda>
@@ -871,9 +1036,16 @@ export const CargaDatos: React.FC = () => {
             valor={pestanaAyuda}
             onCambiar={setPestanaAyuda}
             etiquetaGrupo="Contenido de ayuda"
+            idBase="ayuda-carga"
             className="w-full"
           />
-          {pestanaAyuda === 'guia' ? <GuiaCarga /> : <PlantillasCarga />}
+          <div
+            role="tabpanel"
+            id={idPanelPestana('ayuda-carga', pestanaAyuda)}
+            aria-labelledby={idPestana('ayuda-carga', pestanaAyuda)}
+          >
+            {pestanaAyuda === 'guia' ? <GuiaCarga /> : <PlantillasCarga />}
+          </div>
         </div>
       </Drawer>
     </LayoutAdmin>

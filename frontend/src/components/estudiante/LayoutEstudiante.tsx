@@ -1,6 +1,8 @@
 import React from 'react';
-import CabeceraPortal from '../CabeceraPortal';
-import { RUTAS } from '../../config/rutas';
+import { useTituloPagina } from '../../hooks/useTituloPagina';
+import { Contenedor } from '../ui/Contenedor';
+import { EnlaceSaltar, ID_CONTENIDO } from '../ui/EnlaceSaltar';
+import CabeceraAlumno from './CabeceraAlumno';
 import NavegacionEstudiante from './NavegacionEstudiante';
 
 export interface LayoutEstudianteProps {
@@ -10,7 +12,8 @@ export interface LayoutEstudianteProps {
   extra?: React.ReactNode;
   /**
    * Modo tablero: la pantalla ocupa el alto de la ventana y no hace scroll; los paneles
-   * largos llevan su propio scroll interno (Issue 3.29).
+   * largos llevan su propio scroll interno (Issue 3.29). Solo en escritorio y con alto de
+   * ventana de al menos 800 px; por debajo, la página se desplaza con normalidad (Issue 4.36).
    */
   dashboard?: boolean;
   children: React.ReactNode;
@@ -20,8 +23,8 @@ export interface LayoutEstudianteProps {
  * Marco común del área del estudiante (Issue 3.29).
  *
  * La barra de navegación es lo que permite que la portada sea un tablero: cada destino está
- * a un clic y no hay que volver al inicio para cambiar de sección. En móvil la barra va abajo,
- * como en el panel administrativo.
+ * a un clic y no hay que volver al inicio para cambiar de sección. Por debajo de `lg` la barra va
+ * fija abajo, como en el panel administrativo (Issue 3.34).
  */
 export const LayoutEstudiante: React.FC<LayoutEstudianteProps> = ({
   titulo,
@@ -30,24 +33,31 @@ export const LayoutEstudiante: React.FC<LayoutEstudianteProps> = ({
   dashboard = false,
   children,
 }) => {
+  useTituloPagina(titulo);
+
   return (
     <div
-      className={`flex min-h-screen flex-col bg-saie-canvas pb-6 md:pb-0 ${
-        dashboard ? 'lg:h-screen lg:overflow-hidden' : ''
+      className={`flex min-h-screen flex-col bg-saie-canvas pb-[var(--saie-barra-inferior)] text-saie-text ${
+        dashboard ? 'saie-tablero' : ''
       }`}
     >
-      <CabeceraPortal portal="Estudiante" inicioTo={RUTAS.inicioAlumno} />
+      <EnlaceSaltar />
+      <CabeceraAlumno ancho="normal" />
 
       <NavegacionEstudiante />
 
-      <main
-        className={`mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-4 py-4 ${
-          dashboard ? 'lg:min-h-0 lg:overflow-hidden' : ''
+      <Contenedor
+        como="main"
+        ancho="normal"
+        id={ID_CONTENIDO}
+        tabIndex={-1}
+        className={`flex flex-1 flex-col focus:outline-none ${
+          dashboard ? 'saie-tablero-main gap-4 py-4' : 'gap-6 py-6'
         }`}
       >
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="m-0 font-serif text-2xl font-bold leading-8 text-saie-text sm:text-3xl">
+            <h1 className="m-0 text-2xl font-bold leading-8 text-saie-text sm:text-3xl tracking-tight">
               {titulo}
             </h1>
             {subtitulo && <p className="m-0 mt-0.5 text-sm text-saie-muted">{subtitulo}</p>}
@@ -55,7 +65,7 @@ export const LayoutEstudiante: React.FC<LayoutEstudianteProps> = ({
           {extra}
         </div>
         {children}
-      </main>
+      </Contenedor>
     </div>
   );
 };
