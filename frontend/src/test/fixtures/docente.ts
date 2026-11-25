@@ -77,6 +77,7 @@ export const horarioDocente = (o: Partial<HorarioDocenteDTO> = {}): HorarioDocen
       numeroAlumnos: 1,
     },
   ],
+  cambiosDeAula: [],
   ...o,
 });
 

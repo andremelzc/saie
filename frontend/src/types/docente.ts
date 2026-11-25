@@ -18,8 +18,32 @@ export interface AsignacionActivaDocenteDTO {
   numeroAlumnos: number;
 }
 
+/** Issue 7.18: aula de una sección en el aviso de cambio. */
+export interface EspacioCambioAulaDTO {
+  identificador: string;
+  tipo: TipoEspacio;
+  pabellon: string;
+  piso: number;
+}
+
+/** Issue 7.18: una sección del docente cambió de aula hace poco (`id` = la asignación nueva). */
+export interface CambioAulaDocenteDTO {
+  id: string;
+  seccionId: string;
+  codigoCurso: string;
+  nombreCurso: string;
+  codigoSeccion: string;
+  tipoEspacioRequerido: TipoEspacio;
+  fecha: string;
+  espaciosAnteriores: EspacioCambioAulaDTO[];
+  /** Vacío si la sección se quedó sin aula. */
+  espaciosNuevos: EspacioCambioAulaDTO[];
+}
+
 export interface HorarioDocenteDTO extends HorarioSemanalDTO {
   asignacionesActivas: AsignacionActivaDocenteDTO[];
+  /** Issue 7.18: cambios de aula recientes, del más reciente al más antiguo. */
+  cambiosDeAula: CambioAulaDocenteDTO[];
 }
 
 export interface FranjaDTO {
