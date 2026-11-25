@@ -245,6 +245,21 @@ export interface ResumenAsignacionDTO {
 
 export type TipoImportacion = 'cursos-secciones' | 'horarios' | 'matriculas' | 'docentes';
 
+/** Última importación de un tipo de archivo, registrada en el servidor (Issue 4.54). */
+export interface UltimaImportacionDTO {
+  tipo: TipoImportacion;
+  fecha: string;
+  /** Persona que la cargó; `null` si la cuenta ya no existe. */
+  cuenta: { id: string; nombre: string } | null;
+  filasRecibidas: number;
+  filasAceptadas: number;
+  filasRechazadas: number;
+  resultado: 'EXITOSA' | 'CON_ERRORES';
+}
+
+/** GET /v1/admin/importaciones/ultima: `null` si ese tipo nunca se cargó. */
+export type UltimasImportacionesDTO = Partial<Record<TipoImportacion, UltimaImportacionDTO | null>>;
+
 /** POST /v1/import/:tipo (Issue 1.6). */
 export interface ResultadoImportacionDTO {
   tipo: TipoImportacion;

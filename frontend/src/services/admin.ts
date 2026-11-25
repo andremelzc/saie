@@ -20,6 +20,7 @@ import type {
   ListadoSoftwareDTO,
   ResultadoReubicacionDTO,
   TrabajoImportacionDTO,
+  UltimasImportacionesDTO,
   NuevoPeriodoDTO,
   PeriodoDTO,
   NuevoAlumnoDTO,
@@ -136,6 +137,17 @@ export async function reintentarSeccion(seccionId: string): Promise<ResumenAsign
     `/v1/asignaciones/seccion/${encodeURIComponent(seccionId)}`,
     {},
     { timeout: 30000 },
+  );
+  return data.data;
+}
+
+/**
+ * GET /v1/admin/importaciones/ultima (Issues 4.54 y 4.55): la última carga de cada tipo de
+ * archivo según el servidor, igual para cualquier navegador y persona de Coordinación.
+ */
+export async function obtenerUltimasImportaciones(): Promise<UltimasImportacionesDTO> {
+  const { data } = await api.get<Respuesta<UltimasImportacionesDTO>>(
+    '/v1/admin/importaciones/ultima',
   );
   return data.data;
 }

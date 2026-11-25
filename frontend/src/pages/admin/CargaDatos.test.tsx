@@ -2,7 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import CargaDatos from './CargaDatos';
-import { importarCsv, obtenerVistaPreviaImportacion } from '../../services/admin';
+import { vaciarCacheCarga } from '../../hooks/useCarga';
+import {
+  importarCsv,
+  obtenerUltimasImportaciones,
+  obtenerVistaPreviaImportacion,
+} from '../../services/admin';
 import type { ResultadoImportacionDTO, VistaPreviaImportacionDTO } from '../../types/admin';
 
 vi.mock('../../context/useAuth', () => ({
@@ -11,10 +16,12 @@ vi.mock('../../context/useAuth', () => ({
 vi.mock('../../services/admin', () => ({
   importarCsv: vi.fn(),
   obtenerVistaPreviaImportacion: vi.fn(),
+  obtenerUltimasImportaciones: vi.fn(),
 }));
 
 const importar = vi.mocked(importarCsv);
 const vistaPrevia = vi.mocked(obtenerVistaPreviaImportacion);
+const ultimas = vi.mocked(obtenerUltimasImportaciones);
 
 /** Vista previa sin retiros (Issue 1.17): la de la mayoría de las pruebas. */
 const VISTA_SIN_RETIROS: VistaPreviaImportacionDTO = {
@@ -65,7 +72,15 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    vaciarCacheCarga();
     vistaPrevia.mockResolvedValue(VISTA_SIN_RETIROS);
+    // Por defecto el servidor no tiene cargas registradas.
+    ultimas.mockResolvedValue({
+      'cursos-secciones': null,
+      horarios: null,
+      matriculas: null,
+      docentes: null,
+    });
   });
 
   it('muestra la vista previa con los retiros y no importa si se cancela (Issue 1.17)', async () => {
@@ -109,7 +124,8 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     expect(screen.getByRole('button', { name: 'Guía y plantillas' })).toBeInTheDocument();
   });
 
-  it('no muestra «Sin cargar» junto a una fecha de última carga (Issue 4.55)', () => {
+  it('si el servidor no responde, usa la última carga del navegador y lo rotula (Issue 4.55)', async () => {
+    ultimas.mockRejectedValue(new Error('Network Error'));
     localStorage.setItem(
       'saie.carga.ultima.horarios',
       JSON.stringify({ fecha: '2026-10-10T10:00:00Z', estado: 'con-errores' }),
@@ -119,13 +135,60 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     montar();
 
     const horarios = regionDe('2. Horarios');
-    expect(within(horarios).getByText('Con errores')).toBeInTheDocument();
+    expect(await within(horarios).findByText('Con errores')).toBeInTheDocument();
     expect(within(horarios).getByText(/Última carga en este navegador:/)).toBeInTheDocument();
     expect(within(regionDe('4. Docentes')).getByText('Cargado')).toBeInTheDocument();
     // Sin fecha guardada, sí corresponde «Sin cargar» y no hay fecha.
     const cursos = regionDe('1. Cursos y secciones');
     expect(within(cursos).getByText('Sin cargar')).toBeInTheDocument();
     expect(within(cursos).queryByText(/Última carga/)).toBeNull();
+  });
+
+  it('toma del servidor la fecha, quién cargó y el resultado de la última carga (Issue 4.55)', async () => {
+    // Lo guardado en este navegador no manda: el servidor es la fuente.
+    localStorage.setItem('saie.carga.ultima.docentes', '2026-10-09T10:00:00Z');
+    ultimas.mockResolvedValue({
+      'cursos-secciones': {
+        tipo: 'cursos-secciones',
+        fecha: '2026-11-24T15:30:00Z',
+        cuenta: { id: 'c1', nombre: 'coordinacion' },
+        filasRecibidas: 228,
+        filasAceptadas: 228,
+        filasRechazadas: 0,
+        resultado: 'EXITOSA',
+      },
+      horarios: {
+        tipo: 'horarios',
+        fecha: '2026-11-24T16:00:00Z',
+        cuenta: null,
+        filasRecibidas: 5,
+        filasAceptadas: 0,
+        filasRechazadas: 5,
+        resultado: 'CON_ERRORES',
+      },
+      matriculas: null,
+      docentes: null,
+    });
+    montar();
+
+    const cursos = regionDe('1. Cursos y secciones');
+    expect(await within(cursos).findByText('Cargado')).toBeInTheDocument();
+    expect(within(cursos).getByText(/^Última carga: .* · coordinacion$/)).toBeInTheDocument();
+    const horarios = regionDe('2. Horarios');
+    expect(within(horarios).getByText('Con errores')).toBeInTheDocument();
+    expect(within(horarios).getByText(/^Última carga: /)).toBeInTheDocument();
+    // Docentes nunca se cargó según el servidor: «Sin cargar» y sin fecha.
+    const docentes = regionDe('4. Docentes');
+    expect(within(docentes).getByText('Sin cargar')).toBeInTheDocument();
+    expect(within(docentes).queryByText(/Última carga/)).toBeNull();
+    expect(screen.queryByText(/en este navegador/)).toBeNull();
+  });
+
+  it('no afirma «Sin cargar» mientras consulta al servidor (Issue 4.55)', () => {
+    ultimas.mockReturnValue(new Promise(() => {}));
+    montar();
+    expect(within(regionDe('1. Cursos y secciones')).getByText('Consultando…')).toBeInTheDocument();
+    expect(screen.queryByText('Sin cargar')).toBeNull();
   });
 
   it('muestra nombre y tamaño del archivo elegido', () => {
@@ -163,7 +226,9 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     expect(await screen.findByText('Carga completada sin errores')).toBeInTheDocument();
     expect(importar).toHaveBeenCalledWith('horarios', 'x,y', expect.any(Function));
     expect(screen.getByText('Cargado')).toBeInTheDocument();
-    expect(screen.getByText(/Última carga en este navegador:/)).toBeInTheDocument();
+    // La procesó el servidor: no es un dato «de este navegador», y se vuelve a consultar.
+    expect(within(regionDe('2. Horarios')).getByText(/^Última carga: /)).toBeInTheDocument();
+    await waitFor(() => expect(ultimas).toHaveBeenCalledTimes(2));
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
     const dialogo = screen.getByRole('dialog', { name: /Resultado de la carga.*2. Horarios/ });

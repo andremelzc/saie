@@ -14,10 +14,16 @@ import { Drawer } from '../../components/ui/Drawer';
 import { PLANTILLAS, descargarPlantilla } from '../../config/plantillas';
 import type { PlantillaCSV } from '../../config/plantillas';
 import { useAccion } from '../../hooks/useAccion';
-import { importarCsv, obtenerVistaPreviaImportacion } from '../../services/admin';
+import { useCarga } from '../../hooks/useCarga';
+import {
+  importarCsv,
+  obtenerUltimasImportaciones,
+  obtenerVistaPreviaImportacion,
+} from '../../services/admin';
 import type {
   ResultadoImportacionDTO,
   TipoImportacion,
+  UltimaImportacionDTO,
   VistaPreviaImportacionDTO,
 } from '../../types/admin';
 import { leerArchivoCsv } from '../../utils/archivoCsv';
@@ -89,17 +95,34 @@ function textoSecciones(cantidad: number): string {
   return cantidad === 1 ? '1 sección' : `${cantidad} secciones`;
 }
 
-/** Última carga de un tipo registrada en este navegador: fecha y resultado. */
+/** Última carga de un tipo: fecha, resultado y de dónde sale el dato. */
 interface UltimaCarga {
   fecha: string;
   estado: Exclude<EstadoFlujo, 'sin-cargar'>;
+  /**
+   * `servidor`: registrada en la base (Issue 4.54), la misma para cualquier navegador y persona.
+   * `navegador`: respaldo local cuando el servidor no responde; la pantalla lo rotula así.
+   */
+  origen: 'servidor' | 'navegador';
+  /** Quién la cargó, si el servidor lo sabe. */
+  cuenta?: string | null;
+}
+
+/** Issue 4.55 — la última carga según el servidor, con su resultado y quién la hizo. */
+function desdeServidor(u: UltimaImportacionDTO): UltimaCarga {
+  return {
+    fecha: u.fecha,
+    estado: u.resultado === 'EXITOSA' ? 'cargado' : 'con-errores',
+    origen: 'servidor',
+    cuenta: u.cuenta?.nombre ?? null,
+  };
 }
 
 /**
- * Issue 4.55 — la última carga se recuerda junto con su resultado, así el distintivo y la fecha
- * no se contradicen («Sin cargar» con una fecha de última carga). Mientras el servidor no exponga
- * la última carga (Issue 4.54) el dato es de este navegador y la pantalla lo dice. Las entradas
- * antiguas (solo la fecha) se leen como una carga correcta.
+ * Respaldo local (Issue 4.55): si el servidor no responde, se usa la última carga recordada en
+ * este navegador, junto con su resultado para que el distintivo y la fecha no se contradigan
+ * («Sin cargar» con una fecha de última carga). Las entradas antiguas (solo la fecha) se leen
+ * como una carga correcta.
  */
 function leerUltimaCarga(tipo: TipoImportacion): UltimaCarga | null {
   try {
@@ -111,15 +134,16 @@ function leerUltimaCarga(tipo: TipoImportacion): UltimaCarga | null {
       return {
         fecha: valor.fecha,
         estado: valor.estado === 'con-errores' ? 'con-errores' : 'cargado',
+        origen: 'navegador',
       };
     }
-    return Number.isNaN(Date.parse(crudo)) ? null : { fecha: crudo, estado: 'cargado' };
+    return Number.isNaN(Date.parse(crudo))
+      ? null
+      : { fecha: crudo, estado: 'cargado', origen: 'navegador' };
   } catch {
     return null;
   }
 }
-
-const TIPOS_CARGA: TipoImportacion[] = ['cursos-secciones', 'horarios', 'matriculas', 'docentes'];
 
 function descargarErrores(tipo: TipoImportacion, errores: string[]) {
   if (typeof URL.createObjectURL !== 'function') return;
@@ -141,8 +165,11 @@ function descargarErrores(tipo: TipoImportacion, errores: string[]) {
 function insigniaDeEstado(
   estado: EstadoFlujo,
   enviando: boolean,
+  consultando = false,
 ): { tono: 'info' | 'exito' | 'advertencia' | 'neutro'; texto: string } {
   if (enviando) return { tono: 'info', texto: 'Importando' };
+  // Mientras llega la respuesta del servidor no se afirma «Sin cargar»: puede haber una carga.
+  if (consultando && estado === 'sin-cargar') return { tono: 'neutro', texto: 'Consultando…' };
   if (estado === 'cargado') return { tono: 'exito', texto: 'Cargado' };
   if (estado === 'con-errores') return { tono: 'advertencia', texto: 'Con errores' };
   return { tono: 'neutro', texto: 'Sin cargar' };
@@ -460,6 +487,8 @@ export const ZonaCarga: React.FC<{
   descripcion: string;
   estado: EstadoFlujo;
   ultimaCarga: UltimaCarga | null;
+  /** `true` mientras se consulta la última carga al servidor. */
+  consultando?: boolean;
   onEstado: (tipo: TipoImportacion, estado: EstadoFlujo, fecha: string) => void;
   onSiguiente?: () => void;
   etiquetaSiguiente?: string;
@@ -469,6 +498,7 @@ export const ZonaCarga: React.FC<{
   descripcion,
   estado,
   ultimaCarga,
+  consultando = false,
   onEstado,
   onSiguiente,
   etiquetaSiguiente,
@@ -596,7 +626,7 @@ export const ZonaCarga: React.FC<{
     setTimeout(() => document.getElementById(idInput)?.focus(), 0);
   }
 
-  const insignia = insigniaDeEstado(estado, enviando);
+  const insignia = insigniaDeEstado(estado, enviando, consultando);
 
   return (
     <section
@@ -615,7 +645,11 @@ export const ZonaCarga: React.FC<{
       </div>
       {ultimaCarga && (
         <p className="m-0 text-sm text-saie-muted">
-          Última carga en este navegador: {formatearFechaCorta(ultimaCarga.fecha)}
+          {ultimaCarga.origen === 'servidor'
+            ? `Última carga: ${formatearFechaCorta(ultimaCarga.fecha)}${
+                ultimaCarga.cuenta ? ` · ${ultimaCarga.cuenta}` : ''
+              }`
+            : `Última carga en este navegador: ${formatearFechaCorta(ultimaCarga.fecha)}`}
         </p>
       )}
 
@@ -951,21 +985,42 @@ export const CargaDatos: React.FC = () => {
   const { hash } = useLocation();
   const [guiaAbierta, setGuiaAbierta] = useState(false);
   const [pestanaAyuda, setPestanaAyuda] = useState<Ayuda>('guia');
-  // El estado de cada zona sale de la misma fuente que su fecha: nunca «Sin cargar» con fecha.
-  const [ultimas, setUltimas] = useState<Record<TipoImportacion, UltimaCarga | null>>(
-    () =>
-      Object.fromEntries(TIPOS_CARGA.map((t) => [t, leerUltimaCarga(t)])) as Record<
-        TipoImportacion,
-        UltimaCarga | null
-      >,
+  // Issue 4.55: la última carga sale del servidor, igual en cualquier navegador y para cualquier
+  // persona de Coordinación. El estado de cada zona sale de la misma fuente que su fecha: nunca
+  // «Sin cargar» con fecha.
+  const servidor = useCarga(obtenerUltimasImportaciones, { clave: 'importaciones:ultima' });
+  // Cargas hechas en esta visita: se muestran al instante, sin esperar a que el servidor responda.
+  const [deEstaVisita, setDeEstaVisita] = useState<Partial<Record<TipoImportacion, UltimaCarga>>>(
+    {},
   );
+  const consultando = servidor.cargando && servidor.datos === null;
+
+  function ultimaDe(tipo: TipoImportacion): UltimaCarga | null {
+    const reciente = deEstaVisita[tipo] ?? null;
+    if (servidor.datos) {
+      const registrada = servidor.datos[tipo];
+      const delServidor = registrada ? desdeServidor(registrada) : null;
+      if (
+        reciente &&
+        (!delServidor || Date.parse(reciente.fecha) > Date.parse(delServidor.fecha))
+      ) {
+        return reciente;
+      }
+      return delServidor;
+    }
+    if (consultando) return reciente;
+    // El servidor no respondió: respaldo local, rotulado «en este navegador».
+    return reciente ?? leerUltimaCarga(tipo);
+  }
 
   function marcarEstado(tipo: TipoImportacion, estado: EstadoFlujo, fecha: string) {
     if (estado === 'sin-cargar') return;
-    const ultima: UltimaCarga = { fecha, estado };
-    setUltimas((prev) => ({ ...prev, [tipo]: ultima }));
+    // La carga la procesó el servidor: es un dato oficial aunque aún no se sepa quién la registró.
+    setDeEstaVisita((prev) => ({ ...prev, [tipo]: { fecha, estado, origen: 'servidor' } }));
+    servidor.recargar();
+    // Se sigue recordando en el navegador como respaldo por si el servidor no responde luego.
     try {
-      localStorage.setItem(`${CLAVE_ALMACEN}${tipo}`, JSON.stringify(ultima));
+      localStorage.setItem(`${CLAVE_ALMACEN}${tipo}`, JSON.stringify({ fecha, estado }));
     } catch {
       // El almacenamiento puede estar deshabilitado; la pantalla sigue funcionando.
     }
@@ -1007,12 +1062,14 @@ export const CargaDatos: React.FC = () => {
         <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
           {FLUJOS.map((flujo, indice) => {
             const siguiente = FLUJOS[indice + 1];
+            const ultima = ultimaDe(flujo.tipo);
             return (
               <ZonaCarga
                 key={flujo.tipo}
                 {...flujo}
-                estado={ultimas[flujo.tipo]?.estado ?? 'sin-cargar'}
-                ultimaCarga={ultimas[flujo.tipo]}
+                estado={ultima?.estado ?? 'sin-cargar'}
+                ultimaCarga={ultima}
+                consultando={consultando}
                 onEstado={marcarEstado}
                 onSiguiente={siguiente ? () => irAZona(siguiente.tipo) : undefined}
                 etiquetaSiguiente={
