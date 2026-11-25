@@ -36,46 +36,45 @@ El proyecto utiliza una arquitectura monorepo organizada en carpetas con límite
 ```
 saie/
 ├── .nvmrc                      # Versión de Node.js fijada (v24.16.0)
-├── .gitignore                  # Reglas globales de exclusión Git
+├── .github/workflows/          # ci.yml, cd.yml, asignacion-programada.yml, resumen-diario.yml
 ├── docker-compose.yml          # Contenedor de PostgreSQL local para desarrollo
 ├── package.json                # Workspaces de npm y scripts unificados
-├── docs/                       # Documentación técnica del proyecto
-│   ├── arquitectura.md         # Documento de Arquitectura (DA)
-│   ├── modelo-datos.md         # Documento de Modelo de Datos (DMD)
-│   └── git-workflow.md         # Convenciones de Commits y Branching
-├── assets/                     # Recursos estáticos globales
-│   └── planos/                 # Planos vectoriales SVG (Issue 6.10)
+├── docs/                       # Documentación del proyecto (ver sección 10)
+│   └── specs/                  # Especificaciones técnicas por épica
+├── assets/planos/              # Planos vectoriales SVG de los tres pisos (Issue 6.10)
+├── demo/                       # CSV de demostración y de pruebas manuales
+├── tools/planos/               # Fuentes y conversor de los planos
 ├── backend/                    # API REST, motor de reglas e importadores
 │   ├── prisma/
-│   │   └── schema.prisma       # Definición del esquema de base de datos
+│   │   ├── schema.prisma       # Esquema de base de datos
+│   │   ├── migrations/         # Migraciones de Prisma
+│   │   ├── seed.ts             # Seed desde Excel (Issue 5.17)
+│   │   └── *.ts                # Scripts de mantenimiento (exportar, restablecer claves, …)
 │   ├── src/
 │   │   ├── app.ts              # Configuración de Express, CORS y middlewares
 │   │   ├── index.ts            # Punto de entrada y servidor HTTP
-│   │   ├── lib/prisma.ts       # Instancia singleton de Prisma Client
-│   │   ├── routes/             # Enrutadores Express (/api/health, etc.)
+│   │   ├── routes/             # Enrutadores Express por área
 │   │   ├── controllers/        # Controladores de endpoints
-│   │   ├── services/           # Lógica de negocio y dominio
-│   │   ├── rules/              # Motor de reglas pedagógicas
+│   │   ├── services/           # Lógica de negocio y orquestación del motor
+│   │   ├── rules/              # Reglas del motor de asignación
 │   │   ├── importers/          # Importadores masivos (CSV)
-│   │   └── middlewares/        # Middlewares (Auth JWT, validación Zod)
-│   ├── .env.example            # Variables de entorno requeridas
-│   ├── tsconfig.json           # Configuración de TypeScript
-│   ├── eslint.config.mjs       # Configuración de ESLint 9+
-│   └── jest.config.js          # Configuración de pruebas Jest con ts-jest
+│   │   ├── events/             # Bus de eventos interno
+│   │   ├── telegram/           # Bot y avisos por Telegram
+│   │   ├── middlewares/        # Autenticación, roles, límites y errores
+│   │   ├── lib/                # Prisma y utilidades
+│   │   └── types/              # DTO compartidos
+│   ├── tests/                  # Pruebas unitarias y de integración (Jest + Supertest)
+│   └── .env.example            # Variables de entorno requeridas
 ├── frontend/                   # Portales web y panel administrativo (SPA)
 │   ├── src/
-│   │   ├── pages/              # Páginas y vistas (Home, Dashboard, etc.)
-│   │   ├── services/api.ts     # Cliente Axios configurado
-│   │   ├── components/         # Componentes reutilizables de UI
-│   │   ├── hooks/              # Custom React Hooks
-│   │   └── types/              # Definiciones e interfaces TypeScript
-│   ├── .env.example            # Variables de entorno de frontend
-│   ├── tsconfig.json           # Configuración de TypeScript
-│   ├── eslint.config.js        # Configuración de ESLint
-│   └── vite.config.ts          # Configuración de Vite + TailwindCSS
-└── tests/                      # Suites de pruebas integrales
-    ├── integration/            # Pruebas de integración de endpoints (Jest + Supertest)
-    ├── e2e/                    # Pruebas end-to-end con Playwright
+│   │   ├── pages/              # Pantallas por rol
+│   │   ├── components/         # Componentes por área y sistema de diseño (ui/)
+│   │   ├── services/           # Llamadas a la API (Axios)
+│   │   ├── config/rutas.ts     # Rutas de la SPA
+│   │   └── hooks/, context/, utils/, types/
+│   └── .env.example            # Variables de entorno de frontend
+└── tests/                      # Suites que prueban el sistema completo
+    ├── e2e/                    # Pruebas end-to-end con Playwright y axe
     └── load/                   # Pruebas de carga con k6
 ```
 
@@ -131,10 +130,14 @@ npm run docker:db
 ```
 *Esto levantará una instancia de PostgreSQL en `localhost:5432` con la base `saie_dev`.*
 
-### 5. Generar el cliente de Prisma y aplicar migraciones
+### 5. Aplicar migraciones, generar el cliente de Prisma y cargar los datos
 ```bash
+npm run prisma:deploy
 npm run prisma:generate
+npm run prisma:seed
 ```
+
+El seed lee `backend/prisma/data/seed-plantilla.xlsx`, que **no está versionado**: pídelo al Maintainer o indica otra ruta con `SEED_ARCHIVO`. Detalle en el [Manual técnico §6.2](docs/manual_tecnico.md#62-reconstruir-la-base-con-el-seed-issue-517).
 
 > **Después de cada `git pull`:** si el pull trae cambios en `backend/prisma/schema.prisma`, vuelve a ejecutar `npx prisma generate` dentro de `backend/`. Si no lo haces, el cliente de Prisma queda desactualizado: el backend no compila y fallan las pruebas que usan los modelos nuevos (riesgo R27 de `docs/riesgos_y_brechas.md`). No se automatiza con `postinstall` porque `prisma` es una dependencia de desarrollo y el despliegue podría instalar solo las de producción.
 
@@ -167,16 +170,19 @@ Todos los comandos principales pueden ejecutarse directamente desde la raíz del
 | :--- | :--- |
 | `npm run dev:backend` | Inicia el servidor Express en desarrollo con recarga en caliente (`tsx watch`). |
 | `npm run dev:frontend` | Inicia el servidor de desarrollo de Vite para React. |
-| `npm run build` | Compila TypeScript en backend (`dist/`) y construye el bundle de frontend. |
-| `npm run test` | Ejecuta las pruebas unitarias y de integración de API con Jest y Supertest. |
+| `npm run build` | Compila TypeScript en backend (`dist/`) y construye el bundle de frontend (`build:backend` y `build:frontend` por separado). |
+| `npm run test` | Ejecuta las pruebas de backend (Jest + Supertest) y de frontend (Vitest). `test:backend` y `test:frontend` por separado. |
 | `npm run test:watch` | Ejecuta Jest en modo interactivo/observador. |
-| `npm run test:coverage` | Genera reporte de cobertura de código con Jest. |
+| `npm run test:coverage` | Genera el reporte de cobertura de backend y frontend. |
 | `npm run test:e2e` | Ejecuta las pruebas end-to-end con Playwright. |
+| `npm run test:load` | Ejecuta la prueba de carga del pico del primer día con k6. |
 | `npm run lint` | Ejecuta el análisis estático de ESLint en backend y frontend. |
-| `npm run format` | Aplica el formato automático de código con Prettier en todo el proyecto. |
+| `npm run format` | Aplica el formato automático de código con Prettier en backend y frontend. |
 | `npm run format:check` | Verifica que el código cumpla con las reglas de estilo de Prettier sin modificarlo. |
 | `npm run prisma:generate` | Genera los tipos de Prisma Client basados en el esquema. |
-| `npm run prisma:migrate` | Aplica migraciones pendientes sobre la base de datos configurada. |
+| `npm run prisma:migrate` | Crea y aplica migraciones en desarrollo (`prisma migrate dev`). |
+| `npm run prisma:deploy` | Aplica las migraciones pendientes sin crear nuevas (`prisma migrate deploy`). |
+| `npm run prisma:seed` | Carga la base desde el Excel del seed. |
 | `npm run docker:db` | Levanta el contenedor Docker con la base de datos PostgreSQL local. |
 | `npm run docker:down` | Detiene y remueve los contenedores Docker locales. |
 
@@ -184,10 +190,11 @@ Todos los comandos principales pueden ejecutarse directamente desde la raíz del
 
 ## 7. Ejecución de Pruebas
 
-### Pruebas de Integración (Jest + Supertest)
+### Pruebas unitarias y de integración (Jest, Supertest y Vitest)
 ```bash
 npm run test
 ```
+Las de backend están en `backend/tests/` (`unit/` e `integration/`) y necesitan `DATABASE_URL` y `DIRECT_URL`; las de frontend están junto a cada componente (`*.test.tsx`).
 
 ### Pruebas End-to-End (Playwright)
 ```bash
@@ -201,8 +208,10 @@ npm run test:e2e
 ### Pruebas de Carga (k6)
 Requiere tener instalado [k6](https://k6.io/docs/get-started/installation/):
 ```bash
-k6 run tests/load/smoke-load-test.js
+npm run test:load                      # pico del primer día (tests/load/pico_primer_dia.js)
+k6 run tests/load/smoke-load-test.js   # prueba de humo
 ```
+Detalle de escenarios y umbrales en [`tests/load/README.md`](tests/load/README.md).
 
 ---
 
@@ -296,5 +305,21 @@ Además del despliegue, dos workflows de GitHub Actions ejecutan tareas sin inte
 Ambos toleran el arranque en frío de Render reintentando la llamada.
 
 > [!NOTE]
-> El candado que evita corridas simultáneas vive en la memoria del proceso. Es válido mientras el backend corra en una sola instancia (el plan gratuito de Render); si se escala a varias instancias, habrá que moverlo a un almacén compartido.
+> El candado que evita corridas simultáneas usa un *advisory lock* de PostgreSQL (Issue 5.33), así que sigue siendo válido si el backend escala a varias instancias.
+
+---
+
+## 10. Documentación
+
+| Documento | Para qué sirve |
+|---|---|
+| [Informe final](docs/informe_final.md) | Resumen del proyecto: alcance entregado, gestión, calidad, decisiones y pendientes. |
+| [Manual de usuario](docs/manual_usuario.md) | Qué puede hacer cada rol y cómo. |
+| [Manual técnico](docs/manual_tecnico.md) | Instalación, variables de entorno, base de datos y seed, despliegue, operación y cómo extender el sistema. |
+| [Guion de demostración](docs/guion_demo.md) | Guion de la sustentación y lista previa a la demo. |
+| [Arquitectura](docs/arquitectura.md) y [Modelo de datos](docs/modelo-datos.md) | Diseño del sistema. |
+| [Especificaciones técnicas](docs/specs/README.md) | Contratos de cada épica. |
+| [Guía de pruebas por rol](docs/guia_pruebas_por_rol.md) | Recorrido manual del sistema con los cuatro roles. |
+| [Riesgos y brechas](docs/riesgos_y_brechas.md) | Auditoría final, decisiones del equipo y propuestas pendientes. |
+| [CHANGELOG](CHANGELOG.md) | Historial de versiones. |
 
