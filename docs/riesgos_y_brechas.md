@@ -89,8 +89,8 @@
 
 | Estado | Riesgos |
 |---|---|
-| **Resueltos** | R1 (doble reserva), R2 (aulas de menor a mayor), R3 y R18 (espacios que dejan de servir, alerta al deshabilitar y «Reubicar secciones»), R7 (secciones sin horarios como datos incompletos), R10 (alerta de accesibilidad), R11 (la importación conserva la movilidad declarada), R17 (Jefatura a cargo de los laboratorios, aplicado en Supabase), R27 (indicación en README y AGENTS.md), R34 y R36 (importación todo o nada y avisos de choques), R46 (Telegram sin respuestas repetidas), R49 (normalización y validación del periodo), R37 (consulta pública sin ficha médica y solo con el periodo vigente), R38 (CSV de Excel con tildes y ñ), R25, R50, R51 y R52 (periodos gestionados por Coordinación: registrar, activar y cerrar, escrituras bloqueadas en periodos cerrados, filtro por el vigente) |
-| **En parte** | — |
+| **Resueltos** | R1 (doble reserva), R2 (aulas de menor a mayor), R3 y R18 (espacios que dejan de servir, alerta al deshabilitar y «Reubicar secciones»), R7 (secciones sin horarios como datos incompletos), R10 (alerta de accesibilidad), R11 (la importación conserva la movilidad declarada), R17 (Jefatura a cargo de los laboratorios, aplicado en Supabase), R27 (indicación en README y AGENTS.md), R34 y R36 (importación todo o nada y avisos de choques), R46 (Telegram sin respuestas repetidas), R49 (normalización y validación del periodo), R37 (consulta pública sin ficha médica y solo con el periodo vigente), R38 (CSV de Excel con tildes y ñ), R39 (importaciones en segundo plano con avance y una sola carga por tipo), R25, R50, R51 y R52 (periodos gestionados por Coordinación: registrar, activar y cerrar, escrituras bloqueadas en periodos cerrados, filtro por el vigente) |
+| **En parte** | R35 (matrículas y horarios ya reflejan retiros y cambios de hora; faltan la vista previa antes de confirmar y marcar como inactivas las secciones que dejan de aparecer) |
 | **Pendientes** | El resto de los issues del milestone *Sprint 6 — Correcciones de la auditoría* |
 
 La migración `20261125000000_alerta_accesibilidad` (valor `ACCESIBILIDAD` en `TipoAlerta`) ya está aplicada en Supabase.
