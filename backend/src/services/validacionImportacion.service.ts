@@ -130,7 +130,16 @@ async function validarHorarios(filas: unknown[], db: Db, r: ValidacionImportacio
     if (!secciones.has(k)) r.errores.push(errorSeccionInexistente(v.fila, v.datos));
   }
 
-  // Riesgo R36: avisar si un docente quedaría con dos clases a la vez. Se cruzan las franjas del
+  avisarChoquesDeDocentes(validas, secciones, r);
+}
+
+/** Riesgo R36: avisa si un docente quedaría con dos clases a la vez. */
+function avisarChoquesDeDocentes(
+  validas: FilaValida<z.output<typeof HorarioSchema>>[],
+  secciones: Map<string, SeccionReferida>,
+  r: ValidacionImportacion,
+): void {
+  // Se cruzan las franjas del
   // archivo con las que ya están en la base para las secciones que el archivo no incluye.
   const franjasPorDocente = new Map<string, { seccion: string; horario: HorarioSlot }[]>();
   const enArchivo = new Set<string>();
@@ -289,6 +298,6 @@ export async function validarImportacion(
 }
 
 function numeroDeFila(error: string): number {
-  const m = error.match(/^Fila (\d+)/);
+  const m = /^Fila (\d+)/.exec(error);
   return m ? Number(m[1]) : Number.MAX_SAFE_INTEGER;
 }

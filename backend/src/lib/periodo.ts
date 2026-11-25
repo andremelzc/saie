@@ -19,7 +19,7 @@ export const MENSAJE_PERIODO_INVALIDO =
 /** Devuelve el periodo en la forma `AAAA-N`, o `null` si no es un periodo válido. */
 export function normalizarPeriodo(valor: string): string | null {
   const compacto = valor.replace(/\s+/g, '').toUpperCase();
-  const m = compacto.match(/^(\d{4})-(0|1|2|I|II)$/);
+  const m = /^(\d{4})-(0|1|2|I|II)$/.exec(compacto);
   if (!m) return null;
   return `${m[1]}-${SEMESTRE[m[2]]}`;
 }

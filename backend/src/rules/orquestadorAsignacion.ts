@@ -48,7 +48,7 @@ export function espaciosSiguenSirviendo(
 ): boolean {
   const porId = new Map(espaciosDisponibles.map((e) => [e.id, e]));
   const espacios = espacioIds.map((id) => porId.get(id));
-  if (espacios.length === 0 || espacios.some((e) => e === undefined)) return false;
+  if (espacios.length === 0 || espacios.includes(undefined)) return false;
 
   const bloque = espacios as EspacioConexo[];
   if (bloque.some((e) => e.tipo !== seccion.tipoEspacioRequerido)) return false;

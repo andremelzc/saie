@@ -347,6 +347,29 @@ export async function crearEspacio(
   }
 }
 
+/** Issue 2.22 (R18): alerta con las secciones que quedaron sin aula al deshabilitar el espacio. */
+async function alertarEspacioDeshabilitado(
+  espacioId: string,
+  identificador: string,
+  tx: Prisma.TransactionClient,
+): Promise<AlertaRegistradaDTO | null> {
+  const vigentes = await cargarAsignacionesVigentesDeEspacio(espacioId, tx);
+  return registrarAlertaDesdeDeteccion(
+    TipoAlerta.CAPACIDAD,
+    espacioId,
+    identificador,
+    vigentes.map((a) => ({
+      asignacionId: a.id,
+      seccionId: a.seccionId,
+      codigoCurso: a.codigoCurso,
+      nombreCurso: a.nombreCurso,
+      codigoSeccion: a.codigoSeccion,
+      detalle: 'el espacio fue deshabilitado',
+    })),
+    tx,
+  );
+}
+
 /**
  * Issue 4.15: edición de un espacio con campos acotados por rol.
  *
@@ -470,19 +493,9 @@ export async function actualizarEspacio(
         // Issue 2.22 (riesgo R18 de la auditoría): deshabilitar un espacio con clases deja a
         // esas secciones sin aula. Se genera una alerta para que Coordinación las reubique.
         if (actual.habilitado && entrada.habilitado === false) {
-          const vigentes = await cargarAsignacionesVigentesDeEspacio(actual.id, tx);
-          const alerta = await registrarAlertaDesdeDeteccion(
-            TipoAlerta.CAPACIDAD,
+          const alerta = await alertarEspacioDeshabilitado(
             actual.id,
             actualizado.identificador,
-            vigentes.map((a) => ({
-              asignacionId: a.id,
-              seccionId: a.seccionId,
-              codigoCurso: a.codigoCurso,
-              nombreCurso: a.nombreCurso,
-              codigoSeccion: a.codigoSeccion,
-              detalle: 'el espacio fue deshabilitado',
-            })),
             tx,
           );
           if (alerta) alertas.push(alerta);
