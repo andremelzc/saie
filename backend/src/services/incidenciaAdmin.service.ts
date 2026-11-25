@@ -8,6 +8,8 @@ import { verificarAccesoEspacio } from './acceso.service';
 const INCLUIR_INCIDENCIA = {
   espacio: true,
   docente: true,
+  // Issue 7.19: solo si hay foto; los bytes se piden aparte.
+  imagen: { select: { id: true } },
   asignacion: { include: { seccion: { include: { curso: true } } } },
 } satisfies Prisma.IncidenciaInclude;
 
@@ -22,6 +24,7 @@ function aIncidenciaDTO(i: IncidenciaConDetalle): IncidenciaAdminDTO {
     estado: i.estado,
     descripcion: i.descripcion,
     evidencia: i.evidencia,
+    tieneImagen: Boolean(i.imagen),
     fechaReporte: i.fechaReporte,
     comentarioCierre: i.comentarioCierre,
     fechaCierre: i.fechaCierre,

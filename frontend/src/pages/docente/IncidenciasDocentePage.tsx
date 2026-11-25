@@ -18,6 +18,7 @@ import {
   obtenerHorarioDocente,
   obtenerMisIncidencias,
   reportarIncidencia,
+  subirImagenIncidencia,
 } from '../../services/docente';
 import type {
   AsignacionActivaDocenteDTO,
@@ -36,6 +37,7 @@ import {
 } from '../../utils/diccionarios';
 import { ubicacionEspacio } from '../../utils/docente';
 import { formatearFechaCorta } from '../../utils/fechas';
+import { TIPOS_IMAGEN_EVIDENCIA, validarArchivoImagen } from '../../utils/imagenEvidencia';
 
 const MIN_DESCRIPCION = 5;
 const MAX_DESCRIPCION = 1000;
@@ -206,6 +208,16 @@ export const IncidenciasDocentePage: React.FC = () => {
   const [form, setForm] = useState<Formulario | null>(null);
   const [confirmacion, setConfirmacion] = useState<Confirmacion | null>(null);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
+  // Issue 7.19 (R45): foto opcional del problema; se sube después de registrar la incidencia.
+  const [foto, setFoto] = useState<File | null>(null);
+  const [errorFoto, setErrorFoto] = useState<string | null>(null);
+  const [avisoFoto, setAvisoFoto] = useState<string | null>(null);
+
+  const elegirFoto = (archivo: File | undefined) => {
+    const error = archivo ? validarArchivoImagen(archivo) : null;
+    setErrorFoto(error);
+    setFoto(archivo && !error ? archivo : null);
+  };
 
   // El formulario arranca con la primera clase en cuanto llega el horario.
   const datos = form ?? formularioInicial(asignaciones);
@@ -253,6 +265,7 @@ export const IncidenciasDocentePage: React.FC = () => {
       { avisarError: false },
     );
     if (resultado?.ok) {
+      setAvisoFoto(foto ? await adjuntarFoto(resultado.valor.id, foto) : null);
       misIncidencias.recargar();
       setConfirmacion({
         registro: resultado.valor,
@@ -265,14 +278,33 @@ export const IncidenciasDocentePage: React.FC = () => {
     }
   }
 
+  /** Sube la foto; si falla, la incidencia ya quedó registrada: se avisa sin perderla. */
+  async function adjuntarFoto(id: string, archivo: File): Promise<string | null> {
+    const subida = await accion.ejecutar(() => subirImagenIncidencia(id, archivo), {
+      avisarError: false,
+    });
+    if (subida?.ok) return null;
+    return `La incidencia se registró, pero no se pudo adjuntar la foto${subida ? `: ${subida.error}` : '.'}`;
+  }
+
   const reportarOtra = () => {
     setConfirmacion(null);
     setForm(null);
     setErrorEnvio(null);
+    setFoto(null);
+    setErrorFoto(null);
+    setAvisoFoto(null);
   };
 
   const cuerpo = (): React.ReactNode => {
-    if (confirmacion) return <ConfirmacionIncidencia c={confirmacion} onOtra={reportarOtra} />;
+    if (confirmacion) {
+      return (
+        <div className="flex flex-col gap-3">
+          {avisoFoto && <Aviso tono="advertencia">{avisoFoto}</Aviso>}
+          <ConfirmacionIncidencia c={confirmacion} onOtra={reportarOtra} />
+        </div>
+      );
+    }
     if (horario.cargando && !horario.datos) return <EsqueletoCarga texto="Cargando tus clases…" />;
     if (horario.error) {
       return <EstadoError mensaje={horario.error} onReintentar={horario.recargar} />;
@@ -372,9 +404,33 @@ export const IncidenciasDocentePage: React.FC = () => {
             className={`${CLASE_CAMPO} py-2`}
           />
         </Campo>
+        <div className="flex flex-col gap-1">
+          <Campo
+            etiqueta="Foto del problema (opcional)"
+            ayuda="JPEG, PNG o WebP de hasta 2 MB. Jefatura la verá en la ficha de la incidencia."
+          >
+            <input
+              type="file"
+              accept={TIPOS_IMAGEN_EVIDENCIA.join(',')}
+              onChange={(e) => elegirFoto(e.target.files?.[0])}
+              aria-invalid={errorFoto ? true : undefined}
+              aria-describedby={errorFoto ? 'error-foto-incidencia' : undefined}
+              className="text-sm file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-lg file:border file:border-saie-border file:bg-white file:px-3 file:text-sm file:font-medium"
+            />
+          </Campo>
+          {errorFoto && (
+            <p
+              id="error-foto-incidencia"
+              role="alert"
+              className="m-0 text-sm text-saie-danger-strong"
+            >
+              {errorFoto}
+            </p>
+          )}
+        </div>
         <Campo
-          etiqueta="Evidencia (opcional)"
-          ayuda="Enlace a una foto o un dato que ayude a ubicar el problema."
+          etiqueta="O un enlace (opcional)"
+          ayuda="Si la foto está en otro sitio, o un dato que ayude a ubicar el problema."
         >
           <input
             type="text"

@@ -300,6 +300,8 @@ export const CrearIncidenciaSchema = z
 export type CrearIncidenciaInput = z.infer<typeof CrearIncidenciaSchema>;
 
 export interface IncidenciaRegistradaDTO {
+  /** Issue 7.19: con él se adjunta la foto (`POST /docente/incidencias/:id/imagen`). */
+  id: string;
   identificadorSeguimiento: string;
   estado: 'PENDIENTE';
   fechaReporte: Date;
@@ -366,6 +368,7 @@ export async function registrarIncidencia(
       });
 
       return {
+        id: incidencia.id,
         identificadorSeguimiento: incidencia.identificadorSeguimiento,
         estado: 'PENDIENTE',
         fechaReporte: incidencia.fechaReporte,
@@ -386,6 +389,8 @@ export async function registrarIncidencia(
 
 const INCLUIR_INCIDENCIA_DOCENTE = {
   espacio: true,
+  // Issue 7.19: solo si hay foto; los bytes se piden aparte.
+  imagen: { select: { id: true } },
   asignacion: { include: { seccion: { include: { curso: true } } } },
 } satisfies Prisma.IncidenciaInclude;
 
@@ -413,6 +418,7 @@ export async function listarMisIncidencias(
     estado: i.estado,
     descripcion: i.descripcion,
     evidencia: i.evidencia,
+    tieneImagen: Boolean(i.imagen),
     fechaReporte: i.fechaReporte,
     comentarioCierre: i.comentarioCierre,
     fechaCierre: i.fechaCierre,

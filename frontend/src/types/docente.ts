@@ -126,6 +126,8 @@ export interface CrearIncidenciaDTO {
 }
 
 export interface IncidenciaRegistradaDTO {
+  /** Issue 7.19: con él se adjunta la foto. */
+  id: string;
   identificadorSeguimiento: string;
   estado: 'PENDIENTE';
   fechaReporte: string;
@@ -141,6 +143,8 @@ export interface IncidenciaAdminDTO {
   estado: EstadoIncidencia;
   descripcion: string;
   evidencia: string | null;
+  /** Issue 7.19: tiene una foto adjunta (se pide aparte). */
+  tieneImagen?: boolean;
   fechaReporte: string;
   comentarioCierre: string | null;
   fechaCierre: string | null;

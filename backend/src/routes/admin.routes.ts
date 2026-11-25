@@ -52,6 +52,8 @@ import {
   resolverAccesibilidadAdmin,
 } from '../controllers/accesibilidad.controller';
 
+import { verImagenIncidenciaAdmin } from '../controllers/imagenIncidencia.controller';
+
 const router = Router();
 
 // Todo el panel exige JWT válido de Coordinación Académica o Jefatura (Issue 4.8).
@@ -82,6 +84,8 @@ router.get('/secciones-escaladas', listarEscaladas);
 // GET /api/v1/admin/incidencias y PATCH /api/v1/admin/incidencias/:id/resolver (Issue 7.6)
 router.get('/incidencias', listarIncidenciasReportadas);
 router.patch('/incidencias/:id/resolver', resolverIncidencia);
+// Issue 7.19: la foto de la incidencia, con la misma regla de acceso que el listado.
+router.get('/incidencias/:id/imagen', verImagenIncidenciaAdmin);
 
 const soloCoordinacion = roleGuard(RolCuenta.COORDINACION_ACADEMICA);
 
