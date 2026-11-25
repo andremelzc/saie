@@ -1,5 +1,6 @@
 import { longitudMaxima, patron, validarCampo } from './validacion';
 import { TIPOS_SANGRE } from '../types/perfil';
+import type { EstadoAccesibilidadDTO } from '../types/accesibilidad';
 import type {
   CambiosPerfil,
   DatosAlumnoDTO,
@@ -41,14 +42,20 @@ export function valoresDatosPersonales(alumno: DatosAlumnoDTO): ValoresFormulari
   };
 }
 
-export function valoresFichaMedica(ficha: FichaMedicaDTO | null): ValoresFormulario {
+export function valoresFichaMedica(
+  ficha: FichaMedicaDTO | null,
+  accesibilidad: EstadoAccesibilidadDTO | null = null,
+): ValoresFormulario {
+  // Issue 3.60: la casilla queda marcada si la condición está aprobada o la declaración espera la
+  // confirmación de Coordinación.
+  const declarada = ficha?.condicionAccesible === true || accesibilidad?.estado === 'PENDIENTE';
   return {
     tipoSangre: aTexto(ficha?.tipoSangre),
     alergias: aTexto(ficha?.alergias),
     condicionEspecial: aTexto(ficha?.condicionEspecial),
     contactoEmergencia: aTexto(ficha?.contactoEmergencia),
     // La casilla es binaria: el vacío es «no», para que el formulario siga siendo de texto.
-    condicionAccesible: ficha?.condicionAccesible ? 'true' : '',
+    condicionAccesible: declarada ? 'true' : '',
   };
 }
 

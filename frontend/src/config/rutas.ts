@@ -39,6 +39,7 @@ export const RUTAS = {
   softwareAdmin: '/admin/software',
   solicitudesSoftwareAdmin: '/admin/solicitudes-software',
   incidenciasAdmin: '/admin/incidencias',
+  accesibilidadAdmin: '/admin/accesibilidad',
 } as const;
 
 export const ROLES_ADMIN: RolCuenta[] = ['COORDINACION_ACADEMICA', 'JEFATURA_LABORATORIOS'];

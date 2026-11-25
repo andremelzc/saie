@@ -276,6 +276,7 @@ model Alumno {
   cuenta      Cuenta?      @relation(fields: [cuentaId], references: [id])
   fichaMedica FichaMedica?
   matriculas  Matricula[]
+  solicitudesAccesibilidad SolicitudAccesibilidad[]
   vinculacionTelegram VinculacionTelegram?
 
   @@map("alumnos")
@@ -331,6 +332,7 @@ model Cuenta {
   softwareCreado       Software[]
   softwareRegistrado   EspacioSoftware[]
   solicitudesResueltas SolicitudSoftware[]
+  accesibilidadResuelta SolicitudAccesibilidad[]
 
   @@map("cuentas")
 }
@@ -608,4 +610,27 @@ model SolicitudSoftware {
   @@index([estado])
   @@index([docenteId])
   @@map("solicitudes_software")
+}
+
+// Issue 3.60 (riesgos R12 a R14): el alumno declara en su perfil que no puede subir a pisos
+// superiores y Coordinación Académica confirma o rechaza la declaración. Solo al aprobarla se
+// marca `FichaMedica.condicionAccesible` y la movilidad reducida de sus matrículas. No guarda
+// diagnósticos: es un requisito de acceso al espacio.
+model SolicitudAccesibilidad {
+  id              String          @id @default(uuid())
+  alumnoId        String          @map("alumno_id")
+  estado          EstadoSolicitud @default(PENDIENTE)
+  fechaSolicitud  DateTime        @default(now()) @map("fecha_solicitud")
+  resueltaPorId   String?         @map("resuelta_por_id")
+  fechaResolucion DateTime?       @map("fecha_resolucion")
+  motivoRechazo   String?         @map("motivo_rechazo") // Obligatorio si estado = RECHAZADA
+  // Al aprobarla: cuántas secciones del alumno quedaron en el piso 1 tras reasignarlas.
+  resultado       String?
+
+  alumno      Alumno  @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
+  resueltaPor Cuenta? @relation(fields: [resueltaPorId], references: [id], onDelete: SetNull)
+
+  @@index([estado])
+  @@index([alumnoId])
+  @@map("solicitudes_accesibilidad")
 }
