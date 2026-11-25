@@ -51,6 +51,7 @@ vi.mock('../../services/admin', () => ({
   obtenerAlertas: vi.fn(),
   resolverAlerta: vi.fn(),
   obtenerEscaladas: vi.fn(),
+  obtenerIncidencias: vi.fn().mockResolvedValue([]),
   ejecutarCorrida: vi.fn(),
   reintentarSeccion: vi.fn(),
   obtenerEspacios: vi.fn(),
