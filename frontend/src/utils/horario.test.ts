@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { HORARIO_FIXTURE } from '../test/fixtures/horario';
-import type { EspacioAsignadoDTO } from '../types/consulta';
+import type { DiaSemana, EspacioAsignadoDTO } from '../types/consulta';
 import type { SesionDTO } from '../types/horario';
 import {
   PALETA_CURSOS,
+  minutosDesdeHoy,
+  ordenarDesdeHoy,
   aMinutos,
   agruparClases,
   agruparPorCurso,
@@ -108,6 +110,72 @@ describe('utilidades del horario del alumno (Issue #145 / 3.16)', () => {
     expect(grupos[0].nombreCurso).toBe('Programación');
     expect(grupos[0].secciones.map((s) => s.codigoSeccion)).toEqual(['1', '1-LAB']);
     expect(grupos[1].secciones).toHaveLength(1);
+  });
+
+  describe('ordenarDesdeHoy', () => {
+    const seccion = (
+      codigoCurso: string,
+      codigoSeccion: string,
+      horarios: { diaSemana: DiaSemana; horaInicio: string }[],
+    ) => ({
+      codigoCurso,
+      nombreCurso: codigoCurso,
+      codigoSeccion,
+      horarios: horarios.map((h) => ({ ...h, horaFin: '23:59' })),
+    });
+
+    it('cuenta la semana desde hoy: miércoles, jueves, viernes, sábado, lunes, martes', () => {
+      const grupos = agruparPorCurso([
+        seccion('LUN', '1', [{ diaSemana: 'LUNES', horaInicio: '08:00' }]),
+        seccion('MAR', '1', [{ diaSemana: 'MARTES', horaInicio: '08:00' }]),
+        seccion('MIE', '1', [{ diaSemana: 'MIERCOLES', horaInicio: '20:00' }]),
+        seccion('JUE', '1', [{ diaSemana: 'JUEVES', horaInicio: '08:00' }]),
+        seccion('VIE', '1', [{ diaSemana: 'VIERNES', horaInicio: '08:00' }]),
+        seccion('SAB', '1', [{ diaSemana: 'SABADO', horaInicio: '08:00' }]),
+      ]);
+
+      const orden = ordenarDesdeHoy(grupos, 'MIERCOLES').map((g) => g.codigoCurso);
+
+      expect(orden).toEqual(['MIE', 'JUE', 'VIE', 'SAB', 'LUN', 'MAR']);
+    });
+
+    it('a igual día ordena por hora y un domingo empieza por el lunes', () => {
+      const grupos = agruparPorCurso([
+        seccion('TARDE', '1', [{ diaSemana: 'LUNES', horaInicio: '14:00' }]),
+        seccion('MANANA', '1', [{ diaSemana: 'LUNES', horaInicio: '08:00' }]),
+        seccion('SABADO', '1', [{ diaSemana: 'SABADO', horaInicio: '08:00' }]),
+      ]);
+
+      expect(ordenarDesdeHoy(grupos, 'DOMINGO').map((g) => g.codigoCurso)).toEqual([
+        'MANANA',
+        'TARDE',
+        'SABADO',
+      ]);
+    });
+
+    it('ordena las secciones y sus franjas, y deja al final lo que no tiene horario', () => {
+      const grupos = agruparPorCurso([
+        seccion('CC', '1', [
+          { diaSemana: 'LUNES', horaInicio: '08:00' },
+          { diaSemana: 'VIERNES', horaInicio: '08:00' },
+        ]),
+        seccion('CC', '1-LAB', [{ diaSemana: 'JUEVES', horaInicio: '10:00' }]),
+        seccion('SIN', '1', []),
+      ]);
+
+      const [cc, sin] = ordenarDesdeHoy(grupos, 'MIERCOLES');
+
+      expect(cc.secciones.map((s) => s.codigoSeccion)).toEqual(['1-LAB', '1']);
+      expect(cc.secciones[1].horarios.map((h) => h.diaSemana)).toEqual(['VIERNES', 'LUNES']);
+      expect(sin.codigoCurso).toBe('SIN');
+    });
+
+    it('cuenta los minutos desde el inicio de hoy', () => {
+      const franja = { diaSemana: 'JUEVES' as DiaSemana, horaInicio: '10:00', horaFin: '12:00' };
+      expect(minutosDesdeHoy(franja, 'MIERCOLES')).toBe(24 * 60 + 600);
+      expect(minutosDesdeHoy(franja, 'JUEVES')).toBe(600);
+      expect(minutosDesdeHoy(franja, 'VIERNES')).toBe(6 * 24 * 60 + 600);
+    });
   });
 
   it('resume la ubicación y decide qué estado de asignación destacar', () => {
