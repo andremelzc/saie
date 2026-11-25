@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { RUTAS } from '../../config/rutas';
+import { useSearchParams } from 'react-router-dom';
+import { PARAMS_SECCIONES, RUTAS, VALOR_EDITAR_HORARIO } from '../../config/rutas';
 import { ICONOS } from '../../components/ui/iconos';
 import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import LayoutAdmin, { AvisoError } from '../../components/admin/LayoutAdmin';
@@ -471,16 +472,24 @@ const FormularioSeccion: React.FC<{
  * aula, su docente y el software que exigen, y se pueden editar sin reimportar el CSV.
  */
 export const SeccionesAdmin: React.FC = () => {
-  const [texto, setTexto] = useState('');
+  const [params] = useSearchParams();
+  // Un enlace puede traer la búsqueda ya puesta (`?buscar=DEMO001`), p. ej. desde «Datos
+  // incompletos» del Inicio: así la sección enlazada queda en la primera página.
+  const [texto, setTexto] = useState(() => params.get(PARAMS_SECCIONES.buscar) ?? '');
   const [tipo, setTipo] = useState<'TODOS' | TipoEspacio>('TODOS');
   const filtroPeriodo = usePeriodoFiltro();
   const periodo = filtroPeriodo.periodo;
   const [pagina, setPagina] = useState(1);
   const [tamanoPagina, setTamanoPagina] = useState(leerTamanoPagina);
   // El detalle abierto vive en la URL (`?seccion=<id>`): «Atrás» lo cierra y el enlace se comparte (Issue 4.51).
-  const detalle = useDetalleEnUrl('seccion');
+  const detalle = useDetalleEnUrl(PARAMS_SECCIONES.seccion);
   const seleccionadaId = detalle.valor;
   const [editando, setEditando] = useState(false);
+  // `?editar=horario` abre la edición en cuanto la sección carga (una sola vez y solo si el rol
+  // puede editarla): Coordinación llega directo a agregar el horario que falta.
+  const [editarAlCargar, setEditarAlCargar] = useState(
+    () => params.get(PARAMS_SECCIONES.editar) === VALOR_EDITAR_HORARIO,
+  );
   const [cambiosPendientes, setCambiosPendientes] = useState(false);
   /** Issue 4.62: avisos del último guardado (choque de docente…): quedan a la vista en el detalle. */
   const [advertencias, setAdvertencias] = useState<string[]>([]);
@@ -582,6 +591,13 @@ export const SeccionesAdmin: React.FC = () => {
     () => secciones.find((s) => s.id === seleccionadaId) ?? null,
     [secciones, seleccionadaId],
   );
+
+  // Se ajusta durante el render (no en un efecto) y se consume una sola vez: si la sección no
+  // llegó en el listado, no se abre en edición otra que se elija después.
+  if (editarAlCargar && !cargando && datos !== null) {
+    setEditarAlCargar(false);
+    if (seleccionada && seleccionada.camposEditables.length > 0) setEditando(true);
+  }
 
   const abrirDetalle = (seccion: SeccionAdminDTO) => {
     detalle.abrir(seccion.id);

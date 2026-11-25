@@ -211,7 +211,12 @@ describe('Inicio del panel administrativo', () => {
         name: 'Datos incompletos: falta cargar horarios (1)',
       });
       expect(within(bloque).getByText(/DEMO001 · DEMO — Demo/)).toBeInTheDocument();
-      expect(within(bloque).getByRole('link', { name: 'Cargar horarios' })).toHaveAttribute(
+      // Cada sección se corrige por separado desde Secciones, con el editor de horario abierto.
+      expect(
+        within(bloque).getByRole('link', { name: 'Agregar horario a DEMO001 · DEMO' }),
+      ).toHaveAttribute('href', '/admin/secciones?buscar=DEMO001&seccion=sec3&editar=horario');
+      // La carga masiva sigue disponible como opción secundaria.
+      expect(within(bloque).getByRole('link', { name: 'Cargar CSV de horarios' })).toHaveAttribute(
         'href',
         '/admin/carga#carga-horarios',
       );

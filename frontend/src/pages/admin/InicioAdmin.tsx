@@ -9,7 +9,7 @@ import { Boton } from '../../components/ui/Boton';
 import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import { DialogoConfirmacion } from '../../components/ui/DialogoConfirmacion';
 import { Drawer } from '../../components/ui/Drawer';
-import { RUTAS } from '../../config/rutas';
+import { RUTAS, rutaEditarHorarioSeccion } from '../../config/rutas';
 import { useAuth } from '../../context/useAuth';
 import { useAccion } from '../../hooks/useAccion';
 import { useCarga } from '../../hooks/useCarga';
@@ -252,17 +252,28 @@ const DatosIncompletos: React.FC<{ secciones: SeccionEscaladaDTO[] }> = ({ secci
         <h3 id="titulo-datos-incompletos" className="m-0 text-sm font-bold text-saie-text">
           Datos incompletos: falta cargar horarios ({secciones.length})
         </h3>
+        {/* La carga masiva queda como opción secundaria: para completar una sección basta con
+            agregarle el horario desde Secciones, sin tocar el de las demás. */}
         <BotonEnlace to={`${RUTAS.cargaAdmin}#carga-horarios`} variante="secundario" tamano="sm">
-          Cargar horarios
+          Cargar CSV de horarios
         </BotonEnlace>
       </div>
-      <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+      <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
         {secciones.map((s) => (
           <li
             key={s.asignacionId}
-            className="rounded-md bg-saie-canvas px-2 py-1 text-sm text-saie-text"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-saie-canvas px-2 py-1 text-sm text-saie-text"
           >
-            {s.seccion.codigoCurso} · {s.seccion.codigoSeccion} — {s.seccion.nombreCurso}
+            <span>
+              {s.seccion.codigoCurso} · {s.seccion.codigoSeccion} — {s.seccion.nombreCurso}
+            </span>
+            <Link
+              to={rutaEditarHorarioSeccion(s.seccion.codigoCurso, s.seccion.id)}
+              aria-label={`Agregar horario a ${s.seccion.codigoCurso} · ${s.seccion.codigoSeccion}`}
+              className="font-semibold text-saie-primary underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-saie-primary"
+            >
+              Agregar horario
+            </Link>
           </li>
         ))}
       </ul>
