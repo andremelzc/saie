@@ -39,6 +39,11 @@ Todas las rutas de `/api/v1/admin/*` exigen JWT válido de `COORDINACION_ACADEMI
   * En la pantalla de alertas, el botón «Reubicar secciones» (con confirmación) solo aparece para Coordinación.
 * **Deshabilitar un espacio con clases** (Issue 2.22, riesgo R18): al pasar `habilitado` de `true` a `false`, si el espacio tiene asignaciones vigentes se registra una alerta de tipo `CAPACIDAD` con esas secciones («el espacio fue deshabilitado»).
 * Al crearse una alerta nueva se emite `alerta.creada` ([Spec 02](02-motor-asignacion.md) §2.4).
+* **Avisos inmediatos a Jefatura** (Issue 4.60): si están configurados `TELEGRAM_BOT_TOKEN` y `TELEGRAM_CHAT_JEFATURA` (uno o varios `chat_id` separados por comas, por ejemplo el grupo de Jefatura), se envía un mensaje de Telegram por:
+  * cada alerta nueva de `SOFTWARE` o `CAPACIDAD` (`alerta.creada`): tipo, espacio, motivo y número de secciones afectadas. Las de `ACCESIBILIDAD` no se envían: son de Coordinación y mencionan movilidad reducida (RNF-11);
+  * cada incidencia de prioridad `ALTA` (`incidencia.registrada`, que emite `POST /docente/incidencias`): código de seguimiento, tipo, espacio, clase y el comienzo de la descripción.
+  * Los fallos de envío se registran sin el `chat_id` y no afectan a la operación que originó el aviso.
+* El inicio de Coordinación y el de Jefatura muestran la cifra «Incidencias pendientes» (`GET /admin/incidencias?estado=PENDIENTE`), en rojo si alguna es de prioridad alta, con enlace a la lista.
 
 ### 2.2 Mapa Visual de Ocupación por Piso (2D & 3D) (#4.11, #4.12, #4.13, #4.14, #4.15, #4.23, #4.24)
 * **Servicio `obtenerOcupacionPorPiso`** (Issue 4.11, `backend/src/services/ocupacion.service.ts`): para cada espacio del pabellón y piso en una franja, devuelve el estado:
@@ -98,14 +103,23 @@ una ni de cambiarles el software requerido. Estas rutas lo resuelven sin reimpor
   * La asignación es la más reciente `VIGENTE` o `ESCALADA` de la sección.
 * `GET /api/v1/admin/secciones/:id` — el detalle de una sección. 404 si no existe.
 * `PATCH /api/v1/admin/secciones/:id` (**solo Coordinación Académica**; 403 para Jefatura)
-  * Cuerpo: `{ tipoEspacioRequerido?, docenteId?, softwareRequerido?: [{ softwareId, comparacionVersion }] }`.
+  * Cuerpo: `{ tipoEspacioRequerido?, docenteId?, softwareRequerido?: [{ softwareId, comparacionVersion }], horarios?: [{ diaSemana, horaInicio, horaFin }] }`.
   * `docenteId` acepta `null` para quitar al docente; un id inexistente responde 404.
   * `softwareRequerido` **reemplaza** el conjunto: los ids se resuelven contra el catálogo
     (404 si no existe, 422 si está dado de baja) y cada uno lleva su regla de comparación de
     versión (`CUALQUIERA`, `MINIMA`, `EXACTA`).
   * Si la sección ya tiene aula asignada y el software nuevo no está instalado en ella, se
     genera la alerta de software correspondiente: el cambio no se queda solo en la sección.
-  * Respuesta: `{ seccion, alertas }`.
+  * `horarios` (Issue 4.62) **reemplaza** las franjas de la sección: así se agregan, cambian y
+    quitan desde la pantalla sin recargar el CSV. Cada franja usa `HH:mm` y el inicio debe ser
+    anterior al fin; las franjas de la misma sección no pueden cruzarse (400). Si el horario
+    cambia, se registra en la auditoría (`horarios`, como «Lunes 08:00–10:00») y la sección se
+    **reasigna** con el motor; si hay una corrida en curso, el horario se guarda igual y se
+    avisa que falta reasignar. Un periodo cerrado responde 409 (Issue 4.64).
+  * Si el docente de la sección dicta otra sección del mismo periodo que se cruza con el
+    horario, se **advierte** en `advertencias` sin impedir el guardado.
+  * Respuesta: `{ seccion, alertas, advertencias, reasignacion }`; `reasignacion` es
+    `{ estado, motivoEscalamiento, conservada }` o `null` si el horario no cambió.
 * `GET /api/v1/admin/docentes` — listado mínimo (id, código, nombre, departamento) para el
   selector de docente. No expone correos ni claves.
 

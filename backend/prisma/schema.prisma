@@ -215,6 +215,9 @@ model Seccion {
   codigoSeccion           String      @map("codigo_seccion")
   periodo                 String      // ej. "2026-1"
   tipoEspacioRequerido    TipoEspacio @map("tipo_espacio_requerido")
+  // Issue 1.17 (R35): false = dejó de figurar en el último CSV de cursos y secciones de su curso.
+  // No se borra (tiene historial), pero no entra al motor y su aula queda libre.
+  activa                  Boolean     @default(true)
 
   // Relaciones
   curso        Curso        @relation(fields: [cursoId], references: [id], onDelete: Cascade)

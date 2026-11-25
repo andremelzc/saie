@@ -24,6 +24,7 @@ import { useDetalleEnUrl } from '../../hooks/useDetalleEnUrl';
 import { useCarga } from '../../hooks/useCarga';
 import { usePeriodoFiltro } from '../../hooks/usePeriodoFiltro';
 import SelectorPeriodo from '../../components/admin/SelectorPeriodo';
+import EditorHorarioSeccion from '../../components/admin/EditorHorarioSeccion';
 import { useValorDiferido } from '../../hooks/useValorDiferido';
 import {
   editarSeccion,
@@ -35,6 +36,7 @@ import type { DocenteParaAsignarDTO } from '../../services/admin';
 import type {
   CambiosSeccion,
   ComparacionVersion,
+  ResultadoEdicionSeccionDTO,
   SeccionAdminDTO,
   SoftwareDTO,
   TipoEspacio,
@@ -42,7 +44,16 @@ import type {
 import { formatearFechaCorta } from '../../utils/fechas';
 import { formatearBloqueHorario } from '../../utils/etiquetas';
 import { etiquetaTipoEspacio } from '../../utils/diccionarios';
-import { plural } from '../../utils/texto';
+import {
+  aFranjas,
+  aFranjasEditables,
+  idCampoFranja,
+  mensajeGuardadoSeccion,
+  mismasFranjas,
+  textoFranja,
+  validarFranjas,
+} from '../../utils/franjasSeccion';
+import type { FranjaEditable } from '../../utils/franjasSeccion';
 
 const COMPARACIONES: { valor: ComparacionVersion; etiqueta: string }[] = [
   { valor: 'CUALQUIERA', etiqueta: 'Cualquier versión' },
@@ -182,12 +193,12 @@ function mismoSoftware(
   );
 }
 
-/** Formulario de edición: tipo de aula, docente y software requerido (Issue 4.31). */
+/** Formulario de edición: tipo de aula, docente, software requerido (Issue 4.31) y horario (4.62). */
 const FormularioSeccion: React.FC<{
   seccion: SeccionAdminDTO;
   docentes: DocenteParaAsignarDTO[];
   catalogo: SoftwareDTO[];
-  onGuardado: (resultado: { alertas: { motivo: string }[] }) => void;
+  onGuardado: (resultado: ResultadoEdicionSeccionDTO) => void;
   onCancelar: () => void;
   /** Avisa al drawer si hay cambios sin guardar, para pedir confirmación al cerrarlo. */
   onCambiosPendientes?: (hay: boolean) => void;
@@ -198,6 +209,16 @@ const FormularioSeccion: React.FC<{
   const [elegidos, setElegidos] = useState<Record<string, ComparacionVersion>>(() =>
     Object.fromEntries(seccion.softwareRequerido.map((s) => [s.id, s.comparacionVersion])),
   );
+  const [franjas, setFranjas] = useState<FranjaEditable[]>(() =>
+    aFranjasEditables(seccion.horarios),
+  );
+  /** Issue 4.62: los errores del horario se muestran al intentar guardar y luego al corregir. */
+  const [validarHorario, setValidarHorario] = useState(false);
+  const erroresFranjas = useMemo(
+    () => (validarHorario ? validarFranjas(franjas) : {}),
+    [franjas, validarHorario],
+  );
+  const horarioCambiado = !mismasFranjas(franjas, seccion.horarios);
   const { ejecutar } = useAccion();
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -212,7 +233,8 @@ const FormularioSeccion: React.FC<{
   const hayCambios =
     tipo !== seccion.tipoEspacioRequerido ||
     docenteId !== (seccion.docente?.id ?? '') ||
-    !mismoSoftware(elegidos, seccion.softwareRequerido);
+    !mismoSoftware(elegidos, seccion.softwareRequerido) ||
+    horarioCambiado;
 
   useEffect(() => {
     onCambiosPendientes?.(hayCambios);
@@ -239,9 +261,18 @@ const FormularioSeccion: React.FC<{
     if (guardando) return;
     const errorEncontrado = validarTipo(tipo, elegidos);
     setErrorTipo(errorEncontrado);
-    if (errorEncontrado) {
+    const erroresHorario = validarFranjas(franjas);
+    setValidarHorario(true);
+    const primeraFranjaConError = franjas.find((f) => erroresHorario[f.clave]);
+    if (errorEncontrado || primeraFranjaConError) {
       setResumenVisible(true);
-      document.getElementById(`tipo-seccion-${seccion.id}`)?.focus();
+      document
+        .getElementById(
+          errorEncontrado
+            ? `tipo-seccion-${seccion.id}`
+            : idCampoFranja(`horario-${seccion.id}`, primeraFranjaConError!.clave),
+        )
+        ?.focus();
       return;
     }
     setResumenVisible(false);
@@ -254,6 +285,8 @@ const FormularioSeccion: React.FC<{
         softwareId,
         comparacionVersion,
       })),
+      // Solo se envía si cambió: así un cambio de docente no dispara una reasignación.
+      ...(horarioCambiado && { horarios: aFranjas(franjas) }),
     };
     // El error se muestra en línea, dentro del formulario.
     const resultado = await ejecutar(() => editarSeccion(seccion.id, cambios), {
@@ -311,6 +344,14 @@ const FormularioSeccion: React.FC<{
           </select>
         </Campo>
       </div>
+
+      <EditorHorarioSeccion
+        idBase={`horario-${seccion.id}`}
+        franjas={franjas}
+        onCambiar={setFranjas}
+        errores={erroresFranjas}
+        deshabilitado={guardando}
+      />
 
       <fieldset className="m-0 flex flex-col gap-2">
         <legend className={CLASE_ETIQUETA}>Software que exige la sección</legend>
@@ -382,14 +423,29 @@ const FormularioSeccion: React.FC<{
         </ul>
       </fieldset>
 
-      {resumenVisible && errorTipo && (
+      {resumenVisible && (errorTipo || Object.keys(erroresFranjas).length > 0) && (
         <ResumenErrores
           errores={[
-            {
-              idCampo: `tipo-seccion-${seccion.id}`,
-              etiqueta: 'Tipo de espacio que necesita',
-              mensaje: errorTipo,
-            },
+            ...(errorTipo
+              ? [
+                  {
+                    idCampo: `tipo-seccion-${seccion.id}`,
+                    etiqueta: 'Tipo de espacio que necesita',
+                    mensaje: errorTipo,
+                  },
+                ]
+              : []),
+            ...franjas.flatMap((f, i) =>
+              erroresFranjas[f.clave]
+                ? [
+                    {
+                      idCampo: idCampoFranja(`horario-${seccion.id}`, f.clave),
+                      etiqueta: `Franja ${i + 1} (${textoFranja(f)})`,
+                      mensaje: erroresFranjas[f.clave],
+                    },
+                  ]
+                : [],
+            ),
           ]}
         />
       )}
@@ -426,6 +482,8 @@ export const SeccionesAdmin: React.FC = () => {
   const seleccionadaId = detalle.valor;
   const [editando, setEditando] = useState(false);
   const [cambiosPendientes, setCambiosPendientes] = useState(false);
+  /** Issue 4.62: avisos del último guardado (choque de docente…): quedan a la vista en el detalle. */
+  const [advertencias, setAdvertencias] = useState<string[]>([]);
   const { mostrar } = useAvisos();
 
   // Se espera una pausa al escribir para no pedir al servidor una vez por tecla (Issue 4.41).
@@ -528,6 +586,7 @@ export const SeccionesAdmin: React.FC = () => {
   const abrirDetalle = (seccion: SeccionAdminDTO) => {
     detalle.abrir(seccion.id);
     setEditando(false);
+    setAdvertencias([]);
   };
 
   // Un enlace con una sección que no existe (o ya no está en el periodo) se explica, no rompe la pantalla.
@@ -543,17 +602,12 @@ export const SeccionesAdmin: React.FC = () => {
     sinFiltros &&
     total <= secciones.length;
 
-  const manejarGuardado = (resultado: { alertas: { motivo: string }[] }) => {
+  const manejarGuardado = (resultado: ResultadoEdicionSeccionDTO) => {
     setEditando(false);
+    setAdvertencias(resultado.advertencias ?? []);
     recargar();
-    if (resultado.alertas.length > 0) {
-      mostrar(
-        'info',
-        `La sección se guardó y generó ${plural(resultado.alertas.length, 'alerta', 'alertas')} en el panel.`,
-      );
-    } else {
-      mostrar('exito', 'Sección actualizada.');
-    }
+    const { tono, texto } = mensajeGuardadoSeccion(resultado);
+    mostrar(tono, texto);
   };
 
   const lista =
@@ -681,6 +735,7 @@ export const SeccionesAdmin: React.FC = () => {
         onCerrar={() => {
           detalle.cerrar();
           setEditando(false);
+          setAdvertencias([]);
         }}
         titulo={
           seleccionada ? `${seleccionada.codigoCurso} · ${seleccionada.codigoSeccion}` : 'Sección'
@@ -692,6 +747,16 @@ export const SeccionesAdmin: React.FC = () => {
       >
         {seleccionada && (
           <div className="flex flex-col gap-5">
+            {!editando && advertencias.length > 0 && (
+              <Aviso tono="advertencia">
+                <p className="m-0 font-semibold">Revisa antes de seguir:</p>
+                <ul className="m-0 mt-1 flex list-disc flex-col gap-1 pl-5">
+                  {advertencias.map((a) => (
+                    <li key={a}>{a}</li>
+                  ))}
+                </ul>
+              </Aviso>
+            )}
             <dl className="m-0 rounded-xl border border-saie-divider bg-white p-4 text-sm">
               <div className="border-b border-saie-divider py-2">
                 <dt className="text-sm font-semibold text-saie-muted">Aula asignada</dt>
@@ -778,7 +843,8 @@ export const SeccionesAdmin: React.FC = () => {
                 {seleccionada.camposEditables.length > 0 ? (
                   <>
                     <p className="m-0 text-sm text-saie-muted">
-                      Puedes cambiar el tipo de aula, el docente y el software que exige la sección.
+                      Puedes cambiar el tipo de aula, el docente, el software que exige la sección y
+                      su horario.
                     </p>
                     <div>
                       <Boton variante="primario" tamano="sm" onClick={() => setEditando(true)}>

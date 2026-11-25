@@ -1,4 +1,4 @@
-import { EstadoSolicitud, TipoAlerta } from '@prisma/client';
+import { EstadoSolicitud, PrioridadIncidencia, TipoAlerta } from '@prisma/client';
 import { HorarioSlot } from '../services/disponibilidad.service';
 
 export interface EspacioEventoDTO {
@@ -30,6 +30,12 @@ export interface AlertaCreadaEvento {
   asignacionesAfectadas: number;
 }
 
+/** Un docente registró una incidencia (Issue 4.60). Quien escucha lee el detalle de la base. */
+export interface IncidenciaRegistradaEvento {
+  incidenciaId: string;
+  prioridad: PrioridadIncidencia;
+}
+
 /** Coordinación aprobó o rechazó la declaración de accesibilidad de un alumno (Issue 3.60). */
 export interface AccesibilidadResueltaEvento {
   alumnoId: string;
@@ -42,6 +48,7 @@ export interface AccesibilidadResueltaEvento {
 export interface MapaEventos {
   'asignacion.cambiada': AsignacionCambiadaEvento;
   'alerta.creada': AlertaCreadaEvento;
+  'incidencia.registrada': IncidenciaRegistradaEvento;
   'accesibilidad.resuelta': AccesibilidadResueltaEvento;
 }
 
