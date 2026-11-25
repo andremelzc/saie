@@ -95,7 +95,7 @@
 
 La migración `20261125000000_alerta_accesibilidad` (valor `ACCESIBILIDAD` en `TipoAlerta`) ya está aplicada en Supabase.
 
-La migración `20261126000000_periodos` (tabla `periodos`, valor `CAMBIO_PERIODO` y registro del periodo actual como vigente) **debe aplicarse en Supabase antes de desplegar el backend**: sin ella el sistema no encuentra el periodo vigente.
+La migración `20261126000000_periodos` (tabla `periodos`, valor `CAMBIO_PERIODO` y registro del periodo actual como vigente) ya está aplicada en Supabase: `2026-2` quedó como vigente.
 
 ### Decisiones tomadas
 
