@@ -88,6 +88,28 @@ describe('Corrida batch sin dobles reservas (Issue 2.20, riesgo R1)', () => {
     expect(detectarDobleReserva(resultado.resultados, [s1, s2])).toEqual([]);
   });
 
+  it('dos asignaciones previas que ya se pisan no bloquean la corrida: solo se conserva una', () => {
+    // Dato viejo con doble reserva: S1 y S2 estaban en el aula A a la misma hora.
+    const s1 = seccion('S1', 30);
+    const s2 = seccion('S2', 30);
+
+    const resultado = ejecutarCorridaBatch({
+      periodo: '2026-2',
+      secciones: [s1, s2],
+      todosLosEspacios: [aula('A', 50), aula('B', 50)],
+      obtenerVecinosContiguos: () => [],
+      asignacionesPrevias: [
+        previa('S1', ['A'], calcularHuellaEntradaSeccion(s1)),
+        previa('S2', ['A'], calcularHuellaEntradaSeccion(s2)),
+      ],
+    });
+
+    const conservadas = resultado.resultados.filter((r) => r.conservadaPorIdempotencia);
+    expect(conservadas).toHaveLength(1);
+    expect(resultado.resultados.every((r) => r.estado === EstadoAsignacion.VIGENTE)).toBe(true);
+    expect(detectarDobleReserva(resultado.resultados, [s1, s2])).toEqual([]);
+  });
+
   it('las conservadas cuentan como paralelas desde el inicio de la corrida', () => {
     const s1 = { ...seccion('S1', 20), cursoId: 'curso-comun' };
     const s2 = { ...seccion('S2', 20, LUNES_10_12), cursoId: 'curso-comun' };
