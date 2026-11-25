@@ -6,12 +6,14 @@ import {
   DIAS_LECTIVOS,
   ETIQUETA_DIA,
   PALETA_CURSOS,
+  etiquetaTipoClase,
   etiquetaTipoEspacio,
   formatearRango,
   horasDeRango,
   posicionBloque,
   rangoDeHorario,
   resumenUbicacion,
+  rotuloClase,
   sesionesDeDia,
 } from '../../utils/horario';
 import type { ColorCurso } from '../../utils/horario';
@@ -49,8 +51,8 @@ const DetalleSesion: React.FC<{ sesion: SesionDTO }> = ({ sesion }) => (
       </dd>
     </div>
     <div>
-      <dt className="text-sm text-saie-muted">Sección</dt>
-      <dd className="m-0">{sesion.codigoSeccion}</dd>
+      <dt className="text-sm text-saie-muted">Clase</dt>
+      <dd className="m-0">{rotuloClase(sesion)}</dd>
     </div>
     <div>
       <dt className="text-sm text-saie-muted">Docente</dt>
@@ -89,7 +91,7 @@ const DetalleSesion: React.FC<{ sesion: SesionDTO }> = ({ sesion }) => (
 /**
  * Grilla semanal de lunes a sábado (Guía de diseño 2.3). Issue 3.39: el rango de horas se ajusta
  * a las clases, cada bloque tiene un alto mínimo y es un botón que abre su detalle completo
- * (curso, sección, docente, aula y hora) en un drawer, y la región con desplazamiento horizontal
+ * (curso, grupo y tipo de clase, docente, aula y hora) en un drawer, y la región con desplazamiento horizontal
  * se alcanza con el teclado.
  */
 export const GridHorarioSemanal: React.FC<GridHorarioSemanalProps> = ({
@@ -191,7 +193,7 @@ export const GridHorarioSemanal: React.FC<GridHorarioSemanalProps> = ({
                           }}
                         >
                           <span className="block truncate text-sm font-bold leading-5">
-                            {`${sesion.codigoCurso} · Sec. ${sesion.codigoSeccion}`}
+                            {`${sesion.codigoCurso} · ${etiquetaTipoClase(sesion.tipoEspacioRequerido)}`}
                           </span>
                           <span className="block truncate text-xs leading-4">
                             {formatearRango(sesion.horaInicio, sesion.horaFin)}
@@ -200,7 +202,7 @@ export const GridHorarioSemanal: React.FC<GridHorarioSemanalProps> = ({
                             {resumenUbicacion(sesion.espacios)}
                           </span>
                           <span className="sr-only">
-                            {`: ${sesion.nombreCurso}. Ver detalle de la clase`}
+                            {`: ${sesion.nombreCurso}, ${rotuloClase(sesion)}. Ver detalle de la clase`}
                           </span>
                         </button>
                       </li>

@@ -1,5 +1,6 @@
 import { logger } from '../lib/logger';
-import { DiaSemana, EstadoAsignacion, PrismaClient } from '@prisma/client';
+import { DiaSemana, EstadoAsignacion, PrismaClient, TipoEspacio } from '@prisma/client';
+import { agruparClases, encabezadoGrupo, etiquetaTipoClase } from '../lib/clasesAgrupadas';
 import { diaYMinutosEnLima } from '../lib/horario';
 import { obtenerPeriodoVigente } from '../services/periodo.service';
 import { ClienteTelegram } from './cliente';
@@ -24,6 +25,8 @@ export interface ClaseDelDia {
   codigoCurso: string;
   nombreCurso: string;
   codigoSeccion: string;
+  /** Teoría (`AULA_TEORICA`) o laboratorio (`LABORATORIO`). */
+  tipoEspacioRequerido: TipoEspacio;
   /** Vacío si la sección todavía no tiene un aula vigente. */
   espacios: string[];
 }
@@ -54,21 +57,26 @@ export function fechaEnLima(instante: Date): string {
   }).format(instante);
 }
 
-/** Texto del resumen. Solo clases, aulas y horarios: nunca datos de salud ni movilidad (RNF-11). */
+/**
+ * Texto del resumen. Solo clases, aulas y horarios: nunca datos de salud ni movilidad (RNF-11).
+ * Las clases van agrupadas por curso y grupo, con su tipo (Issue 3.62).
+ */
 export function formatearResumenDiario(
   dia: DiaSemana,
   fecha: string,
   clases: ClaseDelDia[],
 ): string {
   const [, mes, diaDelMes] = fecha.split('-');
-  const lineas = [...clases]
-    .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))
-    .map(
+  const lineas = agruparClases(clases).flatMap((grupo) => [
+    '',
+    encabezadoGrupo(grupo),
+    ...grupo.clases.map(
       (c) =>
-        `${c.horaInicio}-${c.horaFin}  ${c.codigoCurso} - ${c.nombreCurso} (sec. ${c.codigoSeccion})\n` +
-        `   ${c.espacios.length > 0 ? c.espacios.join(', ') : 'aula por confirmar'}`,
-    );
-  return [`Tus clases de hoy, ${NOMBRE_DIA[dia]} ${diaDelMes}/${mes}`, '', ...lineas].join('\n');
+        `   ${etiquetaTipoClase(c.tipoEspacioRequerido)}: ${c.horaInicio}-${c.horaFin}  ` +
+        (c.espacios.length > 0 ? c.espacios.join(', ') : 'aula por confirmar'),
+    ),
+  ]);
+  return [`Tus clases de hoy, ${NOMBRE_DIA[dia]} ${diaDelMes}/${mes}`, ...lineas].join('\n');
 }
 
 /**
@@ -117,6 +125,7 @@ export async function enviarResumenesDiarios(
               seccion: {
                 select: {
                   codigoSeccion: true,
+                  tipoEspacioRequerido: true,
                   curso: { select: { codigo: true, nombre: true } },
                   horarios: {
                     where: { diaSemana: dia },
@@ -149,6 +158,7 @@ export async function enviarResumenesDiarios(
         codigoCurso: seccion.curso.codigo,
         nombreCurso: seccion.curso.nombre,
         codigoSeccion: seccion.codigoSeccion,
+        tipoEspacioRequerido: seccion.tipoEspacioRequerido,
         espacios: (seccion.asignaciones[0]?.espacios ?? []).map((e) => e.espacio.identificador),
       })),
     );
