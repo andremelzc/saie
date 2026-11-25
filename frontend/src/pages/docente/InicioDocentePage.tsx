@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PaginaDocente from '../../components/docente/PaginaDocente';
 import { BadgeEstadoClase, EstadoVacio } from '../../components/estudiante/ElementosHorario';
+import AccesibilidadDocente from '../../components/docente/AccesibilidadDocente';
 import { EstadoError } from '../../components/ui/EstadoError';
 import { RUTAS } from '../../config/rutas';
 import { useCarga } from '../../hooks/useCarga';
@@ -264,6 +265,9 @@ export const InicioDocentePage: React.FC<{ ahora?: Date }> = ({ ahora }) => {
           )}
         </section>
       )}
+
+      {/* Issue 3.61 (R15): el docente también puede pedir aulas en el piso 1. */}
+      <AccesibilidadDocente />
     </PaginaDocente>
   );
 };

@@ -174,4 +174,22 @@ describe('AccesibilidadAdminPage (Issue 3.60)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }));
     expect(await screen.findByText('Ana Quispe')).toBeInTheDocument();
   });
+
+  it('marca las declaraciones de docentes y su fecha de fin (Issue 3.61)', async () => {
+    obtener.mockResolvedValue(
+      datos({
+        pendientes: [
+          declaracion({
+            tipo: 'DOCENTE',
+            alumno: { codigo: '0A0690', nombre: 'Dra. Rojas' },
+            fechaFin: '2026-12-20',
+          }),
+        ],
+      }),
+    );
+    montar();
+
+    expect(await screen.findByText(/Docente · Código 0A0690/)).toBeInTheDocument();
+    expect(screen.getByText(/hasta el 20 de diciembre de 2026/)).toBeInTheDocument();
+  });
 });

@@ -1,6 +1,7 @@
 import api from './api';
 import type {
   AccesibilidadAdminDTO,
+  AccesibilidadDocenteDTO,
   DecisionAccesibilidad,
   SolicitudAccesibilidadAdminDTO,
 } from '../types/accesibilidad';
@@ -28,6 +29,27 @@ export async function resolverAccesibilidad(
     `/v1/admin/accesibilidad/${encodeURIComponent(id)}/resolver`,
     decision,
     { timeout: 60000 },
+  );
+  return data.data;
+}
+
+/** GET /v1/docente/accesibilidad (Issue 3.61): el estado de la declaración del docente. */
+export async function obtenerAccesibilidadDocente(): Promise<AccesibilidadDocenteDTO> {
+  const { data } = await api.get<Respuesta<AccesibilidadDocenteDTO>>('/v1/docente/accesibilidad');
+  return data.data;
+}
+
+/**
+ * PUT /v1/docente/accesibilidad (Issue 3.61). Declarar crea una solicitud que Coordinación
+ * aprueba; retirarla quita la pendiente o la condición aprobada.
+ */
+export async function declararAccesibilidadDocente(entrada: {
+  declarado: boolean;
+  fechaFin?: string | null;
+}): Promise<AccesibilidadDocenteDTO> {
+  const { data } = await api.put<Respuesta<AccesibilidadDocenteDTO>>(
+    '/v1/docente/accesibilidad',
+    entrada,
   );
   return data.data;
 }

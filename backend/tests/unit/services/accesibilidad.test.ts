@@ -117,7 +117,9 @@ describe('declaraciones de accesibilidad (Issue 3.60)', () => {
     it('marcar crea una solicitud pendiente', async () => {
       const t = tx();
       await declararAccesibilidad('alu-1', true, false, t as never);
-      expect(t.solicitudAccesibilidad.create).toHaveBeenCalledWith({ data: { alumnoId: 'alu-1' } });
+      expect(t.solicitudAccesibilidad.create).toHaveBeenCalledWith({
+        data: { alumnoId: 'alu-1', fechaFin: null },
+      });
     });
   });
 
@@ -155,9 +157,12 @@ describe('declaraciones de accesibilidad (Issue 3.60)', () => {
         expect.objectContaining({
           where: {
             estado: EstadoSolicitud.APROBADA,
-            alumno: { fichaMedica: { condicionAccesible: true } },
+            OR: [
+              { alumno: { fichaMedica: { condicionAccesible: true } } },
+              { docente: { condicionAccesible: true } },
+            ],
           },
-          distinct: ['alumnoId'],
+          distinct: ['alumnoId', 'docenteId'],
         }),
       );
     });
@@ -310,7 +315,7 @@ describe('declaraciones de accesibilidad (Issue 3.60)', () => {
         data: { movilidadReducida: true },
       });
       expect(prisma.matricula.findMany).toHaveBeenCalledWith({
-        where: { alumnoId: 'alu-1', seccion: { periodo: '2026-2' } },
+        where: { alumnoId: 'alu-1', seccion: { activa: true, periodo: '2026-2' } },
         select: { seccionId: true },
       });
       expect(ejecutarAsignacionADemanda).toHaveBeenCalledTimes(2);
@@ -349,7 +354,7 @@ describe('declaraciones de accesibilidad (Issue 3.60)', () => {
       );
 
       expect(prisma.matricula.findMany).toHaveBeenCalledWith({
-        where: { alumnoId: 'alu-1' },
+        where: { alumnoId: 'alu-1', seccion: { activa: true } },
         select: { seccionId: true },
       });
     });

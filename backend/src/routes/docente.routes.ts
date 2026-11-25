@@ -11,6 +11,10 @@ import {
   crearSolicitudSoftware,
   listarMisSolicitudesSoftware,
 } from '../controllers/solicitudSoftware.controller';
+import {
+  declararAccesibilidadDelDocente,
+  obtenerAccesibilidadDelDocente,
+} from '../controllers/accesibilidad.controller';
 import { authGuard, roleGuard } from '../middlewares/auth.middleware';
 
 const router = Router();
@@ -27,5 +31,9 @@ router.get('/incidencias', listarIncidenciasDocente); // Issue 7.14
 // Solicitudes de software del docente (Issue 4.29): crea y lista solo las propias.
 router.post('/solicitudes-software', crearSolicitudSoftware);
 router.get('/solicitudes-software', listarMisSolicitudesSoftware);
+
+// Declaración de accesibilidad del docente (Issue 3.61): la aprueba Coordinación, como la del alumno.
+router.get('/accesibilidad', obtenerAccesibilidadDelDocente);
+router.put('/accesibilidad', declararAccesibilidadDelDocente);
 
 export default router;

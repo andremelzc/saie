@@ -26,6 +26,10 @@ Asimismo, incluye el panel de revisión y resolución de incidencias para la **J
   * `pcsOperativas` es la capacidad real (Issue 2.1). `cursos` compara el stack que exige cada curso del docente con lo instalado (`validarSoftwareLaboratorio`). El historial trae los últimos 20 cambios, del más reciente al más antiguo.
 * `GET /api/v1/docente/espacios/explorador`
   * Explorador de aulas y laboratorios para consultar disponibilidad de espacios libres.
+* `GET /api/v1/docente/accesibilidad` y `PUT /api/v1/docente/accesibilidad` (Issue 3.61, riesgo R15)
+  * El docente declara que no puede subir a pisos superiores, con la misma aprobación de Coordinación que el alumno (Issue 3.60, [Spec 04](04-panel-alertas-y-admin.md) §2.8). `PUT { declarado, fechaFin? }`: declarar crea una solicitud pendiente (o actualiza su fecha de fin); retirarla borra la pendiente o quita la condición aprobada. `fechaFin` (`AAAA-MM-DD`, opcional) es el último día de una condición temporal (R16).
+  * Respuesta: `{ aprobada, vigenteHasta, solicitud: { estado, fechaSolicitud, fechaResolucion, motivoRechazo, fechaFin } | null }`.
+  * En el portal es la tarjeta «Aulas en el piso 1» del inicio.
 
 ### 2.2 Reporte de Incidencias por Docente (#7.10)
 * `POST /api/v1/docente/incidencias` (Issue 7.5)

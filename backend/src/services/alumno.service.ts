@@ -18,9 +18,11 @@ import {
 import { obtenerPeriodoVigente } from './periodo.service';
 import {
   aEstadoAccesibilidadDTO,
+  aFechaISO,
   declararAccesibilidad,
   ultimaSolicitudAccesibilidad,
 } from './accesibilidad.service';
+import { aFechaFin, FechaFinCondicionSchema } from '../lib/fechaFinCondicion';
 import { construirGrafoContiguedad } from './contiguedad.service';
 import { calcularRutaReferencia } from './rutaReferencia.service';
 import {
@@ -181,6 +183,8 @@ export const ActualizarPerfilSchema = z
         condicionAccesible: z
           .boolean({ error: 'condicionAccesible debe ser verdadero o falso' })
           .optional(),
+        /** Issue 3.61 (R16): último día de una condición temporal; `null` = no vence. */
+        condicionAccesibleHasta: FechaFinCondicionSchema.optional(),
       })
       .strict()
       .optional(),
@@ -205,6 +209,7 @@ function armarPerfil(
     condicionEspecial: string | null;
     contactoEmergencia: string | null;
     condicionAccesible: boolean;
+    condicionAccesibleHasta: Date | null;
   } | null,
   solicitud: Parameters<typeof aEstadoAccesibilidadDTO>[0] | null,
 ): PerfilAlumnoDTO {
@@ -228,6 +233,7 @@ function armarPerfil(
           condicionEspecial: ficha.condicionEspecial,
           contactoEmergencia: ficha.contactoEmergencia,
           condicionAccesible: ficha.condicionAccesible,
+          condicionAccesibleHasta: aFechaISO(ficha.condicionAccesibleHasta),
         }
       : null,
   };
@@ -289,7 +295,11 @@ export async function actualizarPerfilAlumno(
 
     // Issue 3.60 (R12): la casilla no marca la condición; crea o retira una solicitud que
     // Coordinación confirma. `condicionAccesible` solo cambia al aprobarla (o al desmarcarla).
-    const { condicionAccesible: declarado, ...datosFicha } = fichaMedica ?? {};
+    const {
+      condicionAccesible: declarado,
+      condicionAccesibleHasta: hasta,
+      ...datosFicha
+    } = fichaMedica ?? {};
     if (fichaMedica && Object.keys(datosFicha).length > 0) {
       await tx.fichaMedica.upsert({
         where: { alumnoId: alumno.id },
@@ -297,7 +307,13 @@ export async function actualizarPerfilAlumno(
         update: datosFicha,
       });
     }
-    await declararAccesibilidad(alumno.id, declarado, fichaPrevia?.condicionAccesible === true, tx);
+    await declararAccesibilidad(
+      alumno.id,
+      declarado,
+      fichaPrevia?.condicionAccesible === true,
+      tx,
+      aFechaFin(hasta),
+    );
 
     const ficha = await tx.fichaMedica.findUnique({ where: { alumnoId: alumno.id } });
     return armarPerfil(alumnoActualizado, ficha, await ultimaSolicitudAccesibilidad(alumno.id, tx));

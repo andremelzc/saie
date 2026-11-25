@@ -56,6 +56,10 @@ export function valoresFichaMedica(
     contactoEmergencia: aTexto(ficha?.contactoEmergencia),
     // La casilla es binaria: el vacío es «no», para que el formulario siga siendo de texto.
     condicionAccesible: declarada ? 'true' : '',
+    // Issue 3.61 (R16): fin de la condición aprobada o de la declaración pendiente.
+    condicionAccesibleHasta: aTexto(
+      ficha?.condicionAccesible ? ficha.condicionAccesibleHasta : accesibilidad?.fechaFin,
+    ),
   };
 }
 
@@ -111,10 +115,36 @@ export function validarDatosPersonales(
   return errores;
 }
 
+/** «Hoy» en la hora local como `AAAA-MM-DD`. */
+function hoyISO(hoy: Date): string {
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoy.getDate()).padStart(2, '0');
+  return `${hoy.getFullYear()}-${mes}-${dia}`;
+}
+
+/**
+ * Issue 3.61 (R16): la fecha de fin de una condición temporal es opcional; si se escribe, debe ser
+ * una fecha real que no haya pasado.
+ */
+export function validarFechaFinCondicion(valor: string, hoy: Date = new Date()): string | null {
+  const fecha = valor.trim();
+  if (!fecha) return null;
+  const real =
+    /^\d{4}-\d{2}-\d{2}$/.test(fecha) &&
+    new Date(`${fecha}T00:00:00.000Z`).toISOString().startsWith(fecha);
+  if (!real) return 'Ingresa una fecha válida.';
+  return fecha < hoyISO(hoy) ? 'La fecha de fin no puede ser un día que ya pasó.' : null;
+}
+
 /** Valida la ficha médica con las mismas reglas que el backend (todos los campos son opcionales). */
-export function validarFichaMedica(valores: ValoresFormulario): ErroresFormulario {
+export function validarFichaMedica(
+  valores: ValoresFormulario,
+  hoy: Date = new Date(),
+): ErroresFormulario {
   const errores: ErroresFormulario = {};
   const tipo = (valores.tipoSangre ?? '').trim();
+  const errorFin = validarFechaFinCondicion(valores.condicionAccesibleHasta ?? '', hoy);
+  if (errorFin) errores.condicionAccesibleHasta = errorFin;
 
   if (tipo && !(TIPOS_SANGRE as readonly string[]).includes(tipo)) {
     errores.tipoSangre = 'Elige un tipo de sangre de la lista.';
@@ -147,13 +177,18 @@ export function cambiosDatosPersonales(valores: ValoresFormulario): CambiosPerfi
 }
 
 export function cambiosFichaMedica(valores: ValoresFormulario): CambiosPerfil {
+  const declarada = (valores.condicionAccesible ?? '') === 'true';
   return {
     fichaMedica: {
       tipoSangre: aValorOpcional(valores.tipoSangre),
       alergias: aValorOpcional(valores.alergias),
       condicionEspecial: aValorOpcional(valores.condicionEspecial),
       contactoEmergencia: aValorOpcional(valores.contactoEmergencia),
-      condicionAccesible: (valores.condicionAccesible ?? '') === 'true',
+      condicionAccesible: declarada,
+      // Issue 3.61: la fecha de fin solo acompaña a la declaración; sin casilla no se envía.
+      ...(declarada && {
+        condicionAccesibleHasta: aValorOpcional(valores.condicionAccesibleHasta),
+      }),
     },
   };
 }

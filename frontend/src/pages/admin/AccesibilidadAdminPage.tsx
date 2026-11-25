@@ -15,7 +15,7 @@ import type {
   SeccionAccesibilidadDTO,
   SolicitudAccesibilidadAdminDTO,
 } from '../../types/accesibilidad';
-import { formatearFechaCorta } from '../../utils/fechas';
+import { formatearFechaCivil, formatearFechaCorta } from '../../utils/fechas';
 import { plural } from '../../utils/texto';
 
 type Vista = 'pendientes' | 'aprobadas';
@@ -74,7 +74,7 @@ const TarjetaDeclaracion: React.FC<{
         <div className="min-w-0">
           <h3 className="m-0 text-base font-bold text-saie-text">{s.alumno.nombre}</h3>
           <p className="m-0 text-sm text-saie-muted">
-            Código {s.alumno.codigo} ·{' '}
+            {s.tipo === 'DOCENTE' ? 'Docente · ' : ''}Código {s.alumno.codigo} ·{' '}
             {s.estado === 'PENDIENTE'
               ? `la envió el ${formatearFechaCorta(s.fechaSolicitud)}`
               : `aprobada el ${formatearFechaCorta(s.fechaResolucion ?? s.fechaSolicitud)}`}
@@ -90,6 +90,12 @@ const TarjetaDeclaracion: React.FC<{
           </BadgeEstado>
         )}
       </div>
+      {s.fechaFin && (
+        <p className="m-0 text-sm text-saie-text">
+          Condición temporal: hasta el {formatearFechaCivil(s.fechaFin) ?? s.fechaFin}. Ese día se
+          quita la prioridad y sus clases se reasignan.
+        </p>
+      )}
       {s.resultado && <p className="m-0 text-sm text-saie-text">Resultado: {s.resultado}.</p>}
       <ListaSecciones secciones={s.secciones} />
       {s.estado === 'PENDIENTE' && onAprobar && onRechazar && (

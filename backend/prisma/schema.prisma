@@ -296,6 +296,8 @@ model FichaMedica {
   // aulas del Piso 1 (Spec 03 §2.2). No es una etiqueta de discapacidad: describe un
   // requisito de acceso al espacio, no un diagnóstico.
   condicionAccesible Boolean @default(false) @map("condicion_accesible")
+  // Issue 3.61 (R16): día en que vence una condición temporal; `null` = no vence.
+  condicionAccesibleHasta DateTime? @map("condicion_accesible_hasta") @db.Date
 
   alumno Alumno @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
 
@@ -309,12 +311,17 @@ model Docente {
   correoInstitucional String       @map("correo_institucional")
   departamento        String
   cuentaId            String?      @unique @map("cuenta_id")
+  // Issue 3.61 (R15): como el alumno, el docente declara que no puede subir a pisos superiores;
+  // solo se marca al aprobarlo Coordinación y el motor prioriza el piso 1 en sus secciones.
+  condicionAccesible      Boolean   @default(false) @map("condicion_accesible")
+  condicionAccesibleHasta DateTime? @map("condicion_accesible_hasta") @db.Date
 
   // Relaciones
   cuenta              Cuenta?             @relation(fields: [cuentaId], references: [id])
   secciones           Seccion[]
   incidencias         Incidencia[]
   solicitudesSoftware SolicitudSoftware[]
+  solicitudesAccesibilidad SolicitudAccesibilidad[]
 
   @@map("docentes")
 }
@@ -621,7 +628,11 @@ model SolicitudSoftware {
 // diagnósticos: es un requisito de acceso al espacio.
 model SolicitudAccesibilidad {
   id              String          @id @default(uuid())
-  alumnoId        String          @map("alumno_id")
+  // Issue 3.61 (R15): la declara un alumno o un docente; siempre exactamente uno de los dos.
+  alumnoId        String?         @map("alumno_id")
+  docenteId       String?         @map("docente_id")
+  // Issue 3.61 (R16): fin opcional de una condición temporal; al vencer se quita la marca.
+  fechaFin        DateTime?       @map("fecha_fin") @db.Date
   estado          EstadoSolicitud @default(PENDIENTE)
   fechaSolicitud  DateTime        @default(now()) @map("fecha_solicitud")
   resueltaPorId   String?         @map("resuelta_por_id")
@@ -630,10 +641,12 @@ model SolicitudAccesibilidad {
   // Al aprobarla: cuántas secciones del alumno quedaron en el piso 1 tras reasignarlas.
   resultado       String?
 
-  alumno      Alumno  @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
-  resueltaPor Cuenta? @relation(fields: [resueltaPorId], references: [id], onDelete: SetNull)
+  alumno      Alumno?  @relation(fields: [alumnoId], references: [id], onDelete: Cascade)
+  docente     Docente? @relation(fields: [docenteId], references: [id], onDelete: Cascade)
+  resueltaPor Cuenta?  @relation(fields: [resueltaPorId], references: [id], onDelete: SetNull)
 
   @@index([estado])
   @@index([alumnoId])
+  @@index([docenteId])
   @@map("solicitudes_accesibilidad")
 }
