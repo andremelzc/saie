@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { generarClaveInicial } from '../lib/claves';
 import { CredencialInicialDTO } from './docentes.importer';
 import { periodoSchema } from '../lib/periodo';
+import type { ProgresoImportacion } from '../types/importacion';
 
 export const MatriculaSchema = z.object({
   codigoAlumno: z.string().min(1, 'El código del alumno es requerido'),
@@ -22,6 +23,8 @@ export interface ResultadoImportacionMatriculas {
   alumnosProcesados: number;
   cuentasCreadas: number;
   matriculasProcesadas: number;
+  /** Issue 1.17 (R35): matrículas que ya no figuran en el archivo de su sección (retiros). */
+  matriculasRetiradas: number;
   errores: string[];
   clavesIniciales?: CredencialInicialDTO[];
 }
@@ -29,14 +32,18 @@ export interface ResultadoImportacionMatriculas {
 export async function importarMatriculas(
   datos: unknown[],
   prisma: PrismaClient,
+  onProgreso?: ProgresoImportacion,
 ): Promise<ResultadoImportacionMatriculas> {
   let alumnosProcesados = 0;
   let cuentasCreadas = 0;
   let matriculasProcesadas = 0;
+  // Issue 1.17: alumnos que el archivo indica para cada sección, para retirar a los demás.
+  const enArchivo = new Map<string, Set<string>>();
   const errores: string[] = [];
   const clavesIniciales: CredencialInicialDTO[] = [];
 
   for (let i = 0; i < datos.length; i++) {
+    onProgreso?.(i, datos.length);
     const validacion = MatriculaSchema.safeParse(datos[i]);
 
     if (!validacion.success) {
@@ -170,11 +177,35 @@ export async function importarMatriculas(
         },
       });
       matriculasProcesadas++;
+      const alumnosDeSeccion = enArchivo.get(seccion.id) ?? new Set<string>();
+      alumnosDeSeccion.add(alumno.id);
+      enArchivo.set(seccion.id, alumnosDeSeccion);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       errores.push(`Fila ${i + 1} (${codigoAlumno} en ${codigoCurso}-${codigoSeccion}): ${msg}`);
     }
   }
 
-  return { alumnosProcesados, cuentasCreadas, matriculasProcesadas, errores, clavesIniciales };
+  // Issue 1.17: las matrículas de cada sección del archivo quedan exactamente como el archivo. Las
+  // secciones que no aparecen no se tocan (se puede cargar por partes). Si alguna fila falló no se
+  // retira a nadie: el archivo no se pudo leer completo.
+  let matriculasRetiradas = 0;
+  if (errores.length === 0) {
+    for (const [seccionId, alumnoIds] of enArchivo) {
+      const { count } = await prisma.matricula.deleteMany({
+        where: { seccionId, alumnoId: { notIn: [...alumnoIds] } },
+      });
+      matriculasRetiradas += count;
+    }
+  }
+  onProgreso?.(datos.length, datos.length);
+
+  return {
+    alumnosProcesados,
+    cuentasCreadas,
+    matriculasProcesadas,
+    matriculasRetiradas,
+    errores,
+    clavesIniciales,
+  };
 }

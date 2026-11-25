@@ -19,6 +19,9 @@ export interface AsignacionEncadenadaDTO {
   resumen: ResumenAsignacionDTO | null;
 }
 
+/** Avance de una importación: filas leídas hasta ahora y total (Issue 1.19). */
+export type ProgresoImportacion = (procesadas: number, total: number) => void;
+
 export interface ResultadoImportacionDTO {
   tipo: TipoImportacion;
   filasRecibidas: number;
