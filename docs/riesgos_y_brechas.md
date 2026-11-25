@@ -113,6 +113,7 @@ La migración `20261126000000_periodos` (tabla `periodos`, valor `CAMBIO_PERIODO
 | #44 | **A solucionar como proceso,** no como cambio puntual: es normal que aparezcan vulnerabilidades nuevas en las librerías, así que se revisan de forma periódica | 24/11/2026 |
 | #38, #39, #41, #42, #43, #45, #46, #47, #48 | **A solucionar** | 24/11/2026 |
 | #25, #49, #50, #51, #52 | **A solucionar.** El cambio de periodo debe hacerse desde Coordinación, y no debe permitirse registrar información en periodos que ya terminaron (ver sección 9) | 24/11/2026 |
+| #47 | **Resuelto en parte.** Nombre de `202SW0302` y validación de nombres mezclados hechos (#443); `202SW0303` no se carga por falta de fuente oficial (#432) | 25/11/2026 |
 | #41 | **Primero proponer, después cargar.** El catálogo de software del Anexo B lo revisa y aprueba **el propio equipo**; solo entonces se carga | 24/11/2026 |
 | #8 | **Riesgo aceptado.** Un docente puede dictar en las aulas contiguas que hagan falta (Anexo C) | 25/11/2026 |
 | #9 | **A solucionar** con «Reorganizar con prioridad» durante las 2 primeras semanas del ciclo (Anexo C) | 25/11/2026 |
@@ -1126,6 +1127,8 @@ Es decir, al armar los datos se **pegaron dos cursos en uno**: el nombre de `202
 - `202SW0303` existe con sus secciones, horarios y matrículas.
 - Un nombre de curso con horas o con el código de otro curso se rechaza al importar.
 
+**Estado (25/11/2026): resuelto en parte.** #443 corrigió el nombre de `202SW0302` en los CSV de demostración y agregó la validación que rechaza nombres de curso mezclados (puntos 1 y 3). `202SW0303 – FÍSICA ELECTRÓNICA` **no se carga**: no se identificó una fuente oficial de sus secciones, horarios y matrículas (#454 se cerró sin datos) y el texto corrupto no permite reconstruirlos. El issue 1.20 (#432) se cierra con esa parte fuera de alcance; si aparece la fuente, se carga con los CSV de Carga de datos y el catálogo de software le asigna sus requisitos (Anexo B). Queda pendiente corregir el nombre en la hoja *Cursos_Secciones* del Excel del seed, que no está en el repositorio.
+
 ---
 
 ### #48 🟡 Cursos generales tienen secciones de laboratorio de cómputo
@@ -1468,5 +1471,5 @@ Respuestas registradas el 25/11/2026 (issue 6.15, #439).
 | Catálogo de software | ¿Quién aprueba el catálogo y el software de cada curso propuestos en el Anexo B? | **El propio equipo** (decisión #41, 24/11/2026) | #41 |
 | Laboratorios especializados | ¿Qué laboratorios son de bases de datos, redes, hardware o datos e IA? | **Aprobado en 6.14 (#438):** ver la tabla del Anexo B.4 | #41 |
 | Cursos generales con laboratorio | ¿Qué secciones de Química, Física, Redacción, etc. usan realmente laboratorio de cómputo? | **Se mantienen los dos tipos por defecto:** las secciones de teoría y de laboratorio quedan como vienen en los datos, sin corregirlas. El docente solicita si necesita un solo tipo de salón (7.17) | #48 |
-| Origen de los datos | ¿De qué fuente se corrigen `202SW0302` y `202SW0303`? | La clarifica **andremelzc** en **1.21 (#454)**, que desbloquea 1.20 (#432) | #47 |
+| Origen de los datos | ¿De qué fuente se corrigen `202SW0302` y `202SW0303`? | **Sin fuente oficial.** #454 se cerró sin datos: `202SW0302` queda corregido (#443) y `202SW0303` no se carga; 1.20 (#432) se cierra en parte | #47 |
 | Periodos | ¿Hay ciclo de verano (`AAAA-0`)? ¿Cuáles son las fechas de inicio y fin de cada semestre? | **Por ahora no se implementa el ciclo de verano.** Las fechas de cada semestre las registra Coordinación en la pantalla Periodos (4.64) | #49, 9.2 |
