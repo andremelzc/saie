@@ -16,6 +16,7 @@ import {
   procesarCorridaBatchPeriodo,
 } from '../../../src/services/motor.service';
 import { verificarCorridaPeriodo } from '../../../src/services/verificador.service';
+import { establecerClienteCandado } from '../../../src/lib/candadoCorrida';
 
 const individual = procesarAsignacionSeccionIndividual as jest.Mock;
 const batch = procesarCorridaBatchPeriodo as jest.Mock;
@@ -50,6 +51,8 @@ function prismaMock(seccion: unknown = { id: 's1', periodo: '2026-1' }, periodo 
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Sin cliente de sesión: solo el candado en memoria (cada prueba puede inyectar uno).
+  establecerClienteCandado(null);
   verificar.mockResolvedValue(verificacionConforme());
 });
 
@@ -215,7 +218,10 @@ describe('Asignación a demanda (Issue 2.15)', () => {
     describe('bloqueo en base para varias instancias (Issue 5.33 / R28)', () => {
       it('rechaza con 409 si otra instancia ya tiene el advisory lock en PostgreSQL', async () => {
         const prisma = prismaMock();
-        prisma.$queryRaw = jest.fn().mockResolvedValue([{ locked: false }]);
+        establecerClienteCandado({
+          $queryRaw: jest.fn().mockResolvedValue([{ locked: false }]),
+          $disconnect: jest.fn(),
+        } as any);
 
         await expect(ejecutarAsignacionADemanda(undefined, prisma)).rejects.toMatchObject({
           status: 409,
@@ -227,12 +233,23 @@ describe('Asignación a demanda (Issue 2.15)', () => {
       it('adquiere y libera el advisory lock en la base si está disponible', async () => {
         batch.mockResolvedValue({ corridaId: 'c-adv', resultados: [] });
         const prisma = prismaMock();
-        prisma.$queryRaw = jest.fn().mockResolvedValue([{ locked: true }]);
+        prisma.$queryRaw = jest.fn();
+        const cliente = {
+          $queryRaw: jest
+            .fn()
+            .mockResolvedValueOnce([{ locked: true }])
+            .mockResolvedValueOnce([{ unlocked: true }]),
+          $disconnect: jest.fn(),
+        };
+        establecerClienteCandado(cliente as any);
 
         const res = await ejecutarAsignacionADemanda(undefined, prisma);
 
         expect(res.corridaId).toBe('c-adv');
-        expect(prisma.$queryRaw).toHaveBeenCalledTimes(2); // lock y unlock
+        // Lock y unlock van por el cliente de sesión propio, nunca por el de la aplicación
+        // (que en producción pasa por el pooler en modo transacción).
+        expect(cliente.$queryRaw).toHaveBeenCalledTimes(2);
+        expect(prisma.$queryRaw).not.toHaveBeenCalled();
         expect(hayCorridaEnCurso()).toBe(false);
       });
     });

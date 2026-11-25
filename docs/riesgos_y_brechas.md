@@ -118,6 +118,7 @@ La migración `20261126000000_periodos` (tabla `periodos`, valor `CAMBIO_PERIODO
 | #8 | **Riesgo aceptado.** Un docente puede dictar en las aulas contiguas que hagan falta (Anexo C) | 25/11/2026 |
 | #9 | **A solucionar** con «Reorganizar con prioridad» durante las 2 primeras semanas del ciclo (Anexo C) | 25/11/2026 |
 | #10 | **Se mantiene** el plan B de accesibilidad: piso más accesible con alerta (Anexo C) | 25/11/2026 |
+| #41 | **Catálogo aprobado.** El Anexo B se aprueba tal como está, con los laboratorios especializados de B.4, y se carga con `prisma:cargar-catalogo-software` (6.14) | 25/11/2026 |
 | #22, #48 | **Por defecto se asignan los dos tipos de salón** (teoría en aula, laboratorio en laboratorio); el docente solicita si necesita uno solo (Anexo C) | 25/11/2026 |
 | #1, #3–#11, #13–#16, #18–#24, #26–#29, #32, #36 | **Sin decisión explícita todavía.** El documento propone solucionarlos; falta que el equipo los priorice. Las preguntas abiertas están en el Anexo C | — |
 
@@ -1352,7 +1353,9 @@ Registrar ──► EN PREPARACIÓN ──► Activar ──► VIGENTE ──�
 
 ## Anexo B — Propuesta de software por laboratorio y por curso (riesgo #41)
 
-> **Estado: PROPUESTA, pendiente de revisión y aprobación por el equipo. No cargar en la base hasta que se apruebe** (ver el orden de pasos en #41).
+> **Estado: APROBADO** por el equipo el 25/11/2026 (issue 6.14, #438), tal como está, con la asignación de laboratorios especializados de la sección B.4.
+>
+> **Cómo se carga:** `CATALOGO_SIMULAR=1 npm run prisma:cargar-catalogo-software` (en `backend/`) muestra el plan sin escribir; sin la variable lo aplica. Es aditivo e idempotente. Después hay que correr la asignación. Los datos están en `backend/src/data/catalogoSoftwareAprobado.ts`.
 >
 > Es una propuesta razonable hecha a partir de los nombres de los cursos y de lo habitual en una carrera de Ingeniería de Software. La revisa y la aprueba el propio equipo. Los nombres van sin versión, así que el motor acepta cualquier versión instalada (comparación `CUALQUIERA`).
 
@@ -1437,6 +1440,21 @@ Registrar ──► EN PREPARACIÓN ──► Activar ──► VIGENTE ──�
 - Los cursos que solo piden software de la imagen base (Matemática, Base de Datos I, Algorítmica, etc.) caben en **cualquier** laboratorio, como hoy.
 - Los cursos especializados (Redes, Minería de Datos, Inteligencia de Negocios, Programación Concurrente, Sistemas Digitales) solo caben en los laboratorios especializados. **Si esos laboratorios están ocupados a su hora, la sección escalará por software.** Eso permite mostrar en la demo la regla de software, la alerta y el flujo de solicitud del docente.
 
+### B.4 Laboratorios especializados (aprobado el 25/11/2026)
+
+La **imagen base** y el resto del software del catálogo (IDE, modelado, pruebas, ofimática, compiladores, virtualización…) van en **todos** los laboratorios. El software especializado va solo en estos:
+
+| Especialidad | Programas | Laboratorios |
+|---|---|---|
+| Redes | Cisco Packet Tracer, GNS3, Wireshark | Nuevo Pabellón: Laboratorios 01, 02 y 03 (piso 2) |
+| Hardware y paralelismo | Logisim Evolution, Arduino IDE, MS-MPI / OpenMPI | Nuevo Pabellón: Laboratorios 01, 02 y 03 · Antiguo Pabellón: Laboratorios 01, 02 y 03 (piso 3) |
+| Bases de datos | SQL Server Express + SSMS, MongoDB Community | Nuevo Pabellón: Laboratorios 04 a 08 (piso 3) · Antiguo Pabellón: Laboratorios 04, 05 y 06 (piso 3) |
+| Datos e IA | Anaconda, Weka, KNIME, Power BI Desktop | Nuevo Pabellón: Laboratorios 04 a 08 (piso 3) |
+
+Cada especialidad ocupa laboratorios vecinos del mismo piso porque el motor exige que **todos** los laboratorios de un bloque tengan el software: así una sección grande (por ejemplo `202SW0805 2-LAB`, que ocupa 3 laboratorios) puede seguir recibiendo un bloque. Los laboratorios 08, 09 y 11 del Antiguo Pabellón y el data center quedan con la imagen base y el software general.
+
+Los cursos marcados *(confirmar, #48)* en B.2 se cargan igual: por decisión del Anexo C, sus secciones de laboratorio se mantienen y solo piden software que está en todos los laboratorios. `202SW0303` no tiene secciones en la base (#432): el script le carga sus requisitos en cuanto existan, al volver a correrlo.
+
 ---
 
 ## Anexo C — Decisiones del equipo
@@ -1451,7 +1469,7 @@ Respuestas registradas el 25/11/2026 (issue 6.15, #439).
 | Plan B de accesibilidad | Sin piso 1 disponible, ¿asignar el piso más accesible con alerta o escalar siempre? | **Se deja como está:** se asigna el piso más accesible y se registra la alerta de accesibilidad (3.59) | #10 |
 | Teoría como laboratorio | ¿Lo decide el docente con aprobación, o solo Coordinación? | Por defecto la teoría **recibe un aula normal**; el docente puede **solicitar** dictarla solo en laboratorio (7.17) | #22 |
 | Catálogo de software | ¿Quién aprueba el catálogo y el software de cada curso propuestos en el Anexo B? | **El propio equipo** (decisión #41, 24/11/2026) | #41 |
-| Laboratorios especializados | ¿Qué laboratorios son de bases de datos, redes, hardware o datos e IA? | Se define al revisar y aprobar el Anexo B en **6.14 (#438)**, que incluye esa pregunta | #41 |
+| Laboratorios especializados | ¿Qué laboratorios son de bases de datos, redes, hardware o datos e IA? | **Aprobado en 6.14 (#438):** ver la tabla del Anexo B.4 | #41 |
 | Cursos generales con laboratorio | ¿Qué secciones de Química, Física, Redacción, etc. usan realmente laboratorio de cómputo? | **Se mantienen los dos tipos por defecto:** las secciones de teoría y de laboratorio quedan como vienen en los datos, sin corregirlas. El docente solicita si necesita un solo tipo de salón (7.17) | #48 |
 | Origen de los datos | ¿De qué fuente se corrigen `202SW0302` y `202SW0303`? | **Sin fuente oficial.** #454 se cerró sin datos: `202SW0302` queda corregido (#443) y `202SW0303` no se carga; 1.20 (#432) se cierra en parte | #47 |
 | Periodos | ¿Hay ciclo de verano (`AAAA-0`)? ¿Cuáles son las fechas de inicio y fin de cada semestre? | **Por ahora no se implementa el ciclo de verano.** Las fechas de cada semestre las registra Coordinación en la pantalla Periodos (4.64) | #49, 9.2 |
