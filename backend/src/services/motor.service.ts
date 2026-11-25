@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { EstadoAsignacion, PrismaClient, TipoEventoAuditoria } from '@prisma/client';
+import { HttpError } from '../lib/http';
 import { EspacioConexo } from '../rules/buscarBloqueContiguo';
 import {
   construirEventoCambio,
@@ -83,6 +84,13 @@ export async function cargarSeccionInputPorId(
 
   if (!seccion) {
     return null;
+  }
+  // Issue 1.17 (R35): una sección que dejó de figurar en el CSV de su curso no se asigna.
+  if (seccion.activa === false) {
+    throw new HttpError(
+      409,
+      'La sección está inactiva: ya no figura en el último archivo de cursos y secciones de su curso',
+    );
   }
 
   const tieneMovilidad = seccion.matriculas.some((m) => m.movilidadReducida === true);
@@ -267,9 +275,10 @@ export async function procesarCorridaBatchPeriodo(
 ): Promise<ResultadoCorridaBatch> {
   const { todosLosEspacios, obtenerVecinos } = await cargarContextoEspacios(prisma);
 
-  // Obtener todas las secciones del periodo con sus datos
+  // Obtener todas las secciones activas del periodo con sus datos (Issue 1.17: las inactivas ya
+  // no figuran en el CSV de su curso y no se asignan).
   const seccionesDb = await prisma.seccion.findMany({
-    where: { periodo },
+    where: { periodo, activa: true },
     include: {
       curso: true,
       horarios: true,

@@ -35,6 +35,8 @@ describe('Importador de Cursos y Secciones (Issue 1.3 / 4.28)', () => {
         upsert: jest
           .fn()
           .mockImplementation(({ create }) => Promise.resolve({ id: 'seccion-123', ...create })),
+        // Issue 1.17: sin secciones ausentes, la inactivación no hace nada.
+        findMany: jest.fn().mockResolvedValue([]),
       },
       software: {
         findUnique: jest
