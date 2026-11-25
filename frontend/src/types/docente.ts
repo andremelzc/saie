@@ -1,5 +1,5 @@
 import type { DiaSemana, EspacioAsignadoDTO, HorarioConsultaDTO, TipoEspacio } from './consulta';
-import type { HorarioSemanalDTO } from './horario';
+import type { HorarioSemanalDTO, SesionDTO } from './horario';
 import type { ComparacionVersion, SoftwareResumenDTO } from './admin';
 
 /**
@@ -18,8 +18,26 @@ export interface AsignacionActivaDocenteDTO {
   numeroAlumnos: number;
 }
 
+/** Issue 7.18: espacios del aviso de cambio de aula (antes y ahora; vacío = sin aula). */
+type EspaciosCambio = Record<
+  'espaciosAnteriores' | 'espaciosNuevos',
+  Omit<EspacioAsignadoDTO, 'id'>[]
+>;
+
+/** Issue 7.18: una sección del docente cambió de aula (`id` = la asignación nueva, `fecha` ISO). */
+export type CambioAulaDocenteDTO = { id: string; fecha: string } & Pick<
+  SesionDTO,
+  'seccionId' | 'codigoCurso' | 'nombreCurso' | 'codigoSeccion' | 'tipoEspacioRequerido'
+> &
+  EspaciosCambio;
+
+/** Un espacio del aviso de cambio de aula. */
+export type EspacioCambioAulaDTO = CambioAulaDocenteDTO['espaciosNuevos'][number];
+
 export interface HorarioDocenteDTO extends HorarioSemanalDTO {
   asignacionesActivas: AsignacionActivaDocenteDTO[];
+  /** Issue 7.18: cambios de aula recientes, del más reciente al más antiguo. */
+  cambiosDeAula: CambioAulaDocenteDTO[];
 }
 
 export interface FranjaDTO {
