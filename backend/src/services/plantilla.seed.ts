@@ -574,7 +574,7 @@ export async function registrarPeriodosDeLaPlantilla(
   prisma: Pick<PrismaClient, 'periodo'>,
   periodos: string[],
 ): Promise<void> {
-  const codigos = [...new Set(periodos)].sort();
+  const codigos = [...new Set(periodos)].sort((a, b) => a.localeCompare(b));
   for (const codigo of codigos) {
     await prisma.periodo.upsert({ where: { codigo }, update: {}, create: { codigo } });
   }
