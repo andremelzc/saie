@@ -564,7 +564,7 @@ Los cinco temas siguientes pertenecen al bloque de RPA del sílabo, pero son con
 
 **En SAIE.** No se usa. El sistema se integra por API y por archivo, que son más estables que operar una pantalla.
 
-**Qué se podría mejorar.** Si el equipo obtuviera acceso a un sistema institucional sin API, reevaluar RPA con el análisis del §7.2.
+**Qué se podría mejorar.** Si el equipo obtuviera acceso a un sistema institucional sin API, reevaluar RPA con el análisis del §7.2. El SUM es ese caso: no tiene API, pero genera el «Reporte de Programación de Asignaturas» en PDF. La propuesta de leerlo automáticamente, con su viabilidad comprobada, está en [`propuesta_importacion_pdf_sum.md`](../propuesta_importacion_pdf_sum.md).
 
 ### 7.2. Procesos candidatos a RPA — Justificado
 
