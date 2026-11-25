@@ -132,7 +132,10 @@ export function ejecutarCorridaBatch(input: CorridaBatchInput): ResultadoCorrida
   const idsConservadas = new Set<string>();
   for (const seccion of secciones) {
     const previa = mapaPrevias.get(seccion.id);
-    if (puedeConservarse(seccion, previa, todosLosEspacios)) {
+    if (
+      puedeConservarse(seccion, previa, todosLosEspacios) &&
+      !chocaConReservadas(seccion, previa.espacioIds, ocupacionesVigentes)
+    ) {
       idsConservadas.add(seccion.id);
       ocupacionesVigentes.push({
         id: previa.id,
@@ -193,7 +196,8 @@ export function ejecutarCorridaBatch(input: CorridaBatchInput): ResultadoCorrida
         asignacionesVigentes: ocupacionesVigentes,
         obtenerVecinosContiguos,
         paralelasAsignadas: paralelasDelCurso,
-        asignacionPrevia,
+        // La decisión de conservar ya se tomó arriba (con las reservas de toda la corrida).
+        asignacionPrevia: null,
         maxEspaciosPorBloque,
       });
 
@@ -256,6 +260,22 @@ export function ejecutarCorridaBatch(input: CorridaBatchInput): ResultadoCorrida
     desglosePorTipoEspacio,
     resultados,
   };
+}
+
+/**
+ * Una asignación previa que ya choca con otra reservada (dato viejo con doble reserva) no se
+ * conserva: el motor la reasigna y la base se corrige sola, en vez de bloquear la corrida.
+ */
+function chocaConReservadas(
+  seccion: SeccionInputMotor,
+  espacioIds: string[],
+  reservadas: AsignacionOcupacionInput[],
+): boolean {
+  return reservadas.some(
+    (o) =>
+      o.espacioIds.some((id) => espacioIds.includes(id)) &&
+      o.horarios.some((ho) => seccion.horarios.some((hs) => haySolapamientoHorario(ho, hs))),
+  );
 }
 
 /** Dos secciones que la corrida dejaría en el mismo espacio a la misma hora. */
