@@ -121,4 +121,19 @@ describe('TarjetaAlerta', () => {
       expect(screen.getByRole('button', { name: 'Marcar como resuelta' })).toBeDisabled();
     });
   });
+
+  it('muestra las alertas de accesibilidad con su propia etiqueta (Issue 3.59)', () => {
+    render(
+      <TarjetaAlerta
+        alerta={{
+          ...alerta,
+          tipo: 'ACCESIBILIDAD',
+          motivo:
+            'Accesibilidad en Lab 1: IS101 sec. 01 tiene alumnos con movilidad reducida y quedó en el piso 3 porque no había lugar en el piso 1',
+        }}
+      />,
+    );
+    expect(screen.getByText('Accesibilidad')).toBeInTheDocument();
+    expect(screen.getByRole('article')).toHaveAccessibleName(/alerta de accesibilidad/i);
+  });
 });
