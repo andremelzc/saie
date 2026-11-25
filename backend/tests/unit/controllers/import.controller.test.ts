@@ -71,6 +71,7 @@ describe('Import Controller (Issue 1.6)', () => {
       mockFilas,
       expect.anything(),
       'cuenta-9',
+      expect.any(Function),
     );
   });
 

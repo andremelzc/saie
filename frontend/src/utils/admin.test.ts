@@ -41,4 +41,72 @@ describe('Utils de Administración', () => {
       }
     });
   });
+
+  describe('textoAvanceImportacion (Issue 1.19)', () => {
+    it('sin avance conocido pide esperar', () => {
+      expect(adminUtils.textoAvanceImportacion(null)).toMatch(/^Importando/);
+      expect(adminUtils.textoAvanceImportacion({ procesadas: 0, total: 0 })).toMatch(/^Importando/);
+    });
+
+    it('con avance indica cuántas filas van', () => {
+      expect(adminUtils.textoAvanceImportacion({ procesadas: 2300, total: 4470 })).toBe(
+        'Procesando 2300 de 4470 filas. No cierres esta pantalla.',
+      );
+    });
+  });
+
+  describe('resumirReubicacion (Issue 2.22)', () => {
+    const seccion = (estado: 'VIGENTE' | 'ESCALADA') => ({
+      seccionId: 's',
+      codigoSeccion: '1',
+      codigoCurso: 'C1',
+      estado,
+      espacioIds: [],
+      motivoEscalamiento: null,
+      conservada: false,
+    });
+
+    it('cuenta las secciones reubicadas', () => {
+      expect(
+        adminUtils.resumirReubicacion({
+          alertaId: 'a',
+          alertaResuelta: true,
+          secciones: [seccion('VIGENTE')],
+        }),
+      ).toBe('Alerta resuelta: 1 sección reubicada.');
+    });
+
+    it('no cuenta como reubicadas las que siguen en su aula', () => {
+      expect(
+        adminUtils.resumirReubicacion({
+          alertaId: 'a',
+          alertaResuelta: true,
+          secciones: [seccion('VIGENTE'), { ...seccion('VIGENTE'), conservada: true }],
+        }),
+      ).toBe('Alerta resuelta: 1 sección reubicada, 1 sin cambios (su aula sigue sirviendo).');
+    });
+
+    it('indica las que quedaron en revisión', () => {
+      expect(
+        adminUtils.resumirReubicacion({
+          alertaId: 'a',
+          alertaResuelta: true,
+          secciones: [seccion('VIGENTE'), seccion('VIGENTE'), seccion('ESCALADA')],
+        }),
+      ).toBe('Alerta resuelta: 2 secciones reubicadas, 1 en revisión en el inicio.');
+    });
+  });
+
+  describe('separarDatosIncompletos (Issue 2.25)', () => {
+    it('separa las secciones sin horarios de las que esperan revisión', () => {
+      const sinHorario = { motivoEscalamiento: '[SIN_HORARIOS_DEFINIDOS] sin franjas' };
+      const ocupada = { motivoEscalamiento: '[HORARIO_BLOQUEADO] todo ocupado' };
+      const sinMotivo = { motivoEscalamiento: null };
+
+      expect(adminUtils.separarDatosIncompletos([sinHorario, ocupada, sinMotivo])).toEqual({
+        enRevision: [ocupada, sinMotivo],
+        datosIncompletos: [sinHorario],
+      });
+    });
+  });
 });

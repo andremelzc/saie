@@ -40,9 +40,10 @@ function resultado(seccionId: string, estado: string, extra: Record<string, unkn
 
 function prismaMock(seccion: unknown = { id: 's1', periodo: '2026-1' }, periodo = '2026-1') {
   return {
-    seccion: {
-      findUnique: jest.fn().mockResolvedValue(seccion),
-      findFirst: jest.fn().mockResolvedValue(periodo ? { periodo } : null),
+    seccion: { findUnique: jest.fn().mockResolvedValue(seccion) },
+    periodo: {
+      findFirst: jest.fn().mockResolvedValue(periodo ? { codigo: periodo } : null),
+      findUnique: jest.fn().mockResolvedValue({ estado: 'VIGENTE' }),
     },
   } as any;
 }
@@ -54,6 +55,16 @@ beforeEach(() => {
 
 describe('Asignación a demanda (Issue 2.15)', () => {
   describe('con id de sección', () => {
+    it('409 y no reasigna si la sección es de un periodo cerrado (Issue 4.64)', async () => {
+      const prisma = prismaMock();
+      prisma.periodo.findUnique.mockResolvedValue({ estado: 'CERRADO' });
+
+      await expect(ejecutarAsignacionADemanda('s1', prisma)).rejects.toMatchObject({
+        status: 409,
+      });
+      expect(individual).not.toHaveBeenCalled();
+    });
+
     it('ejecuta solo la orquestación de esa sección y resume el resultado', async () => {
       individual.mockResolvedValue(resultado('s1', 'VIGENTE'));
       const prisma = prismaMock();

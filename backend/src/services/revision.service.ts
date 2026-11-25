@@ -12,7 +12,7 @@ import { obtenerPeriodoVigente } from './periodo.service';
  */
 export async function listarSeccionesEscaladas(
   periodoSolicitado: string | undefined,
-  prisma: Pick<PrismaClient, 'asignacion' | 'seccion'>,
+  prisma: Pick<PrismaClient, 'asignacion' | 'seccion' | 'periodo'>,
   paginacion?: { pagina?: number; limite?: number },
 ): Promise<SeccionesEscaladasDTO> {
   const periodo = periodoSolicitado ?? (await obtenerPeriodoVigente(prisma));

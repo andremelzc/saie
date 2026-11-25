@@ -1,3 +1,4 @@
+import type { ResultadoReubicacionDTO } from '../types/admin';
 import { RUTAS } from '../config/rutas';
 import type { RolCuenta } from '../types/auth';
 import { ROL } from './diccionarios';
@@ -120,6 +121,8 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
     },
     { to: RUTAS.alertasAdmin, etiqueta: 'Alertas', trazo: T_ALERTA },
     { to: RUTAS.cargaAdmin, etiqueta: 'Carga', trazo: T_CARGA },
+    // Issue 4.64: Coordinación decide cuándo cambia el semestre.
+    { to: RUTAS.periodosAdmin, etiqueta: 'Periodos', trazo: ICONOS.calendario, secundaria: true },
     {
       to: RUTAS.auditoriaAdmin,
       etiqueta: 'Historial',
@@ -142,4 +145,43 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
  */
 export function etiquetaRol(rol?: RolCuenta): string {
   return rol ? ROL[rol] : 'Administrativo';
+}
+
+/** Resumen del resultado de reubicar: cuántas secciones cambiaron de espacio y cuántas escalaron. */
+export function resumirReubicacion(r: ResultadoReubicacionDTO): string {
+  const enRevision = r.secciones.filter((s) => s.estado === 'ESCALADA').length;
+  const sinCambios = r.secciones.filter((s) => s.estado !== 'ESCALADA' && s.conservada).length;
+  const reubicadas = r.secciones.length - enRevision - sinCambios;
+  const partes = [
+    `${reubicadas} ${reubicadas === 1 ? 'sección reubicada' : 'secciones reubicadas'}`,
+  ];
+  if (sinCambios > 0) partes.push(`${sinCambios} sin cambios (su aula sigue sirviendo)`);
+  if (enRevision > 0) partes.push(`${enRevision} en revisión en el inicio`);
+  return `Alerta resuelta: ${partes.join(', ')}.`;
+}
+
+/**
+ * Issue 2.25 (riesgo R7 de la auditoría): una sección sin horarios no es un problema de aulas
+ * sino de datos incompletos. Se separa de las que sí esperan una decisión de Coordinación.
+ */
+export function separarDatosIncompletos<T extends { motivoEscalamiento: string | null }>(
+  secciones: T[],
+): { enRevision: T[]; datosIncompletos: T[] } {
+  const enRevision: T[] = [];
+  const datosIncompletos: T[] = [];
+  for (const s of secciones) {
+    const { codigo } = describirMotivoEscalamiento(s.motivoEscalamiento);
+    (codigo === 'SIN_HORARIOS_DEFINIDOS' ? datosIncompletos : enRevision).push(s);
+  }
+  return { enRevision, datosIncompletos };
+}
+
+/** Texto de espera de una importación grande, con el avance cuando ya se conoce (Issue 1.19). */
+export function textoAvanceImportacion(
+  avance: { procesadas: number; total: number } | null,
+): string {
+  if (!avance || avance.total === 0) {
+    return 'Importando. Puede tardar unos minutos; no cierres esta pantalla.';
+  }
+  return `Procesando ${avance.procesadas} de ${avance.total} filas. No cierres esta pantalla.`;
 }

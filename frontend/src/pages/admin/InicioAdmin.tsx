@@ -31,7 +31,7 @@ import type {
   ResultadoVerificacionDTO,
   SeccionEscaladaDTO,
 } from '../../types/admin';
-import { describirMotivoEscalamiento } from '../../utils/admin';
+import { describirMotivoEscalamiento, separarDatosIncompletos } from '../../utils/admin';
 import { formatearFechaCorta } from '../../utils/fechas';
 import { plural } from '../../utils/texto';
 import { fraseDeMotivoAlerta } from '../../utils/textoMotor';
@@ -200,6 +200,45 @@ const FilaEscalada: React.FC<{
         </Boton>
       </div>
     </li>
+  );
+};
+
+/** «Esperan revisión» sin contar las secciones que solo tienen datos incompletos. */
+function restarDatosIncompletos(total: number | null, incompletos: number): number | null {
+  return total === null ? null : Math.max(0, total - incompletos);
+}
+
+/**
+ * Issue 2.25 (riesgo R7): secciones que no entran al motor porque les faltan los horarios. No
+ * esperan una decisión de Coordinación sino una carga de datos, así que no se mezclan con las
+ * escaladas ni ofrecen «Reintentar».
+ */
+const DatosIncompletos: React.FC<{ secciones: SeccionEscaladaDTO[] }> = ({ secciones }) => {
+  if (secciones.length === 0) return null;
+  return (
+    <section
+      aria-labelledby="titulo-datos-incompletos"
+      className="flex flex-col gap-2 border-t border-saie-divider pt-3"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 id="titulo-datos-incompletos" className="m-0 text-sm font-bold text-saie-text">
+          Datos incompletos: falta cargar horarios ({secciones.length})
+        </h3>
+        <BotonEnlace to={`${RUTAS.cargaAdmin}#carga-horarios`} variante="secundario" tamano="sm">
+          Cargar horarios
+        </BotonEnlace>
+      </div>
+      <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+        {secciones.map((s) => (
+          <li
+            key={s.asignacionId}
+            className="rounded-md bg-saie-canvas px-2 py-1 text-sm text-saie-text"
+          >
+            {s.seccion.codigoCurso} · {s.seccion.codigoSeccion} — {s.seccion.nombreCurso}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 };
 
@@ -438,7 +477,10 @@ const InicioCoordinacion: React.FC = () => {
   const delta = (campo: 'asignadas' | 'mantenidas' | 'escaladas') =>
     resumenCorrida && resumenAnterior ? resumenCorrida[campo] - resumenAnterior[campo] : null;
   const periodo = escaladas.datos?.periodo ?? resumenCorrida?.periodo ?? '—';
-  const secciones = escaladas.datos?.secciones ?? [];
+  // Issue 2.25: las secciones sin horarios van aparte, como «datos incompletos».
+  const { enRevision: secciones, datosIncompletos } = separarDatosIncompletos(
+    escaladas.datos?.secciones ?? [],
+  );
 
   /** Vuelve a pedir lo que la corrida pudo cambiar y libera el botón si ya no hay otra en curso. */
   function comprobarCorrida() {
@@ -530,7 +572,10 @@ const InicioCoordinacion: React.FC = () => {
         <TiraMetricas etiqueta="Resumen de la asignación" className="grid-cols-2 lg:grid-cols-4">
           <Metrica
             etiqueta="Esperan revisión"
-            valor={resumenCorrida?.escaladas ?? escaladas.datos?.total ?? null}
+            valor={restarDatosIncompletos(
+              resumenCorrida?.escaladas ?? escaladas.datos?.total ?? null,
+              datosIncompletos.length,
+            )}
             cargando={escaladas.cargando && !escaladas.datos && !resumenCorrida}
             delta={delta('escaladas')}
             tono="advertencia"
@@ -702,6 +747,7 @@ const InicioCoordinacion: React.FC = () => {
                 onReintentar={reintentar}
               />
             </div>
+            <DatosIncompletos secciones={datosIncompletos} />
           </section>
 
           {/*

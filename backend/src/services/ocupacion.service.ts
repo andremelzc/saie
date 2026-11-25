@@ -1,3 +1,4 @@
+import { obtenerPeriodoVigente } from './periodo.service';
 import { EstadoAlerta, EstadoAsignacion, PrismaClient } from '@prisma/client';
 import { diaYMinutosEnLima, formatearHora } from '../lib/horario';
 import { calcularCapacidadReal } from '../rules/calcularCapacidadReal';
@@ -16,7 +17,7 @@ export interface FiltrosOcupacion {
   franja?: FranjaOcupacionDTO;
 }
 
-type DbOcupacion = Pick<PrismaClient, 'espacio' | 'asignacion' | 'alerta'>;
+type DbOcupacion = Pick<PrismaClient, 'espacio' | 'asignacion' | 'alerta' | 'periodo'>;
 
 function franjaActual(ahora: Date): FranjaOcupacionDTO {
   const { dia, minutos } = diaYMinutosEnLima(ahora);
@@ -49,14 +50,17 @@ export async function obtenerOcupacionPorPiso(
     orderBy: { identificador: 'asc' },
   });
   const ids = espacios.map((e) => e.id);
+  // Issue 4.64 (R52): el mapa solo muestra el periodo vigente.
+  const periodoVigente = await obtenerPeriodoVigente(prisma);
 
   const [asignaciones, alertas] =
-    ids.length === 0
+    ids.length === 0 || !periodoVigente
       ? [[], []]
       : await Promise.all([
           prisma.asignacion.findMany({
             where: {
               estado: EstadoAsignacion.VIGENTE,
+              seccion: { periodo: periodoVigente },
               espacios: { some: { espacioId: { in: ids } } },
             },
             include: {

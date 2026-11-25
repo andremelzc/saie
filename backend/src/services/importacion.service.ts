@@ -11,9 +11,11 @@ import {
   AsignacionEncadenadaDTO,
   ResultadoImportacionDTO,
   TipoImportacion,
+  ProgresoImportacion,
 } from '../types/importacion';
 import { ejecutarAsignacionADemanda } from './asignacionDemanda.service';
 import { registrarImportacion } from './importacionRegistro.service';
+import { validarImportacion } from './validacionImportacion.service';
 import { obtenerPeriodoVigente } from './periodo.service';
 
 interface ResultadoImportador {
@@ -32,6 +34,7 @@ async function correrImportador(
   tipo: TipoImportacion,
   filas: unknown[],
   prisma: PrismaClient,
+  onProgreso?: ProgresoImportacion,
 ): Promise<ResultadoImportador> {
   switch (tipo) {
     case 'cursos-secciones': {
@@ -39,11 +42,15 @@ async function correrImportador(
       return { procesados, errores };
     }
     case 'horarios': {
-      const { errores, ...procesados } = await importarHorarios(filas, prisma);
+      const { errores, ...procesados } = await importarHorarios(filas, prisma, onProgreso);
       return { procesados, errores };
     }
     case 'matriculas': {
-      const { errores, clavesIniciales, ...procesados } = await importarMatriculas(filas, prisma);
+      const { errores, clavesIniciales, ...procesados } = await importarMatriculas(
+        filas,
+        prisma,
+        onProgreso,
+      );
       return { procesados, errores, clavesIniciales };
     }
     case 'docentes': {
@@ -121,9 +128,20 @@ export async function ejecutarImportacion(
   filas: unknown[],
   prisma: PrismaClient,
   cuentaId: string | null = null,
+  onProgreso?: ProgresoImportacion,
 ): Promise<ResultadoImportacionDTO> {
-  const { procesados, errores, clavesIniciales } = await correrImportador(tipo, filas, prisma);
+  // Issue 1.16 (riesgo R34 de la auditoría): todo o nada. Se valida el archivo completo antes de
+  // escribir; si hay al menos un error, no se guarda ninguna fila.
+  const validacion = await validarImportacion(tipo, filas, prisma);
+  const { procesados, errores, clavesIniciales }: ResultadoImportador =
+    validacion.errores.length > 0
+      ? { procesados: {}, errores: validacion.errores }
+      : await correrImportador(tipo, filas, prisma, onProgreso);
   const exitosa = errores.length === 0;
+  // La validación previa no cubre los fallos al escribir (por ejemplo, un correo ya usado por otro
+  // alumno): si el importador falla a medias, las filas anteriores sí quedaron guardadas y se avisa.
+  const parcial =
+    !exitosa && validacion.errores.length === 0 && Object.values(procesados).some((n) => n > 0);
 
   try {
     await registrarImportacion(prisma, { tipo, cuentaId, filasRecibidas: filas.length, errores });
@@ -143,6 +161,9 @@ export async function ejecutarImportacion(
     procesados,
     errores,
     exitosa,
+    guardadas: exitosa,
+    ...(parcial ? { parcial: true } : {}),
+    ...(validacion.advertencias.length > 0 ? { advertencias: validacion.advertencias } : {}),
     asignacion,
     ...(clavesIniciales && clavesIniciales.length > 0 ? { clavesIniciales } : {}),
   };

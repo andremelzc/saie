@@ -1,3 +1,4 @@
+import { obtenerPeriodoVigente } from './periodo.service';
 import { EstadoAsignacion, Prisma, TipoEspacio } from '@prisma/client';
 import { calcularCapacidadReal } from '../rules/calcularCapacidadReal';
 import { BloqueCandidato } from '../rules/buscarBloqueContiguo';
@@ -39,9 +40,13 @@ export async function cargarAsignacionesVigentesDeEspacio(
   espacioId: string,
   db: Db,
 ): Promise<AsignacionVigenteConEspacios[]> {
+  // Issue 4.64 (R52): las alertas solo consideran el periodo vigente.
+  const periodo = await obtenerPeriodoVigente(db);
+  if (!periodo) return [];
   const asignaciones = await db.asignacion.findMany({
     where: {
       estado: EstadoAsignacion.VIGENTE,
+      seccion: { periodo },
       espacios: { some: { espacioId } },
     },
     include: {

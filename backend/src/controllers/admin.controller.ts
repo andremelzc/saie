@@ -13,7 +13,14 @@ import { responderError } from '../lib/http';
 import { filtrosDeMapa, MapaOcupacionQuerySchema } from '../lib/franja';
 import { obtenerOcupacionPorPiso } from '../services/ocupacion.service';
 import { listarSeccionesEscaladas } from '../services/revision.service';
-import { listarPeriodos } from '../services/periodo.service';
+import {
+  activarPeriodo,
+  cerrarPeriodo,
+  listarPeriodos,
+  NuevoPeriodoSchema,
+  registrarPeriodo,
+} from '../services/periodo.service';
+import { periodoSchema } from '../lib/periodo';
 import { obtenerUltimasImportaciones } from '../services/importacionRegistro.service';
 import { TIPOS_IMPORTACION } from '../types/importacion';
 import {
@@ -54,6 +61,7 @@ import {
   registrarCambioPcsMalogradas,
   registrarCambioSoftware,
 } from '../services/laboratorio.service';
+import { reubicarSeccionesDeAlerta } from '../services/reubicacion.service';
 
 const LaboratorioParamSchema = z.object({
   id: z.string().min(1, 'El id del laboratorio es requerido'),
@@ -141,6 +149,20 @@ export async function resolverAlertaPendiente(req: Request, res: Response): Prom
 }
 
 /**
+ * Issue 2.22 — POST /api/v1/admin/alertas/:id/reubicar (solo Coordinación)
+ * Reevalúa con el motor cada sección afectada por la alerta y la marca resuelta.
+ */
+export async function reubicarSeccionesAlerta(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = AlertaParamSchema.parse(req.params);
+    const data = await reubicarSeccionesDeAlerta(id, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/**
  * Issue 4.12 — GET /api/v1/admin/mapa-ocupacion?pabellon=A&piso=1[&dia=&horaInicio=&horaFin=]
  * Sin franja se usa el momento actual (hora de Lima).
  */
@@ -175,6 +197,41 @@ export async function consultarUltimasImportaciones(req: Request, res: Response)
 export async function listarPeriodosAdmin(_req: Request, res: Response): Promise<void> {
   try {
     const data = await listarPeriodos(prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.64 — POST /api/v1/admin/periodos (solo Coordinación): registra un periodo en preparación. */
+export async function registrarPeriodoAdmin(req: Request, res: Response): Promise<void> {
+  try {
+    const entrada = NuevoPeriodoSchema.parse(req.body);
+    const data = await registrarPeriodo(entrada, req.auth!, prisma);
+    res.status(201).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+const PeriodoParamSchema = z.object({ codigo: periodoSchema });
+
+/** Issue 4.64 — POST /api/v1/admin/periodos/:codigo/activar: cierra el vigente y activa este. */
+export async function activarPeriodoAdmin(req: Request, res: Response): Promise<void> {
+  try {
+    const { codigo } = PeriodoParamSchema.parse(req.params);
+    const data = await activarPeriodo(codigo, req.auth!, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 4.64 — POST /api/v1/admin/periodos/:codigo/cerrar: el periodo pasa a solo consulta. */
+export async function cerrarPeriodoAdmin(req: Request, res: Response): Promise<void> {
+  try {
+    const { codigo } = PeriodoParamSchema.parse(req.params);
+    const data = await cerrarPeriodo(codigo, req.auth!, prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);

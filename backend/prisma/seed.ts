@@ -25,6 +25,7 @@ import {
   cargarPlantilla,
   leerPlantilla,
 } from '../src/services/plantilla.seed';
+import { vincularJefaturaConLaboratorios } from '../src/services/responsables.service';
 
 const prisma = new PrismaClient();
 
@@ -99,6 +100,10 @@ async function main() {
 
   // PASOS 2-6: todo lo que viene del Excel
   const resumen = await cargarPlantilla(prisma, datos, (m) => console.log(m));
+
+  // Issue 4.59: Jefatura es responsable de todos los laboratorios.
+  const vinculos = await vincularJefaturaConLaboratorios(prisma);
+  console.log(`  ✅ Jefatura a cargo de los laboratorios (${vinculos} vínculo(s) nuevo(s))`);
 
   if (resumen.erroresImportadores.length > 0) {
     console.warn(`  ⚠️  ${resumen.erroresImportadores.length} error(es) al importar:`);

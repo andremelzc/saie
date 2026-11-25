@@ -18,6 +18,7 @@ const prismaMock: any = {
   espacioResponsable: { findUnique: jest.fn() },
   historialEspacio: { create: jest.fn() },
   espacioContiguo: { findMany: jest.fn() },
+  periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
   asignacion: { findUnique: jest.fn(), findMany: jest.fn(), findFirst: jest.fn() },
   alerta: { findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
 

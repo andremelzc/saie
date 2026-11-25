@@ -136,6 +136,8 @@ npm run docker:db
 npm run prisma:generate
 ```
 
+> **Después de cada `git pull`:** si el pull trae cambios en `backend/prisma/schema.prisma`, vuelve a ejecutar `npx prisma generate` dentro de `backend/`. Si no lo haces, el cliente de Prisma queda desactualizado: el backend no compila y fallan las pruebas que usan los modelos nuevos (riesgo R27 de `docs/riesgos_y_brechas.md`). No se automatiza con `postinstall` porque `prisma` es una dependencia de desarrollo y el despliegue podría instalar solo las de producción.
+
 ---
 
 ## 5. Ejecución del Entorno de Desarrollo

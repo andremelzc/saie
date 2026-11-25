@@ -18,6 +18,10 @@ import type {
   ListadoHistorialDTO,
   ListadoSeccionesDTO,
   ListadoSoftwareDTO,
+  ResultadoReubicacionDTO,
+  TrabajoImportacionDTO,
+  NuevoPeriodoDTO,
+  PeriodoDTO,
   NuevoAlumnoDTO,
   NuevoDocenteDTO,
   NuevoEspacioDTO,
@@ -74,6 +78,19 @@ export async function resolverAlerta(id: string): Promise<void> {
   await api.patch(`/v1/admin/alertas/${encodeURIComponent(id)}/resolver`);
 }
 
+/**
+ * POST /v1/admin/alertas/:id/reubicar (Issue 2.22): reasigna las secciones afectadas por la
+ * alerta y la deja resuelta. Corre el motor una vez por sección, así que puede tardar.
+ */
+export async function reubicarSeccionesAlerta(id: string): Promise<ResultadoReubicacionDTO> {
+  const { data } = await api.post<Respuesta<ResultadoReubicacionDTO>>(
+    `/v1/admin/alertas/${encodeURIComponent(id)}/reubicar`,
+    {},
+    { timeout: 60000 },
+  );
+  return data.data;
+}
+
 /** GET /v1/admin/secciones-escaladas (Issue 4.22). */
 export async function obtenerEscaladas(): Promise<SeccionesEscaladasDTO> {
   const { data } = await api.get<Respuesta<SeccionesEscaladasDTO>>('/v1/admin/secciones-escaladas');
@@ -102,17 +119,42 @@ export async function reintentarSeccion(seccionId: string): Promise<ResumenAsign
   return data.data;
 }
 
-/** POST /v1/import/:tipo con el CSV tal cual (Issues 1.3, 1.4 y 1.5). */
+/** Espera entre consultas del avance de una importación (Issue 1.19). */
+export const INTERVALO_AVANCE_MS = 1500;
+
+/**
+ * Importa el CSV en segundo plano (Issue 1.19): el servidor responde enseguida con un trabajo y
+ * aquí se consulta su avance hasta que termina, sin límite de espera de pantalla. `onProgreso`
+ * recibe las filas procesadas y el total («2300 de 4470»).
+ */
 export async function importarCsv(
   tipo: TipoImportacion,
   contenidoCsv: string,
+  onProgreso?: (procesadas: number, total: number) => void,
 ): Promise<ResultadoImportacionDTO> {
-  const { data } = await api.post<Respuesta<ResultadoImportacionDTO>>(
-    `/v1/import/${tipo}`,
+  const { data } = await api.post<Respuesta<TrabajoImportacionDTO>>(
+    `/v1/import/${tipo}/trabajos`,
     contenidoCsv,
-    { headers: { 'Content-Type': 'text/csv' }, timeout: 120000 },
+    { headers: { 'Content-Type': 'text/csv' }, timeout: 60000 },
   );
-  return data.data;
+  let trabajo = data.data;
+  onProgreso?.(trabajo.procesadas, trabajo.total);
+
+  while (trabajo.estado === 'EN_CURSO') {
+    await new Promise((resolver) => setTimeout(resolver, INTERVALO_AVANCE_MS));
+    const consulta = await api.get<Respuesta<TrabajoImportacionDTO>>(
+      `/v1/import/trabajos/${encodeURIComponent(trabajo.id)}`,
+    );
+    trabajo = consulta.data.data;
+    onProgreso?.(trabajo.procesadas, trabajo.total);
+  }
+
+  if (trabajo.estado === 'FALLIDO' || !trabajo.resultado) {
+    throw new Error(
+      trabajo.error ?? 'La importación falló. Revisa el archivo e inténtalo de nuevo.',
+    );
+  }
+  return trabajo.resultado;
 }
 
 /** GET /v1/admin/espacios[?tipo=] (Issue 4.15). */
@@ -270,6 +312,30 @@ export async function obtenerHistorial(
     {
       params: filtros,
     },
+  );
+  return data.data;
+}
+
+/** POST /v1/admin/periodos (Issue 4.64): registra un periodo en preparación. */
+export async function registrarPeriodo(entrada: NuevoPeriodoDTO): Promise<PeriodoDTO> {
+  const { data } = await api.post<Respuesta<PeriodoDTO>>('/v1/admin/periodos', entrada);
+  return data.data;
+}
+
+/** POST /v1/admin/periodos/:codigo/activar (Issue 4.64): cierra el vigente y activa este. */
+export async function activarPeriodo(codigo: string): Promise<PeriodoDTO> {
+  const { data } = await api.post<Respuesta<PeriodoDTO>>(
+    `/v1/admin/periodos/${encodeURIComponent(codigo)}/activar`,
+    {},
+  );
+  return data.data;
+}
+
+/** POST /v1/admin/periodos/:codigo/cerrar (Issue 4.64): el periodo pasa a solo consulta. */
+export async function cerrarPeriodo(codigo: string): Promise<PeriodoDTO> {
+  const { data } = await api.post<Respuesta<PeriodoDTO>>(
+    `/v1/admin/periodos/${encodeURIComponent(codigo)}/cerrar`,
+    {},
   );
   return data.data;
 }

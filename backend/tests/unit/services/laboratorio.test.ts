@@ -91,6 +91,7 @@ function prismaMock(opciones: { espacio?: any; responsable?: boolean; asignacion
     },
     historialEspacio: { create: jest.fn().mockResolvedValue({}) },
     registroAuditoria: { create: jest.fn().mockResolvedValue({}) },
+    periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
     asignacion: { findMany: jest.fn().mockResolvedValue(opciones.asignaciones ?? []) },
     alerta: {
       findMany: jest.fn().mockResolvedValue([]),

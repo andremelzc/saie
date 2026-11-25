@@ -28,7 +28,7 @@ import {
   registrarAccionDePersona,
 } from './auditoriaAcciones.service';
 import { evaluarIncompatibilidadSoftware } from './deteccionAlertas.service';
-import { obtenerPeriodoVigente } from './periodo.service';
+import { asegurarPeriodoEscribible, obtenerPeriodoVigente } from './periodo.service';
 import { mapearSoftwareInstalado, resolverSoftwareIds } from './software.service';
 
 type Db = Prisma.TransactionClient;
@@ -182,7 +182,7 @@ function dondeDeFiltros(filtros: FiltrosSecciones): Prisma.SeccionWhereInput {
 export async function listarSecciones(
   filtros: FiltrosSecciones,
   auth: TokenPayload,
-  prisma: Pick<PrismaClient, 'seccion'>,
+  prisma: Pick<PrismaClient, 'seccion' | 'periodo'>,
 ): Promise<ListadoSeccionesDTO> {
   const periodo = filtros.periodo ?? (await obtenerPeriodoVigente(prisma));
   const where = dondeDeFiltros({ ...filtros, ...(periodo && !filtros.periodo ? { periodo } : {}) });
@@ -288,6 +288,9 @@ export async function actualizarSeccion(
   if (!actual) {
     throw new HttpError(404, `La sección con ID '${seccionId}' no existe`);
   }
+
+  // Issue 4.64 (R50): un periodo cerrado solo admite consulta.
+  await asegurarPeriodoEscribible(prisma, actual.periodo);
 
   const alertas: { id: string; tipo: string; motivo: string }[] = [];
 

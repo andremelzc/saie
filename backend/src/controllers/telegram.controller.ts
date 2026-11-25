@@ -6,6 +6,7 @@ import { prisma } from '../lib/prisma';
 import { ActualizacionTelegram, procesarActualizacion } from '../telegram/bot.service';
 import { ClienteTelegram, crearClienteTelegram } from '../telegram/cliente';
 import { limitadorIntentos } from '../telegram/limitador';
+import { actualizacionesVistas } from '../telegram/actualizacionesVistas';
 import { enviarResumenesDiarios } from '../telegram/resumenDiario.service';
 
 let cliente: ClienteTelegram | null = null;
@@ -35,6 +36,7 @@ export async function recibirActualizacion(req: Request, res: Response): Promise
       prisma,
       cliente,
       limitador: limitadorIntentos,
+      vistas: actualizacionesVistas,
     });
   } catch (error: unknown) {
     // Solo el tipo: el mensaje podría incluir datos del alumno o el token.

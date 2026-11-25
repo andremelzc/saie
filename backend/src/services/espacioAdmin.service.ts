@@ -24,9 +24,13 @@ import {
   calcularCambios,
   registrarAccionDePersona,
 } from './auditoriaAcciones.service';
-import { evaluarCapacidadInsuficiente } from './deteccionAlertas.service';
+import {
+  cargarAsignacionesVigentesDeEspacio,
+  evaluarCapacidadInsuficiente,
+} from './deteccionAlertas.service';
 import { registrarCambioPcsMalogradas, registrarCambioSoftware } from './laboratorio.service';
 import { resolverSoftwareIds } from './software.service';
+import { vincularLaboratorioConJefatura } from './responsables.service';
 
 const CAMPOS_COORDINACION: CampoEspacio[] = [
   'identificador',
@@ -320,6 +324,11 @@ export async function crearEspacio(
         });
       }
 
+      // Issue 4.59: un laboratorio nuevo queda a cargo de Jefatura desde que se crea.
+      if (esLab) {
+        await vincularLaboratorioConJefatura(creado.id, tx);
+      }
+
       await reemplazarContiguos(creado.id, vecinos, tx);
       const conSoftware = await tx.espacio.findUniqueOrThrow({
         where: { id: creado.id },
@@ -336,6 +345,29 @@ export async function crearEspacio(
     }
     throw error;
   }
+}
+
+/** Issue 2.22 (R18): alerta con las secciones que quedaron sin aula al deshabilitar el espacio. */
+async function alertarEspacioDeshabilitado(
+  espacioId: string,
+  identificador: string,
+  tx: Prisma.TransactionClient,
+): Promise<AlertaRegistradaDTO | null> {
+  const vigentes = await cargarAsignacionesVigentesDeEspacio(espacioId, tx);
+  return registrarAlertaDesdeDeteccion(
+    TipoAlerta.CAPACIDAD,
+    espacioId,
+    identificador,
+    vigentes.map((a) => ({
+      asignacionId: a.id,
+      seccionId: a.seccionId,
+      codigoCurso: a.codigoCurso,
+      nombreCurso: a.nombreCurso,
+      codigoSeccion: a.codigoSeccion,
+      detalle: 'el espacio fue deshabilitado',
+    })),
+    tx,
+  );
 }
 
 /**
@@ -453,6 +485,17 @@ export async function actualizarEspacio(
             actual.id,
             actualizado.identificador,
             afectadas,
+            tx,
+          );
+          if (alerta) alertas.push(alerta);
+        }
+
+        // Issue 2.22 (riesgo R18 de la auditoría): deshabilitar un espacio con clases deja a
+        // esas secciones sin aula. Se genera una alerta para que Coordinación las reubique.
+        if (actual.habilitado && entrada.habilitado === false) {
+          const alerta = await alertarEspacioDeshabilitado(
+            actual.id,
+            actualizado.identificador,
             tx,
           );
           if (alerta) alertas.push(alerta);

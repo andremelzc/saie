@@ -3,7 +3,8 @@ import type { RolCuenta } from './auth';
 
 /** Contratos del panel administrativo (espejo de backend/src/types/*). */
 
-export type TipoAlerta = 'SOFTWARE' | 'CAPACIDAD';
+/** Issue 3.59: ACCESIBILIDAD = una sección con movilidad reducida quedó fuera del piso 1. */
+export type TipoAlerta = 'SOFTWARE' | 'CAPACIDAD' | 'ACCESIBILIDAD';
 export type EstadoAlerta = 'PENDIENTE' | 'RESUELTA';
 export type TipoEspacio = 'AULA_TEORICA' | 'LABORATORIO';
 
@@ -191,6 +192,24 @@ export interface ResultadoSeccionDTO {
   conservada: boolean;
 }
 
+/** Estado de una importación en segundo plano (Issue 1.19). */
+export interface TrabajoImportacionDTO {
+  id: string;
+  tipo: TipoImportacion;
+  estado: 'EN_CURSO' | 'TERMINADO' | 'FALLIDO';
+  procesadas: number;
+  total: number;
+  resultado?: ResultadoImportacionDTO;
+  error?: string;
+}
+
+/** Respuesta de POST /v1/admin/alertas/:id/reubicar (Issue 2.22). */
+export interface ResultadoReubicacionDTO {
+  alertaId: string;
+  alertaResuelta: boolean;
+  secciones: (ResultadoSeccionDTO & { codigoCurso: string })[];
+}
+
 /** Respuesta de POST /v1/asignaciones/batch y /seccion/:id (Issue 2.15). */
 export interface ResumenAsignacionDTO {
   modo: 'seccion' | 'periodo';
@@ -214,6 +233,12 @@ export interface ResultadoImportacionDTO {
   procesados: Record<string, number>;
   errores: string[];
   exitosa: boolean;
+  /** Issue 1.16: «todo o nada». `false` si el archivo tenía errores y no se guardó ninguna fila. */
+  guardadas?: boolean;
+  /** `true` si falló al escribir y las filas anteriores al error sí quedaron guardadas. */
+  parcial?: boolean;
+  /** Avisos que no impiden guardar, como un docente o alumno con dos clases a la vez. */
+  advertencias?: string[];
   asignacion: {
     disparada: boolean;
     motivo: string | null;
@@ -235,7 +260,9 @@ export type TipoEventoAuditoria =
   // Acciones de personas (Issue 4.58)
   | 'EDICION_ESPACIO'
   | 'EDICION_SECCION'
-  | 'CAMBIO_LABORATORIO';
+  | 'CAMBIO_LABORATORIO'
+  // Issue 4.64: registro, activación y cierre de periodos
+  | 'CAMBIO_PERIODO';
 
 /** Campos de una sección que el backend permite editar según el rol. */
 export type CampoSeccion = 'tipoEspacioRequerido' | 'docenteId' | 'softwareRequerido';
@@ -367,6 +394,25 @@ export interface PeriodosDTO {
   vigente: string | null;
   /** Del más reciente al más antiguo. */
   periodos: string[];
+  /** Issue 4.64: cada periodo registrado con su estado y fechas. */
+  registrados: PeriodoDTO[];
+}
+
+/** Issue 4.64: ciclo de vida de un periodo. Solo uno puede estar vigente. */
+export type EstadoPeriodo = 'EN_PREPARACION' | 'VIGENTE' | 'CERRADO';
+
+export interface PeriodoDTO {
+  codigo: string;
+  /** `AAAA-MM-DD` o `null` si no se registró. */
+  fechaInicio: string | null;
+  fechaFin: string | null;
+  estado: EstadoPeriodo;
+}
+
+export interface NuevoPeriodoDTO {
+  codigo: string;
+  fechaInicio?: string;
+  fechaFin?: string;
 }
 
 export interface ReporteAsignacionesDTO {

@@ -258,6 +258,9 @@ describe('crearEspacio — validaciones de contigüidad y catálogo (Issue 4.15 
         createMany: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
       },
+      // Issue 4.59: al crear un laboratorio se vincula con las cuentas de Jefatura.
+      cuenta: { findMany: jest.fn().mockResolvedValue([]) },
+      espacioResponsable: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
     };
 
     return {
@@ -449,6 +452,7 @@ describe('actualizarEspacio (Issue 4.15)', () => {
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
         createMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
+      periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
       asignacion: { findMany: jest.fn().mockResolvedValue([]) },
       alerta: { findMany: jest.fn().mockResolvedValue([]), create: jest.fn() },
       registroAuditoria: { create: jest.fn().mockResolvedValue({}) },
@@ -466,6 +470,60 @@ describe('actualizarEspacio (Issue 4.15)', () => {
         .mockImplementation(async (fn: (tx: any) => Promise<any>) => fn(txMock)),
     } as any;
   }
+
+  describe('deshabilitar un espacio con clases (Issue 2.22, riesgo R18)', () => {
+    const asignacionVigente = {
+      id: 'asig-1',
+      seccionId: 'sec-1',
+      seccion: {
+        codigoSeccion: '2-LAB',
+        curso: { codigo: '202SW0805', nombre: 'Programación Concurrente' },
+        _count: { matriculas: 20 },
+        softwareRequerido: [],
+      },
+      espacios: [{ espacio: espacioDB({ softwareInstaladoCatalogo: [] }) }],
+    };
+
+    it('genera una alerta con las secciones que quedan sin aula', async () => {
+      const db = updateDb({ actual: espacioDB({ habilitado: true, aforoNominal: 30 }) });
+      db.__tx.asignacion.findMany.mockResolvedValue([asignacionVigente]);
+      db.__tx.alerta.create.mockImplementation(async ({ data }: any) => ({ id: 'al-1', ...data }));
+
+      const res = await actualizarEspacio('e1', { habilitado: false }, authCoord, db);
+
+      expect(db.__tx.alerta.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          tipo: 'CAPACIDAD',
+          espacioId: 'e1',
+          motivo: expect.stringContaining('202SW0805 sec. 2-LAB (el espacio fue deshabilitado)'),
+          asignacionesAfectadas: { create: [{ asignacionId: 'asig-1' }] },
+        }),
+      });
+      expect(res.alertas).toHaveLength(1);
+    });
+
+    it('no genera alerta si el espacio no tiene clases asignadas', async () => {
+      const db = updateDb({ actual: espacioDB({ habilitado: true, aforoNominal: 30 }) });
+
+      const res = await actualizarEspacio('e1', { habilitado: false }, authCoord, db);
+
+      expect(db.__tx.alerta.create).not.toHaveBeenCalled();
+      expect(res.alertas).toEqual([]);
+    });
+
+    it('no evalúa nada si el espacio ya estaba deshabilitado', async () => {
+      const db = updateDb({ actual: espacioDB({ habilitado: false, aforoNominal: 30 }) });
+
+      await actualizarEspacio(
+        'e1',
+        { habilitado: false, descripcionUso: 'Mantenimiento' },
+        authCoord,
+        db,
+      );
+
+      expect(db.__tx.asignacion.findMany).not.toHaveBeenCalled();
+    });
+  });
 
   it('Coordinación actualiza campos propios con éxito', async () => {
     const db = updateDb();

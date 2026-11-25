@@ -1,6 +1,7 @@
 // Issue 3.37 / RNF-09 — La consulta pública (sin sesión) no expone el correo ni datos de salud.
 // La prueba falla si aparece cualquier campo de `alumno` fuera de la lista permitida.
 const prismaMock: any = {
+  periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
   alumno: { findUnique: jest.fn() },
   curso: { findUnique: jest.fn() },
 };

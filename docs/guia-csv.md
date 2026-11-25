@@ -33,6 +33,11 @@ Variables opcionales:
 Los archivos se escriben con **BOM** y separador **punto y coma**: es lo que Excel en español
 abre sin romper los acentos ni convertir los códigos de curso en fechas.
 
+**Al guardar un CSV propio desde Excel**, elige **«CSV UTF-8 (delimitado por comas)»**. Si usas la
+opción «CSV (delimitado por comas)», Excel guarda en Windows-1252: la pantalla de Carga de datos
+lo detecta y lo lee bien, pero conviene UTF-8. Cualquier fila con caracteres dañados («�») se
+rechaza y no se guarda nada.
+
 ---
 
 ## 2. Los archivos que se pueden volver a subir

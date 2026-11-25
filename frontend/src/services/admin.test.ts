@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import api from './api';
 import {
   editarSeccion,
   ejecutarCorrida,
   importarCsv,
+  INTERVALO_AVANCE_MS,
   obtenerAlertas,
   obtenerAuditoria,
   obtenerCatalogoActivo,
@@ -73,13 +74,56 @@ describe('Servicios de administración', () => {
     expect(post).toHaveBeenCalledWith('/v1/asignaciones/seccion/s%201', {}, { timeout: 30000 });
   });
 
-  it('importarCsv envía el CSV como text/csv', async () => {
-    const resultado = { tipo: 'horarios', exitosa: true };
-    post.mockResolvedValue({ data: { data: resultado } });
-    expect(await importarCsv('horarios', 'a,b\n1,2')).toEqual(resultado);
-    expect(post).toHaveBeenCalledWith('/v1/import/horarios', 'a,b\n1,2', {
-      headers: { 'Content-Type': 'text/csv' },
-      timeout: 120000,
+  describe('importarCsv (Issue 1.19)', () => {
+    afterEach(() => vi.useRealTimers());
+
+    it('inicia el trabajo con el CSV como text/csv y consulta el avance hasta que termina', async () => {
+      vi.useFakeTimers();
+      const resultado = { tipo: 'matriculas', exitosa: true };
+      post.mockResolvedValue({
+        data: {
+          data: { id: 't1', tipo: 'matriculas', estado: 'EN_CURSO', procesadas: 0, total: 4 },
+        },
+      });
+      get
+        .mockResolvedValueOnce({
+          data: { data: { id: 't1', estado: 'EN_CURSO', procesadas: 2, total: 4 } },
+        })
+        .mockResolvedValueOnce({
+          data: { data: { id: 't1', estado: 'TERMINADO', procesadas: 4, total: 4, resultado } },
+        });
+      const avance: [number, number][] = [];
+
+      const promesa = importarCsv('matriculas', 'a,b\n1,2', (h, t) => avance.push([h, t]));
+      await vi.advanceTimersByTimeAsync(INTERVALO_AVANCE_MS * 2);
+
+      expect(await promesa).toEqual(resultado);
+      expect(post).toHaveBeenCalledWith('/v1/import/matriculas/trabajos', 'a,b\n1,2', {
+        headers: { 'Content-Type': 'text/csv' },
+        timeout: 60000,
+      });
+      expect(get).toHaveBeenCalledWith('/v1/import/trabajos/t1');
+      expect(avance).toEqual([
+        [0, 4],
+        [2, 4],
+        [4, 4],
+      ]);
+    });
+
+    it('si el trabajo falla en el servidor lanza el motivo', async () => {
+      post.mockResolvedValue({
+        data: {
+          data: {
+            id: 't2',
+            tipo: 'horarios',
+            estado: 'FALLIDO',
+            procesadas: 0,
+            total: 1,
+            error: 'La importación falló.',
+          },
+        },
+      });
+      await expect(importarCsv('horarios', 'x')).rejects.toThrow('La importación falló.');
     });
   });
 

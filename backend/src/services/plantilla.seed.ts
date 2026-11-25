@@ -565,6 +565,28 @@ export function calcularAnonimos(datos: DatosPlantilla): Array<{
     }));
 }
 
+/**
+ * Issue 4.64: los periodos de la plantilla quedan registrados. Si el sistema aún no tiene un
+ * periodo vigente (base nueva), el más reciente pasa a serlo; si ya hay uno, los demás quedan en
+ * preparación y solo Coordinación puede activarlos.
+ */
+export async function registrarPeriodosDeLaPlantilla(
+  prisma: Pick<PrismaClient, 'periodo'>,
+  periodos: string[],
+): Promise<void> {
+  const codigos = [...new Set(periodos)].sort((a, b) => a.localeCompare(b));
+  for (const codigo of codigos) {
+    await prisma.periodo.upsert({ where: { codigo }, update: {}, create: { codigo } });
+  }
+  const vigente = await prisma.periodo.findFirst({ where: { estado: 'VIGENTE' } });
+  if (!vigente && codigos.length > 0) {
+    await prisma.periodo.update({
+      where: { codigo: codigos[codigos.length - 1] },
+      data: { estado: 'VIGENTE' },
+    });
+  }
+}
+
 export async function cargarPlantilla(
   prisma: PrismaClient,
   datos: DatosPlantilla,
@@ -614,6 +636,10 @@ export async function cargarPlantilla(
   await sembrarCatalogoSoftware(
     prisma,
     datos.secciones.flatMap((s) => s.stackSoftwareRequerido),
+  );
+  await registrarPeriodosDeLaPlantilla(
+    prisma,
+    datos.secciones.map((x) => x.periodo),
   );
   const resCursos = await importarCursosYSecciones(
     datos.secciones.map(({ codigoDocente: _d, matriculados: _m, ...s }) => s),

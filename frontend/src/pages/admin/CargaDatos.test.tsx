@@ -80,6 +80,23 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     expect(botonImportar('2. Horarios')).toBeEnabled();
   });
 
+  it('muestra el avance de una importación grande mientras se procesa (Issue 1.19)', async () => {
+    let terminar!: (r: typeof base) => void;
+    importar.mockImplementation((_tipo, _csv, onProgreso) => {
+      onProgreso?.(2300, 4470);
+      return new Promise((resolver) => {
+        terminar = resolver;
+      });
+    });
+    montar();
+    elegirArchivo('matriculas', 'x,y');
+    fireEvent.click(botonImportar('3. Matrículas'));
+
+    expect(await screen.findByText(/Procesando 2300 de 4470 filas/)).toBeInTheDocument();
+    terminar(base);
+    expect(await screen.findByText('Carga completada sin errores')).toBeInTheDocument();
+  });
+
   it('importa el CSV y muestra el resultado legible con los procesados', async () => {
     importar.mockResolvedValue(base);
     montar();
@@ -88,7 +105,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
 
     // En la tarjeta queda el resumen; el detalle (procesados) va en el drawer.
     expect(await screen.findByText('Carga completada sin errores')).toBeInTheDocument();
-    expect(importar).toHaveBeenCalledWith('horarios', 'x,y');
+    expect(importar).toHaveBeenCalledWith('horarios', 'x,y', expect.any(Function));
     expect(screen.getByText('Cargado')).toBeInTheDocument();
     expect(screen.getByText(/Última carga en este navegador:/)).toBeInTheDocument();
 
@@ -105,6 +122,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     importar.mockResolvedValue({
       ...base,
       exitosa: false,
+      guardadas: false,
       procesados: {},
       errores: ['Fila 2: código inválido', 'Fila 5: falta columna'],
     });
@@ -115,17 +133,57 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     // La tarjeta solo resume; el detalle de las filas va en el drawer.
     expect(await screen.findByText('La carga tiene 2 filas con problemas')).toBeInTheDocument();
     expect(screen.getByText('Con errores')).toBeInTheDocument();
+    // Issue 1.16: «todo o nada», con errores no se guarda ninguna fila.
+    expect(screen.getByText(/0 guardadas · 2 con problemas/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Continuar con/ })).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
     const dialogo = screen.getByRole('dialog', { name: /Resultado de la carga.*3. Matrículas/ });
     expect(
-      within(dialogo).getByText(/No se asignaron aulas porque el archivo tiene filas/),
+      within(dialogo).getByText(/No se guardó ninguna fila porque el archivo tiene filas/),
     ).toBeInTheDocument();
     expect(within(dialogo).getByText('Fila 2: código inválido')).toBeInTheDocument();
     expect(within(dialogo).getByText('Fila 5: falta columna')).toBeInTheDocument();
     expect(
       within(dialogo).getByRole('button', { name: 'Descargar errores (CSV)' }),
+    ).toBeInTheDocument();
+  });
+
+  it('avisa cuando la carga falló a medias y parte de las filas sí se guardó', async () => {
+    importar.mockResolvedValue({
+      ...base,
+      exitosa: false,
+      guardadas: false,
+      parcial: true,
+      filasRecibidas: 5,
+      procesados: { matriculasProcesadas: 4 },
+      errores: ['Fila 5: correo duplicado'],
+    });
+    montar();
+    elegirArchivo('matriculas');
+    fireEvent.click(botonImportar('3. Matrículas'));
+
+    expect(await screen.findByText(/4 guardadas · 1 con problemas/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
+    const dialogo = screen.getByRole('dialog', { name: /Resultado de la carga.*3. Matrículas/ });
+    expect(within(dialogo).getByText(/El archivo falló a medias/)).toBeInTheDocument();
+  });
+
+  it('muestra las advertencias de una carga guardada (Issue 1.16)', async () => {
+    importar.mockResolvedValue({
+      ...base,
+      guardadas: true,
+      advertencias: ['El docente de C1-1 y C2-1 tendría dos clases a la vez'],
+    });
+    montar();
+    elegirArchivo('horarios');
+    fireEvent.click(botonImportar('2. Horarios'));
+
+    expect(await screen.findByText(/1 aviso/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
+    const dialogo = screen.getByRole('dialog', { name: /Resultado de la carga.*2. Horarios/ });
+    expect(
+      within(dialogo).getByText('El docente de C1-1 y C2-1 tendría dos clases a la vez'),
     ).toBeInTheDocument();
   });
 
@@ -236,6 +294,12 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     expect(within(dialogo).getByText('¿Cómo funciona la carga?')).toBeInTheDocument();
     expect(within(dialogo).getByText('1. Orden de carga')).toBeInTheDocument();
     expect(within(dialogo).getByText('2. El periodo académico')).toBeInTheDocument();
+    // Issue 4.64: el periodo vigente solo cambia desde la pantalla Periodos.
+    expect(within(dialogo).getByRole('link', { name: 'Periodos' })).toHaveAttribute(
+      'href',
+      '/admin/periodos',
+    );
+    expect(within(dialogo).getByText(/Cargar datos nunca lo cambia/)).toBeInTheDocument();
 
     fireEvent.click(within(dialogo).getByRole('tab', { name: 'Plantillas' }));
     expect(

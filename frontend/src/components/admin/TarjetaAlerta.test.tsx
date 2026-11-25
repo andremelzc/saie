@@ -75,4 +75,77 @@ describe('TarjetaAlerta', () => {
       'true',
     );
   });
+
+  describe('reubicar secciones (Issue 2.22)', () => {
+    it('pide confirmación y reubica las secciones afectadas', () => {
+      const onReubicar = vi.fn();
+      render(
+        <TarjetaAlerta
+          alerta={{ ...alerta, asignacionesAfectadas: cursos }}
+          onReubicar={onReubicar}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Reubicar secciones' }));
+      expect(onReubicar).not.toHaveBeenCalled();
+      expect(screen.getByText('¿Reubicar las secciones afectadas?')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Sí, reubicar' }));
+      expect(onReubicar).toHaveBeenCalledWith('1');
+    });
+
+    it('no ofrece reubicar si la alerta no tiene secciones afectadas', () => {
+      render(<TarjetaAlerta alerta={alerta} onReubicar={vi.fn()} />);
+      expect(screen.queryByRole('button', { name: 'Reubicar secciones' })).toBeNull();
+    });
+
+    it('no ofrece reubicar en una alerta de accesibilidad: el motor no movería nada', () => {
+      render(
+        <TarjetaAlerta
+          alerta={{ ...alerta, tipo: 'ACCESIBILIDAD', asignacionesAfectadas: cursos }}
+          onReubicar={vi.fn()}
+          onResolver={vi.fn()}
+        />,
+      );
+      expect(screen.queryByRole('button', { name: 'Reubicar secciones' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Marcar como resuelta' })).toBeInTheDocument();
+    });
+
+    it('no ofrece reubicar sin el permiso (Jefatura)', () => {
+      render(
+        <TarjetaAlerta
+          alerta={{ ...alerta, asignacionesAfectadas: cursos }}
+          onResolver={vi.fn()}
+        />,
+      );
+      expect(screen.queryByRole('button', { name: 'Reubicar secciones' })).toBeNull();
+    });
+
+    it('mientras reubica, desactiva las dos acciones', () => {
+      render(
+        <TarjetaAlerta
+          alerta={{ ...alerta, asignacionesAfectadas: cursos }}
+          onResolver={vi.fn()}
+          onReubicar={vi.fn()}
+          reubicando
+        />,
+      );
+      expect(screen.getByRole('button', { name: 'Marcar como resuelta' })).toBeDisabled();
+    });
+  });
+
+  it('muestra las alertas de accesibilidad con su propia etiqueta (Issue 3.59)', () => {
+    render(
+      <TarjetaAlerta
+        alerta={{
+          ...alerta,
+          tipo: 'ACCESIBILIDAD',
+          motivo:
+            'Accesibilidad en Lab 1: IS101 sec. 01 tiene alumnos con movilidad reducida y quedó en el piso 3 porque no había lugar en el piso 1',
+        }}
+      />,
+    );
+    expect(screen.getByText('Accesibilidad')).toBeInTheDocument();
+    expect(screen.getByRole('article')).toHaveAccessibleName(/alerta de accesibilidad/i);
+  });
 });

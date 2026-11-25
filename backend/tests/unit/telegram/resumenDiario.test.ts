@@ -106,7 +106,7 @@ describe('enviarResumenesDiarios (Issue 3.27)', () => {
 
   it('retorna resumen en ceros si no hay periodo vigente', async () => {
     const prisma = {
-      seccion: { findFirst: jest.fn().mockResolvedValue(null) },
+      periodo: { findFirst: jest.fn().mockResolvedValue(null) },
     } as any;
 
     const res = await enviarResumenesDiarios({ prisma, cliente, cola });
@@ -138,7 +138,7 @@ describe('enviarResumenesDiarios (Issue 3.27)', () => {
     };
 
     const prisma = {
-      seccion: { findFirst: jest.fn().mockResolvedValue({ periodo: '2026-1' }) },
+      periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-1' }) },
       vinculacionTelegram: {
         findMany: jest.fn().mockResolvedValue([
           {
@@ -168,7 +168,7 @@ describe('enviarResumenesDiarios (Issue 3.27)', () => {
     const ahora = new Date('2026-03-23T15:00:00.000Z');
 
     const prisma = {
-      seccion: { findFirst: jest.fn().mockResolvedValue({ periodo: '2026-1' }) },
+      periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-1' }) },
       vinculacionTelegram: {
         findMany: jest.fn().mockResolvedValue([
           {
@@ -205,7 +205,7 @@ describe('enviarResumenesDiarios (Issue 3.27)', () => {
     const ahora = new Date('2026-03-23T15:00:00.000Z');
 
     const prisma = {
-      seccion: { findFirst: jest.fn().mockResolvedValue({ periodo: '2026-1' }) },
+      periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-1' }) },
       vinculacionTelegram: {
         findMany: jest.fn().mockResolvedValue([
           {
@@ -252,7 +252,7 @@ describe('enviarResumenesDiarios (Issue 3.27)', () => {
     const fechaPrevia = new Date('2026-03-20T00:00:00.000Z');
 
     const prisma = {
-      seccion: { findFirst: jest.fn().mockResolvedValue({ periodo: '2026-1' }) },
+      periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-1' }) },
       vinculacionTelegram: {
         findMany: jest.fn().mockResolvedValue([
           {

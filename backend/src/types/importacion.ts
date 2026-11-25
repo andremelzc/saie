@@ -19,6 +19,9 @@ export interface AsignacionEncadenadaDTO {
   resumen: ResumenAsignacionDTO | null;
 }
 
+/** Avance de una importación: filas leídas hasta ahora y total (Issue 1.19). */
+export type ProgresoImportacion = (procesadas: number, total: number) => void;
+
 export interface ResultadoImportacionDTO {
   tipo: TipoImportacion;
   filasRecibidas: number;
@@ -28,6 +31,15 @@ export interface ResultadoImportacionDTO {
   errores: string[];
   /** `true` si ninguna fila fue rechazada. */
   exitosa: boolean;
+  /**
+   * Issue 1.16: la importación es «todo o nada». `true` si se guardaron las filas; `false` si el
+   * archivo tenía al menos un error y no se guardó ninguna.
+   */
+  guardadas: boolean;
+  /** `true` si falló al escribir y las filas anteriores al error sí quedaron guardadas. */
+  parcial?: boolean;
+  /** Avisos que no impiden guardar, como un docente o alumno con dos clases a la vez (R36). */
+  advertencias?: string[];
   /** `null` si la importación no encadena asignación (docentes) o tuvo filas rechazadas. */
   asignacion: AsignacionEncadenadaDTO | null;
   /** Claves iniciales generadas para cuentas nuevas creadas en esta importación (se muestra una sola vez). */

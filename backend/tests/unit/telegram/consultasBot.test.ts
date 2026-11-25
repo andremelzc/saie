@@ -13,8 +13,8 @@ describe('consultasBot.service', () => {
       vinculacionTelegram: {
         findUnique: jest.fn(),
       },
-      seccion: {
-        findFirst: jest.fn().mockResolvedValue({ periodo: '2026-1' }),
+      periodo: {
+        findFirst: jest.fn().mockResolvedValue({ codigo: '2026-1' }),
       },
       matricula: {
         findMany: jest.fn().mockResolvedValue([]),

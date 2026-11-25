@@ -62,7 +62,8 @@ const conEscaladas: SeccionesEscaladasDTO = {
     {
       asignacionId: 'x1',
       fechaEscalamiento: '2026-10-10T10:00:00Z',
-      motivoEscalamiento: '[SIN_HORARIOS_DEFINIDOS] La sección 01 no tiene horario en 2026-II',
+      motivoEscalamiento:
+        '[HORARIO_BLOQUEADO] Todos los espacios están ocupados el lunes a las 08:00',
       seccion: {
         id: 'sec1',
         codigoCurso: 'IS101',
@@ -170,16 +171,56 @@ describe('Inicio del panel administrativo', () => {
   });
 
   describe('Coordinación (Issue 4.20)', () => {
+    it('muestra aparte las secciones sin horarios, como datos incompletos (Issue 2.25)', async () => {
+      escaladas.mockResolvedValue({
+        ...conEscaladas,
+        total: 3,
+        secciones: [
+          ...conEscaladas.secciones,
+          {
+            asignacionId: 'x3',
+            fechaEscalamiento: '2026-10-10T10:00:00Z',
+            motivoEscalamiento: '[SIN_HORARIOS_DEFINIDOS] La sección DEMO no tiene horario',
+            seccion: {
+              id: 'sec3',
+              codigoCurso: 'DEMO001',
+              nombreCurso: 'Demo',
+              codigoSeccion: 'DEMO',
+              periodo: '2026-II',
+              docenteNombre: null,
+              tipoEspacioRequerido: 'AULA_TEORICA',
+              alumnosMatriculados: 1,
+            },
+          },
+        ],
+      });
+      montar();
+
+      const bloque = await screen.findByRole('region', {
+        name: 'Datos incompletos: falta cargar horarios (1)',
+      });
+      expect(within(bloque).getByText(/DEMO001 · DEMO — Demo/)).toBeInTheDocument();
+      expect(within(bloque).getByRole('link', { name: 'Cargar horarios' })).toHaveAttribute(
+        'href',
+        '/admin/carga#carga-horarios',
+      );
+      // No se ofrece reintentar ni cuenta como «espera revisión».
+      expect(screen.queryByText('Sin horarios definidos')).toBeNull();
+      expect(valorMetrica('Esperan revisión')).toHaveTextContent('2');
+    });
+
     it('muestra el total de escaladas, el periodo y las secciones', async () => {
       montar();
       expect(await screen.findByText(/IS101 · 01 — Algoritmos/)).toBeInTheDocument();
       expect(screen.getByText(/Periodo 2026-II/)).toBeInTheDocument();
-      expect(screen.getByText('Sin horarios definidos')).toBeInTheDocument();
-      expect(screen.getByText('La sección 01 no tiene horario en 2026-II')).toBeInTheDocument();
+      expect(screen.getByText('Horario ocupado')).toBeInTheDocument();
+      expect(
+        screen.getByText('Todos los espacios están ocupados el lunes a las 08:00'),
+      ).toBeInTheDocument();
       expect(screen.getByText(/45 alumnos/)).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Cargar horario' })).toHaveAttribute(
+      expect(screen.getByRole('link', { name: 'Revisar ocupación' })).toHaveAttribute(
         'href',
-        '/admin/carga#carga-horarios',
+        '/admin/espacios',
       );
       expect(screen.getByText('Sin motivo registrado.')).toBeInTheDocument();
       // Issue 4.52: cada métrica enlaza a su lista y la cifra de revisiones aparece una sola vez.

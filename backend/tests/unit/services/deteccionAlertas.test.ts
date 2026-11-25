@@ -144,15 +144,30 @@ describe('Detección de incompatibilidad de software (Issue 4.3)', () => {
     ).toEqual([]);
   });
 
+  it('sin periodo vigente no hay asignaciones que evaluar (Issue 4.64)', async () => {
+    const findMany = jest.fn();
+    const resultado = await evaluarIncompatibilidadSoftware('L1', listaSoftwareInstalado([]), {
+      periodo: { findFirst: jest.fn().mockResolvedValue(null) },
+      asignacion: { findMany },
+    } as any);
+    expect(resultado).toEqual([]);
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
   it('la versión evaluar* consulta solo asignaciones VIGENTES del laboratorio', async () => {
     const findMany = jest.fn().mockResolvedValue([]);
     await evaluarIncompatibilidadSoftware('L1', listaSoftwareInstalado([]), {
+      periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
       asignacion: { findMany },
     } as any);
 
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { estado: 'VIGENTE', espacios: { some: { espacioId: 'L1' } } },
+        where: {
+          estado: 'VIGENTE',
+          seccion: { periodo: '2026-2' },
+          espacios: { some: { espacioId: 'L1' } },
+        },
       }),
     );
   });
@@ -241,6 +256,7 @@ describe('Detección de capacidad insuficiente (Issue 4.4)', () => {
     ]);
 
     const afectadas = await evaluarCapacidadInsuficiente('L1', { pcsMalogradas: 5 }, {
+      periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
       asignacion: { findMany },
     } as any);
 

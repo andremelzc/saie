@@ -33,8 +33,8 @@ function dbMock(asignaciones: any[] = [], periodoVigente: string | null = '2026-
     asignacion: {
       findMany: jest.fn().mockResolvedValue(asignaciones),
     },
-    seccion: {
-      findFirst: jest.fn().mockResolvedValue(periodoVigente ? { periodo: periodoVigente } : null),
+    periodo: {
+      findFirst: jest.fn().mockResolvedValue(periodoVigente ? { codigo: periodoVigente } : null),
     },
   } as any;
 }

@@ -6,6 +6,7 @@ import {
   AsignacionOcupacionInput,
 } from '../services/disponibilidad.service';
 import { validarSoftwareBloque } from './validarSoftware';
+import { calcularCapacidadReal } from './calcularCapacidadReal';
 import { priorizarBloquesPiso1 } from './accesibilidad';
 import { AsignacionParalelaUbicacion, evaluarCercaniaParalelas } from './cercaniaParalelas';
 import { clasificarMotivoEscalamiento, formatearMotivoEscalamiento } from './escalamiento';
@@ -23,6 +24,73 @@ export interface OrquestarAsignacionInput {
   paralelasAsignadas?: AsignacionParalelaUbicacion[];
   asignacionPrevia?: AsignacionExistenteContexto | null;
   maxEspaciosPorBloque?: number;
+}
+
+/**
+ * Issue 2.21: dos bloques cuyo desperdicio de asientos cae en el mismo tramo de este tamaño se
+ * consideran «de tamaño parecido», y entre ellos decide la cercanía con las secciones del curso.
+ * Fuera de ese margen gana siempre el bloque más justo: las aulas se ocupan de menor a mayor.
+ */
+export const MARGEN_DESPERDICIO_ASIENTOS = 10;
+
+/**
+ * Issue 2.22 (riesgo R3 de la auditoría): una asignación solo se conserva si sus espacios siguen
+ * sirviendo a la sección. La huella mira solo los datos de la sección; sin esta comprobación, un
+ * aula deshabilitada, con menos capacidad (PCs malogradas, aforo menor) o sin el software
+ * requerido se conservaba igual y la sección nunca se movía.
+ *
+ * `espaciosDisponibles` son los espacios habilitados: un espacio ausente cuenta como no válido.
+ */
+export function espaciosSiguenSirviendo(
+  seccion: SeccionInputMotor,
+  espacioIds: string[],
+  espaciosDisponibles: EspacioConexo[],
+): boolean {
+  const porId = new Map(espaciosDisponibles.map((e) => [e.id, e]));
+  const espacios = espacioIds.map((id) => porId.get(id));
+  if (espacios.length === 0 || espacios.includes(undefined)) return false;
+
+  const bloque = espacios as EspacioConexo[];
+  if (bloque.some((e) => e.tipo !== seccion.tipoEspacioRequerido)) return false;
+
+  const capacidad = bloque.reduce((suma, e) => suma + calcularCapacidadReal(e), 0);
+  if (capacidad < seccion.alumnosMatriculados) return false;
+
+  if (seccion.tipoEspacioRequerido === TipoEspacio.LABORATORIO) {
+    const resultado = validarSoftwareBloque(
+      {
+        espacios: bloque,
+        espacioIds,
+        capacidadTotal: capacidad,
+        desperdicio: capacidad - seccion.alumnosMatriculados,
+        piso: bloque[0].piso,
+        pabellon: bloque[0].pabellon,
+        tipo: TipoEspacio.LABORATORIO,
+      },
+      seccion.softwareRequerido,
+    );
+    if (!resultado.cumple) return false;
+  }
+
+  return true;
+}
+
+/**
+ * Una asignación previa se conserva por idempotencia si sigue vigente, los datos de la sección
+ * no cambiaron (misma huella) y sus espacios siguen sirviendo.
+ */
+export function puedeConservarse(
+  seccion: SeccionInputMotor,
+  asignacionPrevia: AsignacionExistenteContexto | null | undefined,
+  espaciosDisponibles: EspacioConexo[],
+): asignacionPrevia is AsignacionExistenteContexto {
+  return Boolean(
+    asignacionPrevia &&
+    asignacionPrevia.estado === EstadoAsignacion.VIGENTE &&
+    asignacionPrevia.huellaEntrada === calcularHuellaEntradaSeccion(seccion) &&
+    asignacionPrevia.espacioIds.length > 0 &&
+    espaciosSiguenSirviendo(seccion, asignacionPrevia.espacioIds, espaciosDisponibles),
+  );
 }
 
 /**
@@ -79,13 +147,9 @@ export function orquestarAsignacionSeccion(input: OrquestarAsignacionInput): Res
 
   const huellaEntrada = calcularHuellaEntradaSeccion(seccion);
 
-  // Idempotencia: Si ya existía asignación VIGENTE y los requerimientos no cambiaron, conservar
-  if (
-    asignacionPrevia &&
-    asignacionPrevia.estado === EstadoAsignacion.VIGENTE &&
-    asignacionPrevia.huellaEntrada === huellaEntrada &&
-    asignacionPrevia.espacioIds.length > 0
-  ) {
+  // Idempotencia: si ya existía asignación VIGENTE, los requerimientos no cambiaron y sus
+  // espacios siguen sirviendo (Issue 2.22), se conserva.
+  if (puedeConservarse(seccion, asignacionPrevia, todosLosEspacios)) {
     return {
       seccionId: seccion.id,
       codigoSeccion: seccion.codigoSeccion,
@@ -214,13 +278,18 @@ export function orquestarAsignacionSeccion(input: OrquestarAsignacionInput): Res
     esPiso1: bloque.piso === 1,
   }));
 
-  // 7. Criterio jerárquico de selección y desempate:
+  // 7. Criterio jerárquico de selección y desempate (Issue 2.21, riesgo R2 de la auditoría:
+  //    las aulas se ocupan de menor a mayor; la cercanía solo desempata entre aulas parecidas):
   // (1) Si aplica movilidad reducida: Piso 1 tiene máxima prioridad
-  // (2) Mayor puntaje de cercanía entre secciones paralelas
-  // (3) Menor cantidad de espacios en el bloque
-  // (4) Menor desperdicio de aforo residual
-  // (5) Menor número de piso
-  // (6) Orden léxico de identificadores
+  // (2) Menor cantidad de espacios en el bloque
+  // (3) Menor desperdicio de aforo, por tramos de MARGEN_DESPERDICIO_ASIENTOS
+  // (4) Mayor puntaje de cercanía entre secciones paralelas
+  // (5) Menor desperdicio exacto
+  // (6) Menor número de piso
+  // (7) Orden léxico de identificadores
+  const tramoDesperdicio = (b: BloqueConMetricas) =>
+    Math.floor(b.bloque.desperdicio / MARGEN_DESPERDICIO_ASIENTOS);
+
   bloquesEvaluados.sort((a, b) => {
     if (tieneMovilidad) {
       if (a.esPiso1 !== b.esPiso1) {
@@ -228,12 +297,16 @@ export function orquestarAsignacionSeccion(input: OrquestarAsignacionInput): Res
       }
     }
 
-    if (b.puntajeCercania !== a.puntajeCercania) {
-      return b.puntajeCercania - a.puntajeCercania;
-    }
-
     if (a.bloque.espacios.length !== b.bloque.espacios.length) {
       return a.bloque.espacios.length - b.bloque.espacios.length;
+    }
+
+    if (tramoDesperdicio(a) !== tramoDesperdicio(b)) {
+      return tramoDesperdicio(a) - tramoDesperdicio(b);
+    }
+
+    if (b.puntajeCercania !== a.puntajeCercania) {
+      return b.puntajeCercania - a.puntajeCercania;
     }
 
     if (a.bloque.desperdicio !== b.bloque.desperdicio) {

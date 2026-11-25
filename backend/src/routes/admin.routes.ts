@@ -15,6 +15,9 @@ import {
   listarHistorial,
   listarIncidenciasReportadas,
   listarPeriodosAdmin,
+  registrarPeriodoAdmin,
+  activarPeriodoAdmin,
+  cerrarPeriodoAdmin,
   listarRegistrosAuditoria,
   listarDocentes,
   listarSeccionesAdmin,
@@ -23,6 +26,7 @@ import {
   registrarPcsMalogradasLaboratorio,
   registrarSoftwareLaboratorio,
   resolverAlertaPendiente,
+  reubicarSeccionesAlerta,
   resolverIncidencia,
   restablecerClaveUsuario,
 } from '../controllers/admin.controller';
@@ -72,6 +76,14 @@ router.get('/incidencias', listarIncidenciasReportadas);
 router.patch('/incidencias/:id/resolver', resolverIncidencia);
 
 const soloCoordinacion = roleGuard(RolCuenta.COORDINACION_ACADEMICA);
+
+// POST /api/v1/admin/alertas/:id/reubicar (Issue 2.22). Reasignar es una acción de Coordinación.
+router.post('/alertas/:id/reubicar', soloCoordinacion, reubicarSeccionesAlerta);
+
+// Issue 4.64: gestión de periodos (solo Coordinación).
+router.post('/periodos', soloCoordinacion, registrarPeriodoAdmin);
+router.post('/periodos/:codigo/activar', soloCoordinacion, activarPeriodoAdmin);
+router.post('/periodos/:codigo/cerrar', soloCoordinacion, cerrarPeriodoAdmin);
 
 // Última carga de datos maestros por tipo (Issue 4.54). Solo Coordinación carga archivos.
 router.get('/importaciones/ultima', soloCoordinacion, consultarUltimasImportaciones);

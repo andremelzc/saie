@@ -62,6 +62,7 @@ export const EVENTO_AUDITORIA: Record<string, EntradaEstado> = {
   EDICION_ESPACIO: { etiqueta: 'Espacio editado', tono: 'neutro' },
   EDICION_SECCION: { etiqueta: 'Sección editada', tono: 'neutro' },
   CAMBIO_LABORATORIO: { etiqueta: 'Laboratorio editado', tono: 'neutro' },
+  CAMBIO_PERIODO: { etiqueta: 'Periodo modificado', tono: 'info' },
 };
 
 export function describirEventoAuditoria(tipo: string | null | undefined): EntradaEstado {
@@ -82,6 +83,7 @@ export function etiquetaTipoEspacio(tipo: string | null | undefined): string {
 export const TIPO_ALERTA: Record<string, string> = {
   SOFTWARE: 'Software',
   CAPACIDAD: 'Capacidad',
+  ACCESIBILIDAD: 'Accesibilidad',
 };
 
 export function etiquetaTipoAlerta(tipo: string | null | undefined): string {

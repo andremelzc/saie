@@ -126,6 +126,38 @@ export async function registrarAlertaDesdeDeteccion(
   );
 }
 
+/** Datos de una asignación que quedó fuera del piso 1 teniendo alumnos con movilidad reducida. */
+export interface AsignacionFueraDePiso1 {
+  asignacionId: string;
+  codigoCurso: string;
+  codigoSeccion: string;
+  espacio: { id: string; identificador: string; piso: number };
+}
+
+/**
+ * Issue 3.59 (riesgo R10 de la auditoría): cuando el motor aplica el plan B de accesibilidad
+ * (no había lugar en el piso 1), la sección queda asignada en otro piso, pero Coordinación debe
+ * enterarse. Se registra una alerta de tipo ACCESIBILIDAD sobre el primer espacio del bloque.
+ */
+export async function registrarAlertaAccesibilidad(
+  afectada: AsignacionFueraDePiso1,
+  db: Db,
+): Promise<AlertaRegistradaDTO | null> {
+  const { espacio } = afectada;
+  return registrarAlerta(
+    {
+      tipo: TipoAlerta.ACCESIBILIDAD,
+      espacioId: espacio.id,
+      motivo:
+        `Accesibilidad en ${espacio.identificador}: ${afectada.codigoCurso} sec. ` +
+        `${afectada.codigoSeccion} tiene alumnos con movilidad reducida y quedó en el piso ` +
+        `${espacio.piso} porque no había lugar en el piso 1`,
+      asignacionIds: [afectada.asignacionId],
+    },
+    db,
+  );
+}
+
 const INCLUIR_ALERTA = {
   espacio: true,
   asignacionesAfectadas: {

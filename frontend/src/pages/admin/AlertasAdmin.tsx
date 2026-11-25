@@ -9,9 +9,10 @@ import { Boton } from '../../components/ui/Boton';
 import { useAuth } from '../../context/useAuth';
 import { useAccion } from '../../hooks/useAccion';
 import { invalidarCacheCarga, useCarga } from '../../hooks/useCarga';
-import { obtenerAlertas, resolverAlerta } from '../../services/admin';
-import type { AlertaDTO, TipoAlerta } from '../../types/admin';
+import { obtenerAlertas, resolverAlerta, reubicarSeccionesAlerta } from '../../services/admin';
+import type { AlertaDTO, ResultadoReubicacionDTO, TipoAlerta } from '../../types/admin';
 import { ETIQUETA_TIPO_ALERTA } from '../../utils/etiquetas';
+import { resumirReubicacion } from '../../utils/admin';
 
 type Filtro = 'TODAS' | TipoAlerta;
 
@@ -36,7 +37,9 @@ const ListaAlertas: React.FC<{
   filtro: Filtro;
   alertas: AlertaDTO[];
   onResolver: (id: string) => void;
+  onReubicar?: (id: string) => void;
   reintentando: string | null;
+  reubicando: string | null;
   onVerTodas: () => void;
 }> = ({
   hayAlertas,
@@ -45,7 +48,9 @@ const ListaAlertas: React.FC<{
   filtro,
   alertas,
   onResolver,
+  onReubicar,
   reintentando,
+  reubicando,
   onVerTodas,
 }) => {
   if (!error && !hayAlertas) {
@@ -80,6 +85,8 @@ const ListaAlertas: React.FC<{
           alerta={a}
           onResolver={onResolver}
           resolviendo={reintentando === a.id}
+          onReubicar={onReubicar}
+          reubicando={reubicando === a.id}
         />
       ))}
     </div>
@@ -92,6 +99,8 @@ export const AlertasAdmin: React.FC = () => {
   const { ejecutar } = useAccion();
   const [resueltasLocal, setResueltasLocal] = useState<Set<string>>(new Set());
   const [enCurso, setEnCurso] = useState<string | null>(null);
+  const [reubicando, setReubicando] = useState<string | null>(null);
+  const esCoordinacion = sesion?.rol === 'COORDINACION_ACADEMICA';
   const [errorAccion, setErrorAccion] = useState<{
     mensaje: string;
     reintentar: () => void;
@@ -103,6 +112,7 @@ export const AlertasAdmin: React.FC = () => {
   const conteos: Record<Filtro, number> = {
     TODAS: base.length,
     SOFTWARE: base.filter((a) => a.tipo === 'SOFTWARE').length,
+    ACCESIBILIDAD: base.filter((a) => a.tipo === 'ACCESIBILIDAD').length,
     CAPACIDAD: base.filter((a) => a.tipo === 'CAPACIDAD').length,
   };
   const pendientes = base.filter((a) => a.estado === 'PENDIENTE').length;
@@ -129,6 +139,25 @@ export const AlertasAdmin: React.FC = () => {
     setEnCurso(null);
   }
 
+  // Issue 2.22: reasigna las secciones afectadas y deja la alerta resuelta.
+  async function manejarReubicar(id: string) {
+    if (enCurso || reubicando) return;
+    setReubicando(id);
+    setErrorAccion(null);
+    const resultado = await ejecutar(() => reubicarSeccionesAlerta(id), {
+      exito: (r: ResultadoReubicacionDTO) => resumirReubicacion(r),
+      avisarError: false,
+    });
+    if (resultado?.ok) {
+      invalidarCacheCarga('alertas');
+      invalidarCacheCarga('escaladas');
+      setResueltasLocal((prev) => new Set(prev).add(id));
+    } else if (resultado) {
+      setErrorAccion({ mensaje: resultado.error, reintentar: () => manejarReubicar(id) });
+    }
+    setReubicando(null);
+  }
+
   const subtitulo =
     sesion?.rol === 'JEFATURA_LABORATORIOS'
       ? 'Alertas de los laboratorios bajo tu responsabilidad.'
@@ -152,10 +181,12 @@ export const AlertasAdmin: React.FC = () => {
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SelectorSegmentado<Filtro>
-            opciones={(['TODAS', 'SOFTWARE', 'CAPACIDAD'] as Filtro[]).map((f) => ({
-              valor: f,
-              etiqueta: `${ETIQUETAS_FILTRO[f]} (${conteos[f]})`,
-            }))}
+            opciones={(['TODAS', 'SOFTWARE', 'CAPACIDAD', 'ACCESIBILIDAD'] as Filtro[]).map(
+              (f) => ({
+                valor: f,
+                etiqueta: `${ETIQUETAS_FILTRO[f]} (${conteos[f]})`,
+              }),
+            )}
             valor={filtro}
             onCambiar={setFiltro}
             etiquetaGrupo="Filtrar por tipo"
@@ -186,7 +217,9 @@ export const AlertasAdmin: React.FC = () => {
             filtro={filtro}
             alertas={alertas}
             onResolver={manejarResolver}
+            onReubicar={esCoordinacion ? manejarReubicar : undefined}
             reintentando={enCurso}
+            reubicando={reubicando}
             onVerTodas={() => setFiltro('TODAS')}
           />
         )}

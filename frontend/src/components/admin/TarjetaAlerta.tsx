@@ -34,18 +34,30 @@ const ESTILO_TIPO: Record<TipoAlerta, { etiqueta: string; chip: string; trazo: s
     trazo:
       'M17 20h5v-2a3 3 0 00-5.36-1.86M17 20H7m10 0v-2c0-.66-.13-1.28-.36-1.86M7 20H2v-2a3 3 0 015.36-1.86M7 20v-2c0-.66.13-1.28.36-1.86m0 0a5 5 0 019.28 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
   },
+  // Issue 3.59: sección con movilidad reducida fuera del piso 1.
+  ACCESIBILIDAD: {
+    etiqueta: 'Accesibilidad',
+    chip: 'bg-saie-canvas text-saie-text',
+    // Edificio con pisos
+    trazo: ICONOS.edificio,
+  },
 };
 
 export interface TarjetaAlertaProps {
   alerta: AlertaDTO;
   onResolver?: (id: string) => void;
   resolviendo?: boolean;
+  /** Issue 2.22: reasignar las secciones afectadas (solo Coordinación). */
+  onReubicar?: (id: string) => void;
+  reubicando?: boolean;
 }
 
 export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
   alerta,
   onResolver,
   resolviendo = false,
+  onReubicar,
+  reubicando = false,
 }) => {
   const estilo = ESTILO_TIPO[alerta.tipo] ?? {
     ...ESTILO_TIPO.SOFTWARE,
@@ -53,7 +65,9 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
   };
   const resuelta = alerta.estado === 'RESUELTA';
   const [confirmando, setConfirmando] = useState(false);
+  const [confirmandoReubicar, setConfirmandoReubicar] = useState(false);
   const [mostrarTodos, setMostrarTodos] = useState(false);
+  const ocupada = resolviendo || reubicando;
 
   const motivo = fraseDeMotivoAlerta(alerta.motivo);
   const cursos = alerta.asignacionesAfectadas;
@@ -145,29 +159,58 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
         <time dateTime={alerta.fechaDeteccion} className="text-sm text-saie-muted">
           Detectada el {formatearFechaAlerta(alerta.fechaDeteccion)}
         </time>
-        {!resuelta && onResolver && (
+        {!resuelta && (onResolver || onReubicar) && (
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <Boton
-              variante="secundario"
-              tamano="sm"
-              onClick={() => setConfirmando(true)}
-              disabled={resolviendo}
-              cargando={resolviendo}
-              textoCargando="Marcando…"
-            >
-              Marcar como resuelta
-            </Boton>
-            <DialogoConfirmacion
-              abierto={confirmando}
-              titulo="¿Marcar como resuelta?"
-              descripcion={`La alerta de ${alerta.espacio.identificador} dejará de aparecer en la lista de pendientes.`}
-              textoConfirmar="Sí, marcar como resuelta"
-              onConfirmar={() => {
-                setConfirmando(false);
-                onResolver(alerta.id);
-              }}
-              onCancelar={() => setConfirmando(false)}
-            />
+            {onResolver && (
+              <>
+                <Boton
+                  variante="secundario"
+                  tamano="sm"
+                  onClick={() => setConfirmando(true)}
+                  disabled={ocupada}
+                  cargando={resolviendo}
+                  textoCargando="Marcando…"
+                >
+                  Marcar como resuelta
+                </Boton>
+                <DialogoConfirmacion
+                  abierto={confirmando}
+                  titulo="¿Marcar como resuelta?"
+                  descripcion={`La alerta de ${alerta.espacio.identificador} dejará de aparecer en la lista de pendientes.`}
+                  textoConfirmar="Sí, marcar como resuelta"
+                  onConfirmar={() => {
+                    setConfirmando(false);
+                    onResolver(alerta.id);
+                  }}
+                  onCancelar={() => setConfirmando(false)}
+                />
+              </>
+            )}
+            {onReubicar && cursos.length > 0 && alerta.tipo !== 'ACCESIBILIDAD' && (
+              <>
+                <Boton
+                  variante="primario"
+                  tamano="sm"
+                  onClick={() => setConfirmandoReubicar(true)}
+                  disabled={ocupada}
+                  cargando={reubicando}
+                  textoCargando="Reubicando…"
+                >
+                  Reubicar secciones
+                </Boton>
+                <DialogoConfirmacion
+                  abierto={confirmandoReubicar}
+                  titulo="¿Reubicar las secciones afectadas?"
+                  descripcion={`Se volverá a asignar cada sección afectada en ${alerta.espacio.identificador}. Las que no encuentren otro espacio quedarán en revisión en el inicio, y la alerta se marcará como resuelta.`}
+                  textoConfirmar="Sí, reubicar"
+                  onConfirmar={() => {
+                    setConfirmandoReubicar(false);
+                    onReubicar(alerta.id);
+                  }}
+                  onCancelar={() => setConfirmandoReubicar(false)}
+                />
+              </>
+            )}
           </div>
         )}
       </footer>

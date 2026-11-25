@@ -33,6 +33,11 @@ Todas las rutas de `/api/v1/admin/*` exigen JWT válido de `COORDINACION_ACADEMI
   * Cada alerta: `{ id, tipo, estado, motivo, fechaDeteccion, espacio: { id, identificador, pabellon, piso }, asignacionesAfectadas: [{ asignacionId, codigoCurso, nombreCurso, codigoSeccion }] }`.
 * `PATCH /api/v1/admin/alertas/:id/resolver` (Issue 4.7)
   * Marca la alerta como `RESUELTA` y deja un `RegistroAuditoria` de tipo `ALERTA`. 404 si no existe, 403 si Jefatura no es responsable del espacio, 409 si ya estaba resuelta.
+* `POST /api/v1/admin/alertas/:id/reubicar` (Issue 2.22, solo Coordinación)
+  * Reevalúa con el motor cada sección afectada por la alerta (una vez por sección) y después la marca `RESUELTA`. Cada sección termina en un espacio válido o `ESCALADA` con su motivo.
+  * Respuesta: `{ alertaId, alertaResuelta, secciones: [{ seccionId, codigoSeccion, codigoCurso, estado, espacioIds, motivoEscalamiento, conservada }] }`. 404 si no existe, 409 si ya estaba resuelta.
+  * En la pantalla de alertas, el botón «Reubicar secciones» (con confirmación) solo aparece para Coordinación.
+* **Deshabilitar un espacio con clases** (Issue 2.22, riesgo R18): al pasar `habilitado` de `true` a `false`, si el espacio tiene asignaciones vigentes se registra una alerta de tipo `CAPACIDAD` con esas secciones («el espacio fue deshabilitado»).
 * Al crearse una alerta nueva se emite `alerta.creada` ([Spec 02](02-motor-asignacion.md) §2.4).
 
 ### 2.2 Mapa Visual de Ocupación por Piso (2D & 3D) (#4.11, #4.12, #4.13, #4.14, #4.15, #4.23, #4.24)
@@ -153,6 +158,15 @@ Lo que faltaba era poder consultarlos.
   * `fallos-04-auditoria.csv` — la bitácora del motor.
 * Variables opcionales: `EXPORT_DIR` (otra carpeta) y `EXPORT_PERIODO` (un solo periodo).
 * La guía completa está en [`docs/guia-csv.md`](../guia-csv.md).
+
+---
+
+## 2.1. Gestión de periodos (Issue 4.64)
+* `GET /api/v1/admin/periodos` → `{ vigente, periodos[], registrados[{ codigo, fechaInicio, fechaFin, estado }] }` (Coordinación y Jefatura).
+* `POST /api/v1/admin/periodos` (solo Coordinación): registra un periodo `EN_PREPARACION`. El código se normaliza («2027-II» → «2027-2»).
+* `POST /api/v1/admin/periodos/:codigo/activar` y `POST /api/v1/admin/periodos/:codigo/cerrar` (solo Coordinación). Activar cierra el vigente y archiva sus asignaciones; un periodo cerrado no se reactiva.
+* Pantalla «Periodos» (`/admin/periodos`) con confirmación antes de activar y cerrar.
+* `obtenerPeriodoVigente` lee la tabla `periodos`; el reintento, la consulta pública, las alertas y el mapa solo consideran el vigente.
 
 ---
 

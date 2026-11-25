@@ -23,6 +23,7 @@ describe('Servicio de Consulta Pública (#3.2 y #3.4)', () => {
 
   beforeEach(() => {
     mockPrisma = {
+      periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
       alumno: {
         findUnique: jest.fn(),
       },
@@ -33,6 +34,15 @@ describe('Servicio de Consulta Pública (#3.2 y #3.4)', () => {
   });
 
   describe('obtenerAsignacionPorAlumno (#3.2)', () => {
+    it('solo trae las matrículas del periodo vigente (Issue 4.64, R37)', async () => {
+      mockPrisma.alumno.findUnique.mockResolvedValue(null);
+
+      await obtenerAsignacionPorAlumno('20200000', mockPrisma as unknown as PrismaClient);
+
+      const { include } = mockPrisma.alumno.findUnique.mock.calls[0][0];
+      expect(include.matriculas.where).toEqual({ seccion: { periodo: '2026-2' } });
+    });
+
     it('retorna null si el alumno no existe en la base de datos', async () => {
       mockPrisma.alumno.findUnique.mockResolvedValue(null);
 

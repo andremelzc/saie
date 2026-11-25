@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { RUTAS } from '../../config/rutas';
 import LayoutAdmin from '../../components/admin/LayoutAdmin';
 import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
 import { SelectorSegmentado } from '../../components/ui/SelectorSegmentado';
@@ -14,6 +15,8 @@ import type { PlantillaCSV } from '../../config/plantillas';
 import { useAccion } from '../../hooks/useAccion';
 import { importarCsv } from '../../services/admin';
 import type { ResultadoImportacionDTO, TipoImportacion } from '../../types/admin';
+import { leerArchivoCsv } from '../../utils/archivoCsv';
+import { textoAvanceImportacion } from '../../utils/admin';
 import { agruparErroresPorTipo } from '../../utils/erroresImportacion';
 import { formatearFechaCorta } from '../../utils/fechas';
 
@@ -112,16 +115,6 @@ function leerUltimaCarga(tipo: TipoImportacion): UltimaCarga | null {
 
 const TIPOS_CARGA: TipoImportacion[] = ['cursos-secciones', 'horarios', 'matriculas', 'docentes'];
 
-function leerArchivo(archivo: File): Promise<string> {
-  if (typeof archivo.text === 'function') return archivo.text();
-  return new Promise((resolve, reject) => {
-    const lector = new FileReader();
-    lector.onload = () => resolve(String(lector.result ?? ''));
-    lector.onerror = () => reject(lector.error);
-    lector.readAsText(archivo);
-  });
-}
-
 function descargarErrores(tipo: TipoImportacion, errores: string[]) {
   if (typeof URL.createObjectURL !== 'function') return;
   const filas = errores.map((error, indice) => `"${indice + 1}","${error.replaceAll('"', '""')}"`);
@@ -150,6 +143,16 @@ function insigniaDeEstado(
 }
 
 /** Resumen de lo que hizo la asignación tras la carga. */
+/**
+ * Filas que quedaron guardadas. Desde el Issue 1.16 la carga es «todo o nada»: con algún error no
+ * se guarda ninguna. Si el backend todavía no informa `guardadas`, se usa el cálculo anterior.
+ */
+function filasGuardadas(resultado: ResultadoImportacionDTO): number {
+  if (resultado.guardadas === undefined) return resultado.filasRecibidas - resultado.errores.length;
+  if (resultado.parcial) return Math.max(0, resultado.filasRecibidas - resultado.errores.length);
+  return resultado.guardadas ? resultado.filasRecibidas : 0;
+}
+
 function textoAsignacion(asignacion: NonNullable<ResultadoImportacionDTO['asignacion']>): string {
   const resumen = asignacion.resumen;
   if (!asignacion.disparada || !resumen) {
@@ -248,8 +251,8 @@ const PanelResultado: React.FC<{
     <div className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-saie-canvas p-4">
       {/*
         El resumen («N filas leídas · M guardadas») está una sola vez, en la tarjeta de la zona
-        de carga. Aquí solo va el detalle (Issue 4.53). Cada importador genera una entrada por
-        fila rechazada, así que `filasRecibidas - errores` son las filas que sí se guardaron.
+        de carga. Aquí solo va el detalle (Issue 4.53). Desde el Issue 1.16 la carga es «todo o
+        nada»: si hay errores no se guarda ninguna fila.
       */}
       {Object.keys(resultado.procesados).length > 0 && (
         <dl className="m-0 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
@@ -267,10 +270,21 @@ const PanelResultado: React.FC<{
       {conProblemas && (
         <>
           <Aviso tono="advertencia">
-            {tipo !== 'docentes' && (
-              <strong>No se asignaron aulas porque el archivo tiene filas con problemas. </strong>
+            {resultado.parcial ? (
+              <>
+                <strong>El archivo falló a medias: las filas sin problema ya se guardaron. </strong>
+                Corrige las filas de la lista y sube el archivo de nuevo; repetir la carga no
+                duplica datos
+              </>
+            ) : (
+              <>
+                <strong>
+                  No se guardó ninguna fila porque el archivo tiene filas con problemas.{' '}
+                </strong>
+                Corrige todas las filas de la lista y sube el archivo de nuevo
+              </>
             )}
-            Corrige esas filas y sube el archivo de nuevo; las demás ya se guardaron.
+            {tipo !== 'docentes' ? '; después se asignarán las aulas.' : '.'}
           </Aviso>
           <div className="flex flex-wrap gap-2">
             <Boton
@@ -286,6 +300,23 @@ const PanelResultado: React.FC<{
           </div>
           <ErroresAgrupados errores={resultado.errores} />
         </>
+      )}
+
+      {resultado.advertencias && resultado.advertencias.length > 0 && (
+        <Aviso tono="info">
+          <strong>Revisa estos avisos. </strong>
+          El archivo se guardó, pero conviene revisarlos:
+          <ul className="m-0 mt-1 list-disc pl-5">
+            {resultado.advertencias.slice(0, FILAS_POR_GRUPO).map((a) => (
+              <li key={a}>{a}</li>
+            ))}
+          </ul>
+          {resultado.advertencias.length > FILAS_POR_GRUPO && (
+            <p className="m-0 mt-1">
+              Y {resultado.advertencias.length - FILAS_POR_GRUPO} aviso(s) más.
+            </p>
+          )}
+        </Aviso>
       )}
 
       {resultado.asignacion && (
@@ -356,9 +387,10 @@ const ResumenResultado: React.FC<{
         </BadgeEstado>
       </div>
       <p className="m-0 text-sm text-saie-muted">
-        {resultado.filasRecibidas} filas leídas ·{' '}
-        {resultado.filasRecibidas - resultado.errores.length} guardadas
+        {resultado.filasRecibidas} filas leídas · {filasGuardadas(resultado)} guardadas
         {resultado.errores.length > 0 && ` · ${resultado.errores.length} con problemas`}
+        {(resultado.advertencias?.length ?? 0) > 0 &&
+          ` · ${resultado.advertencias!.length} ${resultado.advertencias!.length === 1 ? 'aviso' : 'avisos'}`}
       </p>
       {resultado.asignacion && (
         <p className="m-0 text-sm text-saie-text">{textoAsignacion(resultado.asignacion)}</p>
@@ -400,6 +432,7 @@ export const ZonaCarga: React.FC<{
   const [arrastrando, setArrastrando] = useState(false);
   const { ejecutar } = useAccion();
   const [enviando, setEnviando] = useState(false);
+  const [avance, setAvance] = useState<{ procesadas: number; total: number } | null>(null);
   const [resultado, setResultado] = useState<ResultadoImportacionDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [errorArchivo, setErrorArchivo] = useState<string | null>(null);
@@ -450,9 +483,15 @@ export const ZonaCarga: React.FC<{
     setError(null);
     setResultado(null);
     // El error se muestra en línea, junto a la zona de carga.
-    const salida = await ejecutar(async () => importarCsv(tipo, await leerArchivo(archivo)), {
-      avisarError: false,
-    });
+    setAvance(null);
+    const salida = await ejecutar(
+      async () =>
+        importarCsv(tipo, await leerArchivoCsv(archivo), (procesadas, total) =>
+          setAvance({ procesadas, total }),
+        ),
+      { avisarError: false },
+    );
+    setAvance(null);
     if (salida?.ok) {
       setResultado(salida.valor);
       onEstado(tipo, salida.valor.exitosa ? 'cargado' : 'con-errores', new Date().toISOString());
@@ -510,7 +549,7 @@ export const ZonaCarga: React.FC<{
 
       {/* Región viva siempre presente: si se montara con el texto, el lector no lo anunciaría. */}
       <p role="status" className={enviando ? 'm-0 text-sm text-saie-muted' : 'sr-only'}>
-        {enviando ? 'Importando. Esto puede tardar hasta 2 min; no cierres esta pantalla.' : ''}
+        {enviando ? textoAvanceImportacion(avance) : ''}
       </p>
       {errorArchivo && <Aviso tono="error">{errorArchivo}</Aviso>}
       {error && <Aviso tono="error">{error}</Aviso>}
@@ -628,28 +667,28 @@ const GuiaCarga: React.FC = () => (
       <section>
         <h3 className="m-0 text-base font-bold text-saie-text">2. El periodo académico</h3>
         <p className="m-0 mt-2">
-          Cada fila lleva su <strong>periodo</strong> (por ejemplo, 2026-2). Un mismo curso puede
-          existir en varios periodos a la vez: el periodo no se borra, se agrega.
+          Cada fila lleva su <strong>periodo</strong> (por ejemplo, 2026-2; también se acepta
+          2026-II). Solo se puede cargar en un periodo <strong>registrado</strong> en la pantalla{' '}
+          <Link to={RUTAS.periodosAdmin}>Periodos</Link> que no esté cerrado.
         </p>
         <p className="m-0 mt-3">
-          El <strong>periodo actual</strong> es el semestre que el sistema está asignando.
-          Normalmente es el más reciente que hayas cargado; si tu institución lo fija manualmente,
-          se usa el valor que haya configurado la persona administradora.
+          El <strong>periodo vigente</strong> es el semestre que el sistema asigna y que ven alumnos
+          y docentes. Cargar datos nunca lo cambia: solo cambia al activar otro periodo en Periodos.
         </p>
         <ul className="m-0 mt-3 pl-5">
           <li>
-            <strong>Volver a subir el semestre en curso:</strong> usa los mismos archivos y el mismo
-            periodo. Las secciones, horarios y matrículas se actualizan en el sitio y las
-            asignaciones que siguen siendo válidas se conservan.
+            <strong>Volver a subir el semestre en curso:</strong> usa el mismo periodo. Para cada
+            sección incluida en el archivo, sus matrículas y horarios pasan a ser exactamente los
+            del archivo: los alumnos que ya no figuran quedan retirados. Las asignaciones que siguen
+            siendo válidas se conservan.
           </li>
           <li>
-            <strong>Abrir un semestre nuevo:</strong> sube los archivos con el nuevo periodo (por
-            ejemplo, 2027-1). Se agregan las secciones nuevas y los datos del semestre anterior
-            quedan intactos. Como el nuevo periodo es el más reciente, pasa a ser el actual.
+            <strong>Preparar un semestre nuevo:</strong> registra primero el periodo (por ejemplo,
+            2027-1) en Periodos y luego sube sus archivos. Queda en preparación: nadie lo ve hasta
+            que lo actives.
           </li>
           <li>
-            <strong>Asignar un semestre anterior:</strong> pídele a la persona administradora que
-            indique el periodo actual; no lo cambies desde la carga.
+            <strong>Semestres cerrados:</strong> son de solo consulta; la carga los rechaza.
           </li>
         </ul>
       </section>
@@ -660,7 +699,7 @@ const GuiaCarga: React.FC = () => (
         </h3>
         <p className="m-0 mt-2">
           Si la carga termina sin filas con problemas, el sistema{' '}
-          <strong>asigna las aulas del periodo actual</strong>. La asignación solo se hace si ese
+          <strong>asigna las aulas del periodo vigente</strong>. La asignación solo se hace si ese
           periodo ya tiene secciones, horarios y matrículas cargados; si falta algo, el resultado lo
           explica.
         </p>

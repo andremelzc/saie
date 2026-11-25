@@ -266,10 +266,8 @@ describe('Auditoría e historial de asignaciones (Issue 4.32)', () => {
   describe('informe de salones (Issue 4.33)', () => {
     function dbMock(secciones: unknown[] = []) {
       return {
-        seccion: {
-          findFirst: jest.fn().mockResolvedValue({ periodo: '2026-2' }),
-          findMany: jest.fn().mockResolvedValue(secciones),
-        },
+        seccion: { findMany: jest.fn().mockResolvedValue(secciones) },
+        periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
       } as any;
     }
 
@@ -327,7 +325,8 @@ describe('Auditoría e historial de asignaciones (Issue 4.32)', () => {
 
     it('404 si no hay ningún periodo con secciones', async () => {
       const db = {
-        seccion: { findFirst: jest.fn().mockResolvedValue(null), findMany: jest.fn() },
+        seccion: { findMany: jest.fn() },
+        periodo: { findFirst: jest.fn().mockResolvedValue(null) },
       } as any;
       await expect(generarReporteAsignaciones(undefined, db)).rejects.toMatchObject({
         status: 404,
