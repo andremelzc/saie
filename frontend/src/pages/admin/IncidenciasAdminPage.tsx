@@ -13,7 +13,12 @@ import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
 import { useAccion } from '../../hooks/useAccion';
 import { invalidarCacheCarga, useCarga } from '../../hooks/useCarga';
 import { useDetalleEnUrl } from '../../hooks/useDetalleEnUrl';
-import { cerrarIncidencia, obtenerEspacio, obtenerIncidencias } from '../../services/admin';
+import {
+  cerrarIncidencia,
+  obtenerEspacio,
+  obtenerImagenIncidencia,
+  obtenerIncidencias,
+} from '../../services/admin';
 import type {
   EstadoIncidencia,
   IncidenciaAdminDTO,
@@ -25,6 +30,7 @@ import {
   etiquetaTipoIncidencia,
 } from '../../utils/diccionarios';
 import { ubicacionEspacio } from '../../utils/docente';
+import ImagenProtegida from '../../components/ui/ImagenProtegida';
 import { formatearFechaAlerta } from '../../utils/fechas';
 import { plural } from '../../utils/texto';
 
@@ -263,6 +269,12 @@ export const IncidenciasAdminPage: React.FC = () => {
     detalle.valor === null
       ? null
       : (cerradas[detalle.valor] ?? (datos ?? []).find((i) => i.id === detalle.valor) ?? null);
+  // Issue 7.19: la foto se pide solo al abrir la ficha (con el token, como Blob).
+  const idSeleccionada = seleccionada?.id;
+  const cargarFoto = useCallback(
+    () => obtenerImagenIncidencia(idSeleccionada ?? ''),
+    [idSeleccionada],
+  );
 
   const alCerrar = (cerrada: IncidenciaAdminDTO) => {
     // Las otras vistas (resueltas/descartadas) quedaron viejas: se vuelven a pedir al entrar.
@@ -372,6 +384,18 @@ export const IncidenciasAdminPage: React.FC = () => {
                   <dt className={TITULO_DT}>Descripción</dt>
                   <dd className="m-0 whitespace-pre-line">{seleccionada.descripcion}</dd>
                 </div>
+                {seleccionada.tieneImagen && (
+                  <div>
+                    <dt className={TITULO_DT}>Foto</dt>
+                    <dd className="m-0 mt-1">
+                      <ImagenProtegida
+                        key={seleccionada.id}
+                        cargar={cargarFoto}
+                        alt={`Foto de la incidencia ${seleccionada.identificadorSeguimiento}`}
+                      />
+                    </dd>
+                  </div>
+                )}
                 {seleccionada.evidencia && (
                   <div>
                     <dt className={TITULO_DT}>Evidencia</dt>

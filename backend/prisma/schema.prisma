@@ -418,8 +418,26 @@ model Incidencia {
   docente    Docente    @relation(fields: [docenteId], references: [id], onDelete: Cascade)
   asignacion Asignacion @relation(fields: [asignacionId], references: [id], onDelete: Cascade)
   espacio    Espacio    @relation(fields: [espacioId], references: [id], onDelete: Cascade)
+  // Issue 7.19 (R45): foto que el docente adjunta como evidencia.
+  imagen     ImagenIncidencia?
 
   @@map("incidencias")
+}
+
+// Issue 7.19 (riesgo R45): la foto de una incidencia (una por incidencia). Se guarda en la propia
+// base, sin depender de un almacenamiento externo: solo JPEG, PNG o WebP de hasta 2 MB,
+// comprobados por su contenido y no solo por la extensión.
+model ImagenIncidencia {
+  id           String   @id @default(uuid())
+  incidenciaId String   @unique @map("incidencia_id")
+  tipoMime     String   @map("tipo_mime")
+  tamanoBytes  Int      @map("tamano_bytes")
+  datos        Bytes
+  creadaEn     DateTime @default(now()) @map("creada_en")
+
+  incidencia Incidencia @relation(fields: [incidenciaId], references: [id], onDelete: Cascade)
+
+  @@map("imagenes_incidencia")
 }
 
 model HistorialEspacio {

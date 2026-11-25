@@ -9,6 +9,8 @@ export interface IncidenciaAdminDTO {
   estado: EstadoIncidencia;
   descripcion: string;
   evidencia: string | null;
+  /** Issue 7.19: tiene una foto adjunta (se pide aparte, en `/incidencias/:id/imagen`). */
+  tieneImagen: boolean;
   fechaReporte: Date;
   comentarioCierre: string | null;
   fechaCierre: Date | null;

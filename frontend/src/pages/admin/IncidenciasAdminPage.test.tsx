@@ -3,7 +3,12 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom';
 import { ProveedorAvisos } from '../../components/ui/Avisos';
 import { vaciarCacheCarga } from '../../hooks/useCarga';
-import { cerrarIncidencia, obtenerEspacio, obtenerIncidencias } from '../../services/admin';
+import {
+  cerrarIncidencia,
+  obtenerEspacio,
+  obtenerImagenIncidencia,
+  obtenerIncidencias,
+} from '../../services/admin';
 import { incidencia } from '../../test/fixtures/docente';
 import IncidenciasAdminPage from './IncidenciasAdminPage';
 import { esperarSinViolacionesGraves } from '../../test/axe';
@@ -15,6 +20,7 @@ vi.mock('../../services/admin', () => ({
   obtenerIncidencias: vi.fn(),
   cerrarIncidencia: vi.fn(),
   obtenerEspacio: vi.fn(),
+  obtenerImagenIncidencia: vi.fn(),
 }));
 
 const listar = vi.mocked(obtenerIncidencias);
@@ -80,6 +86,22 @@ describe('Revisión de incidencias por Jefatura (Issues 7.11 y 7.12)', () => {
     expect(within(tecnico).getByText('4')).toBeInTheDocument(); // PCs inoperativas
     expect(within(tecnico).getByText('Python 3.12')).toBeInTheDocument();
     expect(espacio).toHaveBeenCalledWith('esp-l204');
+  });
+
+  it('muestra la foto adjunta en la ficha (Issue 7.19)', async () => {
+    listar.mockResolvedValue([incidencia({ tieneImagen: true })]);
+    vi.mocked(obtenerImagenIncidencia).mockResolvedValue(new Blob(['x'], { type: 'image/png' }));
+    const crear = vi.fn(() => 'blob:foto');
+    Object.assign(URL, { createObjectURL: crear, revokeObjectURL: vi.fn() });
+    montar();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Revisar incidencia INC-1A2B3C4D' }));
+    const panel = await screen.findByRole('dialog');
+    const foto = await within(panel).findByRole('img', {
+      name: 'Foto de la incidencia INC-1A2B3C4D',
+    });
+    expect(foto).toHaveAttribute('src', 'blob:foto');
+    expect(obtenerImagenIncidencia).toHaveBeenCalledWith('inc-1');
   });
 
   it('resolver exige un comentario y quita la incidencia sin recargar', async () => {

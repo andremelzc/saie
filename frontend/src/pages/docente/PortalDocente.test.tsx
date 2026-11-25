@@ -291,6 +291,7 @@ describe('Reportar incidencia (Issue 7.10)', () => {
 
   it('envía el reporte y muestra el identificador, la prioridad y la ubicación', async () => {
     reportar.mockResolvedValue({
+      id: 'inc-1',
       identificadorSeguimiento: 'INC-1A2B3C4D',
       estado: 'PENDIENTE',
       fechaReporte: '2026-11-09T14:30:00Z',
@@ -375,6 +376,7 @@ describe('Mis incidencias (Issue 7.14)', () => {
 
   it('tras reportar una incidencia vuelve a consultar la lista', async () => {
     reportar.mockResolvedValue({
+      id: 'inc-1',
       identificadorSeguimiento: 'INC-1A2B3C4D',
       estado: 'PENDIENTE',
       fechaReporte: '2026-11-09T14:30:00Z',

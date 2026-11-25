@@ -474,3 +474,14 @@ export async function obtenerLaboratoriosConEstado(): Promise<LaboratorioConEsta
     };
   });
 }
+
+/**
+ * GET /v1/admin/incidencias/:id/imagen (Issue 7.19): la foto de la incidencia. Se pide con el
+ * token, por eso llega como `Blob` y no se puede enlazar directo en un `<img>`.
+ */
+export async function obtenerImagenIncidencia(id: string): Promise<Blob> {
+  const { data } = await api.get<Blob>(`/v1/admin/incidencias/${encodeURIComponent(id)}/imagen`, {
+    responseType: 'blob',
+  });
+  return data;
+}

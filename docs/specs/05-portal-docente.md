@@ -40,7 +40,12 @@ Asimismo, incluye el panel de revisión y resolución de incidencias para la **J
       evidencia?: string;     // hasta 500 caracteres
     }
     ```
-  * Registra la incidencia vinculada al espacio y docente y devuelve su `identificadorSeguimiento` (`INC-` + 8 hex).
+  * Registra la incidencia vinculada al espacio y docente y devuelve su `id` y su `identificadorSeguimiento` (`INC-` + 8 hex).
+* `POST /api/v1/docente/incidencias/:id/imagen` y `GET /api/v1/docente/incidencias/:id/imagen` (Issue 7.19, riesgo R45)
+  * Foto del problema como evidencia (una por incidencia; subir otra la reemplaza). El cuerpo es el archivo tal cual, con `Content-Type` `image/jpeg`, `image/png` o `image/webp`, de hasta 2 MB. El tipo se comprueba por la firma del archivo, no solo por la cabecera.
+  * 415 si no es una de esas imágenes (aunque diga serlo), 413 si supera 2 MB, 404 si la incidencia no es del docente, 409 si ya no está pendiente. Respuesta: `201 { tipoMime, tamanoBytes }`.
+  * Se guarda en la base (tabla `imagenes_incidencia`, migración `20261201000000_imagenes_incidencia`, con RLS y `CHECK` de tipo y tamaño), sin depender de un almacenamiento externo. Los listados traen `tieneImagen`; los bytes se piden aparte.
+  * En el portal: «Foto del problema (opcional)» en el reporte; se sube después de registrar la incidencia y, si falla, la incidencia queda registrada y se avisa. El enlace sigue como opción secundaria («O un enlace»).
 * `GET /api/v1/docente/incidencias` (Issue 7.14)
   * Devuelve solo las incidencias del docente autenticado (el id sale del token), de la más reciente a la más antigua. Sin filtros ni paginación: un docente reporta pocas.
   * Cada incidencia (`IncidenciaDocenteDTO`, el contrato de `IncidenciaAdminDTO` sin `docente`): `{ id, identificadorSeguimiento, tipo, prioridad, estado, descripcion, evidencia, fechaReporte, comentarioCierre, fechaCierre, espacio: { id, identificador, pabellon, piso }, asignacion: { id, codigoCurso, nombreCurso, codigoSeccion } }`.
@@ -50,6 +55,7 @@ Asimismo, incluye el panel de revisión y resolución de incidencias para la **J
 * `GET /api/v1/admin/incidencias[?estado=&prioridad=&espacioId=]` (Issue 7.6)
   * Por defecto las `PENDIENTE`. Coordinación ve todas; Jefatura solo las de los laboratorios a su cargo (`EspacioResponsable`). Orden: mayor prioridad primero y, a igual prioridad, las más antiguas primero.
   * Cada incidencia: `{ id, identificadorSeguimiento, tipo, prioridad, estado, descripcion, evidencia, fechaReporte, comentarioCierre, fechaCierre, espacio, docente: { codigo, nombre }, asignacion: { id, codigoCurso, nombreCurso, codigoSeccion } }`.
+* `GET /api/v1/admin/incidencias/:id/imagen` (Issue 7.19): la foto, con la misma regla de acceso que el listado (Jefatura solo las de sus laboratorios). Se responde con su `Content-Type`, `Content-Disposition: inline` y `X-Content-Type-Options: nosniff`. La ficha de la incidencia la muestra (se pide con el token, como `Blob`).
 * `PATCH /api/v1/admin/incidencias/:id/resolver` (Issue 7.6)
   * Cuerpo: `{ estado: 'RESUELTA' | 'DESCARTADA', comentario }` (3 a 1000 caracteres). Guarda `comentario_cierre` y `fecha_cierre` (columnas nuevas de `Incidencia`, ver [`modelo-datos.md`](../modelo-datos.md) §4.15). 404 si no existe, 403 si Jefatura no es responsable del espacio, 409 si ya estaba cerrada.
   * La trazabilidad del cierre queda en esos dos campos; `RegistroAuditoria` no tiene referencia a incidencias.

@@ -81,3 +81,14 @@ export async function obtenerMisIncidencias(): Promise<IncidenciaDocenteDTO[]> {
   const { data } = await api.get<Respuesta<IncidenciaDocenteDTO[]>>('/v1/docente/incidencias');
   return data.data;
 }
+
+/**
+ * POST /v1/docente/incidencias/:id/imagen (Issue 7.19): adjunta la foto de la incidencia. El
+ * cuerpo es el archivo tal cual, con su tipo (JPEG, PNG o WebP, hasta 2 MB).
+ */
+export async function subirImagenIncidencia(id: string, archivo: File): Promise<void> {
+  await api.post(`/v1/docente/incidencias/${encodeURIComponent(id)}/imagen`, archivo, {
+    headers: { 'Content-Type': archivo.type },
+    timeout: 60000,
+  });
+}

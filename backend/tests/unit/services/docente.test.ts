@@ -406,6 +406,7 @@ describe('Mis incidencias (Issue 7.14)', () => {
       estado: 'PENDIENTE',
       descripcion: 'Tres PCs no encienden',
       evidencia: null,
+      tieneImagen: false,
       fechaReporte: new Date('2026-11-02T15:00:00Z'),
       comentarioCierre: null,
       fechaCierre: null,
