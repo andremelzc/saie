@@ -384,6 +384,33 @@ export async function choquesDeDocente(
   return avisos;
 }
 
+/**
+ * Issue 4.62: el horario se reemplaza entero por las franjas que llegan (agregar, cambiar y quitar
+ * son la misma operación). Si no cambió nada, no se toca la base. Devuelve si cambió.
+ */
+async function reemplazarHorario(
+  tx: Db,
+  actual: { id: string; horarios: FranjaSeccionInput[] },
+  franjas: FranjaSeccionInput[],
+  campos: CamposAuditados,
+): Promise<boolean> {
+  const nuevas = ordenarFranjas(franjas);
+  const cambiado = !mismasFranjas(actual.horarios, nuevas);
+  if (cambiado) {
+    await tx.horario.deleteMany({ where: { seccionId: actual.id } });
+    if (nuevas.length > 0) {
+      await tx.horario.createMany({
+        data: nuevas.map((f) => ({ seccionId: actual.id, ...f })),
+      });
+    }
+  }
+  campos.horarios = {
+    anterior: actual.horarios.map(textoFranja),
+    nuevo: nuevas.map(textoFranja),
+  };
+  return cambiado;
+}
+
 const AVISO_CORRIDA_EN_CURSO =
   'El horario se guardó, pero no se pudo reasignar la sección porque hay una corrida de ' +
   'asignación en curso. Vuelve a asignarla cuando termine.';
@@ -493,23 +520,8 @@ export async function actualizarSeccion(
       };
     }
 
-    // Issue 4.62: el horario se reemplaza entero por las franjas que llegan (agregar, cambiar y
-    // quitar son la misma operación). Si no cambió nada, no se toca la base.
     if (entrada.horarios !== undefined) {
-      const nuevas = ordenarFranjas(entrada.horarios);
-      horarioCambiado = !mismasFranjas(actual.horarios, nuevas);
-      if (horarioCambiado) {
-        await tx.horario.deleteMany({ where: { seccionId: actual.id } });
-        if (nuevas.length > 0) {
-          await tx.horario.createMany({
-            data: nuevas.map((f) => ({ seccionId: actual.id, ...f })),
-          });
-        }
-      }
-      campos.horarios = {
-        anterior: actual.horarios.map(textoFranja),
-        nuevo: nuevas.map(textoFranja),
-      };
+      horarioCambiado = await reemplazarHorario(tx, actual, entrada.horarios, campos);
     }
 
     await registrarAccionDePersona(tx, {

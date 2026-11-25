@@ -48,7 +48,7 @@ export function aFranjasEditables(franjas: Franja[]): FranjaEditable[] {
  * formulario no arranque con una franja que ya choca con otra.
  */
 export function nuevaFranja(existentes: Franja[]): FranjaEditable {
-  const ultima = existentes[existentes.length - 1];
+  const ultima = existentes.at(-1);
   const indice = ultima ? DIAS_FRANJA.indexOf(ultima.diaSemana) : -1;
   const dia = DIAS_FRANJA[(indice + 1) % DIAS_LECTIVOS.length];
   return { clave: nuevaClave(), diaSemana: dia, horaInicio: '08:00', horaFin: '10:00' };
@@ -91,7 +91,7 @@ function clave(franjas: Franja[]): string {
       (f) =>
         `${DIAS_FRANJA.indexOf(f.diaSemana)}|${f.horaInicio.slice(0, 5)}|${f.horaFin.slice(0, 5)}`,
     )
-    .sort()
+    .sort((a, b) => a.localeCompare(b))
     .join(';');
 }
 
