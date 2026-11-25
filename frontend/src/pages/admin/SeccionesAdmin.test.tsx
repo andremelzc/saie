@@ -432,6 +432,54 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     expect(screen.getByLabelText('Tipo de espacio')).toHaveValue('TODOS');
   });
 
+  describe('Enlace desde «Datos incompletos» del Inicio', () => {
+    const montarEn = (url: string) =>
+      render(
+        <MemoryRouter initialEntries={[url]}>
+          <ProveedorAvisos>
+            <SeccionesAdmin />
+          </ProveedorAvisos>
+        </MemoryRouter>,
+      );
+
+    it('busca el curso del enlace y abre la sección directamente en edición', async () => {
+      montarEn('/admin/secciones?buscar=IS202&seccion=s2&editar=horario');
+
+      expect(screen.getByLabelText('Buscar sección')).toHaveValue('IS202');
+      await waitFor(() =>
+        expect(listar).toHaveBeenCalledWith(expect.objectContaining({ q: 'IS202' })),
+      );
+      const panel = await screen.findByRole('dialog');
+      expect(
+        await within(panel).findByLabelText('Tipo de espacio que necesita'),
+      ).toBeInTheDocument();
+      expect(within(panel).queryByRole('button', { name: 'Editar sección' })).toBeNull();
+    });
+
+    it('sin `editar` solo abre el detalle', async () => {
+      montarEn('/admin/secciones?buscar=IS202&seccion=s2');
+      const panel = await screen.findByRole('dialog');
+      expect(
+        await within(panel).findByRole('button', { name: 'Editar sección' }),
+      ).toBeInTheDocument();
+    });
+
+    it('no abre la edición si el rol no puede editar la sección', async () => {
+      listar.mockResolvedValue({
+        items: [seccion({ id: 's2', codigoCurso: 'IS202', camposEditables: [] })],
+        total: 1,
+        pagina: 1,
+        limite: 50,
+      });
+      montarEn('/admin/secciones?buscar=IS202&seccion=s2&editar=horario');
+      const panel = await screen.findByRole('dialog');
+      expect(
+        await within(panel).findByText(/Tu rol solo puede consultar las secciones/),
+      ).toBeInTheDocument();
+      expect(within(panel).queryByLabelText('Tipo de espacio que necesita')).toBeNull();
+    });
+  });
+
   describe('Horario de la sección (Issue 4.62)', () => {
     const abrirEdicion = async () => {
       montar();

@@ -6,7 +6,7 @@ import logoBlanco from '../assets/logo-blanco.svg';
 import { EnlaceSaltar, ID_CONTENIDO } from '../components/ui/EnlaceSaltar';
 import { useTituloPagina } from '../hooks/useTituloPagina';
 import type { ResultadoConsulta } from '../types/consulta';
-import { agruparPorCurso } from '../utils/horario';
+import { agruparPorCurso, diaDeFecha, fechaActual, ordenarDesdeHoy } from '../utils/horario';
 import { plural } from '../utils/texto';
 
 /** Fases de la consulta: la vista muestra solo una a la vez. */
@@ -41,8 +41,9 @@ const Resultados: React.FC<{ resultado: ResultadoConsulta }> = ({ resultado }) =
         </EstadoUnico>
       );
     }
-    // El bloque es el curso; las secciones (teórica y laboratorio) cuelgan de él.
-    const grupos = agruparPorCurso(asignaciones);
+    // El bloque es el curso; las secciones (teórica y laboratorio) cuelgan de él. Los cursos van
+    // en el orden de la semana a partir de hoy: primero lo de hoy, luego mañana y así.
+    const grupos = ordenarDesdeHoy(agruparPorCurso(asignaciones), diaDeFecha(fechaActual()));
     return (
       <section aria-labelledby="titulo-resultado" className="flex flex-col gap-3">
         <div>

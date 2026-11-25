@@ -9,7 +9,7 @@ import { Boton } from '../../components/ui/Boton';
 import { BotonEnlace } from '../../components/ui/BotonEnlace';
 import { DialogoConfirmacion } from '../../components/ui/DialogoConfirmacion';
 import { Drawer } from '../../components/ui/Drawer';
-import { RUTAS } from '../../config/rutas';
+import { RUTAS, rutaEditarHorarioSeccion } from '../../config/rutas';
 import { useAuth } from '../../context/useAuth';
 import { useAccion } from '../../hooks/useAccion';
 import { useCarga } from '../../hooks/useCarga';
@@ -32,7 +32,15 @@ import type {
   ResultadoVerificacionDTO,
   SeccionEscaladaDTO,
 } from '../../types/admin';
-import { describirMotivoEscalamiento, separarDatosIncompletos } from '../../utils/admin';
+import {
+  describirMotivoEscalamiento,
+  accionSoftwareFaltante,
+  codigoSeccionCompleto,
+  rotuloSeccion,
+  separarDatosIncompletos,
+  softwareFaltanteDeMotivo,
+} from '../../utils/admin';
+import { formatearBloqueHorario } from '../../utils/etiquetas';
 import { formatearFechaCorta } from '../../utils/fechas';
 import { plural } from '../../utils/texto';
 import { fraseDeMotivoAlerta } from '../../utils/textoMotor';
@@ -177,21 +185,25 @@ const FilaEscalada: React.FC<{
 }> = ({ seccion, reintentando, deshabilitado, onReintentar }) => {
   const motivo = describirMotivoEscalamiento(seccion.motivoEscalamiento);
   const alumnos = seccion.seccion.alumnosMatriculados;
+  const accionSoftware = accionSoftwareFaltante(seccion);
 
   return (
     <li className="flex flex-col gap-3 border-b border-saie-divider py-2.5 last:border-b-0 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="m-0 text-sm font-semibold text-saie-text sm:truncate">
-          {seccion.seccion.codigoCurso} · {seccion.seccion.codigoSeccion} —{' '}
-          {seccion.seccion.nombreCurso}
+        {/* «Grupo 2 · Laboratorio» en vez de «2-LAB», que se leía como «Laboratorio 2». */}
+        <p className="m-0 text-sm font-semibold text-saie-text">{rotuloSeccion(seccion.seccion)}</p>
+        <p className="m-0 text-sm text-saie-muted">
+          {codigoSeccionCompleto(seccion.seccion)} · {alumnos}{' '}
+          {alumnos === 1 ? 'alumno' : 'alumnos'}
         </p>
-        <p className="m-0 flex flex-wrap items-center gap-2 text-sm text-saie-muted">
+        <div className="flex flex-wrap items-start gap-2 text-sm text-saie-muted">
           <BadgeEstado tono="advertencia">{motivo.etiqueta}</BadgeEstado>
-          <span className="min-w-0 sm:truncate">{motivo.descripcion}</span>
-          <span>
-            {alumnos} {alumnos === 1 ? 'alumno' : 'alumnos'}
-          </span>
-        </p>
+          {/* El motivo completo, con saltos de línea: cortado no se entendía qué faltaba. */}
+          <p className="m-0 min-w-0 flex-1 basis-60 break-words">{motivo.descripcion}</p>
+        </div>
+        {accionSoftware && (
+          <p className="m-0 text-sm font-medium text-saie-text">{accionSoftware}</p>
+        )}
         {/*
           El código del motivo es interno (lo escribe el motor). Se muestra plegado y bajo una
           etiqueta de "soporte" para que la persona que coordina lea primero la causa en
@@ -252,17 +264,29 @@ const DatosIncompletos: React.FC<{ secciones: SeccionEscaladaDTO[] }> = ({ secci
         <h3 id="titulo-datos-incompletos" className="m-0 text-sm font-bold text-saie-text">
           Datos incompletos: falta cargar horarios ({secciones.length})
         </h3>
+        {/* La carga masiva queda como opción secundaria: para completar una sección basta con
+            agregarle el horario desde Secciones, sin tocar el de las demás. */}
         <BotonEnlace to={`${RUTAS.cargaAdmin}#carga-horarios`} variante="secundario" tamano="sm">
-          Cargar horarios
+          Cargar CSV de horarios
         </BotonEnlace>
       </div>
-      <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+      <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
         {secciones.map((s) => (
           <li
             key={s.asignacionId}
-            className="rounded-md bg-saie-canvas px-2 py-1 text-sm text-saie-text"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-saie-canvas px-2 py-1 text-sm text-saie-text"
           >
-            {s.seccion.codigoCurso} · {s.seccion.codigoSeccion} — {s.seccion.nombreCurso}
+            <span className="flex flex-col">
+              <span>{rotuloSeccion(s.seccion)}</span>
+              <span className="text-saie-muted">{codigoSeccionCompleto(s.seccion)}</span>
+            </span>
+            <Link
+              to={rutaEditarHorarioSeccion(s.seccion.codigoCurso, s.seccion.id)}
+              aria-label={`Agregar horario a ${rotuloSeccion(s.seccion)} (${codigoSeccionCompleto(s.seccion)})`}
+              className="font-semibold text-saie-primary underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-saie-primary"
+            >
+              Agregar horario
+            </Link>
           </li>
         ))}
       </ul>
@@ -276,16 +300,23 @@ const ListaEscaladas: React.FC<{
   cargando: boolean;
   reintentando: string | null;
   onReintentar: (seccion: SeccionEscaladaDTO) => void;
-}> = ({ secciones, cargando, reintentando, onReintentar }) => {
+  /** Secciones sin aula por datos incompletos: se listan aparte, debajo de esta lista. */
+  incompletas?: number;
+}> = ({ secciones, cargando, reintentando, onReintentar, incompletas = 0 }) => {
   if (cargando) return <EsqueletoCarga texto="Cargando secciones pendientes…" />;
 
   if (secciones.length === 0) {
+    // Si hay secciones con datos incompletos no se puede decir que todas tienen aula.
     return (
       <EstadoVacio
         compacto
         titulo="Nada por revisar"
         icono={ICONOS.escudo}
-        descripcion="No hay secciones pendientes de revisión. Todas tienen un espacio asignado."
+        descripcion={
+          incompletas > 0
+            ? 'Ninguna sección espera tu decisión. Las que aún no tienen aula figuran abajo porque les faltan datos.'
+            : 'No hay secciones pendientes de revisión. Todas tienen un espacio asignado.'
+        }
       />
     );
   }
@@ -302,6 +333,73 @@ const ListaEscaladas: React.FC<{
         />
       ))}
     </ul>
+  );
+};
+
+/**
+ * Secciones que el motor escaló porque ningún laboratorio libre tiene el software que piden.
+ * Quien instala el software es Jefatura, así que se le muestran aquí (sin alertas: una alerta
+ * exige un espacio y estas secciones no tienen ninguno). Si no hay, el bloque no aparece.
+ */
+const SeccionesEsperanSoftware: React.FC = () => {
+  const escaladas = useCarga(obtenerEscaladas, { clave: 'escaladas' });
+  const secciones = (escaladas.datos?.secciones ?? []).filter(
+    (s) => describirMotivoEscalamiento(s.motivoEscalamiento).codigo === 'SOFTWARE_FALTANTE',
+  );
+  if (secciones.length === 0) return null;
+
+  return (
+    <section
+      aria-labelledby="titulo-esperan-software"
+      className="flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4"
+    >
+      <div className="flex flex-col gap-1">
+        <h2 id="titulo-esperan-software" className="m-0 text-base font-bold">
+          Secciones que esperan software ({secciones.length})
+        </h2>
+        <p className="m-0 text-sm text-saie-muted">
+          Ningún laboratorio libre a su hora tiene el software que piden. Instálalo en un
+          laboratorio a tu cargo; después, Coordinación debe pulsar «Reintentar» para asignarles
+          aula.
+        </p>
+      </div>
+      <ul className="m-0 flex list-none flex-col gap-2 p-0">
+        {secciones.map((s) => {
+          const falta = softwareFaltanteDeMotivo(s.motivoEscalamiento);
+          const horarios = s.seccion.horarios ?? [];
+          return (
+            <li
+              key={s.asignacionId}
+              className="flex flex-col gap-1 rounded-lg bg-saie-canvas px-3 py-2 text-sm"
+            >
+              <span className="font-semibold text-saie-text">{rotuloSeccion(s.seccion)}</span>
+              <span className="text-saie-muted">{codigoSeccionCompleto(s.seccion)}</span>
+              <span>
+                <span className="text-saie-muted">Falta: </span>
+                {falta.length > 0 ? falta.join(', ') : 'software requerido por la sección'}
+              </span>
+              <span className="text-saie-muted">
+                {horarios.length > 0 &&
+                  `${horarios.map((h) => formatearBloqueHorario(h, false)).join(' · ')} · `}
+                {plural(
+                  s.seccion.alumnosMatriculados,
+                  'alumno matriculado',
+                  'alumnos matriculados',
+                )}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <BotonEnlace
+        to={RUTAS.cambioLaboratorio}
+        variante="secundario"
+        tamano="sm"
+        className="self-start"
+      >
+        Instalar en un laboratorio
+      </BotonEnlace>
+    </section>
   );
 };
 
@@ -413,6 +511,8 @@ const InicioJefatura: React.FC = () => {
                 </p>
               )}
             </section>
+
+            <SeccionesEsperanSoftware />
 
             <nav aria-label="Accesos de Jefatura" className="grid gap-3">
               <Acceso
@@ -783,6 +883,7 @@ const InicioCoordinacion: React.FC = () => {
                 cargando={escaladas.cargando && !escaladas.datos}
                 reintentando={reintentando}
                 onReintentar={reintentar}
+                incompletas={datosIncompletos.length}
               />
             </div>
             <DatosIncompletos secciones={datosIncompletos} />

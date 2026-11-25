@@ -159,6 +159,51 @@ describe('Consulta (Issue #136 / 3.7)', () => {
     ).toBeVisible();
   });
 
+  it('ordena los cursos por día empezando por hoy (miércoles → jueves → viernes → lunes)', async () => {
+    // Solo se simula la fecha: las promesas y los temporizadores siguen siendo reales.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 25, 9, 0)); // miércoles 25/11/2026
+    const clase = (
+      codigoCurso: string,
+      nombreCurso: string,
+      diaSemana: AsignacionConsultaItemDTO['horarios'][number]['diaSemana'],
+    ): AsignacionConsultaItemDTO => ({
+      ...aula,
+      asignacionId: codigoCurso,
+      codigoCurso,
+      nombreCurso,
+      horarios: [{ diaSemana, horaInicio: '10:00', horaFin: '12:00' }],
+    });
+    vi.mocked(api.get).mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: datosAlumno([
+          clase('AA-100', 'Curso del lunes', 'LUNES'),
+          clase('BB-100', 'Curso del viernes', 'VIERNES'),
+          clase('CC-100', 'Curso del miércoles', 'MIERCOLES'),
+          clase('DD-100', 'Curso del jueves', 'JUEVES'),
+        ]),
+      },
+    });
+    try {
+      renderizar();
+      buscar('20200001');
+
+      await screen.findByRole('region', { name: 'Curso Curso del lunes' });
+      const cursos = screen
+        .getAllByRole('region', { name: /^Curso / })
+        .map((r) => r.getAttribute('aria-label'));
+      expect(cursos).toEqual([
+        'Curso Curso del miércoles',
+        'Curso Curso del jueves',
+        'Curso Curso del viernes',
+        'Curso Curso del lunes',
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('flujo completo con un código de curso: lista una tarjeta por sección', async () => {
     vi.mocked(api.get).mockResolvedValueOnce({
       data: { success: true, data: datosCurso(true) },

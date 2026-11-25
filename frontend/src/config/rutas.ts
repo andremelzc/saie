@@ -43,6 +43,29 @@ export const RUTAS = {
   solicitudesLaboratorioAdmin: '/admin/dictar-en-laboratorio',
 } as const;
 
+/** Parámetros de `/admin/secciones` que abren una sección ya buscada y en edición. */
+export const PARAMS_SECCIONES = {
+  buscar: 'buscar',
+  seccion: 'seccion',
+  editar: 'editar',
+} as const;
+
+export const VALOR_EDITAR_HORARIO = 'horario';
+
+/**
+ * Enlace que abre una sección en Secciones con el editor ya abierto, para completar su horario
+ * sin pasar por la carga masiva de CSV. La búsqueda por código de curso deja la sección en la
+ * primera página del listado.
+ */
+export function rutaEditarHorarioSeccion(codigoCurso: string, seccionId: string): string {
+  const params = new URLSearchParams({
+    [PARAMS_SECCIONES.buscar]: codigoCurso,
+    [PARAMS_SECCIONES.seccion]: seccionId,
+    [PARAMS_SECCIONES.editar]: VALOR_EDITAR_HORARIO,
+  });
+  return `${RUTAS.seccionesAdmin}?${params.toString()}`;
+}
+
 export const ROLES_ADMIN: RolCuenta[] = ['COORDINACION_ACADEMICA', 'JEFATURA_LABORATORIOS'];
 
 /** Pantalla de login que corresponde a cada rol. */

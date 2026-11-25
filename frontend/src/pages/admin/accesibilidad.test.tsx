@@ -65,6 +65,13 @@ vi.mock('../../services/admin', () => ({
   registrarSoftware: vi.fn(),
   registrarPcsMalogradas: vi.fn(),
   importarCsv: vi.fn(),
+  // Issue 4.55: Carga de datos pide la última carga al servidor; aquí nunca se cargó nada.
+  obtenerUltimasImportaciones: vi.fn().mockResolvedValue({
+    'cursos-secciones': null,
+    horarios: null,
+    matriculas: null,
+    docentes: null,
+  }),
   ordenarAlertasPorFecha: (a: AlertaDTO[]) => a,
 }));
 

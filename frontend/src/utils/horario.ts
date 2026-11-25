@@ -359,6 +359,54 @@ export function agruparPorCurso<
     .sort((a, b) => a.codigoCurso.localeCompare(b.codigoCurso));
 }
 
+const ORDEN_SEMANA: DiaSemana[] = [...DIAS_LECTIVOS, 'DOMINGO'];
+const MINUTOS_POR_DIA = 24 * 60;
+
+/**
+ * Minutos desde el inicio de `hoy` hasta el inicio de la franja, contando la semana a partir de
+ * hoy: una clase de hoy va primero (aunque ya haya pasado), luego mañana y así hasta ayer.
+ */
+export function minutosDesdeHoy(franja: HorarioConsultaDTO, hoy: DiaSemana): number {
+  const dias = (ORDEN_SEMANA.indexOf(franja.diaSemana) - ORDEN_SEMANA.indexOf(hoy) + 7) % 7;
+  return dias * MINUTOS_POR_DIA + aMinutos(franja.horaInicio);
+}
+
+/** Próxima clase de una sección desde hoy; `Infinity` si no tiene horarios (va al final). */
+function proximaDesdeHoy(horarios: HorarioConsultaDTO[], hoy: DiaSemana): number {
+  return horarios.reduce((min, h) => Math.min(min, minutosDesdeHoy(h, hoy)), Infinity);
+}
+
+/**
+ * Ordena los cursos de una consulta por su próxima clase contando desde hoy (si hoy es miércoles:
+ * miércoles, jueves, viernes, sábado, lunes, martes). También ordena las secciones de cada curso y
+ * las franjas de cada sección; lo que no tiene horario queda al final. A igual hora se mantiene
+ * el orden de `agruparPorCurso` (código de curso y de sección).
+ */
+export function ordenarDesdeHoy<T extends { horarios: HorarioConsultaDTO[] }>(
+  grupos: GrupoCurso<T>[],
+  hoy: DiaSemana,
+): GrupoCurso<T>[] {
+  const porDia = (a: number, b: number) => (a === b ? 0 : a < b ? -1 : 1);
+  return grupos
+    .map((grupo) => ({
+      ...grupo,
+      secciones: grupo.secciones
+        .map((s) => ({
+          ...s,
+          horarios: [...s.horarios].sort((a, b) =>
+            porDia(minutosDesdeHoy(a, hoy), minutosDesdeHoy(b, hoy)),
+          ),
+        }))
+        .sort((a, b) => porDia(proximaDesdeHoy(a.horarios, hoy), proximaDesdeHoy(b.horarios, hoy))),
+    }))
+    .sort((a, b) =>
+      porDia(
+        Math.min(...a.secciones.map((s) => proximaDesdeHoy(s.horarios, hoy))),
+        Math.min(...b.secciones.map((s) => proximaDesdeHoy(s.horarios, hoy))),
+      ),
+    );
+}
+
 const SUFIJO_LABORATORIO = '-LAB';
 
 /**
