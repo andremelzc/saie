@@ -175,3 +175,13 @@ export function separarDatosIncompletos<T extends { motivoEscalamiento: string |
   }
   return { enRevision, datosIncompletos };
 }
+
+/** Texto de espera de una importación grande, con el avance cuando ya se conoce (Issue 1.19). */
+export function textoAvanceImportacion(
+  avance: { procesadas: number; total: number } | null,
+): string {
+  if (!avance || avance.total === 0) {
+    return 'Importando. Puede tardar unos minutos; no cierres esta pantalla.';
+  }
+  return `Procesando ${avance.procesadas} de ${avance.total} filas. No cierres esta pantalla.`;
+}

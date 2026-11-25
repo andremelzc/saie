@@ -192,6 +192,17 @@ export interface ResultadoSeccionDTO {
   conservada: boolean;
 }
 
+/** Estado de una importación en segundo plano (Issue 1.19). */
+export interface TrabajoImportacionDTO {
+  id: string;
+  tipo: TipoImportacion;
+  estado: 'EN_CURSO' | 'TERMINADO' | 'FALLIDO';
+  procesadas: number;
+  total: number;
+  resultado?: ResultadoImportacionDTO;
+  error?: string;
+}
+
 /** Respuesta de POST /v1/admin/alertas/:id/reubicar (Issue 2.22). */
 export interface ResultadoReubicacionDTO {
   alertaId: string;

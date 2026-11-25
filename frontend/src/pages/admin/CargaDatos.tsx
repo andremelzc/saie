@@ -15,6 +15,7 @@ import { useAccion } from '../../hooks/useAccion';
 import { importarCsv } from '../../services/admin';
 import type { ResultadoImportacionDTO, TipoImportacion } from '../../types/admin';
 import { leerArchivoCsv } from '../../utils/archivoCsv';
+import { textoAvanceImportacion } from '../../utils/admin';
 import { agruparErroresPorTipo } from '../../utils/erroresImportacion';
 import { formatearFechaCorta } from '../../utils/fechas';
 
@@ -430,6 +431,7 @@ export const ZonaCarga: React.FC<{
   const [arrastrando, setArrastrando] = useState(false);
   const { ejecutar } = useAccion();
   const [enviando, setEnviando] = useState(false);
+  const [avance, setAvance] = useState<{ procesadas: number; total: number } | null>(null);
   const [resultado, setResultado] = useState<ResultadoImportacionDTO | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [errorArchivo, setErrorArchivo] = useState<string | null>(null);
@@ -480,9 +482,15 @@ export const ZonaCarga: React.FC<{
     setError(null);
     setResultado(null);
     // El error se muestra en línea, junto a la zona de carga.
-    const salida = await ejecutar(async () => importarCsv(tipo, await leerArchivoCsv(archivo)), {
-      avisarError: false,
-    });
+    setAvance(null);
+    const salida = await ejecutar(
+      async () =>
+        importarCsv(tipo, await leerArchivoCsv(archivo), (procesadas, total) =>
+          setAvance({ procesadas, total }),
+        ),
+      { avisarError: false },
+    );
+    setAvance(null);
     if (salida?.ok) {
       setResultado(salida.valor);
       onEstado(tipo, salida.valor.exitosa ? 'cargado' : 'con-errores', new Date().toISOString());
@@ -540,7 +548,7 @@ export const ZonaCarga: React.FC<{
 
       {/* Región viva siempre presente: si se montara con el texto, el lector no lo anunciaría. */}
       <p role="status" className={enviando ? 'm-0 text-sm text-saie-muted' : 'sr-only'}>
-        {enviando ? 'Importando. Esto puede tardar hasta 2 min; no cierres esta pantalla.' : ''}
+        {enviando ? textoAvanceImportacion(avance) : ''}
       </p>
       {errorArchivo && <Aviso tono="error">{errorArchivo}</Aviso>}
       {error && <Aviso tono="error">{error}</Aviso>}

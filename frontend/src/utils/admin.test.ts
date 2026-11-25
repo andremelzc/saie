@@ -42,6 +42,19 @@ describe('Utils de Administración', () => {
     });
   });
 
+  describe('textoAvanceImportacion (Issue 1.19)', () => {
+    it('sin avance conocido pide esperar', () => {
+      expect(adminUtils.textoAvanceImportacion(null)).toMatch(/^Importando/);
+      expect(adminUtils.textoAvanceImportacion({ procesadas: 0, total: 0 })).toMatch(/^Importando/);
+    });
+
+    it('con avance indica cuántas filas van', () => {
+      expect(adminUtils.textoAvanceImportacion({ procesadas: 2300, total: 4470 })).toBe(
+        'Procesando 2300 de 4470 filas. No cierres esta pantalla.',
+      );
+    });
+  });
+
   describe('resumirReubicacion (Issue 2.22)', () => {
     const seccion = (estado: 'VIGENTE' | 'ESCALADA') => ({
       seccionId: 's',

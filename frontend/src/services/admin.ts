@@ -19,6 +19,7 @@ import type {
   ListadoSeccionesDTO,
   ListadoSoftwareDTO,
   ResultadoReubicacionDTO,
+  TrabajoImportacionDTO,
   NuevoPeriodoDTO,
   PeriodoDTO,
   NuevoAlumnoDTO,
@@ -118,17 +119,42 @@ export async function reintentarSeccion(seccionId: string): Promise<ResumenAsign
   return data.data;
 }
 
-/** POST /v1/import/:tipo con el CSV tal cual (Issues 1.3, 1.4 y 1.5). */
+/** Espera entre consultas del avance de una importación (Issue 1.19). */
+export const INTERVALO_AVANCE_MS = 1500;
+
+/**
+ * Importa el CSV en segundo plano (Issue 1.19): el servidor responde enseguida con un trabajo y
+ * aquí se consulta su avance hasta que termina, sin límite de espera de pantalla. `onProgreso`
+ * recibe las filas procesadas y el total («2300 de 4470»).
+ */
 export async function importarCsv(
   tipo: TipoImportacion,
   contenidoCsv: string,
+  onProgreso?: (procesadas: number, total: number) => void,
 ): Promise<ResultadoImportacionDTO> {
-  const { data } = await api.post<Respuesta<ResultadoImportacionDTO>>(
-    `/v1/import/${tipo}`,
+  const { data } = await api.post<Respuesta<TrabajoImportacionDTO>>(
+    `/v1/import/${tipo}/trabajos`,
     contenidoCsv,
-    { headers: { 'Content-Type': 'text/csv' }, timeout: 120000 },
+    { headers: { 'Content-Type': 'text/csv' }, timeout: 60000 },
   );
-  return data.data;
+  let trabajo = data.data;
+  onProgreso?.(trabajo.procesadas, trabajo.total);
+
+  while (trabajo.estado === 'EN_CURSO') {
+    await new Promise((resolver) => setTimeout(resolver, INTERVALO_AVANCE_MS));
+    const consulta = await api.get<Respuesta<TrabajoImportacionDTO>>(
+      `/v1/import/trabajos/${encodeURIComponent(trabajo.id)}`,
+    );
+    trabajo = consulta.data.data;
+    onProgreso?.(trabajo.procesadas, trabajo.total);
+  }
+
+  if (trabajo.estado === 'FALLIDO' || !trabajo.resultado) {
+    throw new Error(
+      trabajo.error ?? 'La importación falló. Revisa el archivo e inténtalo de nuevo.',
+    );
+  }
+  return trabajo.resultado;
 }
 
 /** GET /v1/admin/espacios[?tipo=] (Issue 4.15). */

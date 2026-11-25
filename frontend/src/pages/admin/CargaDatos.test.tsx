@@ -80,6 +80,23 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     expect(botonImportar('2. Horarios')).toBeEnabled();
   });
 
+  it('muestra el avance de una importación grande mientras se procesa (Issue 1.19)', async () => {
+    let terminar!: (r: typeof base) => void;
+    importar.mockImplementation((_tipo, _csv, onProgreso) => {
+      onProgreso?.(2300, 4470);
+      return new Promise((resolver) => {
+        terminar = resolver;
+      });
+    });
+    montar();
+    elegirArchivo('matriculas', 'x,y');
+    fireEvent.click(botonImportar('3. Matrículas'));
+
+    expect(await screen.findByText(/Procesando 2300 de 4470 filas/)).toBeInTheDocument();
+    terminar(base);
+    expect(await screen.findByText('Carga completada sin errores')).toBeInTheDocument();
+  });
+
   it('importa el CSV y muestra el resultado legible con los procesados', async () => {
     importar.mockResolvedValue(base);
     montar();
@@ -88,7 +105,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
 
     // En la tarjeta queda el resumen; el detalle (procesados) va en el drawer.
     expect(await screen.findByText('Carga completada sin errores')).toBeInTheDocument();
-    expect(importar).toHaveBeenCalledWith('horarios', 'x,y');
+    expect(importar).toHaveBeenCalledWith('horarios', 'x,y', expect.any(Function));
     expect(screen.getByText('Cargado')).toBeInTheDocument();
     expect(screen.getByText(/Última carga en este navegador:/)).toBeInTheDocument();
 
