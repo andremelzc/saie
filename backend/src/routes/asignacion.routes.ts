@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { RolCuenta } from '@prisma/client';
 import {
+  consultarReorganizacion,
   ejecutarBatch,
   ejecutarProgramada,
+  ejecutarReorganizacion,
   ejecutarSeccion,
 } from '../controllers/asignacion.controller';
 import { authGuard, roleGuard } from '../middlewares/auth.middleware';
@@ -19,5 +21,9 @@ router.use(authGuard, roleGuard(RolCuenta.COORDINACION_ACADEMICA));
 
 router.post('/batch', ejecutarBatch);
 router.post('/seccion/:id', ejecutarSeccion);
+
+// Issue 2.26: «Reorganizar con prioridad», solo al inicio del ciclo.
+router.get('/reorganizacion', consultarReorganizacion);
+router.post('/reorganizacion', ejecutarReorganizacion);
 
 export default router;

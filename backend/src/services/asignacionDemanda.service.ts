@@ -54,6 +54,34 @@ function resumir(
 }
 
 /**
+ * Issue 2.26: «Reorganizar con prioridad». Corre el periodo procesando primero las escaladas y sin
+ * conservar asignaciones, con el mismo candado que las demás corridas (409 si hay otra en curso).
+ * Quien llama decide si la reorganización está permitida (ventana al inicio del ciclo).
+ */
+export async function ejecutarReorganizacionConPrioridad(
+  periodo: string,
+  prisma: PrismaClient,
+): Promise<ResumenAsignacionDTO> {
+  if (corridaEnCurso) {
+    throw new HttpError(
+      409,
+      'Ya hay una corrida de asignación en curso. Intenta de nuevo al terminar.',
+    );
+  }
+  corridaEnCurso = true;
+  try {
+    await asegurarPeriodoEscribible(prisma, periodo);
+    const batch = await procesarCorridaBatchPeriodo(periodo, prisma, 'DEMANDA', {
+      priorizarEscaladas: true,
+    });
+    const verificacion = await verificarCorridaPeriodo(periodo, prisma, batch.corridaId);
+    return resumir('periodo', periodo, batch.corridaId, batch.resultados, verificacion);
+  } finally {
+    corridaEnCurso = false;
+  }
+}
+
+/**
  * Issue 2.15: dispara el motor a demanda para Coordinación Académica.
  *
  * - Con `seccionId` ejecuta solo esa sección (Issue 2.10). Si estaba ESCALADA se reevalúa con

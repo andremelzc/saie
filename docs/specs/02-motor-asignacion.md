@@ -86,6 +86,15 @@ El motor de asignación calcula automáticamente el mejor bloque contiguo de aul
   * Los manejadores se conectan en `registrarManejadores()`, llamada desde `index.ts`; `createApp` no la llama.
 * **Manejadores actuales:** notificador de Telegram (Issue 3.26, ver [Spec 03](03-portal-estudiante.md) §2.4). La auditoría de alertas (Issue 5.11) será otro manejador.
 
+### 2.5 Issue 2.26 — Reorganizar con prioridad al inicio del ciclo (riesgo R9)
+
+* **Qué hace:** una corrida del periodo vigente con `priorizarEscaladas: true` (`ejecutarCorridaBatch`): las secciones que estaban `ESCALADA` se procesan primero y **ninguna asignación se conserva por idempotencia**, así las escaladas pueden tomar aulas que tenían otras secciones, que se reubican después o quedan escaladas. Solo ayuda cuando el motivo es falta de aulas o de bloque contiguo; si a una hora hay más secciones que aulas, solo cambia quién se queda fuera.
+* **Ventana:** disponible desde la `fechaInicio` del periodo vigente (registrada en Periodos, Issue 4.64) hasta `REORGANIZACION_SEMANAS` semanas después (2 por defecto). Cuántas semanas es una decisión abierta del equipo (Anexo C); fuera de la ventana la salida para una escalada es la asignación manual (2.23).
+* `GET /api/v1/asignaciones/reorganizacion` (solo Coordinación): `{ disponible, motivo, periodo, semanas, desde, hasta, simulacion }`. Si está disponible, `simulacion` calcula en memoria la reorganización (el motor es puro, no escribe) y la compara con lo actual: `{ totalEscaladas, escaladasConAula, cambianDeAula, pierdenAula }`.
+* `POST /api/v1/asignaciones/reorganizacion` (solo Coordinación): ejecuta la reorganización con el mismo candado que las demás corridas (409 si hay otra en curso o si la ventana está cerrada, con el motivo) y devuelve el mismo resumen que la corrida a demanda, con su verificación.
+* **Avisos:** además del cambio entre aulas (Issue 2.16), en la reorganización se emite `asignacion.cambiada` para la escalada que consigue aula («Antes: sin aula») y para la sección que pierde la suya («Ahora: sin aula»).
+* **Pantalla:** en el inicio de Coordinación, el botón «Reorganizar con prioridad» aparece solo con la ventana abierta y muestra lo que cambiaría antes de confirmar.
+
 ---
 
 ## 3. Matriz de Pruebas Unitarias & Integración
