@@ -1,6 +1,6 @@
 # CSVs de demo — carga y asignación
 
-> Actualizado el 25/11/2026 para el comportamiento de la rama `docs/auditoria-final` (PR #408): importación «todo o nada», periodos registrados, retiros y cambios de horario, y lectura de CSV de Excel. Los casos de prueba completos, con resultados esperados, están en la sección 6 de [`docs/guia_pruebas_por_rol.md`](../docs/guia_pruebas_por_rol.md).
+> Actualizado el 25/11/2026 para el comportamiento de la rama `feat/andre-auditoria` (PR #441): importación «todo o nada», periodos registrados, retiros y cambios de horario, y lectura de CSV de Excel. Los casos de prueba completos, con resultados esperados, están en la sección 6 de [`docs/guia_pruebas_por_rol.md`](../docs/guia_pruebas_por_rol.md).
 
 ## ⚠️ Antes de subir cualquier archivo
 

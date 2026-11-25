@@ -2,7 +2,7 @@
 
 > **Para qué sirve:** recorrer el sistema completo con los cuatro roles, comprobando no solo los casos de éxito sino también los casos en que el sistema **rechaza** una acción o **escala** un problema a otro rol (Coordinación o Jefatura) para que lo resuelva.
 >
-> **Versión probada:** rama `docs/auditoria-final` (PR #408), con las correcciones de la auditoría. Si se prueba `develop` antes de fusionar ese PR, varias funciones de esta guía todavía no existen.
+> **Versión probada:** rama `feat/andre-auditoria` (PR #441), con las correcciones de la auditoría. Si se prueba `develop` antes de fusionar ese PR, varias funciones de esta guía todavía no existen.
 >
 > **Estado de la base (25/11/2026):** 16 migraciones aplicadas y sin diferencias con `schema.prisma`; periodo `2026-2` registrado como **vigente**; 54 espacios (18 laboratorios, 36 aulas, 5 deshabilitados); 229 secciones; Jefatura a cargo de los 18 laboratorios; 0 programas en el catálogo de software.
 

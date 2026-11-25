@@ -85,7 +85,7 @@
 | 51 | Periodos | El sistema cambia de periodo en cuanto se carga el siguiente, aunque el actual no haya terminado | 🟠 | Código | [#427](https://github.com/andremelzc/saie/issues/427) |
 | 52 | Periodos | Varias pantallas y reglas mezclan datos de distintos periodos | 🟡 | Código | [#427](https://github.com/andremelzc/saie/issues/427) |
 
-### Estado de las correcciones (PR #408)
+### Estado de las correcciones (PR #441)
 
 | Estado | Riesgos |
 |---|---|
