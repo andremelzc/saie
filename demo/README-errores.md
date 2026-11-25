@@ -12,7 +12,8 @@
 
 | Archivo | Zona | Resultado esperado |
 |---|---|---|
-| `cursos-secciones.csv` | Cursos y secciones | Se guarda (228 filas, los mismos datos de la base) |
+| `cursos-secciones.csv` | Cursos y secciones | Se guarda (228 filas, los mismos datos de la base). Desde el 25/11/2026 la columna `stackSoftwareRequerido` trae el software del catálogo aprobado (PR #509) en las 107 secciones de laboratorio: subirlo ya no borra los requisitos |
+| `indicadores/cursos-secciones-mysql.csv` | Cursos y secciones | Base de Datos I pide su software real más «MySQL» (en el catálogo, sin instalar en ningún laboratorio): sus dos laboratorios escalan por software faltante. Después de la demo, volver a subir `cursos-secciones.csv` para restaurar los requisitos |
 | `horarios.csv` | Horarios | Se guarda (228 filas). Reemplaza los horarios de cada sección del archivo por los del archivo |
 
 Las matrículas reales no están en esta carpeta: se cargaron con el seed (`backend/prisma/data/seed-plantilla.xlsx`).
