@@ -31,6 +31,7 @@ import type {
   ResultadoEdicionSeccionDTO,
   ResultadoImportacionDTO,
   VistaPreviaReorganizacionDTO,
+  VistaPreviaImportacionDTO,
   ResumenAsignacionDTO,
   SeccionesEscaladasDTO,
   TipoEspacio,
@@ -175,6 +176,19 @@ export async function importarCsv(
     );
   }
   return trabajo.resultado;
+}
+
+/** POST /v1/import/:tipo/vista-previa (Issue 1.17): los cambios que haría el archivo, sin guardar. */
+export async function obtenerVistaPreviaImportacion(
+  tipo: TipoImportacion,
+  contenidoCsv: string,
+): Promise<VistaPreviaImportacionDTO> {
+  const { data } = await api.post<Respuesta<VistaPreviaImportacionDTO>>(
+    `/v1/import/${tipo}/vista-previa`,
+    contenidoCsv,
+    { headers: { 'Content-Type': 'text/csv' }, timeout: 60000 },
+  );
+  return data.data;
 }
 
 /** GET /v1/admin/espacios[?tipo=] (Issue 4.15). */

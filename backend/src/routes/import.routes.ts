@@ -4,6 +4,7 @@ import {
   consultarTrabajoImportacion,
   importarDatos,
   iniciarImportacion,
+  previsualizarImportacion,
 } from '../controllers/import.controller';
 import { authGuard, roleGuard } from '../middlewares/auth.middleware';
 
@@ -20,6 +21,9 @@ router.use(express.text({ type: ['text/csv', 'text/plain'], limit: LIMITE_CUERPO
 
 // POST /api/v1/import/:tipo — cursos-secciones | horarios | matriculas | docentes (Issue 1.6)
 router.post('/:tipo', importarDatos);
+
+// Issue 1.17: vista previa de los cambios, sin escribir nada.
+router.post('/:tipo/vista-previa', previsualizarImportacion);
 
 // Issue 1.19: importación en segundo plano con avance.
 router.post('/:tipo/trabajos', iniciarImportacion);

@@ -1,4 +1,5 @@
 import {
+  DiaSemana,
   EstadoAsignacion,
   Prisma,
   PrismaClient,
@@ -17,7 +18,9 @@ import {
   CampoSeccion,
   CAMPOS_SECCION,
   FiltrosSecciones,
+  FranjaSeccionInput,
   ListadoSeccionesDTO,
+  ReasignacionSeccionDTO,
   ResultadoEdicionSeccionDTO,
   SeccionAdminDTO,
   SoftwareRequeridoInputSeccion,
@@ -28,7 +31,9 @@ import {
   calcularCambios,
   registrarAccionDePersona,
 } from './auditoriaAcciones.service';
+import { ejecutarAsignacionADemanda } from './asignacionDemanda.service';
 import { evaluarIncompatibilidadSoftware } from './deteccionAlertas.service';
+import { haySolapamientoHorario } from './disponibilidad.service';
 import { asegurarPeriodoEscribible, obtenerPeriodoVigente } from './periodo.service';
 import { mapearSoftwareInstalado, resolverSoftwareIds } from './software.service';
 
@@ -39,7 +44,8 @@ type Db = Prisma.TransactionClient;
  *
  * La carga masiva crea y actualiza secciones, pero no había forma de verlas una por una ni de
  * cambiarles el software requerido sin reimportar el CSV. Este servicio expone el listado y
- * permite a Coordinación editar el tipo de aula, el docente y el software requerido.
+ * permite a Coordinación editar el tipo de aula, el docente y el software requerido. Issue 4.62:
+ * también el horario (agregar, cambiar y quitar franjas) sin volver a cargar el CSV completo.
  */
 
 /** Campos que puede editar cada rol. Solo Coordinación edita secciones. */
@@ -142,6 +148,54 @@ const softwareRequerido = z.object({
     .default('CUALQUIERA'),
 });
 
+const HORA_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+const NOMBRE_DIA: Record<DiaSemana, string> = {
+  LUNES: 'Lunes',
+  MARTES: 'Martes',
+  MIERCOLES: 'Miércoles',
+  JUEVES: 'Jueves',
+  VIERNES: 'Viernes',
+  SABADO: 'Sábado',
+  DOMINGO: 'Domingo',
+};
+
+/** «Lunes 08:00–10:00»: así se muestra una franja en avisos y en la auditoría. */
+export function textoFranja(f: FranjaSeccionInput): string {
+  return `${NOMBRE_DIA[f.diaSemana]} ${f.horaInicio}–${f.horaFin}`;
+}
+
+/** Issue 4.62: una franja del horario, con el inicio antes que el fin. */
+const franjaSeccion = z
+  .object({
+    diaSemana: z.enum(DiaSemana, { error: 'El día de la semana no es válido' }),
+    horaInicio: z.string().regex(HORA_HHMM, 'La hora de inicio debe tener formato HH:mm (24 h)'),
+    horaFin: z.string().regex(HORA_HHMM, 'La hora de fin debe tener formato HH:mm (24 h)'),
+  })
+  .strict()
+  .refine((f) => f.horaInicio < f.horaFin, {
+    message: 'La hora de inicio debe ser anterior a la hora de fin',
+    path: ['horaFin'],
+  });
+
+/** Las franjas de una misma sección no pueden pisarse entre sí. */
+const horariosSeccion = z
+  .array(franjaSeccion)
+  .max(20, 'Demasiadas franjas para una sección')
+  .superRefine((franjas, ctx) => {
+    for (let i = 0; i < franjas.length; i++) {
+      for (let j = i + 1; j < franjas.length; j++) {
+        if (haySolapamientoHorario(franjas[i], franjas[j])) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `Las franjas ${textoFranja(franjas[i])} y ${textoFranja(franjas[j])} se cruzan`,
+            path: [j],
+          });
+        }
+      }
+    }
+  });
+
 export const ActualizarSeccionSchema = z
   .object({
     tipoEspacioRequerido: z
@@ -152,6 +206,7 @@ export const ActualizarSeccionSchema = z
       .array(softwareRequerido)
       .max(50, 'Demasiados programas en la lista')
       .optional(),
+    horarios: horariosSeccion.optional(),
   })
   .strict()
   .refine((e) => Object.values(e).some((v) => v !== undefined), {
@@ -272,6 +327,118 @@ function etiquetaSoftwareRequerido(
   return base;
 }
 
+const ORDEN_DIA: DiaSemana[] = [
+  DiaSemana.LUNES,
+  DiaSemana.MARTES,
+  DiaSemana.MIERCOLES,
+  DiaSemana.JUEVES,
+  DiaSemana.VIERNES,
+  DiaSemana.SABADO,
+  DiaSemana.DOMINGO,
+];
+
+function ordenarFranjas<T extends FranjaSeccionInput>(franjas: T[]): T[] {
+  return [...franjas].sort(
+    (a, b) =>
+      ORDEN_DIA.indexOf(a.diaSemana) - ORDEN_DIA.indexOf(b.diaSemana) ||
+      a.horaInicio.localeCompare(b.horaInicio),
+  );
+}
+
+function mismasFranjas(a: FranjaSeccionInput[], b: FranjaSeccionInput[]): boolean {
+  const clave = (l: FranjaSeccionInput[]) => ordenarFranjas(l).map(textoFranja).join('|');
+  return clave(a) === clave(b);
+}
+
+/**
+ * Issue 4.62 (riesgo R36): avisa si el docente de la sección quedaría con dos clases a la vez
+ * con otra de sus secciones del mismo periodo. Es un aviso, no un bloqueo: Coordinación decide.
+ */
+export async function choquesDeDocente(
+  seccion: {
+    id: string;
+    periodo: string;
+    docenteId: string | null;
+    horarios: FranjaSeccionInput[];
+  },
+  prisma: Pick<PrismaClient, 'seccion'>,
+): Promise<string[]> {
+  if (!seccion.docenteId || seccion.horarios.length === 0) return [];
+
+  const otras = await prisma.seccion.findMany({
+    where: { docenteId: seccion.docenteId, periodo: seccion.periodo, id: { not: seccion.id } },
+    include: { curso: true, horarios: true },
+  });
+
+  const avisos: string[] = [];
+  for (const franja of ordenarFranjas(seccion.horarios)) {
+    for (const otra of otras) {
+      const choque = otra.horarios.find((h) => haySolapamientoHorario(franja, h));
+      if (choque) {
+        avisos.push(
+          `El docente también dicta ${otra.curso.codigo}-${otra.codigoSeccion} el ${textoFranja(choque)}: ` +
+            `se cruza con la franja ${textoFranja(franja)}`,
+        );
+      }
+    }
+  }
+  return avisos;
+}
+
+/**
+ * Issue 4.62: el horario se reemplaza entero por las franjas que llegan (agregar, cambiar y quitar
+ * son la misma operación). Si no cambió nada, no se toca la base. Devuelve si cambió.
+ */
+async function reemplazarHorario(
+  tx: Db,
+  actual: { id: string; horarios: FranjaSeccionInput[] },
+  franjas: FranjaSeccionInput[],
+  campos: CamposAuditados,
+): Promise<boolean> {
+  const nuevas = ordenarFranjas(franjas);
+  const cambiado = !mismasFranjas(actual.horarios, nuevas);
+  if (cambiado) {
+    await tx.horario.deleteMany({ where: { seccionId: actual.id } });
+    if (nuevas.length > 0) {
+      await tx.horario.createMany({
+        data: nuevas.map((f) => ({ seccionId: actual.id, ...f })),
+      });
+    }
+  }
+  campos.horarios = {
+    anterior: actual.horarios.map(textoFranja),
+    nuevo: nuevas.map(textoFranja),
+  };
+  return cambiado;
+}
+
+const AVISO_CORRIDA_EN_CURSO =
+  'El horario se guardó, pero no se pudo reasignar la sección porque hay una corrida de ' +
+  'asignación en curso. Vuelve a asignarla cuando termine.';
+
+/**
+ * Issue 4.62: reasigna la sección con su horario nuevo. Si hay una corrida en curso no se
+ * pierde el cambio de horario: se avisa para que Coordinación la reasigne después.
+ */
+async function reasignarTrasCambioDeHorario(
+  seccionId: string,
+  prisma: PrismaClient,
+  advertencias: string[],
+): Promise<ReasignacionSeccionDTO | null> {
+  try {
+    const resumen = await ejecutarAsignacionADemanda(seccionId, prisma);
+    const r = resumen.resultados[0];
+    if (!r) return null;
+    return { estado: r.estado, motivoEscalamiento: r.motivoEscalamiento, conservada: r.conservada };
+  } catch (error: unknown) {
+    if (error instanceof HttpError && error.status === 409) {
+      advertencias.push(AVISO_CORRIDA_EN_CURSO);
+      return null;
+    }
+    throw error;
+  }
+}
+
 export async function actualizarSeccion(
   seccionId: string,
   entrada: ActualizarSeccionInput,
@@ -294,6 +461,8 @@ export async function actualizarSeccion(
   await asegurarPeriodoEscribible(prisma, actual.periodo);
 
   const alertas: { id: string; tipo: string; motivo: string }[] = [];
+  const advertencias: string[] = [];
+  let horarioCambiado = false;
 
   await prisma.$transaction(async (tx) => {
     // Issue 4.58: lo que cambia se acumula aquí y se registra al final, junto con el cambio.
@@ -352,6 +521,10 @@ export async function actualizarSeccion(
       };
     }
 
+    if (entrada.horarios !== undefined) {
+      horarioCambiado = await reemplazarHorario(tx, actual, entrada.horarios, campos);
+    }
+
     await registrarAccionDePersona(tx, {
       tipoEvento: TipoEventoAuditoria.EDICION_SECCION,
       cuentaId: auth.sub,
@@ -360,6 +533,11 @@ export async function actualizarSeccion(
       cambios: calcularCambios(campos),
     });
   });
+
+  // Issue 4.62: con el horario nuevo, la sección se reasigna (el aula puede ya no servir).
+  const reasignacion = horarioCambiado
+    ? await reasignarTrasCambioDeHorario(actual.id, prisma, advertencias)
+    : null;
 
   // El laboratorio ya asignado puede no tener el software nuevo: se comprueba y se avisa.
   const actualizada = await prisma.seccion.findUnique({
@@ -401,5 +579,9 @@ export async function actualizarSeccion(
     }
   }
 
-  return { seccion: aSeccionDTO(actualizada, auth.rol), alertas };
+  if (horarioCambiado || entrada.docenteId !== undefined) {
+    advertencias.unshift(...(await choquesDeDocente(actualizada, prisma)));
+  }
+
+  return { seccion: aSeccionDTO(actualizada, auth.rol), alertas, advertencias, reasignacion };
 }

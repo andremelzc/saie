@@ -265,6 +265,23 @@ export interface ResultadoImportacionDTO {
   } | null;
 }
 
+/**
+ * POST /v1/import/:tipo/vista-previa (Issue 1.17): lo que la importación agregaría, quitaría o
+ * inactivaría con el archivo, calculado sin escribir nada.
+ */
+export interface VistaPreviaImportacionDTO {
+  tipo: TipoImportacion;
+  filasRecibidas: number;
+  /** Con errores la importación no guarda nada: no hay cambios que confirmar. */
+  errores: string[];
+  advertencias: string[];
+  cambios: Record<string, number>;
+  /** «Se quitarán 3 matrículas (alumnos que ya no figuran en su sección)». */
+  frases: string[];
+  /** Qué se quita o se reemplaza, una línea por elemento. */
+  retiros: string[];
+}
+
 // ==========================================
 // GESTIÓN INDIVIDUAL DE SECCIONES (Issue 4.31)
 // ==========================================
@@ -284,7 +301,7 @@ export type TipoEventoAuditoria =
   | 'CAMBIO_PERIODO';
 
 /** Campos de una sección que el backend permite editar según el rol. */
-export type CampoSeccion = 'tipoEspacioRequerido' | 'docenteId' | 'softwareRequerido';
+export type CampoSeccion = 'tipoEspacioRequerido' | 'docenteId' | 'softwareRequerido' | 'horarios';
 
 export interface SoftwareRequeridoSeccionDTO {
   id: string;
@@ -336,11 +353,24 @@ export interface CambiosSeccion {
   tipoEspacioRequerido?: TipoEspacio;
   docenteId?: string | null;
   softwareRequerido?: { softwareId: string; comparacionVersion: ComparacionVersion }[];
+  /** Issue 4.62: reemplaza las franjas de la sección. Si cambian, la sección se reasigna. */
+  horarios?: { diaSemana: DiaSemana; horaInicio: string; horaFin: string }[];
+}
+
+/** Issue 4.62: cómo quedó la sección al reasignarla con su horario nuevo. */
+export interface ReasignacionSeccionDTO {
+  estado: EstadoAsignacion;
+  motivoEscalamiento: string | null;
+  conservada: boolean;
 }
 
 export interface ResultadoEdicionSeccionDTO {
   seccion: SeccionAdminDTO;
   alertas: { id: string; tipo: string; motivo: string }[];
+  /** Issue 4.62: avisos que no impiden guardar (choque de docente, reasignación pendiente). */
+  advertencias: string[];
+  /** Issue 4.62: `null` si el horario no cambió. */
+  reasignacion: ReasignacionSeccionDTO | null;
 }
 
 // ==========================================
