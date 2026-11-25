@@ -287,16 +287,23 @@ const ListaEscaladas: React.FC<{
   cargando: boolean;
   reintentando: string | null;
   onReintentar: (seccion: SeccionEscaladaDTO) => void;
-}> = ({ secciones, cargando, reintentando, onReintentar }) => {
+  /** Secciones sin aula por datos incompletos: se listan aparte, debajo de esta lista. */
+  incompletas?: number;
+}> = ({ secciones, cargando, reintentando, onReintentar, incompletas = 0 }) => {
   if (cargando) return <EsqueletoCarga texto="Cargando secciones pendientes…" />;
 
   if (secciones.length === 0) {
+    // Si hay secciones con datos incompletos no se puede decir que todas tienen aula.
     return (
       <EstadoVacio
         compacto
         titulo="Nada por revisar"
         icono={ICONOS.escudo}
-        descripcion="No hay secciones pendientes de revisión. Todas tienen un espacio asignado."
+        descripcion={
+          incompletas > 0
+            ? 'Ninguna sección espera tu decisión. Las que aún no tienen aula figuran abajo porque les faltan datos.'
+            : 'No hay secciones pendientes de revisión. Todas tienen un espacio asignado.'
+        }
       />
     );
   }
@@ -794,6 +801,7 @@ const InicioCoordinacion: React.FC = () => {
                 cargando={escaladas.cargando && !escaladas.datos}
                 reintentando={reintentando}
                 onReintentar={reintentar}
+                incompletas={datosIncompletos.length}
               />
             </div>
             <DatosIncompletos secciones={datosIncompletos} />

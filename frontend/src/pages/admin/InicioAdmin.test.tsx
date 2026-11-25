@@ -261,6 +261,40 @@ describe('Inicio del panel administrativo', () => {
       ).toBeInTheDocument();
     });
 
+    it('si solo quedan secciones con datos incompletos, no dice que todas tienen aula', async () => {
+      escaladas.mockResolvedValue({
+        periodo: '2026-II',
+        total: 1,
+        secciones: [
+          {
+            asignacionId: 'x3',
+            fechaEscalamiento: '2026-10-10T10:00:00Z',
+            motivoEscalamiento: '[SIN_HORARIOS_DEFINIDOS] La sección DEMO no tiene horario',
+            seccion: {
+              id: 'sec3',
+              codigoCurso: 'DEMO001',
+              nombreCurso: 'Demo',
+              codigoSeccion: 'DEMO',
+              periodo: '2026-II',
+              docenteNombre: null,
+              tipoEspacioRequerido: 'AULA_TEORICA',
+              alumnosMatriculados: 1,
+            },
+          },
+        ],
+      });
+      montar();
+      expect(
+        await screen.findByText(
+          'Ninguna sección espera tu decisión. Las que aún no tienen aula figuran abajo porque les faltan datos.',
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/Todas tienen un espacio asignado/)).toBeNull();
+      expect(
+        screen.getByRole('region', { name: 'Datos incompletos: falta cargar horarios (1)' }),
+      ).toBeInTheDocument();
+    });
+
     it('pide confirmación, ejecuta la corrida y muestra el desglose', async () => {
       corrida.mockResolvedValue(resumen);
       montar();
