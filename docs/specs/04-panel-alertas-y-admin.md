@@ -98,14 +98,23 @@ una ni de cambiarles el software requerido. Estas rutas lo resuelven sin reimpor
   * La asignación es la más reciente `VIGENTE` o `ESCALADA` de la sección.
 * `GET /api/v1/admin/secciones/:id` — el detalle de una sección. 404 si no existe.
 * `PATCH /api/v1/admin/secciones/:id` (**solo Coordinación Académica**; 403 para Jefatura)
-  * Cuerpo: `{ tipoEspacioRequerido?, docenteId?, softwareRequerido?: [{ softwareId, comparacionVersion }] }`.
+  * Cuerpo: `{ tipoEspacioRequerido?, docenteId?, softwareRequerido?: [{ softwareId, comparacionVersion }], horarios?: [{ diaSemana, horaInicio, horaFin }] }`.
   * `docenteId` acepta `null` para quitar al docente; un id inexistente responde 404.
   * `softwareRequerido` **reemplaza** el conjunto: los ids se resuelven contra el catálogo
     (404 si no existe, 422 si está dado de baja) y cada uno lleva su regla de comparación de
     versión (`CUALQUIERA`, `MINIMA`, `EXACTA`).
   * Si la sección ya tiene aula asignada y el software nuevo no está instalado en ella, se
     genera la alerta de software correspondiente: el cambio no se queda solo en la sección.
-  * Respuesta: `{ seccion, alertas }`.
+  * `horarios` (Issue 4.62) **reemplaza** las franjas de la sección: así se agregan, cambian y
+    quitan desde la pantalla sin recargar el CSV. Cada franja usa `HH:mm` y el inicio debe ser
+    anterior al fin; las franjas de la misma sección no pueden cruzarse (400). Si el horario
+    cambia, se registra en la auditoría (`horarios`, como «Lunes 08:00–10:00») y la sección se
+    **reasigna** con el motor; si hay una corrida en curso, el horario se guarda igual y se
+    avisa que falta reasignar. Un periodo cerrado responde 409 (Issue 4.64).
+  * Si el docente de la sección dicta otra sección del mismo periodo que se cruza con el
+    horario, se **advierte** en `advertencias` sin impedir el guardado.
+  * Respuesta: `{ seccion, alertas, advertencias, reasignacion }`; `reasignacion` es
+    `{ estado, motivoEscalamiento, conservada }` o `null` si el horario no cambió.
 * `GET /api/v1/admin/docentes` — listado mínimo (id, código, nombre, departamento) para el
   selector de docente. No expone correos ni claves.
 
