@@ -44,12 +44,28 @@ export interface AccesibilidadResueltaEvento {
   resultado: string | null;
 }
 
+/**
+ * Issue 7.17: Coordinación aprobó «dictar todo en laboratorio». La teoría se retiró y sus franjas
+ * pasaron al laboratorio, que ya se reasignó. Se avisa a los alumnos de ambas secciones.
+ */
+export interface SeccionFusionadaEvento {
+  seccionTeoriaId: string;
+  seccionLaboratorioId: string;
+  codigoCurso: string;
+  nombreCurso: string;
+  grupo: string;
+  horarios: HorarioSlot[];
+  /** Espacios del laboratorio tras reasignarlo; vacío si quedó en revisión. */
+  espacios: EspacioEventoDTO[];
+}
+
 /** Eventos internos del sistema y la forma de su contenido. */
 export interface MapaEventos {
   'asignacion.cambiada': AsignacionCambiadaEvento;
   'alerta.creada': AlertaCreadaEvento;
   'incidencia.registrada': IncidenciaRegistradaEvento;
   'accesibilidad.resuelta': AccesibilidadResueltaEvento;
+  'seccion.fusionada': SeccionFusionadaEvento;
 }
 
 export type NombreEvento = keyof MapaEventos;

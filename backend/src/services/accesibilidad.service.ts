@@ -1,7 +1,7 @@
 import { EstadoAsignacion, EstadoSolicitud, Prisma, PrismaClient } from '@prisma/client';
-import { z } from 'zod';
 import { bus } from '../events/bus';
 import { HttpError } from '../lib/http';
+import { ResolverSolicitudInput, ResolverSolicitudSchema } from '../lib/resolucionSolicitud';
 import { logger } from '../lib/logger';
 import { TokenPayload } from '../types/auth';
 import { ejecutarAsignacionADemanda } from './asignacionDemanda.service';
@@ -15,19 +15,9 @@ import { obtenerPeriodoVigente } from './periodo.service';
  */
 
 /** Decisión de Coordinación: aprobar, o rechazar con un motivo que el alumno verá. */
-export const ResolverAccesibilidadSchema = z.discriminatedUnion('decision', [
-  z.object({ decision: z.literal('APROBAR') }),
-  z.object({
-    decision: z.literal('RECHAZAR'),
-    motivo: z
-      .string({ error: 'El motivo del rechazo es obligatorio' })
-      .trim()
-      .min(5, 'Explica el motivo del rechazo (al menos 5 caracteres)')
-      .max(500, 'El motivo no puede superar 500 caracteres'),
-  }),
-]);
+export const ResolverAccesibilidadSchema = ResolverSolicitudSchema;
 
-export type ResolverAccesibilidadInput = z.infer<typeof ResolverAccesibilidadSchema>;
+export type ResolverAccesibilidadInput = ResolverSolicitudInput;
 
 /** Estado de la declaración que el alumno ve en su perfil. */
 export interface EstadoAccesibilidadDTO {

@@ -4,8 +4,8 @@ import { EsqueletoCarga, EstadoVacio } from '../../components/ui/EstadosCarga';
 import { SelectorSegmentado } from '../../components/ui/SelectorSegmentado';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
-import { CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/ui/campos';
 import { DialogoConfirmacion } from '../../components/ui/DialogoConfirmacion';
+import DialogoRechazoSolicitud from '../../components/admin/DialogoRechazoSolicitud';
 import { ICONOS } from '../../components/ui/iconos';
 import { ZonaActualizable } from '../../components/ui/ZonaActualizable';
 import { useAccion } from '../../hooks/useAccion';
@@ -21,8 +21,6 @@ import { plural } from '../../utils/texto';
 type Vista = 'pendientes' | 'aprobadas';
 
 const CLAVE = 'accesibilidad';
-const MAX_MOTIVO = 500;
-const MIN_MOTIVO = 5;
 
 /** Dónde está hoy cada clase del alumno; las que no están en el piso 1 se resaltan. */
 const ListaSecciones: React.FC<{ secciones: SeccionAccesibilidadDTO[] }> = ({ secciones }) => {
@@ -122,8 +120,6 @@ export const AccesibilidadAdminPage: React.FC = () => {
   const [vista, setVista] = useState<Vista>('pendientes');
   const [aprobando, setAprobando] = useState<SolicitudAccesibilidadAdminDTO | null>(null);
   const [rechazando, setRechazando] = useState<SolicitudAccesibilidadAdminDTO | null>(null);
-  const [motivo, setMotivo] = useState('');
-  const [errorMotivo, setErrorMotivo] = useState<string | null>(null);
   const accion = useAccion();
   const { datos, cargando, error, recargar } = useCarga(obtenerAccesibilidad, { clave: CLAVE });
 
@@ -148,19 +144,8 @@ export const AccesibilidadAdminPage: React.FC = () => {
     }
   }
 
-  function abrirRechazo(s: SolicitudAccesibilidadAdminDTO) {
-    setRechazando(s);
-    setMotivo('');
-    setErrorMotivo(null);
-  }
-
-  async function confirmarRechazo() {
+  async function confirmarRechazo(texto: string) {
     if (!rechazando) return;
-    const texto = motivo.trim();
-    if (texto.length < MIN_MOTIVO) {
-      setErrorMotivo('Escribe el motivo del rechazo (al menos 5 caracteres): el alumno lo verá.');
-      return;
-    }
     const resultado = await accion.ejecutar(
       () => resolverAccesibilidad(rechazando.id, { decision: 'RECHAZAR', motivo: texto }),
       { exito: `Declaración de ${rechazando.alumno.nombre} rechazada.` },
@@ -226,7 +211,7 @@ export const AccesibilidadAdminPage: React.FC = () => {
                 key={s.id}
                 solicitud={s}
                 onAprobar={setAprobando}
-                onRechazar={abrirRechazo}
+                onRechazar={setRechazando}
               />
             ))}
           </ul>
@@ -244,45 +229,17 @@ export const AccesibilidadAdminPage: React.FC = () => {
         onCancelar={() => setAprobando(null)}
       />
 
-      <DialogoConfirmacion
-        abierto={rechazando !== null}
-        titulo={`¿Rechazar la declaración de ${rechazando?.alumno.nombre ?? ''}?`}
-        variante="peligro"
-        descripcion={
-          <span className="flex flex-col gap-2">
-            <label htmlFor="motivo-rechazo-accesibilidad" className={CLASE_ETIQUETA}>
-              Motivo del rechazo (obligatorio, el alumno lo verá)
-            </label>
-            <textarea
-              id="motivo-rechazo-accesibilidad"
-              value={motivo}
-              maxLength={MAX_MOTIVO}
-              rows={3}
-              onChange={(e) => {
-                setMotivo(e.target.value);
-                setErrorMotivo(null);
-              }}
-              aria-invalid={errorMotivo ? true : undefined}
-              aria-describedby={errorMotivo ? 'error-motivo-accesibilidad' : undefined}
-              className={`${CLASE_CAMPO} py-2`}
-            />
-            {errorMotivo && (
-              <span
-                id="error-motivo-accesibilidad"
-                role="alert"
-                className="text-sm text-saie-danger-strong"
-              >
-                {errorMotivo}
-              </span>
-            )}
-          </span>
-        }
-        textoConfirmar="Rechazar la declaración"
-        cargando={accion.cargando}
-        textoCargando="Rechazando…"
-        onConfirmar={confirmarRechazo}
-        onCancelar={() => setRechazando(null)}
-      />
+      {rechazando && (
+        <DialogoRechazoSolicitud
+          titulo={`¿Rechazar la declaración de ${rechazando.alumno.nombre}?`}
+          idBase="accesibilidad"
+          destinatario="el alumno"
+          textoConfirmar="Rechazar la declaración"
+          cargando={accion.cargando}
+          onConfirmar={confirmarRechazo}
+          onCancelar={() => setRechazando(null)}
+        />
+      )}
     </LayoutAdmin>
   );
 };

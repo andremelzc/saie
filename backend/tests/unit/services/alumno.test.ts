@@ -129,7 +129,9 @@ describe('Horario semanal del alumno (Issue 3.10)', () => {
     await obtenerHorarioAlumno('cuenta-1', undefined, prisma);
     expect(prisma.alumno.findUnique).toHaveBeenCalledWith({ where: { cuentaId: 'cuenta-1' } });
     expect(prisma.matricula.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { alumnoId: 'alu-1', seccion: { periodo: '2026-1' } } }),
+      expect.objectContaining({
+        where: { alumnoId: 'alu-1', seccion: { periodo: '2026-1', activa: true } },
+      }),
     );
   });
 

@@ -409,6 +409,9 @@ describe('Portal docente: solo rol DOCENTE (Issues 7.2, 7.3, 7.5, 7.14)', () => 
     ['get', '/api/v1/docente/incidencias'],
     // Issue 3.61: declaración de accesibilidad del docente.
     ['get', '/api/v1/docente/accesibilidad'],
+    // Issue 7.17: «dictar todo en laboratorio».
+    ['post', '/api/v1/docente/solicitudes-laboratorio'],
+    ['get', '/api/v1/docente/solicitudes-laboratorio'],
   ];
 
   it.each(rutas)(
@@ -512,6 +515,26 @@ describe('Portal docente: solo rol DOCENTE (Issues 7.2, 7.3, 7.5, 7.14)', () => 
       .post('/api/v1/docente/incidencias')
       .set('Authorization', bearer(RolCuenta.DOCENTE))
       .send({ asignacionId: 'a', espacioId: 'e', tipo: 'NO_EXISTE', descripcion: 'ok ok ok' });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('«Dictar todo en laboratorio»: Coordinación resuelve (Issue 7.17)', () => {
+  it.each([
+    ['get', '/api/v1/admin/solicitudes-laboratorio'],
+    ['patch', '/api/v1/admin/solicitudes-laboratorio/s1/resolver'],
+  ] as const)('%s %s exige token (401) y rol Coordinación (403)', async (metodo, ruta) => {
+    expect((await request(app)[metodo](ruta)).status).toBe(401);
+    for (const rol of [RolCuenta.DOCENTE, RolCuenta.JEFATURA_LABORATORIOS]) {
+      expect((await request(app)[metodo](ruta).set('Authorization', bearer(rol))).status).toBe(403);
+    }
+  });
+
+  it('el docente recibe 400 si falta la justificación', async () => {
+    const res = await request(app)
+      .post('/api/v1/docente/solicitudes-laboratorio')
+      .set('Authorization', bearer(RolCuenta.DOCENTE))
+      .send({ seccionTeoriaId: '7d3c1f9e-2b4a-4c8e-9f1d-0a6b5c4d3e2f' });
     expect(res.status).toBe(400);
   });
 });
