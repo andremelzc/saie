@@ -358,3 +358,85 @@ export function agruparPorCurso<
     }))
     .sort((a, b) => a.codigoCurso.localeCompare(b.codigoCurso));
 }
+
+const SUFIJO_LABORATORIO = '-LAB';
+
+/**
+ * Issue 3.62: grupo al que pertenece una sección. Cada grupo de un curso son dos secciones,
+ * la de teoría y la de laboratorio (`2` y `2-LAB`): las dos son el «Grupo 2».
+ */
+export function grupoDeSeccion(codigoSeccion: string): string {
+  const codigo = codigoSeccion.trim();
+  return codigo.toUpperCase().endsWith(SUFIJO_LABORATORIO)
+    ? codigo.slice(0, -SUFIJO_LABORATORIO.length)
+    : codigo;
+}
+
+/** «Teoría» o «Laboratorio» según el tipo de espacio que requiere la sección. */
+export function etiquetaTipoClase(tipo: TipoEspacio): 'Teoría' | 'Laboratorio' {
+  return tipo === 'LABORATORIO' ? 'Laboratorio' : 'Teoría';
+}
+
+type ClaseRotulable = Pick<SesionDTO, 'codigoSeccion' | 'tipoEspacioRequerido'>;
+
+/** Rótulo corto de una clase suelta, p. ej. «Grupo 2 · Laboratorio» (en vez de «Sec. 2-LAB»). */
+export function rotuloClase(clase: ClaseRotulable): string {
+  return `Grupo ${grupoDeSeccion(clase.codigoSeccion)} · ${etiquetaTipoClase(clase.tipoEspacioRequerido)}`;
+}
+
+/** Un curso y grupo con sus clases (la de teoría y la de laboratorio). */
+export interface GrupoClases<T> {
+  codigoCurso: string;
+  nombreCurso: string;
+  grupo: string;
+  clases: T[];
+}
+
+const ORDEN_TIPO: Record<TipoEspacio, number> = { AULA_TEORICA: 0, LABORATORIO: 1 };
+
+/**
+ * Agrupa las clases por curso y grupo (Issue 3.62). Dentro de cada grupo van por hora de inicio
+ * (teoría antes que laboratorio si empiezan a la vez); los grupos van por la hora de su primera
+ * clase y, a igual hora, por código de curso y grupo.
+ */
+export function agruparClases<
+  T extends ClaseRotulable & {
+    codigoCurso: string;
+    nombreCurso: string;
+    horaInicio: string;
+  },
+>(clases: T[]): GrupoClases<T>[] {
+  const grupos = new Map<string, GrupoClases<T>>();
+
+  for (const clase of clases) {
+    const grupo = grupoDeSeccion(clase.codigoSeccion);
+    const clave = `${clase.codigoCurso}\u0000${grupo}`;
+    const existente = grupos.get(clave);
+    if (existente) {
+      existente.clases.push(clase);
+    } else {
+      grupos.set(clave, {
+        codigoCurso: clase.codigoCurso,
+        nombreCurso: clase.nombreCurso,
+        grupo,
+        clases: [clase],
+      });
+    }
+  }
+
+  return [...grupos.values()]
+    .map((g) => ({
+      ...g,
+      clases: [...g.clases].sort(
+        (a, b) =>
+          aMinutos(a.horaInicio) - aMinutos(b.horaInicio) ||
+          ORDEN_TIPO[a.tipoEspacioRequerido] - ORDEN_TIPO[b.tipoEspacioRequerido],
+      ),
+    }))
+    .sort(
+      (a, b) =>
+        aMinutos(a.clases[0].horaInicio) - aMinutos(b.clases[0].horaInicio) ||
+        a.codigoCurso.localeCompare(b.codigoCurso) ||
+        a.grupo.localeCompare(b.grupo, 'es', { numeric: true }),
+    );
+}

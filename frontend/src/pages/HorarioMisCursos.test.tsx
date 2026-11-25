@@ -118,15 +118,15 @@ describe('HorarioMisCursos (Issue #145 / 3.16)', () => {
       expect(screen.queryByRole('group', { name: 'Seleccionar día de la semana' })).toBeNull();
     });
 
-    it('muestra en cada bloque el curso, la sección, el tipo de espacio y el aula', () => {
+    it('muestra en cada bloque el curso, el tipo de clase, el tipo de espacio y el aula', () => {
       renderizar();
 
       fireEvent.click(screen.getByRole('button', { name: 'Semana' }));
 
       const martes = screen.getByRole('region', { name: 'Martes' });
-      expect(within(martes).getByText('MA-201 · Sec. B')).toBeVisible();
+      expect(within(martes).getByText('MA-201 · Teoría')).toBeVisible();
       expect(within(martes).getByText('Teoría A-105')).toBeVisible();
-      expect(within(martes).getByText('CC-305 · Sec. A')).toBeVisible();
+      expect(within(martes).getByText('CC-305 · Teoría')).toBeVisible();
       expect(within(martes).getByText('Lab. L-301')).toBeVisible();
 
       const viernes = screen.getByRole('region', { name: 'Viernes' });

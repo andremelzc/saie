@@ -9,6 +9,7 @@ const sesion = (o: Partial<SesionDTO>): SesionDTO => ({
   codigoCurso: 'IS101',
   nombreCurso: 'Algoritmos',
   codigoSeccion: '1',
+  tipoEspacioRequerido: 'AULA_TEORICA',
   docenteNombre: 'Dra. García',
   diaSemana: 'LUNES',
   horaInicio: '10:00',
@@ -49,7 +50,7 @@ describe('GridHorarioSemanal (Issue 3.39)', () => {
 
   it('cada bloque es un botón que abre todos sus datos en un drawer', async () => {
     render(<GridHorarioSemanal horario={horario} colores={{}} />);
-    fireEvent.click(screen.getAllByRole('button', { name: /IS101 · Sec\. 1.*Algoritmos/ })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /IS101 · Teoría.*Algoritmos/ })[0]);
 
     const dialogo = await screen.findByRole('dialog', { name: /^Algoritmos/ });
     expect(within(dialogo).getByText('Dra. García')).toBeInTheDocument();
@@ -57,5 +58,29 @@ describe('GridHorarioSemanal (Issue 3.39)', () => {
       within(dialogo).getByText(/Laboratorio Lab 04 · Pabellón Nuevo, piso 2/),
     ).toBeInTheDocument();
     expect(within(dialogo).getByText('Lunes, 10:00 – 10:50')).toBeInTheDocument();
+    expect(within(dialogo).getByText('Grupo 1 · Teoría')).toBeInTheDocument();
+  });
+
+  it('rotula el laboratorio sin mostrar el código de sección crudo (Issue 3.62)', () => {
+    const conLab: HorarioSemanalDTO = {
+      periodo: '2026-2',
+      vista: 'semana',
+      dias: {
+        JUEVES: [
+          sesion({
+            seccionId: 's2',
+            codigoSeccion: '2-LAB',
+            tipoEspacioRequerido: 'LABORATORIO',
+            diaSemana: 'JUEVES',
+            horaInicio: '20:00',
+            horaFin: '22:00',
+          }),
+        ],
+      },
+    };
+    render(<GridHorarioSemanal horario={conLab} colores={{}} />);
+
+    expect(screen.getByText('IS101 · Laboratorio')).toBeInTheDocument();
+    expect(screen.queryByText(/2-LAB/)).toBeNull();
   });
 });

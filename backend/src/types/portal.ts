@@ -9,6 +9,8 @@ export interface SesionDTO {
   codigoCurso: string;
   nombreCurso: string;
   codigoSeccion: string;
+  /** Tipo de espacio que requiere la sección: dice si la clase es de teoría o de laboratorio. */
+  tipoEspacioRequerido: TipoEspacio;
   docenteNombre: string | null;
   diaSemana: DiaSemana;
   horaInicio: string;

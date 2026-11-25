@@ -13,17 +13,20 @@ import type { ProximaClase } from '../../utils/docente';
 import { fechaLarga } from '../../utils/fechas';
 import {
   ABREVIATURA_DIA,
+  agruparClases,
   cuentaRegresiva,
   DIAS_LECTIVOS,
   diaDeFecha,
   ETIQUETA_DIA,
   estadoDeClase,
+  etiquetaTipoClase,
   fechaActual,
   formatearMinutos,
   formatearRango,
   minutosDeFecha,
   resumenSemana,
   resumenUbicacion,
+  rotuloClase,
   saludoSegunHora,
   sesionesDeDia,
 } from '../../utils/horario';
@@ -73,7 +76,7 @@ const TarjetaProximaClase: React.FC<{ proxima: ProximaClase | null; ahora: numbe
           )}
         </li>
         <li>
-          Sección {sesion.codigoSeccion} · {resumenUbicacion(sesion.espacios)}
+          {rotuloClase(sesion)} · {resumenUbicacion(sesion.espacios)}
         </li>
       </ul>
     </div>
@@ -226,21 +229,35 @@ export const InicioDocentePage: React.FC<{ ahora?: Date }> = ({ ahora }) => {
             />
           ) : (
             <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3">
-              {clasesHoy.map((s) => (
+              {agruparClases(clasesHoy).map((grupo) => (
                 <li
-                  key={`${s.seccionId}-${s.horaInicio}`}
-                  className="flex flex-col gap-1 rounded-xl border border-saie-divider bg-white p-4"
+                  key={`${grupo.codigoCurso}-${grupo.grupo}`}
+                  className="flex flex-col gap-2 rounded-xl border border-saie-divider bg-white p-4"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-saie-muted tabular-nums">
-                      {formatearRango(s.horaInicio, s.horaFin)}
-                    </span>
-                    <BadgeEstadoClase estado={estadoDeClase(s, minutos)} />
+                  <div>
+                    <p className="m-0 font-bold">{grupo.nombreCurso}</p>
+                    <p className="m-0 text-sm text-saie-muted">
+                      {grupo.codigoCurso} · Grupo {grupo.grupo}
+                    </p>
                   </div>
-                  <p className="m-0 font-bold">{s.nombreCurso}</p>
-                  <p className="m-0 text-sm text-saie-muted">
-                    Sección {s.codigoSeccion} · {resumenUbicacion(s.espacios)}
-                  </p>
+                  <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                    {grupo.clases.map((s) => (
+                      <li
+                        key={`${s.seccionId}-${s.horaInicio}`}
+                        className="flex flex-col gap-0.5 border-t border-saie-divider pt-2"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-semibold">
+                            {etiquetaTipoClase(s.tipoEspacioRequerido)}
+                          </span>
+                          <BadgeEstadoClase estado={estadoDeClase(s, minutos)} />
+                        </div>
+                        <span className="text-sm text-saie-muted tabular-nums">
+                          {formatearRango(s.horaInicio, s.horaFin)} · {resumenUbicacion(s.espacios)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </li>
               ))}
             </ul>
