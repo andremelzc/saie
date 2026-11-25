@@ -1,0 +1,8 @@
+﻿codigoAlumno,nombre,correo,movilidadReducida,codigoCurso,codigoSeccion,periodo,crearCuentaAcceso
+99999901,ALUMNO DE PRUEBA 1,alumno.prueba1@example.edu,false,DEMO002,A,2026-2,false
+99999902,ALUMNO DE PRUEBA 2,alumno.prueba2@example.edu,false,DEMO002,A,2026-2,false
+99999903,ALUMNO DE PRUEBA 3,alumno.prueba3@example.edu,false,DEMO002,A,2026-2,false
+99999904,ALUMNO DE PRUEBA 4,alumno.prueba4@example.edu,false,DEMO002,A,2026-2,false
+99999905,ALUMNO DE PRUEBA 5,alumno.prueba5@example.edu,false,DEMO002,A,2026-2,false
+99999901,ALUMNO DE PRUEBA 1,alumno.prueba1@example.edu,false,DEMO002,B,2026-2,false
+99999906,ALUMNO DE PRUEBA 6,alumno.prueba6@example.edu,true,DEMO002,LAB,2026-2,false
