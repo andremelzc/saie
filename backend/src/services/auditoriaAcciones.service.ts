@@ -52,7 +52,7 @@ export function describirCambios(cambios: CambioCampo[]): string {
 export interface AccionDePersona {
   tipoEvento: Extract<
     TipoEventoAuditoria,
-    'EDICION_ESPACIO' | 'EDICION_SECCION' | 'CAMBIO_LABORATORIO'
+    'EDICION_ESPACIO' | 'EDICION_SECCION' | 'CAMBIO_LABORATORIO' | 'CAMBIO_PERIODO'
   >;
   /** Cuenta que hizo el cambio (`auth.sub`). */
   cuentaId: string;

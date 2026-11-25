@@ -214,7 +214,7 @@ export async function listarHistorialAsignaciones(
  */
 export async function generarReporteAsignaciones(
   periodoSolicitado: string | undefined,
-  prisma: Pick<PrismaClient, 'seccion' | 'espacio'>,
+  prisma: Pick<PrismaClient, 'seccion' | 'espacio' | 'periodo'>,
 ): Promise<ReporteAsignacionesDTO> {
   const periodo = periodoSolicitado ?? (await obtenerPeriodoVigente(prisma));
   if (!periodo) {

@@ -88,6 +88,15 @@ enum TipoEventoAuditoria {
   EDICION_ESPACIO
   EDICION_SECCION
   CAMBIO_LABORATORIO
+  // Issue 4.64: registro, activación y cierre de periodos por Coordinación.
+  CAMBIO_PERIODO
+}
+
+// Issue 4.64: ciclo de vida de un periodo. Solo uno puede estar VIGENTE a la vez.
+enum EstadoPeriodo {
+  EN_PREPARACION
+  VIGENTE
+  CERRADO
 }
 
 // Flujos de carga de datos maestros (Issue 4.54).
@@ -184,6 +193,19 @@ model Curso {
   secciones Seccion[]
 
   @@map("cursos")
+}
+
+// Issue 4.64 (riesgos R25, R49–R52): el periodo vigente deja de salir de una variable de entorno o
+// del texto «más reciente»; lo decide Coordinación. `Seccion.periodo` guarda el mismo código.
+model Periodo {
+  id          String        @id @default(uuid())
+  codigo      String        @unique // AAAA-1, AAAA-2 (o AAAA-0 en verano)
+  fechaInicio DateTime?     @map("fecha_inicio") @db.Date
+  fechaFin    DateTime?     @map("fecha_fin") @db.Date
+  estado      EstadoPeriodo @default(EN_PREPARACION)
+  creadoEn    DateTime      @default(now()) @map("creado_en")
+
+  @@map("periodos")
 }
 
 model Seccion {

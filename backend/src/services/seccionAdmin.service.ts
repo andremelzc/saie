@@ -182,7 +182,7 @@ function dondeDeFiltros(filtros: FiltrosSecciones): Prisma.SeccionWhereInput {
 export async function listarSecciones(
   filtros: FiltrosSecciones,
   auth: TokenPayload,
-  prisma: Pick<PrismaClient, 'seccion'>,
+  prisma: Pick<PrismaClient, 'seccion' | 'periodo'>,
 ): Promise<ListadoSeccionesDTO> {
   const periodo = filtros.periodo ?? (await obtenerPeriodoVigente(prisma));
   const where = dondeDeFiltros({ ...filtros, ...(periodo && !filtros.periodo ? { periodo } : {}) });
