@@ -34,6 +34,13 @@ const ESTILO_TIPO: Record<TipoAlerta, { etiqueta: string; chip: string; trazo: s
     trazo:
       'M17 20h5v-2a3 3 0 00-5.36-1.86M17 20H7m10 0v-2c0-.66-.13-1.28-.36-1.86M7 20H2v-2a3 3 0 015.36-1.86M7 20v-2c0-.66.13-1.28.36-1.86m0 0a5 5 0 019.28 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
   },
+  // Issue 3.59: sección con movilidad reducida fuera del piso 1.
+  ACCESIBILIDAD: {
+    etiqueta: 'Accesibilidad',
+    chip: 'bg-saie-canvas text-saie-text',
+    // Edificio con pisos
+    trazo: ICONOS.edificio,
+  },
 };
 
 export interface TarjetaAlertaProps {

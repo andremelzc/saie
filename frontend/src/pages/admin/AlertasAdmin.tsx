@@ -112,6 +112,7 @@ export const AlertasAdmin: React.FC = () => {
   const conteos: Record<Filtro, number> = {
     TODAS: base.length,
     SOFTWARE: base.filter((a) => a.tipo === 'SOFTWARE').length,
+    ACCESIBILIDAD: base.filter((a) => a.tipo === 'ACCESIBILIDAD').length,
     CAPACIDAD: base.filter((a) => a.tipo === 'CAPACIDAD').length,
   };
   const pendientes = base.filter((a) => a.estado === 'PENDIENTE').length;
@@ -180,10 +181,12 @@ export const AlertasAdmin: React.FC = () => {
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SelectorSegmentado<Filtro>
-            opciones={(['TODAS', 'SOFTWARE', 'CAPACIDAD'] as Filtro[]).map((f) => ({
-              valor: f,
-              etiqueta: `${ETIQUETAS_FILTRO[f]} (${conteos[f]})`,
-            }))}
+            opciones={(['TODAS', 'SOFTWARE', 'CAPACIDAD', 'ACCESIBILIDAD'] as Filtro[]).map(
+              (f) => ({
+                valor: f,
+                etiqueta: `${ETIQUETAS_FILTRO[f]} (${conteos[f]})`,
+              }),
+            )}
             valor={filtro}
             onCambiar={setFiltro}
             etiquetaGrupo="Filtrar por tipo"

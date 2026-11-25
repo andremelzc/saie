@@ -18,6 +18,7 @@ import {
   SeccionInputMotor,
 } from '../types/asignacion';
 import { OrigenCorrida } from '../types/asignacionDemanda';
+import { AsignacionFueraDePiso1, registrarAlertaAccesibilidad } from './alerta.service';
 
 /**
  * Carga los espacios habilitados y construye la función de vecinos contiguos desde Prisma.
@@ -228,6 +229,15 @@ export async function procesarAsignacionSeccionIndividual(
               : `Sección escalada a revisión manual: ${resultado.motivoEscalamiento}`,
         },
       });
+
+      // Issue 3.59 (riesgo R10): el plan B de accesibilidad no pasa en silencio.
+      const fueraDePiso1 = asignacionFueraDePiso1(
+        resultado,
+        nuevaAsignacion.id,
+        seccionInput,
+        todosLosEspacios,
+      );
+      if (fueraDePiso1) await registrarAlertaAccesibilidad(fueraDePiso1, tx);
     });
 
     // Issue 2.16: el aviso sale una vez confirmada la transacción, nunca dentro de ella.
@@ -337,8 +347,8 @@ export async function procesarCorridaBatchPeriodo(
   // transacción (no una consulta por sección): contra una base remota, cientos de consultas
   // secuenciales superan cualquier tiempo máximo razonable de transacción.
   const nuevos = resultadoBatch.resultados.filter((res) => !res.conservadaPorIdempotencia);
+  const ids = nuevos.map(() => randomUUID());
   if (nuevos.length > 0) {
-    const ids = nuevos.map(() => randomUUID());
     await prisma.$transaction([
       // Marcar previas como HISTORICA
       prisma.asignacion.updateMany({
@@ -386,8 +396,45 @@ export async function procesarCorridaBatchPeriodo(
     ]);
   }
 
+  // Issue 3.59 (riesgo R10): alerta para cada sección nueva que quedó fuera del piso 1 teniendo
+  // alumnos con movilidad reducida. Va después de guardar la corrida, que ya es atómica.
+  const fueraDePiso1 = nuevos
+    .map((res, i) =>
+      asignacionFueraDePiso1(res, ids[i], seccionPorId.get(res.seccionId), todosLosEspacios),
+    )
+    .filter((a): a is AsignacionFueraDePiso1 => a !== null);
+  if (fueraDePiso1.length > 0) {
+    await prisma.$transaction(async (tx) => {
+      for (const afectada of fueraDePiso1) await registrarAlertaAccesibilidad(afectada, tx);
+    });
+  }
+
   // Los avisos salen una vez confirmada la transacción completa.
   emitirCambiosDeAsignacion(eventosCambio);
 
   return resultadoBatch;
+}
+
+/**
+ * Issue 3.59 (riesgo R10): si una asignación vigente aplicó el plan B de accesibilidad (no había
+ * lugar en el piso 1 para una sección con alumnos con movilidad reducida), devuelve los datos para
+ * su alerta. En cualquier otro caso, `null`.
+ */
+export function asignacionFueraDePiso1(
+  resultado: ResultadoOrquestacion,
+  asignacionId: string,
+  seccion: SeccionInputMotor | undefined,
+  espacios: EspacioConexo[],
+): AsignacionFueraDePiso1 | null {
+  if (resultado.estado !== EstadoAsignacion.VIGENTE || !resultado.fallbackPiso1Aplicado) {
+    return null;
+  }
+  const espacio = espacios.find((e) => e.id === resultado.espacioIds[0]);
+  if (!espacio || !seccion) return null;
+  return {
+    asignacionId,
+    codigoCurso: seccion.codigoCurso ?? '',
+    codigoSeccion: seccion.codigoSeccion,
+    espacio: { id: espacio.id, identificador: espacio.identificador, piso: espacio.piso },
+  };
 }

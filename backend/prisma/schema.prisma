@@ -47,6 +47,8 @@ enum EstadoAsignacion {
 enum TipoAlerta {
   SOFTWARE
   CAPACIDAD
+  // Issue 3.59 (riesgo R10): una sección con movilidad reducida quedó fuera del piso 1.
+  ACCESIBILIDAD
 }
 
 enum EstadoAlerta {
@@ -347,7 +349,7 @@ model AsignacionEspacio {
 
 model Alerta {
   id             String       @id @default(uuid())
-  tipo           TipoAlerta   // SOFTWARE o CAPACIDAD
+  tipo           TipoAlerta   // SOFTWARE, CAPACIDAD o ACCESIBILIDAD
   espacioId      String       @map("espacio_id")
   motivo         String
   fechaDeteccion DateTime     @default(now()) @map("fecha_deteccion")

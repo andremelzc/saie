@@ -45,6 +45,7 @@ export const ETIQUETA_TIPO_ESPACIO_PLURAL: Record<TipoEspacio, string> = {
 export const ETIQUETA_TIPO_ALERTA: Record<TipoAlerta, string> = {
   SOFTWARE: 'Software',
   CAPACIDAD: 'Capacidad',
+  ACCESIBILIDAD: 'Accesibilidad',
 };
 
 export const ESTADO_ALERTA: Record<EstadoAlerta, EstadoVisual> = {

@@ -82,6 +82,7 @@ export function etiquetaTipoEspacio(tipo: string | null | undefined): string {
 export const TIPO_ALERTA: Record<string, string> = {
   SOFTWARE: 'Software',
   CAPACIDAD: 'Capacidad',
+  ACCESIBILIDAD: 'Accesibilidad',
 };
 
 export function etiquetaTipoAlerta(tipo: string | null | undefined): string {

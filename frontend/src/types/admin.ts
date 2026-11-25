@@ -3,7 +3,8 @@ import type { RolCuenta } from './auth';
 
 /** Contratos del panel administrativo (espejo de backend/src/types/*). */
 
-export type TipoAlerta = 'SOFTWARE' | 'CAPACIDAD';
+/** Issue 3.59: ACCESIBILIDAD = una sección con movilidad reducida quedó fuera del piso 1. */
+export type TipoAlerta = 'SOFTWARE' | 'CAPACIDAD' | 'ACCESIBILIDAD';
 export type EstadoAlerta = 'PENDIENTE' | 'RESUELTA';
 export type TipoEspacio = 'AULA_TEORICA' | 'LABORATORIO';
 
