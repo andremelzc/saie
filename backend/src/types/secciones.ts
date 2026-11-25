@@ -9,12 +9,13 @@ import { ComparacionVersion, DiaSemana, EstadoAsignacion, TipoEspacio } from '@p
  */
 
 /** Campos que Coordinación Académica puede editar de una sección. */
-export type CampoSeccion = 'tipoEspacioRequerido' | 'docenteId' | 'softwareRequerido';
+export type CampoSeccion = 'tipoEspacioRequerido' | 'docenteId' | 'softwareRequerido' | 'horarios';
 
 export const CAMPOS_SECCION: CampoSeccion[] = [
   'tipoEspacioRequerido',
   'docenteId',
   'softwareRequerido',
+  'horarios',
 ];
 
 export interface SoftwareRequeridoSeccionDTO {
@@ -81,8 +82,30 @@ export interface SoftwareRequeridoInputSeccion {
   comparacionVersion: ComparacionVersion;
 }
 
+/** Franja de horario de una sección, tal como se edita desde la pantalla (Issue 4.62). */
+export interface FranjaSeccionInput {
+  diaSemana: DiaSemana;
+  horaInicio: string;
+  horaFin: string;
+}
+
+/** Resultado de reasignar la sección tras cambiar su horario (Issue 4.62). */
+export interface ReasignacionSeccionDTO {
+  estado: EstadoAsignacion;
+  motivoEscalamiento: string | null;
+  /** `true` si la asignación vigente se conservó (el aula sigue sirviendo con el horario nuevo). */
+  conservada: boolean;
+}
+
 export interface ResultadoEdicionSeccionDTO {
   seccion: SeccionAdminDTO;
   /** Alertas generadas por el cambio (por ejemplo: el laboratorio ya no tiene el software). */
   alertas: { id: string; tipo: string; motivo: string }[];
+  /**
+   * Issue 4.62: avisos que no impiden guardar, como el choque con otra sección del mismo docente
+   * o que la reasignación no se pudo hacer en este momento.
+   */
+  advertencias: string[];
+  /** Issue 4.62: resultado de reasignar la sección si cambió su horario; `null` si no cambió. */
+  reasignacion: ReasignacionSeccionDTO | null;
 }
