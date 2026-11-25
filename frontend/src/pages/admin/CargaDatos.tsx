@@ -14,6 +14,7 @@ import type { PlantillaCSV } from '../../config/plantillas';
 import { useAccion } from '../../hooks/useAccion';
 import { importarCsv } from '../../services/admin';
 import type { ResultadoImportacionDTO, TipoImportacion } from '../../types/admin';
+import { leerArchivoCsv } from '../../utils/archivoCsv';
 import { agruparErroresPorTipo } from '../../utils/erroresImportacion';
 import { formatearFechaCorta } from '../../utils/fechas';
 
@@ -111,16 +112,6 @@ function leerUltimaCarga(tipo: TipoImportacion): UltimaCarga | null {
 }
 
 const TIPOS_CARGA: TipoImportacion[] = ['cursos-secciones', 'horarios', 'matriculas', 'docentes'];
-
-function leerArchivo(archivo: File): Promise<string> {
-  if (typeof archivo.text === 'function') return archivo.text();
-  return new Promise((resolve, reject) => {
-    const lector = new FileReader();
-    lector.onload = () => resolve(String(lector.result ?? ''));
-    lector.onerror = () => reject(lector.error);
-    lector.readAsText(archivo);
-  });
-}
 
 function descargarErrores(tipo: TipoImportacion, errores: string[]) {
   if (typeof URL.createObjectURL !== 'function') return;
@@ -489,7 +480,7 @@ export const ZonaCarga: React.FC<{
     setError(null);
     setResultado(null);
     // El error se muestra en línea, junto a la zona de carga.
-    const salida = await ejecutar(async () => importarCsv(tipo, await leerArchivo(archivo)), {
+    const salida = await ejecutar(async () => importarCsv(tipo, await leerArchivoCsv(archivo)), {
       avisarError: false,
     });
     if (salida?.ok) {

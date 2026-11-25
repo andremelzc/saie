@@ -267,6 +267,23 @@ function validarDocentes(filas: unknown[], r: ValidacionImportacion): void {
   );
 }
 
+export const MENSAJE_CARACTERES_DANADOS =
+  'El archivo tiene caracteres dañados: guárdalo como CSV UTF-8 en Excel';
+
+/**
+ * Issue 1.18 (riesgo R38): un CSV leído con la codificación equivocada trae «�» en lugar de las
+ * tildes y la ñ, y no se puede reparar después. Ninguna fila con ese carácter llega a la base.
+ */
+function marcarCaracteresDanados(filas: unknown[], errores: string[]): void {
+  filas.forEach((f, i) => {
+    const dañada =
+      f !== null &&
+      typeof f === 'object' &&
+      Object.values(f).some((v) => typeof v === 'string' && v.includes('�'));
+    if (dañada) errores.push(`Fila ${i + 1}: ${MENSAJE_CARACTERES_DANADOS}`);
+  });
+}
+
 /**
  * Issue 1.16 (riesgos R34 y R36 de la auditoría): valida el archivo completo ANTES de escribir en
  * la base. Si hay al menos un error, la importación no guarda ninguna fila: así un CSV con una
@@ -279,6 +296,7 @@ export async function validarImportacion(
   db: Db,
 ): Promise<ValidacionImportacion> {
   const r: ValidacionImportacion = { errores: [], advertencias: [] };
+  marcarCaracteresDanados(filas, r.errores);
   switch (tipo) {
     case 'cursos-secciones':
       await validarCursosSecciones(filas, db, r);
