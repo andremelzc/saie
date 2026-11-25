@@ -309,6 +309,7 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
       condicionEspecial: null,
       contactoEmergencia: '999888777',
       condicionAccesible: false,
+      condicionAccesibleHasta: null,
     });
     expect(perfil.accesibilidad).toBeNull();
   });
@@ -321,6 +322,7 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
       fechaSolicitud: new Date('2026-11-20T10:00:00.000Z'),
       fechaResolucion: new Date('2026-11-21T10:00:00.000Z'),
       motivoRechazo: 'Falta confirmar con Bienestar',
+      fechaFin: null,
     });
 
     const perfil = await obtenerPerfilAlumno('cuenta-1', prisma);
@@ -334,6 +336,7 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
       fechaSolicitud: '2026-11-20T10:00:00.000Z',
       fechaResolucion: '2026-11-21T10:00:00.000Z',
       motivoRechazo: 'Falta confirmar con Bienestar',
+      fechaFin: null,
     });
   });
 
@@ -415,7 +418,9 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
       prisma,
     );
 
-    expect(tx.solicitudAccesibilidad.create).toHaveBeenCalledWith({ data: { alumnoId: 'alu-1' } });
+    expect(tx.solicitudAccesibilidad.create).toHaveBeenCalledWith({
+      data: { alumnoId: 'alu-1', fechaFin: null },
+    });
     expect(tx.matricula.updateMany).not.toHaveBeenCalled();
     // Solo venía la casilla: no se escribe la ficha.
     expect(tx.fichaMedica.upsert).not.toHaveBeenCalled();
@@ -470,7 +475,7 @@ describe('Datos personales y ficha médica (Issue 3.12)', () => {
 
     expect(tx.fichaMedica.update).toHaveBeenCalledWith({
       where: { alumnoId: 'alu-1' },
-      data: { condicionAccesible: false },
+      data: { condicionAccesible: false, condicionAccesibleHasta: null },
     });
     expect(tx.matricula.updateMany).toHaveBeenCalledWith({
       where: { alumnoId: 'alu-1' },

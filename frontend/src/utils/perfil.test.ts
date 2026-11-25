@@ -9,6 +9,7 @@ import {
   formatearFecha,
   iniciales,
   validarDatosPersonales,
+  validarFechaFinCondicion,
   validarFichaMedica,
   valoresDatosPersonales,
   valoresFichaMedica,
@@ -170,5 +171,50 @@ describe('aplicarCambios', () => {
       },
     });
     expect(nuevo.fichaMedica?.tipoSangre).toBe('B+');
+  });
+});
+
+describe('fecha de fin de la condición accesible (Issue 3.61)', () => {
+  const HOY = new Date(2026, 10, 24);
+
+  it('es opcional; si se escribe debe ser real y no haber pasado', () => {
+    expect(validarFechaFinCondicion('', HOY)).toBeNull();
+    expect(validarFechaFinCondicion('2026-11-24', HOY)).toBeNull();
+    expect(validarFechaFinCondicion('2026-12-20', HOY)).toBeNull();
+    expect(validarFechaFinCondicion('2026-11-23', HOY)).toContain('ya pasó');
+    expect(validarFechaFinCondicion('2026-02-30', HOY)).toBe('Ingresa una fecha válida.');
+  });
+
+  it('solo se envía junto con la declaración', () => {
+    expect(
+      cambiosFichaMedica({ condicionAccesible: 'true', condicionAccesibleHasta: '2026-12-20' })
+        .fichaMedica,
+    ).toMatchObject({ condicionAccesible: true, condicionAccesibleHasta: '2026-12-20' });
+    expect(
+      cambiosFichaMedica({ condicionAccesible: '', condicionAccesibleHasta: '2026-12-20' })
+        .fichaMedica,
+    ).not.toHaveProperty('condicionAccesibleHasta');
+  });
+
+  it('el formulario muestra el fin de la condición aprobada o de la pendiente', () => {
+    expect(
+      valoresFichaMedica({
+        tipoSangre: null,
+        alergias: null,
+        condicionEspecial: null,
+        contactoEmergencia: null,
+        condicionAccesible: true,
+        condicionAccesibleHasta: '2026-12-20',
+      }).condicionAccesibleHasta,
+    ).toBe('2026-12-20');
+    expect(
+      valoresFichaMedica(null, {
+        estado: 'PENDIENTE',
+        fechaSolicitud: '2026-11-20T15:00:00Z',
+        fechaResolucion: null,
+        motivoRechazo: null,
+        fechaFin: '2027-01-10',
+      }).condicionAccesibleHasta,
+    ).toBe('2027-01-10');
   });
 });

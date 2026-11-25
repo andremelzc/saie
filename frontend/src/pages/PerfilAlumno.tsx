@@ -69,6 +69,15 @@ const CAMPOS_FICHA_MEDICA: CampoPerfil[] = [
     ayuda:
       'Si la marcas, Coordinación Académica revisa tu solicitud y, al aprobarla, el sistema te prioriza las aulas del primer piso. Describe un requisito de acceso al espacio, no un diagnóstico: no hace falta que expliques tu condición.',
   },
+  {
+    clave: 'condicionAccesibleHasta',
+    etiqueta: '¿Hasta cuándo? (solo si es temporal)',
+    tipo: 'fecha',
+    ayuda:
+      'Por ejemplo, una pierna enyesada por un mes. Ese día deja de aplicarse y tus aulas se reasignan. Déjala vacía si no tiene fin.',
+    formatoLectura: (valor) => formatearFecha(valor) ?? valor,
+    textoVacio: 'No vence',
+  },
   { clave: 'tipoSangre', etiqueta: 'Tipo de sangre', tipo: 'select', opciones: TIPOS_SANGRE },
   {
     clave: 'alergias',
@@ -110,14 +119,17 @@ export const EstadoDeclaracionAccesibilidad: React.FC<{
   accesibilidad: EstadoAccesibilidadDTO | null | undefined;
 }> = ({ accesibilidad }) => {
   if (!accesibilidad) return null;
-  const { estado, motivoRechazo, fechaSolicitud, fechaResolucion } = accesibilidad;
+  const { estado, motivoRechazo, fechaSolicitud, fechaResolucion, fechaFin } = accesibilidad;
+  // Issue 3.61 (R16): una condición temporal dice hasta cuándo rige.
+  const hasta = fechaFin ? ` hasta el ${formatearFecha(fechaFin) ?? fechaFin}` : '';
   // Es un estado que se lee al entrar, no un aviso nuevo: `status` aunque sea un rechazo.
   if (estado === 'PENDIENTE') {
     return (
       <Aviso tono="advertencia" role="status">
         <strong className="font-semibold">Solicitud de aulas en el piso 1: pendiente.</strong>{' '}
         Coordinación Académica la está revisando (la enviaste el{' '}
-        {formatearFechaCorta(fechaSolicitud)}). Mientras tanto tus aulas no cambian.
+        {formatearFechaCorta(fechaSolicitud)}
+        {hasta && `, la pediste${hasta}`}). Mientras tanto tus aulas no cambian.
       </Aviso>
     );
   }
@@ -126,7 +138,7 @@ export const EstadoDeclaracionAccesibilidad: React.FC<{
       <Aviso tono="exito" role="status">
         <strong className="font-semibold">Solicitud de aulas en el piso 1: aprobada.</strong> Desde
         el {formatearFechaCorta(fechaResolucion ?? fechaSolicitud)} el sistema prioriza el piso 1
-        para tus clases.
+        para tus clases{hasta}.
       </Aviso>
     );
   }

@@ -23,6 +23,8 @@ export interface CampoPerfil {
   max?: string;
   /** Cómo mostrar el valor en modo lectura (p. ej. fecha con nombre de mes). */
   formatoLectura?: (valor: string) => string;
+  /** Texto en modo lectura cuando no hay valor; por defecto, «Sin registrar». */
+  textoVacio?: string;
 }
 
 export interface SeccionEditableProps {
@@ -174,7 +176,9 @@ export const SeccionEditable: React.FC<SeccionEditableProps> = ({
                     texto
                   )
                 ) : (
-                  <span className="text-saie-muted italic">Sin registrar</span>
+                  <span className="text-saie-muted italic">
+                    {campo.textoVacio ?? 'Sin registrar'}
+                  </span>
                 )}
               </dd>
             </div>

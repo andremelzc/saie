@@ -17,6 +17,10 @@ import {
   verImagenIncidenciaDocente,
 } from '../controllers/imagenIncidencia.controller';
 import {
+  declararAccesibilidadDelDocente,
+  obtenerAccesibilidadDelDocente,
+} from '../controllers/accesibilidad.controller';
+import {
   crearSolicitudLaboratorio,
   listarMisSolicitudesLaboratorio,
 } from '../controllers/fusionLaboratorio.controller';
@@ -40,6 +44,9 @@ router.get('/incidencias/:id/imagen', verImagenIncidenciaDocente);
 router.post('/solicitudes-software', crearSolicitudSoftware);
 router.get('/solicitudes-software', listarMisSolicitudesSoftware);
 
+// Declaración de accesibilidad del docente (Issue 3.61): la aprueba Coordinación, como la del alumno.
+router.get('/accesibilidad', obtenerAccesibilidadDelDocente);
+router.put('/accesibilidad', declararAccesibilidadDelDocente);
 // «Dictar todo en laboratorio» (Issue 7.17): el docente lo pide para su sección de teoría.
 router.post('/solicitudes-laboratorio', crearSolicitudLaboratorio);
 router.get('/solicitudes-laboratorio', listarMisSolicitudesLaboratorio);

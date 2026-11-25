@@ -67,6 +67,8 @@ export interface PerfilAlumnoDTO {
      * El motor lo traduce a `Matricula.movilidadReducida` para priorizar las aulas del Piso 1.
      */
     condicionAccesible: boolean;
+    /** Issue 3.61 (R16): último día de la condición aprobada (`AAAA-MM-DD`); `null` = no vence. */
+    condicionAccesibleHasta: string | null;
   } | null;
   /**
    * Issue 3.60: la declaración de accesibilidad más reciente y su estado. `condicionAccesible`

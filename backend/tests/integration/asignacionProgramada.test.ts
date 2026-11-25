@@ -22,9 +22,15 @@ jest.mock('../../src/services/verificador.service', () => ({
   verificarCorridaPeriodo: jest.fn(),
 }));
 
+// Issue 3.61 (R16): antes de la corrida se quitan las condiciones de accesibilidad vencidas.
+jest.mock('../../src/services/accesibilidadDocente.service', () => ({
+  vencerCondicionesAccesibles: jest.fn().mockResolvedValue({ alumnos: 0, docentes: 0 }),
+}));
+
 import request from 'supertest';
 import { createApp } from '../../src/app';
 import { procesarCorridaBatchPeriodo } from '../../src/services/motor.service';
+import { vencerCondicionesAccesibles } from '../../src/services/accesibilidadDocente.service';
 import { verificarCorridaPeriodo } from '../../src/services/verificador.service';
 
 const TOKEN = 'token-programada-de-pruebas';
@@ -101,6 +107,11 @@ describe('POST /api/v1/asignaciones/programada (Issue 2.18)', () => {
     });
     // La corrida se marca con origen TIEMPO para la auditoría.
     expect(procesarCorridaBatchPeriodo).toHaveBeenCalledWith('2026-1', prismaMock, 'TIEMPO');
+    // Las condiciones vencidas se quitan antes de la corrida, que reasigna lo afectado.
+    expect(vencerCondicionesAccesibles).toHaveBeenCalledWith(prismaMock);
+    expect(jest.mocked(vencerCondicionesAccesibles).mock.invocationCallOrder[0]).toBeLessThan(
+      jest.mocked(procesarCorridaBatchPeriodo).mock.invocationCallOrder[0],
+    );
   });
 
   it('responde 409 si ya hay una corrida en curso (el workflow reintenta)', async () => {

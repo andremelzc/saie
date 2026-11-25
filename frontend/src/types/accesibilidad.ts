@@ -11,6 +11,8 @@ export interface EstadoAccesibilidadDTO {
   fechaSolicitud: string;
   fechaResolucion: string | null;
   motivoRechazo: string | null;
+  /** Issue 3.61 (R16): último día de una condición temporal (`AAAA-MM-DD`); `null` = no vence. */
+  fechaFin?: string | null;
 }
 
 export interface SeccionAccesibilidadDTO {
@@ -33,6 +35,10 @@ export interface SolicitudAccesibilidadAdminDTO {
   motivoRechazo: string | null;
   /** «3 de 4 clases quedaron en el piso 1»; solo en las aprobadas. */
   resultado: string | null;
+  /** Issue 3.61 (R15): quién la declara; `alumno` trae el código y nombre de cualquiera de los dos. */
+  tipo?: 'ALUMNO' | 'DOCENTE';
+  /** Issue 3.61 (R16): último día de la condición (`AAAA-MM-DD`); `null` si no vence. */
+  fechaFin?: string | null;
   alumno: { codigo: string; nombre: string };
   secciones: SeccionAccesibilidadDTO[];
 }
@@ -47,3 +53,12 @@ export interface AccesibilidadAdminDTO {
 /** Cuerpo de PATCH /v1/admin/accesibilidad/:id/resolver. */
 export type DecisionAccesibilidad =
   { decision: 'APROBAR' } | { decision: 'RECHAZAR'; motivo: string };
+
+/** Issue 3.61 (R15) — GET/PUT /v1/docente/accesibilidad: la declaración del docente. */
+export interface AccesibilidadDocenteDTO {
+  /** La condición está aprobada: el motor prioriza el piso 1 en sus secciones. */
+  aprobada: boolean;
+  /** Último día de la condición aprobada (`AAAA-MM-DD`); `null` si no vence. */
+  vigenteHasta: string | null;
+  solicitud: EstadoAccesibilidadDTO | null;
+}
