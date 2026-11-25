@@ -22,6 +22,11 @@ function plural(n: number, singular: string, varias: string): string {
   return `${n} ${n === 1 ? singular : varias}`;
 }
 
+/** El verbo concuerda con la cantidad: «Se quitará 1 matrícula», «Se quitarán 3». */
+function segun(n: number, singular: string, varias: string): string {
+  return n === 1 ? singular : varias;
+}
+
 /** Junta las filas válidas de un esquema; las inválidas ya las informó la validación. */
 function filasValidas<T>(
   filas: unknown[],
@@ -106,10 +111,12 @@ async function vistaMatriculas(filas: unknown[], db: Db): Promise<Cambios> {
   return {
     cambios: { matriculasNuevas: nuevas, matriculasRetiradas: retiradas, alumnosNuevos },
     frases: [
-      `Se agregarán ${plural(nuevas, 'matrícula', 'matrículas')}`,
-      `Se quitarán ${plural(retiradas, 'matrícula', 'matrículas')} (alumnos que ya no figuran en su sección)`,
+      `${segun(nuevas, 'Se agregará', 'Se agregarán')} ${plural(nuevas, 'matrícula', 'matrículas')}`,
+      `${segun(retiradas, 'Se quitará', 'Se quitarán')} ${plural(retiradas, 'matrícula', 'matrículas')} (alumnos que ya no figuran en su sección)`,
       ...(alumnosNuevos > 0
-        ? [`Se registrarán ${plural(alumnosNuevos, 'alumno nuevo', 'alumnos nuevos')}`]
+        ? [
+            `${segun(alumnosNuevos, 'Se registrará', 'Se registrarán')} ${plural(alumnosNuevos, 'alumno nuevo', 'alumnos nuevos')}`,
+          ]
         : []),
     ],
     retiros,
@@ -162,11 +169,11 @@ async function vistaHorarios(filas: unknown[], db: Db): Promise<Cambios> {
       horariosRetirados: retirados,
     },
     frases: [
-      `Se agregarán ${plural(nuevos, 'franja', 'franjas')} de horario`,
+      `${segun(nuevos, 'Se agregará', 'Se agregarán')} ${plural(nuevos, 'franja', 'franjas')} de horario`,
       ...(actualizados > 0
         ? [`Se cambiará la hora de fin de ${plural(actualizados, 'franja', 'franjas')}`]
         : []),
-      `Se quitarán ${plural(retirados, 'franja', 'franjas')} que ya no figuran (cambios de horario)`,
+      `${segun(retirados, 'Se quitará', 'Se quitarán')} ${plural(retirados, 'franja', 'franjas')} ${segun(retirados, 'que ya no figura', 'que ya no figuran')} (cambios de horario)`,
     ],
     retiros,
   };
@@ -232,12 +239,18 @@ async function vistaCursosSecciones(filas: unknown[], db: Db): Promise<Cambios> 
       seccionesInactivadas: inactivadas,
     },
     frases: [
-      ...(cursosNuevos > 0 ? [`Se crearán ${plural(cursosNuevos, 'curso', 'cursos')}`] : []),
-      `Se agregarán ${plural(nuevas, 'sección', 'secciones')}`,
-      ...(reactivadas > 0
-        ? [`Se volverán a activar ${plural(reactivadas, 'sección', 'secciones')}`]
+      ...(cursosNuevos > 0
+        ? [
+            `${segun(cursosNuevos, 'Se creará', 'Se crearán')} ${plural(cursosNuevos, 'curso', 'cursos')}`,
+          ]
         : []),
-      `Se marcarán inactivas ${plural(inactivadas, 'sección', 'secciones')} que ya no figuran en su curso`,
+      `${segun(nuevas, 'Se agregará', 'Se agregarán')} ${plural(nuevas, 'sección', 'secciones')}`,
+      ...(reactivadas > 0
+        ? [
+            `${segun(reactivadas, 'Se volverá', 'Se volverán')} a activar ${plural(reactivadas, 'sección', 'secciones')}`,
+          ]
+        : []),
+      `${segun(inactivadas, 'Se marcará inactiva', 'Se marcarán inactivas')} ${plural(inactivadas, 'sección', 'secciones')} ${segun(inactivadas, 'que ya no figura', 'que ya no figuran')} en su curso`,
     ],
     retiros,
   };
@@ -253,7 +266,7 @@ async function vistaDocentes(filas: unknown[], db: Db): Promise<Cambios> {
   return {
     cambios: { docentesNuevos: nuevos, docentesActualizados: existentes },
     frases: [
-      `Se registrarán ${plural(nuevos, 'docente nuevo', 'docentes nuevos')}`,
+      `${segun(nuevos, 'Se registrará', 'Se registrarán')} ${plural(nuevos, 'docente nuevo', 'docentes nuevos')}`,
       `Se actualizarán los datos de ${plural(existentes, 'docente', 'docentes')}`,
     ],
     retiros: [],
