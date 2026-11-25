@@ -7,15 +7,18 @@ export const HorarioSchema = z.object({
   codigoCurso: z.string().min(1, 'El código del curso es requerido'),
   codigoSeccion: z.string().min(1, 'El código de la sección es requerido'),
   periodo: periodoSchema,
-  diaSemana: z.enum([
-    DiaSemana.LUNES,
-    DiaSemana.MARTES,
-    DiaSemana.MIERCOLES,
-    DiaSemana.JUEVES,
-    DiaSemana.VIERNES,
-    DiaSemana.SABADO,
-    DiaSemana.DOMINGO,
-  ]),
+  diaSemana: z.enum(
+    [
+      DiaSemana.LUNES,
+      DiaSemana.MARTES,
+      DiaSemana.MIERCOLES,
+      DiaSemana.JUEVES,
+      DiaSemana.VIERNES,
+      DiaSemana.SABADO,
+      DiaSemana.DOMINGO,
+    ],
+    { error: 'El día debe ser LUNES, MARTES, MIERCOLES, JUEVES, VIERNES, SABADO o DOMINGO' },
+  ),
   horaInicio: z
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Hora de inicio debe ser formato HH:mm (24h)'),

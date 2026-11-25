@@ -50,7 +50,7 @@ function marcarRepetidas<T>(
     const anterior = vistas.get(k);
     if (anterior !== undefined) {
       errores.push(
-        `Fila ${v.fila}: ${describir(v.datos)} está repetida (ya aparece en la fila ${anterior})`,
+        `Fila ${v.fila}: ${describir(v.datos)} se repite (ya aparece en la fila ${anterior})`,
       );
     } else {
       vistas.set(k, v.fila);

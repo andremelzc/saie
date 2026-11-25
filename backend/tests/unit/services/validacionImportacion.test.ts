@@ -82,8 +82,19 @@ describe('Validación previa de importaciones (Issue 1.16, riesgos R34 y R36)', 
       expect(r.errores[1]).toBe(
         'Fila 3: No existe la sección 1 para el curso C9 en el periodo 2026-2',
       );
-      expect(r.errores[2]).toContain('Fila 4: la franja LUNES 08:00 de C1-1 está repetida');
+      expect(r.errores[2]).toContain('Fila 4: la franja LUNES 08:00 de C1-1 se repite');
       expect(r.errores[3]).toMatch(/^Fila 5: /);
+    });
+
+    it('rechaza un día inválido con un mensaje en español', async () => {
+      const r = await validarImportacion(
+        'horarios',
+        [horario('C1', '1', { diaSemana: 'FERIADO' })],
+        crearDb([seccion('C1', '1', null)]),
+      );
+      expect(r.errores).toEqual([
+        'Fila 1: El día debe ser LUNES, MARTES, MIERCOLES, JUEVES, VIERNES, SABADO o DOMINGO',
+      ]);
     });
 
     it('rechaza un periodo mal escrito', async () => {
@@ -144,7 +155,7 @@ describe('Validación previa de importaciones (Issue 1.16, riesgos R34 y R36)', 
         db,
       );
       expect(r.errores).toEqual([
-        'Fila 2: la matrícula de A1 en C1-1 está repetida (ya aparece en la fila 1)',
+        'Fila 2: la matrícula de A1 en C1-1 se repite (ya aparece en la fila 1)',
         'Fila 3: No existe la sección 1 para el curso C9 en el periodo 2026-2',
       ]);
     });
@@ -184,7 +195,7 @@ describe('Validación previa de importaciones (Issue 1.16, riesgos R34 y R36)', 
     it('rechaza secciones repetidas en el mismo archivo', async () => {
       const r = await validarImportacion('cursos-secciones', [fila(), fila()], crearDb());
       expect(r.errores).toEqual([
-        'Fila 2: la sección C1-1-LAB (2026-2) está repetida (ya aparece en la fila 1)',
+        'Fila 2: la sección C1-1-LAB (2026-2) se repite (ya aparece en la fila 1)',
       ]);
     });
   });
@@ -269,7 +280,7 @@ describe('Validación previa de importaciones (Issue 1.16, riesgos R34 y R36)', 
         departamento: 'Software',
       };
       const r = await validarImportacion('docentes', [docente, docente], crearDb());
-      expect(r.errores).toEqual(['Fila 2: el docente D1 está repetida (ya aparece en la fila 1)']);
+      expect(r.errores).toEqual(['Fila 2: el docente D1 se repite (ya aparece en la fila 1)']);
     });
   });
 });
