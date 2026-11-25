@@ -9,16 +9,22 @@ import { Acordeon } from '../../components/ui/Acordeon';
 import { Aviso } from '../../components/ui/Aviso';
 import { BadgeEstado } from '../../components/ui/BadgeEstado';
 import { Boton } from '../../components/ui/Boton';
+import { DialogoConfirmacion } from '../../components/ui/DialogoConfirmacion';
 import { Drawer } from '../../components/ui/Drawer';
 import { PLANTILLAS, descargarPlantilla } from '../../config/plantillas';
 import type { PlantillaCSV } from '../../config/plantillas';
 import { useAccion } from '../../hooks/useAccion';
-import { importarCsv } from '../../services/admin';
-import type { ResultadoImportacionDTO, TipoImportacion } from '../../types/admin';
+import { importarCsv, obtenerVistaPreviaImportacion } from '../../services/admin';
+import type {
+  ResultadoImportacionDTO,
+  TipoImportacion,
+  VistaPreviaImportacionDTO,
+} from '../../types/admin';
 import { leerArchivoCsv } from '../../utils/archivoCsv';
 import { textoAvanceImportacion } from '../../utils/admin';
 import { agruparErroresPorTipo } from '../../utils/erroresImportacion';
 import { formatearFechaCorta } from '../../utils/fechas';
+import { plural } from '../../utils/texto';
 
 /**
  * Issue 1.9 — cuatro flujos de carga independientes. Las zonas van primero y en orden; la guía
@@ -409,6 +415,45 @@ const ResumenResultado: React.FC<{
   );
 };
 
+/** Cuántos retiros se listan en la confirmación; el resto se resume. */
+const MAX_RETIROS_VISIBLES = 8;
+
+/** Lo que la importación cambiaría (Issue 1.17): frases y, si se quita algo, qué se quita. */
+export const DescripcionVistaPrevia: React.FC<{ vista: VistaPreviaImportacionDTO }> = ({
+  vista,
+}) => {
+  const restantes = vista.retiros.length - MAX_RETIROS_VISIBLES;
+  return (
+    <div className="flex flex-col gap-3">
+      <ul className="m-0 flex list-disc flex-col gap-1 pl-5">
+        {vista.frases.map((frase) => (
+          <li key={frase}>{frase}.</li>
+        ))}
+      </ul>
+      {vista.retiros.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <p className="m-0 font-semibold">Se quitará:</p>
+          <ul className="m-0 flex list-none flex-col gap-0.5 p-0 text-saie-muted">
+            {vista.retiros.slice(0, MAX_RETIROS_VISIBLES).map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+          {restantes > 0 && (
+            <p className="m-0 text-saie-muted">
+              y {plural(restantes, 'cambio más', 'cambios más')}.
+            </p>
+          )}
+        </div>
+      )}
+      {vista.advertencias.length > 0 && (
+        <p className="m-0 text-saie-muted">
+          {plural(vista.advertencias.length, 'aviso', 'avisos')}: los verás en el resultado.
+        </p>
+      )}
+    </div>
+  );
+};
+
 export const ZonaCarga: React.FC<{
   tipo: TipoImportacion;
   titulo: string;
@@ -438,6 +483,11 @@ export const ZonaCarga: React.FC<{
   const [errorArchivo, setErrorArchivo] = useState<string | null>(null);
   // El detalle del resultado vive en un drawer: la tarjeta solo conserva el resumen.
   const [detalleAbierto, setDetalleAbierto] = useState(false);
+  // Issue 1.17: vista previa a la espera de que Coordinación la confirme.
+  const [previa, setPrevia] = useState<{
+    contenido: string;
+    vista: VistaPreviaImportacionDTO;
+  } | null>(null);
   const idInput = `archivo-${tipo}`;
   const idAyuda = `ayuda-${tipo}`;
 
@@ -477,18 +527,43 @@ export const ZonaCarga: React.FC<{
     setError(null);
   }
 
+  /**
+   * Issue 1.17 (R35): antes de importar se pide la vista previa (qué se agrega, qué se quita y qué
+   * secciones quedan inactivas) y Coordinación la confirma. Si el archivo tiene errores no hay
+   * nada que confirmar: se importa directamente y el resultado los lista, como antes.
+   */
   async function enviar() {
     if (!archivo || enviando) return;
     setEnviando(true);
     setError(null);
     setResultado(null);
-    // El error se muestra en línea, junto a la zona de carga.
     setAvance(null);
     const salida = await ejecutar(
-      async () =>
-        importarCsv(tipo, await leerArchivoCsv(archivo), (procesadas, total) =>
-          setAvance({ procesadas, total }),
-        ),
+      async () => {
+        const contenido = await leerArchivoCsv(archivo);
+        return { contenido, vista: await obtenerVistaPreviaImportacion(tipo, contenido) };
+      },
+      { avisarError: false },
+    );
+    if (!salida?.ok) {
+      if (salida) setError(salida.error);
+      setEnviando(false);
+      return;
+    }
+    if (salida.valor.vista.errores.length > 0) {
+      await importar(salida.valor.contenido);
+      return;
+    }
+    setPrevia(salida.valor);
+    setEnviando(false);
+  }
+
+  async function importar(contenido: string) {
+    setEnviando(true);
+    setAvance(null);
+    // El error se muestra en línea, junto a la zona de carga.
+    const salida = await ejecutar(
+      () => importarCsv(tipo, contenido, (procesadas, total) => setAvance({ procesadas, total })),
       { avisarError: false },
     );
     setAvance(null);
@@ -500,6 +575,13 @@ export const ZonaCarga: React.FC<{
     }
     setEnviando(false);
     limpiarInput();
+  }
+
+  function confirmarPrevia() {
+    if (!previa) return;
+    const { contenido } = previa;
+    setPrevia(null);
+    void importar(contenido);
   }
 
   function corregir() {
@@ -580,6 +662,16 @@ export const ZonaCarga: React.FC<{
           onAbrir={() => setDetalleAbierto(true)}
         />
       )}
+
+      <DialogoConfirmacion
+        abierto={previa !== null}
+        titulo="¿Importar este archivo?"
+        descripcion={previa && <DescripcionVistaPrevia vista={previa.vista} />}
+        textoConfirmar="Confirmar e importar"
+        variante={previa && previa.vista.retiros.length > 0 ? 'peligro' : 'primario'}
+        onConfirmar={confirmarPrevia}
+        onCancelar={() => setPrevia(null)}
+      />
 
       {/*
         El detalle del resultado (procesados, errores descargables y veredicto del verificador)

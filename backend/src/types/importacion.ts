@@ -52,6 +52,24 @@ export interface ResultadoImportacionDTO {
   }[];
 }
 
+/**
+ * Issue 1.17 (R35): lo que la importación cambiaría, calculado sin escribir nada. Coordinación lo
+ * revisa antes de confirmar. Cada contador es lo que el importador hará con el mismo archivo.
+ */
+export interface VistaPreviaImportacionDTO {
+  tipo: TipoImportacion;
+  filasRecibidas: number;
+  /** Si hay errores, la importación no guardaría nada (Issue 1.16): no hay nada que confirmar. */
+  errores: string[];
+  advertencias: string[];
+  /** Por ejemplo `{ matriculasNuevas: 12, matriculasRetiradas: 3 }`. */
+  cambios: Record<string, number>;
+  /** Los mismos cambios en frases («Se quitarán 3 matrículas (retiros)»), en orden de lectura. */
+  frases: string[];
+  /** Detalle de lo que se quita o se reemplaza, para que Coordinación lo pueda revisar. */
+  retiros: string[];
+}
+
 /** Última importación de un tipo de archivo (Issue 4.54). */
 export interface UltimaImportacionDTO {
   tipo: TipoImportacion;

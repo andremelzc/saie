@@ -246,6 +246,23 @@ export interface ResultadoImportacionDTO {
   } | null;
 }
 
+/**
+ * POST /v1/import/:tipo/vista-previa (Issue 1.17): lo que la importación agregaría, quitaría o
+ * inactivaría con el archivo, calculado sin escribir nada.
+ */
+export interface VistaPreviaImportacionDTO {
+  tipo: TipoImportacion;
+  filasRecibidas: number;
+  /** Con errores la importación no guarda nada: no hay cambios que confirmar. */
+  errores: string[];
+  advertencias: string[];
+  cambios: Record<string, number>;
+  /** «Se quitarán 3 matrículas (alumnos que ya no figuran en su sección)». */
+  frases: string[];
+  /** Qué se quita o se reemplaza, una línea por elemento. */
+  retiros: string[];
+}
+
 // ==========================================
 // GESTIÓN INDIVIDUAL DE SECCIONES (Issue 4.31)
 // ==========================================
