@@ -11,12 +11,44 @@ import { procesarAsignacionSeccionIndividual, procesarCorridaBatchPeriodo } from
 import { asegurarPeriodoEscribible, obtenerPeriodoVigente } from './periodo.service';
 import { verificarCorridaPeriodo } from './verificador.service';
 
-// El motor corre en el mismo proceso, sin colas (Issue 2.15): un candado en memoria basta para
-// que una corrida no se pise con otra. Cubre tanto la corrida completa como la de una sección.
+// Issue 2.15 & 5.33 (R28): El motor corre en el mismo proceso; para evitar que una corrida
+// se pise con otra (sea local o entre varias instancias si escala el backend), se combina un
+// flag en memoria con un advisory lock de PostgreSQL.
+const ID_BLOQUEO_CORRIDA = 7142026;
 let corridaEnCurso = false;
 
 export function hayCorridaEnCurso(): boolean {
   return corridaEnCurso;
+}
+
+export async function adquirirCandado(prisma?: PrismaClient): Promise<boolean> {
+  if (corridaEnCurso) return false;
+  corridaEnCurso = true;
+  if (prisma && typeof prisma.$queryRaw === 'function') {
+    try {
+      const res = await prisma.$queryRaw<
+        { locked: boolean }[]
+      >`SELECT pg_try_advisory_lock(${ID_BLOQUEO_CORRIDA}) as locked`;
+      if (res && res[0] && res[0].locked === false) {
+        corridaEnCurso = false;
+        return false;
+      }
+    } catch {
+      // Si la BD no soporta pg_try_advisory_lock o no está disponible, se conserva el candado en memoria.
+    }
+  }
+  return true;
+}
+
+export async function liberarCandado(prisma?: PrismaClient): Promise<void> {
+  corridaEnCurso = false;
+  if (prisma && typeof prisma.$queryRaw === 'function') {
+    try {
+      await prisma.$queryRaw`SELECT pg_advisory_unlock(${ID_BLOQUEO_CORRIDA})`;
+    } catch {
+      // Ignorar fallos de liberación externa
+    }
+  }
 }
 
 function mapearResultado(r: ResultadoOrquestacion): ResultadoSeccionDTO {
@@ -62,13 +94,13 @@ export async function ejecutarReorganizacionConPrioridad(
   periodo: string,
   prisma: PrismaClient,
 ): Promise<ResumenAsignacionDTO> {
-  if (corridaEnCurso) {
+  const bloqueado = await adquirirCandado(prisma);
+  if (!bloqueado) {
     throw new HttpError(
       409,
       'Ya hay una corrida de asignación en curso. Intenta de nuevo al terminar.',
     );
   }
-  corridaEnCurso = true;
   try {
     await asegurarPeriodoEscribible(prisma, periodo);
     const batch = await procesarCorridaBatchPeriodo(periodo, prisma, 'DEMANDA', {
@@ -77,7 +109,7 @@ export async function ejecutarReorganizacionConPrioridad(
     const verificacion = await verificarCorridaPeriodo(periodo, prisma, batch.corridaId);
     return resumir('periodo', periodo, batch.corridaId, batch.resultados, verificacion);
   } finally {
-    corridaEnCurso = false;
+    await liberarCandado(prisma);
   }
 }
 
@@ -97,14 +129,14 @@ export async function ejecutarAsignacionADemanda(
   prisma: PrismaClient,
   origen: OrigenCorrida = 'DEMANDA',
 ): Promise<ResumenAsignacionDTO> {
-  if (corridaEnCurso) {
+  const bloqueado = await adquirirCandado(prisma);
+  if (!bloqueado) {
     throw new HttpError(
       409,
       'Ya hay una corrida de asignación en curso. Intenta de nuevo al terminar.',
     );
   }
 
-  corridaEnCurso = true;
   try {
     if (seccionId) {
       const seccion = await prisma.seccion.findUnique({
@@ -135,6 +167,6 @@ export async function ejecutarAsignacionADemanda(
     const verificacion = await verificarCorridaPeriodo(periodo, prisma, batch.corridaId);
     return resumir('periodo', periodo, batch.corridaId, batch.resultados, verificacion);
   } finally {
-    corridaEnCurso = false;
+    await liberarCandado(prisma);
   }
 }
