@@ -63,6 +63,16 @@ describe('Utils de Administración', () => {
       ).toBe('Alerta resuelta: 1 sección reubicada.');
     });
 
+    it('no cuenta como reubicadas las que siguen en su aula', () => {
+      expect(
+        adminUtils.resumirReubicacion({
+          alertaId: 'a',
+          alertaResuelta: true,
+          secciones: [seccion('VIGENTE'), { ...seccion('VIGENTE'), conservada: true }],
+        }),
+      ).toBe('Alerta resuelta: 1 sección reubicada, 1 sin cambios (su aula sigue sirviendo).');
+    });
+
     it('indica las que quedaron en revisión', () => {
       expect(
         adminUtils.resumirReubicacion({

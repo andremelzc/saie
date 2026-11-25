@@ -99,6 +99,18 @@ describe('TarjetaAlerta', () => {
       expect(screen.queryByRole('button', { name: 'Reubicar secciones' })).toBeNull();
     });
 
+    it('no ofrece reubicar en una alerta de accesibilidad: el motor no movería nada', () => {
+      render(
+        <TarjetaAlerta
+          alerta={{ ...alerta, tipo: 'ACCESIBILIDAD', asignacionesAfectadas: cursos }}
+          onReubicar={vi.fn()}
+          onResolver={vi.fn()}
+        />,
+      );
+      expect(screen.queryByRole('button', { name: 'Reubicar secciones' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Marcar como resuelta' })).toBeInTheDocument();
+    });
+
     it('no ofrece reubicar sin el permiso (Jefatura)', () => {
       render(
         <TarjetaAlerta
