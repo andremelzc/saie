@@ -11,45 +11,13 @@ import { procesarAsignacionSeccionIndividual, procesarCorridaBatchPeriodo } from
 import { asegurarPeriodoEscribible, obtenerPeriodoVigente } from './periodo.service';
 import { verificarCorridaPeriodo } from './verificador.service';
 
-// Issue 2.15 & 5.33 (R28): El motor corre en el mismo proceso; para evitar que una corrida
-// se pise con otra (sea local o entre varias instancias si escala el backend), se combina un
-// flag en memoria con un advisory lock de PostgreSQL.
-const ID_BLOQUEO_CORRIDA = 7142026;
-let corridaEnCurso = false;
+// Issue 2.15 & 5.33 (R28): una corrida no debe pisarse con otra, ni en este proceso ni entre
+// instancias. El candado (memoria + advisory lock en una sesión propia, segura con el pooler de
+// Supabase) vive en `lib/candadoCorrida`; todas las corridas lo toman aquí y lo sueltan en
+// `finally`, así un error nunca lo deja tomado.
+import { adquirirCandado, liberarCandado } from '../lib/candadoCorrida';
 
-export function hayCorridaEnCurso(): boolean {
-  return corridaEnCurso;
-}
-
-export async function adquirirCandado(prisma?: PrismaClient): Promise<boolean> {
-  if (corridaEnCurso) return false;
-  corridaEnCurso = true;
-  if (prisma && typeof prisma.$queryRaw === 'function') {
-    try {
-      const res = await prisma.$queryRaw<
-        { locked: boolean }[]
-      >`SELECT pg_try_advisory_lock(${ID_BLOQUEO_CORRIDA}) as locked`;
-      if (res && res[0] && res[0].locked === false) {
-        corridaEnCurso = false;
-        return false;
-      }
-    } catch {
-      // Si la BD no soporta pg_try_advisory_lock o no está disponible, se conserva el candado en memoria.
-    }
-  }
-  return true;
-}
-
-export async function liberarCandado(prisma?: PrismaClient): Promise<void> {
-  corridaEnCurso = false;
-  if (prisma && typeof prisma.$queryRaw === 'function') {
-    try {
-      await prisma.$queryRaw`SELECT pg_advisory_unlock(${ID_BLOQUEO_CORRIDA})`;
-    } catch {
-      // Ignorar fallos de liberación externa
-    }
-  }
-}
+export { adquirirCandado, hayCorridaEnCurso, liberarCandado } from '../lib/candadoCorrida';
 
 function mapearResultado(r: ResultadoOrquestacion): ResultadoSeccionDTO {
   return {
@@ -94,7 +62,7 @@ export async function ejecutarReorganizacionConPrioridad(
   periodo: string,
   prisma: PrismaClient,
 ): Promise<ResumenAsignacionDTO> {
-  const bloqueado = await adquirirCandado(prisma);
+  const bloqueado = await adquirirCandado();
   if (!bloqueado) {
     throw new HttpError(
       409,
@@ -109,7 +77,7 @@ export async function ejecutarReorganizacionConPrioridad(
     const verificacion = await verificarCorridaPeriodo(periodo, prisma, batch.corridaId);
     return resumir('periodo', periodo, batch.corridaId, batch.resultados, verificacion);
   } finally {
-    await liberarCandado(prisma);
+    await liberarCandado();
   }
 }
 
@@ -129,7 +97,7 @@ export async function ejecutarAsignacionADemanda(
   prisma: PrismaClient,
   origen: OrigenCorrida = 'DEMANDA',
 ): Promise<ResumenAsignacionDTO> {
-  const bloqueado = await adquirirCandado(prisma);
+  const bloqueado = await adquirirCandado();
   if (!bloqueado) {
     throw new HttpError(
       409,
@@ -167,6 +135,6 @@ export async function ejecutarAsignacionADemanda(
     const verificacion = await verificarCorridaPeriodo(periodo, prisma, batch.corridaId);
     return resumir('periodo', periodo, batch.corridaId, batch.resultados, verificacion);
   } finally {
-    await liberarCandado(prisma);
+    await liberarCandado();
   }
 }
