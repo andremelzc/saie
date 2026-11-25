@@ -132,6 +132,26 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     ).toBeInTheDocument();
   });
 
+  it('avisa cuando la carga falló a medias y parte de las filas sí se guardó', async () => {
+    importar.mockResolvedValue({
+      ...base,
+      exitosa: false,
+      guardadas: false,
+      parcial: true,
+      filasRecibidas: 5,
+      procesados: { matriculasProcesadas: 4 },
+      errores: ['Fila 5: correo duplicado'],
+    });
+    montar();
+    elegirArchivo('matriculas');
+    fireEvent.click(botonImportar('3. Matrículas'));
+
+    expect(await screen.findByText(/4 guardadas · 1 con problemas/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
+    const dialogo = screen.getByRole('dialog', { name: /Resultado de la carga.*3. Matrículas/ });
+    expect(within(dialogo).getByText(/El archivo falló a medias/)).toBeInTheDocument();
+  });
+
   it('muestra las advertencias de una carga guardada (Issue 1.16)', async () => {
     importar.mockResolvedValue({
       ...base,

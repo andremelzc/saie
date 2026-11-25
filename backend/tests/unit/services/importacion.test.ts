@@ -325,6 +325,20 @@ describe('ejecutarImportacion (Issue 1.6)', () => {
     });
   });
 
+  it('avisa que se guardó parcialmente si el importador falla al escribir tras validar (Issue 1.16)', async () => {
+    (importarMatriculas as jest.Mock).mockResolvedValue({
+      alumnosProcesados: 1,
+      cuentasCreadas: 0,
+      matriculasProcesadas: 1,
+      errores: ['Fila 2 (A2 en C1-1): correo duplicado'],
+    });
+
+    const r = await ejecutarImportacion('matriculas', [{}, {}], prismaMock);
+
+    expect(r).toMatchObject({ exitosa: false, guardadas: false, parcial: true });
+    expect(r.asignacion).toBeNull();
+  });
+
   it('devuelve las advertencias de la validación sin impedir el guardado (Issue 1.16)', async () => {
     (validarImportacion as jest.Mock).mockResolvedValue({
       errores: [],
