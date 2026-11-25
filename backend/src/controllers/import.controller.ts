@@ -6,6 +6,7 @@ import {
   iniciarTrabajoImportacion,
   obtenerTrabajoImportacion,
 } from '../services/trabajosImportacion';
+import { calcularVistaPrevia } from '../services/vistaPreviaImportacion.service';
 import { TIPOS_IMPORTACION, TipoImportacion } from '../types/importacion';
 
 function esTipoImportacion(valor: string): valor is TipoImportacion {
@@ -56,6 +57,21 @@ export async function iniciarImportacion(req: Request, res: Response): Promise<v
     const filas = extraerFilas(tipo, req.body);
     const { trabajo } = iniciarTrabajoImportacion(tipo, filas, prisma, req.auth?.sub ?? null);
     res.status(202).json({ success: true, data: trabajo });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/**
+ * Issue 1.17 — POST /api/v1/import/:tipo/vista-previa: lo que la importación agregaría, quitaría o
+ * inactivaría con este archivo, sin escribir nada. Coordinación lo revisa antes de confirmar.
+ */
+export async function previsualizarImportacion(req: Request, res: Response): Promise<void> {
+  try {
+    const tipo = tipoDeLaRuta(req);
+    const filas = extraerFilas(tipo, req.body);
+    const data = await calcularVistaPrevia(tipo, filas, prisma);
+    res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);
   }

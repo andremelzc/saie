@@ -2,15 +2,30 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import CargaDatos from './CargaDatos';
-import { importarCsv } from '../../services/admin';
-import type { ResultadoImportacionDTO } from '../../types/admin';
+import { importarCsv, obtenerVistaPreviaImportacion } from '../../services/admin';
+import type { ResultadoImportacionDTO, VistaPreviaImportacionDTO } from '../../types/admin';
 
 vi.mock('../../context/useAuth', () => ({
   useAuth: () => ({ sesion: { rol: 'COORDINACION_ACADEMICA' }, cerrarSesion: vi.fn() }),
 }));
-vi.mock('../../services/admin', () => ({ importarCsv: vi.fn() }));
+vi.mock('../../services/admin', () => ({
+  importarCsv: vi.fn(),
+  obtenerVistaPreviaImportacion: vi.fn(),
+}));
 
 const importar = vi.mocked(importarCsv);
+const vistaPrevia = vi.mocked(obtenerVistaPreviaImportacion);
+
+/** Vista previa sin retiros (Issue 1.17): la de la mayoría de las pruebas. */
+const VISTA_SIN_RETIROS: VistaPreviaImportacionDTO = {
+  tipo: 'horarios',
+  filasRecibidas: 10,
+  errores: [],
+  advertencias: [],
+  cambios: { horariosNuevos: 10, horariosActualizados: 0, horariosRetirados: 0 },
+  frases: ['Se agregarán 10 franjas de horario', 'Se quitarán 0 franjas que ya no figuran'],
+  retiros: [],
+};
 
 const base: ResultadoImportacionDTO = {
   tipo: 'horarios',
@@ -39,10 +54,51 @@ const regionDe = (titulo: string) => screen.getByRole('region', { name: titulo }
 const botonImportar = (titulo: string) =>
   within(regionDe(titulo)).getByRole('button', { name: 'Importar' });
 
+/** «Importar» abre la vista previa (Issue 1.17); al confirmarla empieza la importación. */
+async function importarConfirmando(titulo: string) {
+  fireEvent.click(botonImportar(titulo));
+  const dialogo = await screen.findByRole('alertdialog', { name: '¿Importar este archivo?' });
+  fireEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar e importar' }));
+}
+
 describe('Carga de datos maestros (Issue 1.9)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    vistaPrevia.mockResolvedValue(VISTA_SIN_RETIROS);
+  });
+
+  it('muestra la vista previa con los retiros y no importa si se cancela (Issue 1.17)', async () => {
+    vistaPrevia.mockResolvedValue({
+      ...VISTA_SIN_RETIROS,
+      tipo: 'matriculas',
+      frases: ['Se agregarán 12 matrículas', 'Se quitarán 1 matrícula (alumnos que ya no figuran)'],
+      retiros: ['CC-101 sec. 1: 20231234 Pedro Ruiz'],
+    });
+    montar();
+    elegirArchivo('matriculas', 'x,y');
+    fireEvent.click(botonImportar('3. Matrículas'));
+
+    const dialogo = await screen.findByRole('alertdialog', { name: '¿Importar este archivo?' });
+    expect(vistaPrevia).toHaveBeenCalledWith('matriculas', 'x,y');
+    expect(within(dialogo).getByText('Se agregarán 12 matrículas.')).toBeInTheDocument();
+    expect(within(dialogo).getByText('CC-101 sec. 1: 20231234 Pedro Ruiz')).toBeInTheDocument();
+
+    fireEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(importar).not.toHaveBeenCalled();
+  });
+
+  it('importa sin pedir confirmación si el archivo tiene errores (Issue 1.17)', async () => {
+    vistaPrevia.mockResolvedValue({ ...VISTA_SIN_RETIROS, errores: ['Fila 2: código inválido'] });
+    importar.mockResolvedValue({ ...base, exitosa: false, errores: ['Fila 2: código inválido'] });
+    montar();
+    elegirArchivo('horarios', 'x,y');
+    fireEvent.click(botonImportar('2. Horarios'));
+
+    expect(await screen.findByText('La carga tiene 1 fila con problemas')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(importar).toHaveBeenCalledWith('horarios', 'x,y', expect.any(Function));
   });
 
   it('muestra los cuatro flujos con el botón de importar deshabilitado hasta elegir un archivo', () => {
@@ -90,7 +146,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     });
     montar();
     elegirArchivo('matriculas', 'x,y');
-    fireEvent.click(botonImportar('3. Matrículas'));
+    await importarConfirmando('3. Matrículas');
 
     expect(await screen.findByText(/Procesando 2300 de 4470 filas/)).toBeInTheDocument();
     terminar(base);
@@ -101,7 +157,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     importar.mockResolvedValue(base);
     montar();
     elegirArchivo('horarios', 'x,y');
-    fireEvent.click(botonImportar('2. Horarios'));
+    await importarConfirmando('2. Horarios');
 
     // En la tarjeta queda el resumen; el detalle (procesados) va en el drawer.
     expect(await screen.findByText('Carga completada sin errores')).toBeInTheDocument();
@@ -128,7 +184,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     });
     montar();
     elegirArchivo('matriculas');
-    fireEvent.click(botonImportar('3. Matrículas'));
+    await importarConfirmando('3. Matrículas');
 
     // La tarjeta solo resume; el detalle de las filas va en el drawer.
     expect(await screen.findByText('La carga tiene 2 filas con problemas')).toBeInTheDocument();
@@ -161,7 +217,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     });
     montar();
     elegirArchivo('matriculas');
-    fireEvent.click(botonImportar('3. Matrículas'));
+    await importarConfirmando('3. Matrículas');
 
     expect(await screen.findByText(/4 guardadas · 1 con problemas/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
@@ -177,7 +233,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     });
     montar();
     elegirArchivo('horarios');
-    fireEvent.click(botonImportar('2. Horarios'));
+    await importarConfirmando('2. Horarios');
 
     expect(await screen.findByText(/1 aviso/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Ver el resultado completo' }));
@@ -221,7 +277,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     });
     montar();
     elegirArchivo('cursos-secciones');
-    fireEvent.click(botonImportar('1. Cursos y secciones'));
+    await importarConfirmando('1. Cursos y secciones');
 
     // La tarjeta resume la asignación en una línea; el veredicto va en el drawer.
     expect(
@@ -245,7 +301,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     });
     montar();
     elegirArchivo('horarios');
-    fireEvent.click(botonImportar('2. Horarios'));
+    await importarConfirmando('2. Horarios');
 
     expect(
       await screen.findByText('No se asignaron aulas: Faltan matrículas.'),
@@ -256,7 +312,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     importar.mockRejectedValue(new Error('boom'));
     montar();
     elegirArchivo('horarios');
-    fireEvent.click(botonImportar('2. Horarios'));
+    await importarConfirmando('2. Horarios');
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Inténtalo de nuevo en unos minutos.',
@@ -316,7 +372,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     importar.mockResolvedValue(base);
     montar();
     elegirArchivo('cursos-secciones');
-    fireEvent.click(botonImportar('1. Cursos y secciones'));
+    await importarConfirmando('1. Cursos y secciones');
 
     const continuar = await screen.findByRole('button', { name: /Continuar con Horarios/ });
     fireEvent.click(continuar);
@@ -333,7 +389,7 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     });
     montar();
     elegirArchivo('matriculas');
-    fireEvent.click(botonImportar('3. Matrículas'));
+    await importarConfirmando('3. Matrículas');
     await screen.findByText('La carga tiene 1 fila con problemas');
 
     // «Corregir» vive dentro del drawer del detalle: al confirmarlo se cierra y limpia la zona.

@@ -1,4 +1,4 @@
-import { ComparacionVersion, PrismaClient, TipoEspacio } from '@prisma/client';
+import { ComparacionVersion, EstadoAsignacion, PrismaClient, TipoEspacio } from '@prisma/client';
 import { z } from 'zod';
 import { parsearNombreVersion } from '../lib/software';
 import { resolverSoftwarePorNombre } from '../services/software.service';
@@ -19,7 +19,48 @@ export type CursoSeccionInput = z.infer<typeof CursoSeccionSchema>;
 export interface ResultadoImportacionCursos {
   cursosProcesados: number;
   seccionesProcesadas: number;
+  /** Issue 1.17 (R35): secciones de un curso del archivo que ya no figuran en él. */
+  seccionesInactivadas: number;
   errores: string[];
+}
+
+/** Clave de un curso en un periodo: el ámbito en que el archivo manda sobre sus secciones. */
+export function claveCursoPeriodo(cursoId: string, periodo: string): string {
+  return `${cursoId}|${periodo}`;
+}
+
+/**
+ * Issue 1.17 (riesgo R35): las secciones de cada curso y periodo del archivo que no figuran en él
+ * se marcan inactivas (no se borran: tienen historial) y su asignación pasa a HISTORICA, así el
+ * motor no las considera y su aula queda libre. Los cursos que no aparecen en el archivo no se
+ * tocan, para poder cargar por partes.
+ */
+async function inactivarSeccionesAusentes(
+  enArchivo: Map<string, Set<string>>,
+  prisma: PrismaClient,
+): Promise<number> {
+  let inactivadas = 0;
+  for (const [clave, seccionIds] of enArchivo) {
+    const [cursoId, periodo] = clave.split('|');
+    const ausentes = await prisma.seccion.findMany({
+      where: { cursoId, periodo, activa: true, id: { notIn: [...seccionIds] } },
+      select: { id: true },
+    });
+    if (ausentes.length === 0) continue;
+    const ids = ausentes.map((s) => s.id);
+    await prisma.$transaction([
+      prisma.seccion.updateMany({ where: { id: { in: ids } }, data: { activa: false } }),
+      prisma.asignacion.updateMany({
+        where: {
+          seccionId: { in: ids },
+          estado: { in: [EstadoAsignacion.VIGENTE, EstadoAsignacion.ESCALADA] },
+        },
+        data: { estado: EstadoAsignacion.HISTORICA },
+      }),
+    ]);
+    inactivadas += ids.length;
+  }
+  return inactivadas;
 }
 
 interface RequerimientoResuelto {
@@ -68,6 +109,8 @@ export async function importarCursosYSecciones(
   let cursosProcesados = 0;
   let seccionesProcesadas = 0;
   const errores: string[] = [];
+  // Issue 1.17: secciones que el archivo indica para cada curso y periodo.
+  const enArchivo = new Map<string, Set<string>>();
 
   for (let i = 0; i < datos.length; i++) {
     const validacion = CursoSeccionSchema.safeParse(datos[i]);
@@ -111,8 +154,9 @@ export async function importarCursosYSecciones(
         comparacionVersion: r.comparacionVersion,
       }));
 
-      // 2. Inserción o actualización idempotente de Sección, reemplazando sus requerimientos
-      await prisma.seccion.upsert({
+      // 2. Inserción o actualización idempotente de Sección, reemplazando sus requerimientos.
+      // Si estaba inactiva y vuelve a figurar en el archivo, se reactiva (Issue 1.17).
+      const seccion = await prisma.seccion.upsert({
         where: {
           cursoId_codigoSeccion_periodo: {
             cursoId: curso.id,
@@ -122,6 +166,7 @@ export async function importarCursosYSecciones(
         },
         update: {
           tipoEspacioRequerido,
+          activa: true,
           softwareRequerido: {
             deleteMany: {},
             create: relaciones,
@@ -136,11 +181,19 @@ export async function importarCursosYSecciones(
         },
       });
       seccionesProcesadas++;
+      const clave = claveCursoPeriodo(curso.id, periodo);
+      const delCurso = enArchivo.get(clave) ?? new Set<string>();
+      delCurso.add(seccion.id);
+      enArchivo.set(clave, delCurso);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       errores.push(`Fila ${i + 1} (${codigoCurso}-${codigoSeccion}): ${msg}`);
     }
   }
 
-  return { cursosProcesados, seccionesProcesadas, errores };
+  // Igual que matrículas y horarios: si alguna fila falló no se inactiva nada.
+  const seccionesInactivadas =
+    errores.length === 0 ? await inactivarSeccionesAusentes(enArchivo, prisma) : 0;
+
+  return { cursosProcesados, seccionesProcesadas, seccionesInactivadas, errores };
 }
