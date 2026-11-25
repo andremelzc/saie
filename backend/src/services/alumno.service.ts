@@ -1,4 +1,4 @@
-import { DiaSemana, Prisma, PrismaClient } from '@prisma/client';
+import { DiaSemana, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { HttpError } from '../lib/http';
 import {
@@ -16,6 +16,11 @@ import {
   PerfilAlumnoDTO,
 } from '../types/portal';
 import { obtenerPeriodoVigente } from './periodo.service';
+import {
+  aEstadoAccesibilidadDTO,
+  declararAccesibilidad,
+  ultimaSolicitudAccesibilidad,
+} from './accesibilidad.service';
 import { construirGrafoContiguedad } from './contiguedad.service';
 import { calcularRutaReferencia } from './rutaReferencia.service';
 import {
@@ -201,8 +206,10 @@ function armarPerfil(
     contactoEmergencia: string | null;
     condicionAccesible: boolean;
   } | null,
+  solicitud: Parameters<typeof aEstadoAccesibilidadDTO>[0] | null,
 ): PerfilAlumnoDTO {
   return {
+    accesibilidad: solicitud ? aEstadoAccesibilidadDTO(solicitud) : null,
     alumno: {
       codigo: alumno.codigo,
       nombre: alumno.nombre,
@@ -238,7 +245,11 @@ export async function obtenerPerfilAlumno(
   if (!alumno) {
     throw new HttpError(404, 'No hay un alumno asociado a esta cuenta');
   }
-  return armarPerfil(alumno, alumno.fichaMedica);
+  return armarPerfil(
+    alumno,
+    alumno.fichaMedica,
+    await ultimaSolicitudAccesibilidad(alumno.id, prisma),
+  );
 }
 
 /**
@@ -273,57 +284,24 @@ export async function actualizarPerfilAlumno(
         })
       : alumno;
 
-    // La ficha anterior se lee antes del `upsert`: sirve para saber si el flag de las
-    // matrículas lo puso esta declaración o una carga de datos de Coordinación.
+    // La ficha anterior se lee antes del `upsert`: dice si la condición ya estaba aprobada.
     const fichaPrevia = await tx.fichaMedica.findUnique({ where: { alumnoId: alumno.id } });
 
-    const ficha = fichaMedica
-      ? await tx.fichaMedica.upsert({
-          where: { alumnoId: alumno.id },
-          create: { alumnoId: alumno.id, ...fichaMedica },
-          update: fichaMedica,
-        })
-      : fichaPrevia;
+    // Issue 3.60 (R12): la casilla no marca la condición; crea o retira una solicitud que
+    // Coordinación confirma. `condicionAccesible` solo cambia al aprobarla (o al desmarcarla).
+    const { condicionAccesible: declarado, ...datosFicha } = fichaMedica ?? {};
+    if (fichaMedica && Object.keys(datosFicha).length > 0) {
+      await tx.fichaMedica.upsert({
+        where: { alumnoId: alumno.id },
+        create: { alumnoId: alumno.id, ...datosFicha },
+        update: datosFicha,
+      });
+    }
+    await declararAccesibilidad(alumno.id, declarado, fichaPrevia?.condicionAccesible === true, tx);
 
-    await propagarCondicionAccesible(alumno.id, fichaMedica?.condicionAccesible, fichaPrevia, tx);
-
-    return armarPerfil(alumnoActualizado, ficha);
+    const ficha = await tx.fichaMedica.findUnique({ where: { alumnoId: alumno.id } });
+    return armarPerfil(alumnoActualizado, ficha, await ultimaSolicitudAccesibilidad(alumno.id, tx));
   });
-}
-
-/**
- * Traduce la declaración de accesibilidad de la ficha al flag que consume el motor
- * (`Matricula.movilidadReducida`).
- *
- * - Declarar `true` marca todas las matrículas del alumno: el motor prioriza el Piso 1.
- * - Declarar `false` solo limpia el flag si la declaración anterior estaba activa; si el flag
- *   venía de una carga de datos de Coordinación, se respeta y no se toca.
- *
- * Así el alumno puede corregir su declaración sin perder un dato que otro puso, y a la vez
- * su declaración manda mientras está activa.
- */
-async function propagarCondicionAccesible(
-  alumnoId: string,
-  declarado: boolean | undefined,
-  fichaPrevia: { condicionAccesible: boolean } | null,
-  tx: Prisma.TransactionClient,
-): Promise<void> {
-  if (declarado === undefined) return;
-
-  if (declarado) {
-    await tx.matricula.updateMany({
-      where: { alumnoId },
-      data: { movilidadReducida: true },
-    });
-    return;
-  }
-
-  if (fichaPrevia?.condicionAccesible) {
-    await tx.matricula.updateMany({
-      where: { alumnoId },
-      data: { movilidadReducida: false },
-    });
-  }
 }
 
 /**

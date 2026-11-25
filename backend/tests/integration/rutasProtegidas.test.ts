@@ -3,6 +3,8 @@
 const prismaMock: any = {
   cuenta: { findUnique: jest.fn() },
   alumno: { findUnique: jest.fn() },
+  // Issue 3.60: el perfil trae el estado de la declaración de accesibilidad.
+  solicitudAccesibilidad: { findFirst: jest.fn().mockResolvedValue(null) },
   docente: { findUnique: jest.fn() },
   seccion: { findFirst: jest.fn(), findMany: jest.fn() },
   matricula: { findMany: jest.fn() },

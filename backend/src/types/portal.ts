@@ -68,6 +68,16 @@ export interface PerfilAlumnoDTO {
      */
     condicionAccesible: boolean;
   } | null;
+  /**
+   * Issue 3.60: la declaración de accesibilidad más reciente y su estado. `condicionAccesible`
+   * solo es `true` cuando Coordinación la aprobó; mientras tanto la solicitud está `PENDIENTE`.
+   */
+  accesibilidad: {
+    estado: 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
+    fechaSolicitud: string;
+    fechaResolucion: string | null;
+    motivoRechazo: string | null;
+  } | null;
 }
 
 /** Issue 3.28: estado de la vinculación de Telegram que el alumno ve en su perfil. */
