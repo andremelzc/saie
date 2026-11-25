@@ -1,4 +1,6 @@
 import type { ResultadoReubicacionDTO } from '../types/admin';
+import type { DiaSemana, TipoEspacio } from '../types/consulta';
+import { ETIQUETA_DIA, rotuloClase } from './horario';
 import { RUTAS } from '../config/rutas';
 import type { RolCuenta } from '../types/auth';
 import { ROL } from './diccionarios';
@@ -202,6 +204,67 @@ export function softwareFaltanteDeMotivo(motivo: string | null | undefined): str
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+interface SeccionRotulable {
+  codigoCurso: string;
+  nombreCurso: string;
+  codigoSeccion: string;
+  tipoEspacioRequerido: TipoEspacio;
+}
+
+/**
+ * Rótulo legible de una sección para el panel: «BASE DE DATOS I · Grupo 2 · Laboratorio». El
+ * código «2-LAB» solo, en cambio, se lee como «Laboratorio 2» y confunde con los espacios.
+ */
+export function rotuloSeccion(s: SeccionRotulable): string {
+  return `${s.nombreCurso} · ${rotuloClase(s)}`;
+}
+
+/** Código técnico de la sección, como dato secundario: «202SW0503 · 2-LAB». */
+export function codigoSeccionCompleto(s: Pick<SeccionRotulable, 'codigoCurso' | 'codigoSeccion'>) {
+  return `${s.codigoCurso} · ${s.codigoSeccion}`;
+}
+
+/** «el lunes 17:00–19:00 y el jueves 10:00–12:00». */
+function textoFranjas(horarios: { diaSemana: DiaSemana; horaInicio: string; horaFin: string }[]) {
+  return horarios
+    .map(
+      (h) =>
+        `el ${ETIQUETA_DIA[h.diaSemana].toLowerCase()} ${h.horaInicio.slice(0, 5)}–${h.horaFin.slice(0, 5)}`,
+    )
+    .join(' y ');
+}
+
+/**
+ * Acción concreta para una sección escalada por software faltante: qué falta, a qué hora debe
+ * estar libre el laboratorio y para cuántos alumnos. `null` si el motivo es de otro tipo.
+ */
+export function accionSoftwareFaltante(escalada: {
+  motivoEscalamiento: string | null;
+  seccion: {
+    alumnosMatriculados: number;
+    horarios?: { diaSemana: DiaSemana; horaInicio: string; horaFin: string }[];
+  };
+}): string | null {
+  if (describirMotivoEscalamiento(escalada.motivoEscalamiento).codigo !== 'SOFTWARE_FALTANTE') {
+    return null;
+  }
+  const falta = softwareFaltanteDeMotivo(escalada.motivoEscalamiento);
+  const programas =
+    falta.length === 0
+      ? 'el software que pide la sección'
+      : falta.length === 1
+        ? falta[0]
+        : `${falta.slice(0, -1).join(', ')} y ${falta[falta.length - 1]}`;
+  const pronombre = falta.length > 1 ? 'los' : 'lo';
+  const horarios = escalada.seccion.horarios ?? [];
+  const cuando = horarios.length > 0 ? textoFranjas(horarios) : 'a la hora de la sección';
+  const alumnos = escalada.seccion.alumnosMatriculados;
+  return (
+    `Falta ${programas}. Pide a Jefatura que ${pronombre} instale en un laboratorio libre ` +
+    `${cuando} (${alumnos} ${alumnos === 1 ? 'alumno' : 'alumnos'}) y luego pulsa Reintentar.`
+  );
 }
 
 /** Texto de espera de una importación grande, con el avance cuando ya se conoce (Issue 1.19). */

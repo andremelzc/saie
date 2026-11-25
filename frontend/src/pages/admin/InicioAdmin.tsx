@@ -34,6 +34,9 @@ import type {
 } from '../../types/admin';
 import {
   describirMotivoEscalamiento,
+  accionSoftwareFaltante,
+  codigoSeccionCompleto,
+  rotuloSeccion,
   separarDatosIncompletos,
   softwareFaltanteDeMotivo,
 } from '../../utils/admin';
@@ -182,21 +185,25 @@ const FilaEscalada: React.FC<{
 }> = ({ seccion, reintentando, deshabilitado, onReintentar }) => {
   const motivo = describirMotivoEscalamiento(seccion.motivoEscalamiento);
   const alumnos = seccion.seccion.alumnosMatriculados;
+  const accionSoftware = accionSoftwareFaltante(seccion);
 
   return (
     <li className="flex flex-col gap-3 border-b border-saie-divider py-2.5 last:border-b-0 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="m-0 text-sm font-semibold text-saie-text sm:truncate">
-          {seccion.seccion.codigoCurso} · {seccion.seccion.codigoSeccion} —{' '}
-          {seccion.seccion.nombreCurso}
+        {/* «Grupo 2 · Laboratorio» en vez de «2-LAB», que se leía como «Laboratorio 2». */}
+        <p className="m-0 text-sm font-semibold text-saie-text">{rotuloSeccion(seccion.seccion)}</p>
+        <p className="m-0 text-sm text-saie-muted">
+          {codigoSeccionCompleto(seccion.seccion)} · {alumnos}{' '}
+          {alumnos === 1 ? 'alumno' : 'alumnos'}
         </p>
-        <p className="m-0 flex flex-wrap items-center gap-2 text-sm text-saie-muted">
+        <div className="flex flex-wrap items-start gap-2 text-sm text-saie-muted">
           <BadgeEstado tono="advertencia">{motivo.etiqueta}</BadgeEstado>
-          <span className="min-w-0 sm:truncate">{motivo.descripcion}</span>
-          <span>
-            {alumnos} {alumnos === 1 ? 'alumno' : 'alumnos'}
-          </span>
-        </p>
+          {/* El motivo completo, con saltos de línea: cortado no se entendía qué faltaba. */}
+          <p className="m-0 min-w-0 flex-1 basis-60 break-words">{motivo.descripcion}</p>
+        </div>
+        {accionSoftware && (
+          <p className="m-0 text-sm font-medium text-saie-text">{accionSoftware}</p>
+        )}
         {/*
           El código del motivo es interno (lo escribe el motor). Se muestra plegado y bajo una
           etiqueta de "soporte" para que la persona que coordina lea primero la causa en
@@ -269,12 +276,13 @@ const DatosIncompletos: React.FC<{ secciones: SeccionEscaladaDTO[] }> = ({ secci
             key={s.asignacionId}
             className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-saie-canvas px-2 py-1 text-sm text-saie-text"
           >
-            <span>
-              {s.seccion.codigoCurso} · {s.seccion.codigoSeccion} — {s.seccion.nombreCurso}
+            <span className="flex flex-col">
+              <span>{rotuloSeccion(s.seccion)}</span>
+              <span className="text-saie-muted">{codigoSeccionCompleto(s.seccion)}</span>
             </span>
             <Link
               to={rutaEditarHorarioSeccion(s.seccion.codigoCurso, s.seccion.id)}
-              aria-label={`Agregar horario a ${s.seccion.codigoCurso} · ${s.seccion.codigoSeccion}`}
+              aria-label={`Agregar horario a ${rotuloSeccion(s.seccion)} (${codigoSeccionCompleto(s.seccion)})`}
               className="font-semibold text-saie-primary underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-saie-primary"
             >
               Agregar horario
@@ -329,11 +337,6 @@ const ListaEscaladas: React.FC<{
 };
 
 /**
- * Inicio de Jefatura de Laboratorios (Issue 4.16): laboratorios activos, PCs operativas e
- * inoperativas, la alerta más reciente, accesos y el mapa de ocupación con sus laboratorios
- * resaltados (componente del mapa de los Issues 4.13 y 4.14).
- */
-/**
  * Secciones que el motor escaló porque ningún laboratorio libre tiene el software que piden.
  * Quien instala el software es Jefatura, así que se le muestran aquí (sin alertas: una alerta
  * exige un espacio y estas secciones no tienen ninguno). Si no hay, el bloque no aparece.
@@ -369,9 +372,8 @@ const SeccionesEsperanSoftware: React.FC = () => {
               key={s.asignacionId}
               className="flex flex-col gap-1 rounded-lg bg-saie-canvas px-3 py-2 text-sm"
             >
-              <span className="font-semibold text-saie-text">
-                {s.seccion.codigoCurso} · {s.seccion.codigoSeccion} — {s.seccion.nombreCurso}
-              </span>
+              <span className="font-semibold text-saie-text">{rotuloSeccion(s.seccion)}</span>
+              <span className="text-saie-muted">{codigoSeccionCompleto(s.seccion)}</span>
               <span>
                 <span className="text-saie-muted">Falta: </span>
                 {falta.length > 0 ? falta.join(', ') : 'software requerido por la sección'}
@@ -401,6 +403,11 @@ const SeccionesEsperanSoftware: React.FC = () => {
   );
 };
 
+/**
+ * Inicio de Jefatura de Laboratorios (Issue 4.16): laboratorios activos, PCs operativas e
+ * inoperativas, la alerta más reciente, accesos y el mapa de ocupación con sus laboratorios
+ * resaltados (componente del mapa de los Issues 4.13 y 4.14).
+ */
 const InicioJefatura: React.FC = () => {
   const alertas = useCarga(obtenerAlertas, { clave: 'alertas' });
   const labs = useCarga(obtenerLaboratoriosConEstado, { clave: CLAVE_LABORATORIOS_ESTADO });

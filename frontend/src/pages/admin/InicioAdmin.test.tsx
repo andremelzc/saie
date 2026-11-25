@@ -210,10 +210,13 @@ describe('Inicio del panel administrativo', () => {
       const bloque = await screen.findByRole('region', {
         name: 'Datos incompletos: falta cargar horarios (1)',
       });
-      expect(within(bloque).getByText(/DEMO001 · DEMO — Demo/)).toBeInTheDocument();
+      expect(within(bloque).getByText('Demo · Grupo DEMO · Teoría')).toBeInTheDocument();
+      expect(within(bloque).getByText('DEMO001 · DEMO')).toBeInTheDocument();
       // Cada sección se corrige por separado desde Secciones, con el editor de horario abierto.
       expect(
-        within(bloque).getByRole('link', { name: 'Agregar horario a DEMO001 · DEMO' }),
+        within(bloque).getByRole('link', {
+          name: 'Agregar horario a Demo · Grupo DEMO · Teoría (DEMO001 · DEMO)',
+        }),
       ).toHaveAttribute('href', '/admin/secciones?buscar=DEMO001&seccion=sec3&editar=horario');
       // La carga masiva sigue disponible como opción secundaria.
       expect(within(bloque).getByRole('link', { name: 'Cargar CSV de horarios' })).toHaveAttribute(
@@ -225,9 +228,53 @@ describe('Inicio del panel administrativo', () => {
       expect(valorMetrica('Esperan revisión')).toHaveTextContent('2');
     });
 
+    it('rotula «2-LAB» como grupo y laboratorio, con el motivo completo y qué hacer', async () => {
+      const motivo =
+        'Ningún laboratorio disponible en la franja horaria cuenta con el stack de software requerido: [MySQL].';
+      escaladas.mockResolvedValue({
+        periodo: '2026-2',
+        total: 1,
+        secciones: [
+          {
+            asignacionId: 'x9',
+            fechaEscalamiento: '2026-11-25T10:00:00Z',
+            motivoEscalamiento: `[SOFTWARE_FALTANTE] ${motivo}`,
+            seccion: {
+              id: 'sec9',
+              codigoCurso: '202SW0503',
+              nombreCurso: 'BASE DE DATOS I',
+              codigoSeccion: '2-LAB',
+              periodo: '2026-2',
+              docenteNombre: null,
+              tipoEspacioRequerido: 'LABORATORIO',
+              alumnosMatriculados: 7,
+              horarios: [{ diaSemana: 'LUNES', horaInicio: '17:00', horaFin: '19:00' }],
+            },
+          },
+        ],
+      });
+      montar();
+
+      // «2-LAB» se leía como «Laboratorio 2»: ahora es «Grupo 2 · Laboratorio».
+      expect(
+        await screen.findByText('BASE DE DATOS I · Grupo 2 · Laboratorio'),
+      ).toBeInTheDocument();
+      expect(screen.getByText('202SW0503 · 2-LAB · 7 alumnos')).toBeInTheDocument();
+      // El motivo completo, sin recortar.
+      const textoMotivo = screen.getByText(motivo);
+      expect(textoMotivo).not.toHaveClass('truncate');
+      expect(textoMotivo.className).not.toMatch(/truncate/);
+      expect(
+        screen.getByText(
+          'Falta MySQL. Pide a Jefatura que lo instale en un laboratorio libre el lunes 17:00–19:00 (7 alumnos) y luego pulsa Reintentar.',
+        ),
+      ).toBeInTheDocument();
+    });
+
     it('muestra el total de escaladas, el periodo y las secciones', async () => {
       montar();
-      expect(await screen.findByText(/IS101 · 01 — Algoritmos/)).toBeInTheDocument();
+      expect(await screen.findByText('Algoritmos · Grupo 01 · Teoría')).toBeInTheDocument();
+      expect(screen.getByText('IS101 · 01 · 45 alumnos')).toBeInTheDocument();
       expect(screen.getByText(/Periodo 2026-II/)).toBeInTheDocument();
       expect(screen.getByText('Horario ocupado')).toBeInTheDocument();
       expect(
@@ -615,7 +662,10 @@ describe('Inicio del panel administrativo', () => {
       });
       // Solo las de software faltante: las demás escaladas son asunto de Coordinación.
       expect(within(bloque).getAllByRole('listitem')).toHaveLength(1);
-      expect(within(bloque).getByText('202SW0503 · 2-LAB — BASE DE DATOS I')).toBeInTheDocument();
+      expect(
+        within(bloque).getByText('BASE DE DATOS I · Grupo 2 · Laboratorio'),
+      ).toBeInTheDocument();
+      expect(within(bloque).getByText('202SW0503 · 2-LAB')).toBeInTheDocument();
       expect(within(bloque).getByText('MySQL')).toBeInTheDocument();
       expect(
         within(bloque).getByText(/Lunes 17:00 – 19:00 · 7 alumnos matriculados/),
