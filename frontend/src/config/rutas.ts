@@ -24,6 +24,7 @@ export const RUTAS = {
   inicioAdmin: '/admin',
   alertasAdmin: '/admin/alertas',
   cargaAdmin: '/admin/carga',
+  periodosAdmin: '/admin/periodos',
   espaciosAdmin: '/admin/espacios',
   seccionesAdmin: '/admin/secciones',
   auditoriaAdmin: '/admin/auditoria',

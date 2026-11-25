@@ -78,6 +78,7 @@ const EVENTOS_FILTRO: TipoEventoAuditoria[] = [
   'EDICION_ESPACIO',
   'EDICION_SECCION',
   'CAMBIO_LABORATORIO',
+  'CAMBIO_PERIODO',
 ];
 
 /** Motivo de una escalada en lenguaje llano; null si la asignación no está en revisión. */

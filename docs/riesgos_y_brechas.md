@@ -89,11 +89,13 @@
 
 | Estado | Riesgos |
 |---|---|
-| **Resueltos** | R1 (doble reserva), R2 (aulas de menor a mayor), R3 y R18 (espacios que dejan de servir, alerta al deshabilitar y «Reubicar secciones»), R7 (secciones sin horarios como datos incompletos), R10 (alerta de accesibilidad), R11 (la importación conserva la movilidad declarada), R17 (Jefatura a cargo de los laboratorios, aplicado en Supabase), R27 (indicación en README y AGENTS.md), R34 y R36 (importación todo o nada y avisos de choques), R46 (Telegram sin respuestas repetidas), R49 (normalización y validación del periodo), R38 (CSV de Excel con tildes y ñ) |
-| **En parte** | R37 (la consulta ya no lee la ficha médica; falta filtrar por periodo, depende de #427) |
+| **Resueltos** | R1 (doble reserva), R2 (aulas de menor a mayor), R3 y R18 (espacios que dejan de servir, alerta al deshabilitar y «Reubicar secciones»), R7 (secciones sin horarios como datos incompletos), R10 (alerta de accesibilidad), R11 (la importación conserva la movilidad declarada), R17 (Jefatura a cargo de los laboratorios, aplicado en Supabase), R27 (indicación en README y AGENTS.md), R34 y R36 (importación todo o nada y avisos de choques), R46 (Telegram sin respuestas repetidas), R49 (normalización y validación del periodo), R37 (consulta pública sin ficha médica y solo con el periodo vigente), R38 (CSV de Excel con tildes y ñ), R25, R50, R51 y R52 (periodos gestionados por Coordinación: registrar, activar y cerrar, escrituras bloqueadas en periodos cerrados, filtro por el vigente) |
+| **En parte** | — |
 | **Pendientes** | El resto de los issues del milestone *Sprint 6 — Correcciones de la auditoría* |
 
 La migración `20261125000000_alerta_accesibilidad` (valor `ACCESIBILIDAD` en `TipoAlerta`) ya está aplicada en Supabase.
+
+La migración `20261126000000_periodos` (tabla `periodos`, valor `CAMBIO_PERIODO` y registro del periodo actual como vigente) **debe aplicarse en Supabase antes de desplegar el backend**: sin ella el sistema no encuentra el periodo vigente.
 
 ### Decisiones tomadas
 

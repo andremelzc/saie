@@ -19,6 +19,8 @@ import type {
   ListadoSeccionesDTO,
   ListadoSoftwareDTO,
   ResultadoReubicacionDTO,
+  NuevoPeriodoDTO,
+  PeriodoDTO,
   NuevoAlumnoDTO,
   NuevoDocenteDTO,
   NuevoEspacioDTO,
@@ -284,6 +286,30 @@ export async function obtenerHistorial(
     {
       params: filtros,
     },
+  );
+  return data.data;
+}
+
+/** POST /v1/admin/periodos (Issue 4.64): registra un periodo en preparación. */
+export async function registrarPeriodo(entrada: NuevoPeriodoDTO): Promise<PeriodoDTO> {
+  const { data } = await api.post<Respuesta<PeriodoDTO>>('/v1/admin/periodos', entrada);
+  return data.data;
+}
+
+/** POST /v1/admin/periodos/:codigo/activar (Issue 4.64): cierra el vigente y activa este. */
+export async function activarPeriodo(codigo: string): Promise<PeriodoDTO> {
+  const { data } = await api.post<Respuesta<PeriodoDTO>>(
+    `/v1/admin/periodos/${encodeURIComponent(codigo)}/activar`,
+    {},
+  );
+  return data.data;
+}
+
+/** POST /v1/admin/periodos/:codigo/cerrar (Issue 4.64): el periodo pasa a solo consulta. */
+export async function cerrarPeriodo(codigo: string): Promise<PeriodoDTO> {
+  const { data } = await api.post<Respuesta<PeriodoDTO>>(
+    `/v1/admin/periodos/${encodeURIComponent(codigo)}/cerrar`,
+    {},
   );
   return data.data;
 }

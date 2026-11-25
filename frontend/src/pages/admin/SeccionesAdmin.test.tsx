@@ -67,7 +67,11 @@ describe('Gestión individual de secciones (Issue 4.31)', () => {
     vi.clearAllMocks();
     // Sin caché entre pruebas: cada una debe pedir sus datos.
     vaciarCacheCarga();
-    periodos.mockResolvedValue({ vigente: '2026-2', periodos: ['2026-2', '2026-1'] });
+    periodos.mockResolvedValue({
+      vigente: '2026-2',
+      periodos: ['2026-2', '2026-1'],
+      registrados: [],
+    });
     listar.mockResolvedValue({
       items: [
         seccion({

@@ -249,7 +249,9 @@ export type TipoEventoAuditoria =
   // Acciones de personas (Issue 4.58)
   | 'EDICION_ESPACIO'
   | 'EDICION_SECCION'
-  | 'CAMBIO_LABORATORIO';
+  | 'CAMBIO_LABORATORIO'
+  // Issue 4.64: registro, activación y cierre de periodos
+  | 'CAMBIO_PERIODO';
 
 /** Campos de una sección que el backend permite editar según el rol. */
 export type CampoSeccion = 'tipoEspacioRequerido' | 'docenteId' | 'softwareRequerido';
@@ -381,6 +383,25 @@ export interface PeriodosDTO {
   vigente: string | null;
   /** Del más reciente al más antiguo. */
   periodos: string[];
+  /** Issue 4.64: cada periodo registrado con su estado y fechas. */
+  registrados: PeriodoDTO[];
+}
+
+/** Issue 4.64: ciclo de vida de un periodo. Solo uno puede estar vigente. */
+export type EstadoPeriodo = 'EN_PREPARACION' | 'VIGENTE' | 'CERRADO';
+
+export interface PeriodoDTO {
+  codigo: string;
+  /** `AAAA-MM-DD` o `null` si no se registró. */
+  fechaInicio: string | null;
+  fechaFin: string | null;
+  estado: EstadoPeriodo;
+}
+
+export interface NuevoPeriodoDTO {
+  codigo: string;
+  fechaInicio?: string;
+  fechaFin?: string;
 }
 
 export interface ReporteAsignacionesDTO {

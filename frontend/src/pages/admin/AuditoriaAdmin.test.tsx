@@ -47,7 +47,11 @@ const montar = (pantalla: React.ReactElement) =>
 describe('Auditoria e historial (Issue 4.32)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    periodos.mockResolvedValue({ vigente: '2026-2', periodos: ['2026-2', '2026-1'] });
+    periodos.mockResolvedValue({
+      vigente: '2026-2',
+      periodos: ['2026-2', '2026-1'],
+      registrados: [],
+    });
     vaciarCacheCarga();
     espacios.mockResolvedValue([
       {
@@ -410,7 +414,11 @@ describe('Auditoria e historial (Issue 4.32)', () => {
 describe('Informe de salones (Issue 4.33)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    periodos.mockResolvedValue({ vigente: '2026-2', periodos: ['2026-2', '2026-1'] });
+    periodos.mockResolvedValue({
+      vigente: '2026-2',
+      periodos: ['2026-2', '2026-1'],
+      registrados: [],
+    });
     vaciarCacheCarga();
     reporte.mockResolvedValue({
       periodo: '2026-2',

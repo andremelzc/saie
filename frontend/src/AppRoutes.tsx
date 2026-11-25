@@ -33,6 +33,7 @@ const SolicitudesSoftwareDocentePage = lazy(
 const InicioAdmin = lazy(() => import('./pages/admin/InicioAdmin'));
 const AlertasAdmin = lazy(() => import('./pages/admin/AlertasAdmin'));
 const CargaDatos = lazy(() => import('./pages/admin/CargaDatos'));
+const PeriodosAdmin = lazy(() => import('./pages/admin/PeriodosAdmin'));
 const EspaciosAdmin = lazy(() => import('./pages/admin/EspaciosAdmin'));
 const SeccionesAdmin = lazy(() => import('./pages/admin/SeccionesAdmin'));
 const AuditoriaAdmin = lazy(() => import('./pages/admin/AuditoriaAdmin'));
@@ -210,6 +211,17 @@ export const AppRoutes: React.FC = () => {
             element={
               <RutaProtegida rolesPermitidos={ROLES_ADMIN} rutaLogin={RUTAS.loginAdmin}>
                 <AlertasAdmin />
+              </RutaProtegida>
+            }
+          />
+          <Route
+            path={RUTAS.periodosAdmin}
+            element={
+              <RutaProtegida
+                rolesPermitidos={['COORDINACION_ACADEMICA']}
+                rutaLogin={RUTAS.loginAdmin}
+              >
+                <PeriodosAdmin />
               </RutaProtegida>
             }
           />

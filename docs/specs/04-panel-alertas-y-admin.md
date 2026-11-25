@@ -161,6 +161,15 @@ Lo que faltaba era poder consultarlos.
 
 ---
 
+## 2.1. Gestión de periodos (Issue 4.64)
+* `GET /api/v1/admin/periodos` → `{ vigente, periodos[], registrados[{ codigo, fechaInicio, fechaFin, estado }] }` (Coordinación y Jefatura).
+* `POST /api/v1/admin/periodos` (solo Coordinación): registra un periodo `EN_PREPARACION`. El código se normaliza («2027-II» → «2027-2»).
+* `POST /api/v1/admin/periodos/:codigo/activar` y `POST /api/v1/admin/periodos/:codigo/cerrar` (solo Coordinación). Activar cierra el vigente y archiva sus asignaciones; un periodo cerrado no se reactiva.
+* Pantalla «Periodos» (`/admin/periodos`) con confirmación antes de activar y cerrar.
+* `obtenerPeriodoVigente` lee la tabla `periodos`; el reintento, la consulta pública, las alertas y el mapa solo consideran el vigente.
+
+---
+
 ## 3. Seguridad y Control por Rol (#4.8, #4.21, #4.25)
 * Middleware `authGuard`: Verifica el JWT bearer token.
 * Middleware `roleGuard`:

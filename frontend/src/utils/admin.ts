@@ -121,6 +121,8 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
     },
     { to: RUTAS.alertasAdmin, etiqueta: 'Alertas', trazo: T_ALERTA },
     { to: RUTAS.cargaAdmin, etiqueta: 'Carga', trazo: T_CARGA },
+    // Issue 4.64: Coordinación decide cuándo cambia el semestre.
+    { to: RUTAS.periodosAdmin, etiqueta: 'Periodos', trazo: ICONOS.calendario, secundaria: true },
     {
       to: RUTAS.auditoriaAdmin,
       etiqueta: 'Historial',
