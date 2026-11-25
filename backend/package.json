@@ -19,6 +19,7 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:backfill-software": "tsx prisma/backfill-software.ts",
     "prisma:vincular-jefatura": "tsx prisma/vincular-jefatura.ts",
+    "prisma:restablecer-sistema": "tsx prisma/restablecer-sistema.ts",
     "prisma:export": "tsx prisma/exportar-csv.ts"
   },
   "keywords": [

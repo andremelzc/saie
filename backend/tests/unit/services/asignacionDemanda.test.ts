@@ -211,5 +211,30 @@ describe('Asignación a demanda (Issue 2.15)', () => {
       });
       expect(hayCorridaEnCurso()).toBe(false);
     });
+
+    describe('bloqueo en base para varias instancias (Issue 5.33 / R28)', () => {
+      it('rechaza con 409 si otra instancia ya tiene el advisory lock en PostgreSQL', async () => {
+        const prisma = prismaMock();
+        prisma.$queryRaw = jest.fn().mockResolvedValue([{ locked: false }]);
+
+        await expect(ejecutarAsignacionADemanda(undefined, prisma)).rejects.toMatchObject({
+          status: 409,
+        });
+        expect(batch).not.toHaveBeenCalled();
+        expect(hayCorridaEnCurso()).toBe(false);
+      });
+
+      it('adquiere y libera el advisory lock en la base si está disponible', async () => {
+        batch.mockResolvedValue({ corridaId: 'c-adv', resultados: [] });
+        const prisma = prismaMock();
+        prisma.$queryRaw = jest.fn().mockResolvedValue([{ locked: true }]);
+
+        const res = await ejecutarAsignacionADemanda(undefined, prisma);
+
+        expect(res.corridaId).toBe('c-adv');
+        expect(prisma.$queryRaw).toHaveBeenCalledTimes(2); // lock y unlock
+        expect(hayCorridaEnCurso()).toBe(false);
+      });
+    });
   });
 });
