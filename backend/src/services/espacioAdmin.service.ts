@@ -7,6 +7,7 @@ import {
   TipoEventoAuditoria,
 } from '@prisma/client';
 import { z } from 'zod';
+import { emitirAlertasCreadas } from '../events/emisores';
 import { HttpError } from '../lib/http';
 import { formatearSoftware } from '../lib/software';
 import { AlertaRegistradaDTO } from '../types/alertas';
@@ -507,6 +508,8 @@ export async function actualizarEspacio(
       }
       throw error;
     }
+    // Ya confirmada la transacción (Issue 4.60). Las de PCs y software las emite su servicio.
+    emitirAlertasCreadas(alertas);
   }
 
   if (entrada.pcsMalogradas !== undefined) {

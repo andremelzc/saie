@@ -18,6 +18,7 @@ import {
   CLAVE_LABORATORIOS_ESTADO,
   obtenerAlertas,
   obtenerEscaladas,
+  obtenerIncidencias,
   obtenerLaboratoriosConEstado,
   obtenerMapaOcupacionAdmin,
   reintentarSeccion,
@@ -46,6 +47,32 @@ import { Metrica, TiraMetricas } from '../../components/admin/Metrica';
  * scrollear. Las listas largas (las secciones que esperan revisión) llevan su propio scroll
  * interno y el resto son tarjetas fijas.
  */
+
+/** Incidencias de los docentes que Jefatura aún no cerró (Issue 4.60). */
+const obtenerIncidenciasPendientes = () => obtenerIncidencias({ estado: 'PENDIENTE' });
+
+/**
+ * Cifra de incidencias pendientes en el inicio de Coordinación y de Jefatura (Issue 4.60): una
+ * incidencia de prioridad alta no debe esperar a que alguien entre a buscarla.
+ */
+const MetricaIncidencias: React.FC = () => {
+  const incidencias = useCarga(obtenerIncidenciasPendientes, { clave: 'incidencias:pendientes' });
+  const total = incidencias.datos?.length ?? null;
+  // Rojo si alguna pendiente es de prioridad alta; ámbar si solo hay de prioridad media o baja.
+  const altas = incidencias.datos?.filter((i) => i.prioridad === 'ALTA').length ?? 0;
+  return (
+    <Metrica
+      etiqueta="Incidencias pendientes"
+      valor={total}
+      cargando={incidencias.cargando && !incidencias.datos}
+      sinDato={incidencias.error ? 'no disponible' : undefined}
+      tono={altas > 0 ? 'peligro' : total ? 'advertencia' : 'neutro'}
+      icono={ICONOS.portapapeles}
+      to={RUTAS.incidenciasAdmin}
+      textoEnlace="Ver incidencias"
+    />
+  );
+};
 
 /**
  * Enlace de acceso a una pantalla del panel. El nombre accesible es el contenido visible
@@ -309,7 +336,7 @@ const InicioJefatura: React.FC = () => {
 
   return (
     <LayoutAdmin titulo="Inicio" subtitulo="Jefatura de Laboratorios">
-      <TiraMetricas etiqueta="Resumen de laboratorios" className="grid-cols-2 lg:grid-cols-4">
+      <TiraMetricas etiqueta="Resumen de laboratorios" className="grid-cols-2 lg:grid-cols-5">
         <Metrica
           etiqueta="Alertas pendientes"
           valor={pendientes.length}
@@ -320,6 +347,7 @@ const InicioJefatura: React.FC = () => {
           textoEnlace="Ver alertas"
           principal={pendientes.length > 0}
         />
+        <MetricaIncidencias />
         <Metrica
           etiqueta="Laboratorios activos"
           valor={`${activos.length}/${laboratorios.length}`}
@@ -569,7 +597,7 @@ const InicioCoordinacion: React.FC = () => {
           principal y es la única vez que aparece esa cifra en el tablero; cada métrica lleva a
           su lista y mientras carga muestra un esqueleto.
         */}
-        <TiraMetricas etiqueta="Resumen de la asignación" className="grid-cols-2 lg:grid-cols-4">
+        <TiraMetricas etiqueta="Resumen de la asignación" className="grid-cols-2 lg:grid-cols-5">
           <Metrica
             etiqueta="Esperan revisión"
             valor={restarDatosIncompletos(
@@ -593,6 +621,7 @@ const InicioCoordinacion: React.FC = () => {
             to={RUTAS.alertasAdmin}
             textoEnlace="Ver alertas"
           />
+          <MetricaIncidencias />
           <Metrica
             etiqueta="Con aula nueva"
             valor={resumenCorrida?.asignadas ?? null}

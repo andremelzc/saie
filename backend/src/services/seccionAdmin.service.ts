@@ -8,6 +8,7 @@ import {
   TipoEventoAuditoria,
 } from '@prisma/client';
 import { z } from 'zod';
+import { emitirAlertasCreadas } from '../events/emisores';
 import { HttpError } from '../lib/http';
 import { formatearSoftware } from '../lib/software';
 import { TokenPayload } from '../types/auth';
@@ -391,7 +392,11 @@ export async function actualizarSeccion(
           afectadas,
           prisma,
         );
-        if (alerta) alertas.push({ id: alerta.id, tipo: alerta.tipo, motivo: alerta.motivo });
+        if (alerta) {
+          alertas.push({ id: alerta.id, tipo: alerta.tipo, motivo: alerta.motivo });
+          // Se guardó fuera de una transacción: ya se puede avisar (Issue 4.60).
+          emitirAlertasCreadas([alerta]);
+        }
       }
     }
   }
