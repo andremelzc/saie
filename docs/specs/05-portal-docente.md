@@ -20,6 +20,13 @@ Asimismo, incluye el panel de revisión y resolución de incidencias para la **J
 ### 2.1 Consulta Docente (#7.8, #7.9, #7.12)
 * `GET /api/v1/docente/horario`
   * Horario semanal y espacios asignados del docente autenticado.
+  * `cambiosDeAula` (Issue 7.18, riesgo R24): secciones del docente que cambiaron de aula en
+    los últimos 7 días, del cambio más reciente al más antiguo:
+    `[{ id, seccionId, codigoCurso, nombreCurso, codigoSeccion, tipoEspacioRequerido, fecha, espaciosAnteriores, espaciosNuevos }]`.
+    Hay cambio si la asignación más reciente tiene espacios distintos de la última asignación
+    anterior que tuvo aula (`espaciosNuevos` vacío = la sección se quedó sin aula). La primera
+    asignación de una sección no es un cambio. El portal lo muestra al inicio y en «Mi horario»
+    hasta que el docente pulsa «Entendido» (se recuerda en el navegador).
 * `GET /api/v1/docente/laboratorio-estado/:espacioId` (Issue 7.4)
   * Solo laboratorios donde el docente tiene una asignación `VIGENTE`; en cualquier otro caso 404 (no se revela qué espacios existen).
   * Respuesta: `{ laboratorio: { id, identificador, pabellon, piso, aforoNominal, pcsMalogradas, pcsOperativas, softwareInstalado: [{ id, nombre, version }] }, cursos: [{ asignacionId, codigoCurso, nombreCurso, codigoSeccion, softwareRequerido: [{ id, nombre, version, comparacionVersion }], softwareFaltante, cumple }], historial: [{ campo, valorAnterior, valorNuevo, fechaCambio }] }`.

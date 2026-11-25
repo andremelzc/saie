@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PaginaDocente from '../../components/docente/PaginaDocente';
+import AvisosCambioAula from '../../components/docente/AvisosCambioAula';
 import { BadgeEstadoClase, EstadoVacio } from '../../components/estudiante/ElementosHorario';
 import AccesibilidadDocente from '../../components/docente/AccesibilidadDocente';
 import { EstadoError } from '../../components/ui/EstadoError';
@@ -173,6 +174,9 @@ export const InicioDocentePage: React.FC<{ ahora?: Date }> = ({ ahora }) => {
       descripcion={datos?.periodo ? `Periodo lectivo ${datos.periodo}` : undefined}
     >
       {error && <EstadoError mensaje={error} onReintentar={recargar} />}
+
+      {/* Issue 7.18: el cambio de aula va primero, para que el docente no llegue al aula anterior. */}
+      {datos && <AvisosCambioAula cambios={datos.cambiosDeAula ?? []} />}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <section

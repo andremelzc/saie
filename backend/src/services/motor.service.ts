@@ -280,15 +280,17 @@ export async function procesarAsignacionSeccionIndividual(
   return resultado;
 }
 
+/** Opciones de la corrida del periodo. */
+export interface OpcionesCorrida {
+  /** Issue 2.26: «Reorganizar con prioridad» (escaladas primero, sin conservar asignaciones). */
+  priorizarEscaladas?: boolean;
+}
+
 /**
- * Issue 2.11: Ejecuta la corrida batch para todas las secciones de un periodo en Prisma.
- * `origen` distingue la corrida pedida por Coordinación de la programada por tiempo (Issue 2.18).
+ * Datos que necesita la corrida de un periodo: secciones, asignaciones previas y espacios. Lo usan
+ * la corrida y la simulación de la reorganización (Issue 2.26), para que calculen lo mismo.
  */
-export async function procesarCorridaBatchPeriodo(
-  periodo: string,
-  prisma: PrismaClient,
-  origen: OrigenCorrida = 'DEMANDA',
-): Promise<ResultadoCorridaBatch> {
+export async function cargarEntradaCorridaPeriodo(periodo: string, prisma: PrismaClient) {
   const { todosLosEspacios, obtenerVecinos } = await cargarContextoEspacios(prisma);
 
   // Obtener todas las secciones activas del periodo con sus datos (Issue 1.17: las inactivas ya
@@ -348,6 +350,99 @@ export async function procesarCorridaBatchPeriodo(
     motivoEscalamiento: a.motivoEscalamiento,
   }));
 
+  return { seccionesInput, asignacionesPrevias, todosLosEspacios, obtenerVecinos };
+}
+
+/**
+ * Issue 2.26: en la reorganización también se avisa a quien pasa de escalada a tener aula y a quien
+ * pierde la suya (`detectarCambioDeEspacios` solo cubre el cambio entre dos aulas).
+ */
+export function cambioPorReorganizacion(
+  previa: { estado: EstadoAsignacion; espacioIds: string[] } | undefined,
+  estado: EstadoAsignacion,
+  espacioIds: string[],
+): { anteriores: string[]; nuevos: string[] } | null {
+  if (!previa || previa.estado === estado) return null;
+  return {
+    anteriores: previa.estado === EstadoAsignacion.VIGENTE ? previa.espacioIds : [],
+    nuevos: estado === EstadoAsignacion.VIGENTE ? espacioIds : [],
+  };
+}
+
+/** Lo que cambiaría «Reorganizar con prioridad» (Issue 2.26), sin guardar nada. */
+export interface SimulacionReorganizacion {
+  /** Secciones que hoy están escaladas. */
+  totalEscaladas: number;
+  /** De esas, cuántas conseguirían aula. */
+  escaladasConAula: number;
+  /** Secciones con aula que pasarían a otra. */
+  cambianDeAula: number;
+  /** Secciones con aula que quedarían escaladas. */
+  pierdenAula: number;
+}
+
+/** Compara la reorganización con las asignaciones actuales. */
+export function compararReorganizacion(
+  previas: AsignacionExistenteContexto[],
+  resultados: ResultadoOrquestacion[],
+): SimulacionReorganizacion {
+  const previaPorSeccion = new Map(previas.map((a) => [a.seccionId, a]));
+  const simulacion: SimulacionReorganizacion = {
+    totalEscaladas: previas.filter((a) => a.estado === EstadoAsignacion.ESCALADA).length,
+    escaladasConAula: 0,
+    cambianDeAula: 0,
+    pierdenAula: 0,
+  };
+  for (const res of resultados) {
+    const previa = previaPorSeccion.get(res.seccionId);
+    if (!previa) continue;
+    const ahoraTieneAula = res.estado === EstadoAsignacion.VIGENTE;
+    if (previa.estado === EstadoAsignacion.ESCALADA && ahoraTieneAula) {
+      simulacion.escaladasConAula++;
+    } else if (previa.estado === EstadoAsignacion.VIGENTE && !ahoraTieneAula) {
+      simulacion.pierdenAula++;
+    } else if (detectarCambioDeEspacios(previa, res.estado, res.espacioIds)) {
+      simulacion.cambianDeAula++;
+    }
+  }
+  return simulacion;
+}
+
+/**
+ * Issue 2.26: calcula en memoria la reorganización con prioridad del periodo (el motor es puro) y
+ * la compara con lo actual, para que Coordinación vea cuántas secciones cambiarían antes de
+ * confirmar. No escribe nada.
+ */
+export async function simularReorganizacion(
+  periodo: string,
+  prisma: PrismaClient,
+): Promise<SimulacionReorganizacion> {
+  const { seccionesInput, asignacionesPrevias, todosLosEspacios, obtenerVecinos } =
+    await cargarEntradaCorridaPeriodo(periodo, prisma);
+  const resultado = ejecutarCorridaBatch({
+    periodo,
+    secciones: seccionesInput,
+    todosLosEspacios,
+    obtenerVecinosContiguos: obtenerVecinos,
+    asignacionesPrevias,
+    priorizarEscaladas: true,
+  });
+  return compararReorganizacion(asignacionesPrevias, resultado.resultados);
+}
+
+/**
+ * Issue 2.11: Ejecuta la corrida batch para todas las secciones de un periodo en Prisma.
+ * `origen` distingue la corrida pedida por Coordinación de la programada por tiempo (Issue 2.18).
+ */
+export async function procesarCorridaBatchPeriodo(
+  periodo: string,
+  prisma: PrismaClient,
+  origen: OrigenCorrida = 'DEMANDA',
+  opciones: OpcionesCorrida = {},
+): Promise<ResultadoCorridaBatch> {
+  const { seccionesInput, asignacionesPrevias, todosLosEspacios, obtenerVecinos } =
+    await cargarEntradaCorridaPeriodo(periodo, prisma);
+
   // Ejecutar motor de corrida batch puro
   const resultadoBatch = ejecutarCorridaBatch({
     periodo,
@@ -355,6 +450,7 @@ export async function procesarCorridaBatchPeriodo(
     todosLosEspacios,
     obtenerVecinosContiguos: obtenerVecinos,
     asignacionesPrevias,
+    priorizarEscaladas: opciones.priorizarEscaladas,
   });
 
   // Issue 2.16: qué secciones cambiaron de espacios respecto de su asignación VIGENTE previa.
@@ -362,11 +458,12 @@ export async function procesarCorridaBatchPeriodo(
   const seccionPorId = new Map(seccionesInput.map((s) => [s.id, s]));
   const eventosCambio = resultadoBatch.resultados.flatMap((res) => {
     if (res.conservadaPorIdempotencia) return [];
-    const cambio = detectarCambioDeEspacios(
-      previaPorSeccion.get(res.seccionId),
-      res.estado,
-      res.espacioIds,
-    );
+    const previa = previaPorSeccion.get(res.seccionId);
+    const cambio =
+      detectarCambioDeEspacios(previa, res.estado, res.espacioIds) ??
+      (opciones.priorizarEscaladas
+        ? cambioPorReorganizacion(previa, res.estado, res.espacioIds)
+        : null);
     const seccion = seccionPorId.get(res.seccionId);
     return cambio && seccion ? [construirEventoCambio(seccion, cambio, todosLosEspacios)] : [];
   });

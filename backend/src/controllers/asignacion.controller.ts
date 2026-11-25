@@ -4,6 +4,10 @@ import { prisma } from '../lib/prisma';
 import { responderError } from '../lib/http';
 import { vencerCondicionesAccesibles } from '../services/accesibilidadDocente.service';
 import { ejecutarAsignacionADemanda } from '../services/asignacionDemanda.service';
+import {
+  reorganizarConPrioridad,
+  vistaPreviaReorganizacion,
+} from '../services/reorganizacion.service';
 
 const SeccionParamSchema = z.object({
   id: z.string().min(1, 'El id de la sección es requerido'),
@@ -13,6 +17,26 @@ const SeccionParamSchema = z.object({
 export async function ejecutarBatch(_req: Request, res: Response): Promise<void> {
   try {
     const data = await ejecutarAsignacionADemanda(undefined, prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 2.26 — GET /api/v1/asignaciones/reorganizacion: ventana y cuántas secciones cambiarían. */
+export async function consultarReorganizacion(_req: Request, res: Response): Promise<void> {
+  try {
+    const data = await vistaPreviaReorganizacion(prisma);
+    res.status(200).json({ success: true, data });
+  } catch (error: unknown) {
+    responderError(res, error);
+  }
+}
+
+/** Issue 2.26 — POST /api/v1/asignaciones/reorganizacion: escaladas primero (409 fuera de la ventana). */
+export async function ejecutarReorganizacion(_req: Request, res: Response): Promise<void> {
+  try {
+    const data = await reorganizarConPrioridad(prisma);
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {
     responderError(res, error);
