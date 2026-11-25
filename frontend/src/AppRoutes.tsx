@@ -50,6 +50,7 @@ const SolicitudesSoftwareAdminPage = lazy(
   () => import('./pages/admin/SolicitudesSoftwareAdminPage'),
 );
 const IncidenciasAdminPage = lazy(() => import('./pages/admin/IncidenciasAdminPage'));
+const AccesibilidadAdminPage = lazy(() => import('./pages/admin/AccesibilidadAdminPage'));
 
 /** Mientras llega el código de una pantalla se muestra el esqueleto de carga habitual. */
 const CargandoPantalla: React.FC = () => (
@@ -354,6 +355,18 @@ export const AppRoutes: React.FC = () => {
                 rutaLogin={RUTAS.loginAdmin}
               >
                 <SolicitudesSoftwareAdminPage />
+              </RutaProtegida>
+            }
+          />
+          {/* Issue 3.60: Coordinación confirma las declaraciones de accesibilidad. */}
+          <Route
+            path={RUTAS.accesibilidadAdmin}
+            element={
+              <RutaProtegida
+                rolesPermitidos={['COORDINACION_ACADEMICA']}
+                rutaLogin={RUTAS.loginAdmin}
+              >
+                <AccesibilidadAdminPage />
               </RutaProtegida>
             }
           />

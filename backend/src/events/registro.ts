@@ -1,5 +1,6 @@
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
+import { avisarAccesibilidadAlAlumno } from '../telegram/avisoAccesibilidad';
 import { crearClienteTelegram } from '../telegram/cliente';
 import {
   avisarAlertaAJefatura,
@@ -30,6 +31,10 @@ export function registrarManejadores(): void {
   const cliente = crearClienteTelegram();
   bus.suscribir('asignacion.cambiada', async (evento) => {
     await avisarCambioDeAsignacion(evento, { prisma, cliente });
+  });
+  // Issue 3.60: el alumno se entera de que Coordinación resolvió su declaración de accesibilidad.
+  bus.suscribir('accesibilidad.resuelta', async (evento) => {
+    await avisarAccesibilidadAlAlumno(evento, { prisma, cliente });
   });
 
   // Issue 4.60: avisos inmediatos a Jefatura, solo si hay un chat de destino configurado.

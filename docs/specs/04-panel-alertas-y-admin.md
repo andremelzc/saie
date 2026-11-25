@@ -175,6 +175,18 @@ Lo que faltaba era poder consultarlos.
 
 ---
 
+### 2.8 Declaraciones de accesibilidad (Issue 3.60)
+
+La declaración «no puedo subir a pisos superiores» que el alumno marca en su perfil ([Spec 03](03-portal-estudiante.md) §2.2) se aplica solo cuando Coordinación la aprueba. Modelo `SolicitudAccesibilidad` (tabla `solicitudes_accesibilidad`, migración `20261128000000_solicitudes_accesibilidad`, con Row Level Security): `alumnoId`, `estado` (`EstadoSolicitud`: `PENDIENTE`, `APROBADA`, `RECHAZADA`), `fechaSolicitud`, `resueltaPorId`, `fechaResolucion`, `motivoRechazo` y `resultado`. No guarda diagnósticos.
+
+* `GET /api/v1/admin/accesibilidad` (solo Coordinación): `{ periodo, pendientes, aprobadas }`. Cada declaración trae el alumno (código y nombre) y sus secciones del periodo vigente con el aula vigente y su piso: `{ seccionId, codigoCurso, nombreCurso, codigoSeccion, espacios: [{ identificador, pabellon, piso }], fueraDePiso1, sinAula }`. En `aprobadas` va la aprobación vigente de cada alumno (la ficha sigue marcada).
+* `PATCH /api/v1/admin/accesibilidad/:id/resolver` (solo Coordinación), cuerpo `{ decision: 'APROBAR' }` o `{ decision: 'RECHAZAR', motivo }` (motivo de 5 a 500 caracteres):
+  * **Aprobar:** en una transacción marca la solicitud, `FichaMedica.condicionAccesible = true` y `movilidadReducida = true` en todas las matrículas del alumno. Después reasigna cada sección del alumno en el periodo vigente con `ejecutarAsignacionADemanda` (si alguna no consigue el piso 1, el motor registra la alerta `ACCESIBILIDAD`, Issue 3.59; si una sección no se puede reasignar, por ejemplo con una corrida en curso, la aprobación se mantiene). Guarda en `resultado` cuántas clases quedaron en el piso 1 («3 de 4 clases quedaron en el piso 1; 1 clase espera revisión»).
+  * **Rechazar:** guarda el motivo; no toca la ficha ni las matrículas.
+  * En ambos casos emite `accesibilidad.resuelta`: si el alumno tiene Telegram vinculado recibe un aviso sin el motivo ni datos de su condición (RNF-11).
+  * 400 si falta el motivo del rechazo, 404 si la solicitud no existe, 409 si ya fue resuelta.
+* Pantalla `/admin/accesibilidad` (pestaña «Accesibilidad», solo Coordinación): pendientes con «Aprobar» y «Rechazar» (motivo obligatorio) y aprobadas con el piso de cada clase, resaltando las que quedaron fuera del piso 1 o sin aula.
+
 ## 2.1. Gestión de periodos (Issue 4.64)
 * `GET /api/v1/admin/periodos` → `{ vigente, periodos[], registrados[{ codigo, fechaInicio, fechaFin, estado }] }` (Coordinación y Jefatura).
 * `POST /api/v1/admin/periodos` (solo Coordinación): registra un periodo `EN_PREPARACION`. El código se normaliza («2027-II» → «2027-2»).
