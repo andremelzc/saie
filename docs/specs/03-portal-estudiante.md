@@ -33,11 +33,22 @@ El **Portal del Estudiante** es la interfaz web/móvil responsiva donde los alum
   campo booleano `condicionAccesible`: «¿tienes alguna condición física que te impide subir a
   pisos superiores o usar escaleras?». Describe un **requisito de acceso al espacio**, no un
   diagnóstico, para no obligar al alumno a declarar más de lo necesario (RNF-09).
-  * Al activarlo, el backend propaga `MovilidadReducida = true` a **todas** las matrículas del
-    alumno, que es lo que consume el motor (`reglas/accesibilidad.ts` → `priorizarBloquesPiso1`).
-    Así el alumno no necesita reimportar el CSV de matrículas para que se le priorice el Piso 1.
-  * Al desactivarlo, el flag solo se limpia si la declaración anterior estaba activa: si el
-    `movilidadReducida` lo puso una carga de datos de Coordinación, se respeta y no se toca.
+  * **Verificación por Coordinación (Issue 3.60, riesgos R12 a R14):** marcar la casilla ya no
+    aplica nada. Crea una `SolicitudAccesibilidad` en estado `PENDIENTE` (una sola pendiente por
+    alumno) y no cambia ninguna matrícula. Coordinación la aprueba o la rechaza con motivo en
+    `/admin/accesibilidad` ([Spec 04](04-panel-alertas-y-admin.md) §2.8). Solo al aprobarla se
+    marca `condicionAccesible = true` y se propaga `MovilidadReducida = true` a **todas** las
+    matrículas del alumno, que es lo que consume el motor (`reglas/accesibilidad.ts` →
+    `priorizarBloquesPiso1`), y se reasignan sus secciones del periodo vigente.
+  * Al desmarcarla se retira la solicitud pendiente, si la hay, y si la condición estaba
+    aprobada se quita de la ficha y de las matrículas (dejar de declararla no necesita
+    verificación). Si el `movilidadReducida` lo puso una carga de datos de Coordinación y no hay
+    declaración aprobada, se respeta y no se toca.
+  * `GET /api/v1/estudiante/perfil` incluye `accesibilidad: { estado, fechaSolicitud,
+    fechaResolucion, motivoRechazo } | null` (la declaración más reciente). El perfil muestra si
+    está pendiente, aprobada o no aprobada con su motivo; la casilla se ve marcada si está
+    pendiente o aprobada. Si el alumno tiene Telegram vinculado, recibe un aviso al resolverse,
+    sin el motivo ni datos de su condición.
   * El dato nunca sale de la ficha del propio alumno (RNF-09) y **nunca llega a Telegram** (RNF-11).
   * `FichaMedica.condicionAccesible` (columna `condicion_accesible`, migración
     `20261021000000_ficha_accesible`) es la fuente de verdad de la declaración.

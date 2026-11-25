@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import LayoutEstudiante from '../components/estudiante/LayoutEstudiante';
+import { Aviso } from '../components/ui/Aviso';
 import { EstadoError } from '../components/ui/EstadoError';
+import type { EstadoAccesibilidadDTO } from '../types/accesibilidad';
+import { formatearFechaCorta } from '../utils/fechas';
 import { Icono } from '../components/estudiante/ElementosHorario';
 import SeccionEditable from '../components/estudiante/SeccionEditable';
 import type { CampoPerfil } from '../components/estudiante/SeccionEditable';
@@ -64,7 +67,7 @@ const CAMPOS_FICHA_MEDICA: CampoPerfil[] = [
     etiqueta: '¿Tienes alguna condición física que te impide subir a pisos superiores?',
     tipo: 'checkbox',
     ayuda:
-      'Si la marcas, el sistema te prioriza las aulas del primer piso. Describe un requisito de acceso al espacio, no un diagnóstico.',
+      'Si la marcas, Coordinación Académica revisa tu solicitud y, al aprobarla, el sistema te prioriza las aulas del primer piso. Describe un requisito de acceso al espacio, no un diagnóstico: no hace falta que expliques tu condición.',
   },
   { clave: 'tipoSangre', etiqueta: 'Tipo de sangre', tipo: 'select', opciones: TIPOS_SANGRE },
   {
@@ -98,6 +101,43 @@ export interface PerfilAlumnoProps {
   /** Guarda los cambios (PATCH /v1/estudiante/perfil) y devuelve el perfil actualizado. */
   onGuardar: (cambios: CambiosPerfil) => Promise<PerfilAlumnoDTO>;
 }
+
+/**
+ * Estado de la declaración de accesibilidad (Issue 3.60): Coordinación la confirma antes de que el
+ * sistema priorice el piso 1. Un rechazo solo se muestra si sigue siendo la última respuesta.
+ */
+export const EstadoDeclaracionAccesibilidad: React.FC<{
+  accesibilidad: EstadoAccesibilidadDTO | null | undefined;
+}> = ({ accesibilidad }) => {
+  if (!accesibilidad) return null;
+  const { estado, motivoRechazo, fechaSolicitud, fechaResolucion } = accesibilidad;
+  // Es un estado que se lee al entrar, no un aviso nuevo: `status` aunque sea un rechazo.
+  if (estado === 'PENDIENTE') {
+    return (
+      <Aviso tono="advertencia" role="status">
+        <strong className="font-semibold">Solicitud de aulas en el piso 1: pendiente.</strong>{' '}
+        Coordinación Académica la está revisando (la enviaste el{' '}
+        {formatearFechaCorta(fechaSolicitud)}). Mientras tanto tus aulas no cambian.
+      </Aviso>
+    );
+  }
+  if (estado === 'APROBADA') {
+    return (
+      <Aviso tono="exito" role="status">
+        <strong className="font-semibold">Solicitud de aulas en el piso 1: aprobada.</strong> Desde
+        el {formatearFechaCorta(fechaResolucion ?? fechaSolicitud)} el sistema prioriza el piso 1
+        para tus clases.
+      </Aviso>
+    );
+  }
+  return (
+    <Aviso tono="error" role="status">
+      <strong className="font-semibold">Solicitud de aulas en el piso 1: no aprobada.</strong>{' '}
+      {motivoRechazo ?? 'Coordinación Académica no la aprobó.'} Si tu situación cambió, puedes
+      volver a marcar la casilla.
+    </Aviso>
+  );
+};
 
 const EsqueletoPerfil: React.FC = () => (
   <div role="status" aria-live="polite" className="flex flex-col gap-6">
@@ -144,7 +184,7 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
     }
 
     if (!actual) return <EsqueletoPerfil />;
-    const { alumno, fichaMedica } = actual;
+    const { alumno, fichaMedica, accesibilidad = null } = actual;
 
     return (
       <>
@@ -200,18 +240,24 @@ export const PerfilAlumno: React.FC<PerfilAlumnoProps> = ({
           descripcion="Información que ayuda a atenderte en una emergencia."
           trazoIcono={TRAZO_CORAZON}
           campos={CAMPOS_FICHA_MEDICA}
-          valores={valoresFichaMedica(fichaMedica)}
+          valores={valoresFichaMedica(fichaMedica, accesibilidad)}
           validar={validarFichaMedica}
           onGuardar={(valores) => guardar(cambiosFichaMedica(valores))}
           textoVacio="Aún no registras tu ficha médica. Es opcional, pero ayuda a atenderte mejor en una emergencia."
           aviso={
-            <p className="m-0 flex items-start gap-2 rounded-xl bg-saie-primary/5 p-3 text-sm text-saie-text">
-              <Icono trazo={TRAZO_CANDADO} className="mt-0.5 h-4 w-4 shrink-0 text-saie-primary" />
-              <span>
-                <strong className="font-semibold">Información sensible.</strong> Solo tú la ves,
-                dentro de tu sesión. No se comparte con otros alumnos.
-              </span>
-            </p>
+            <div className="flex flex-col gap-3">
+              <p className="m-0 flex items-start gap-2 rounded-xl bg-saie-primary/5 p-3 text-sm text-saie-text">
+                <Icono
+                  trazo={TRAZO_CANDADO}
+                  className="mt-0.5 h-4 w-4 shrink-0 text-saie-primary"
+                />
+                <span>
+                  <strong className="font-semibold">Información sensible.</strong> Solo tú la ves,
+                  dentro de tu sesión. No se comparte con otros alumnos.
+                </span>
+              </p>
+              <EstadoDeclaracionAccesibilidad accesibilidad={accesibilidad} />
+            </div>
           }
         />
       </>

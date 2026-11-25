@@ -120,6 +120,13 @@ export function pestanasDeRol(rol?: RolCuenta): Pestana[] {
       secundaria: true,
     },
     { to: RUTAS.alertasAdmin, etiqueta: 'Alertas', trazo: T_ALERTA },
+    // Issue 3.60: declaraciones de accesibilidad que Coordinación confirma.
+    {
+      to: RUTAS.accesibilidadAdmin,
+      etiqueta: 'Accesibilidad',
+      trazo: ICONOS.usuarioRelleno,
+      secundaria: true,
+    },
     { to: RUTAS.cargaAdmin, etiqueta: 'Carga', trazo: T_CARGA },
     // Issue 4.64: Coordinación decide cuándo cambia el semestre.
     { to: RUTAS.periodosAdmin, etiqueta: 'Periodos', trazo: ICONOS.calendario, secundaria: true },

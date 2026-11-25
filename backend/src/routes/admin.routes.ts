@@ -43,6 +43,10 @@ import {
   listarSolicitudesSoftware,
   rechazarSolicitudSoftware,
 } from '../controllers/solicitudSoftware.controller';
+import {
+  listarAccesibilidadAdmin,
+  resolverAccesibilidadAdmin,
+} from '../controllers/accesibilidad.controller';
 
 const router = Router();
 
@@ -95,6 +99,10 @@ router.get('/software/:id', obtenerSoftware);
 router.post('/software', soloCoordinacion, altaSoftware);
 router.patch('/software/:id', soloCoordinacion, editarSoftwareCatalogo);
 router.patch('/software/:id/estado', soloCoordinacion, cambiarEstadoCatalogo);
+
+// Declaraciones de accesibilidad de los alumnos (Issue 3.60): solo Coordinación.
+router.get('/accesibilidad', soloCoordinacion, listarAccesibilidadAdmin);
+router.patch('/accesibilidad/:id/resolver', soloCoordinacion, resolverAccesibilidadAdmin);
 
 // Solicitudes de software (Issue 4.29): Coordinación las revisa, aprueba o rechaza.
 router.get('/solicitudes-software', listarSolicitudesSoftware);
