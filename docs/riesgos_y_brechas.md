@@ -114,6 +114,10 @@ La migración `20261126000000_periodos` (tabla `periodos`, valor `CAMBIO_PERIODO
 | #38, #39, #41, #42, #43, #45, #46, #47, #48 | **A solucionar** | 24/11/2026 |
 | #25, #49, #50, #51, #52 | **A solucionar.** El cambio de periodo debe hacerse desde Coordinación, y no debe permitirse registrar información en periodos que ya terminaron (ver sección 9) | 24/11/2026 |
 | #41 | **Primero proponer, después cargar.** El catálogo de software del Anexo B lo revisa y aprueba **el propio equipo**; solo entonces se carga | 24/11/2026 |
+| #8 | **Riesgo aceptado.** Un docente puede dictar en las aulas contiguas que hagan falta (Anexo C) | 25/11/2026 |
+| #9 | **A solucionar** con «Reorganizar con prioridad» durante las 2 primeras semanas del ciclo (Anexo C) | 25/11/2026 |
+| #10 | **Se mantiene** el plan B de accesibilidad: piso más accesible con alerta (Anexo C) | 25/11/2026 |
+| #22, #48 | **Por defecto se asignan los dos tipos de salón** (teoría en aula, laboratorio en laboratorio); el docente solicita si necesita uno solo (Anexo C) | 25/11/2026 |
 | #1, #3–#11, #13–#16, #18–#24, #26–#29, #32, #36 | **Sin decisión explícita todavía.** El documento propone solucionarlos; falta que el equipo los priorice. Las preguntas abiertas están en el Anexo C | — |
 
 > Los riesgos **#3, #4 y #29** son en el fondo un mismo problema: **cuando el motor no puede resolver algo, el sistema no le da a Coordinación ninguna salida.** Conviene diseñarlos juntos.
@@ -1432,17 +1436,19 @@ Registrar ──► EN PREPARACIÓN ──► Activar ──► VIGENTE ──�
 
 ---
 
-## Anexo C — Decisiones abiertas del equipo
+## Anexo C — Decisiones del equipo
 
-| Tema | Pregunta | Relacionado |
-|---|---|---|
-| Reparto en varias aulas | ¿Se acepta que una sección use varias salas a la vez con un solo docente? | #8 |
-| Reorganización al inicio del ciclo | ¿Cuántas semanas se permiten cambios de aula masivos? | #9 |
-| Verificación de accesibilidad | ¿Quién aprueba las declaraciones: Coordinación o Bienestar? | #12 |
-| Plan B de accesibilidad | Sin piso 1 disponible, ¿asignar el piso más accesible con alerta o escalar siempre? | #10 |
-| Teoría como laboratorio | ¿Lo decide el docente con aprobación, o solo Coordinación? | #22 |
-| Catálogo de software | ¿Quién aprueba el catálogo y el software de cada curso propuestos en el Anexo B? | #41 |
-| Laboratorios especializados | ¿Qué laboratorios son de bases de datos, redes, hardware o datos e IA? | #41 |
-| Cursos generales con laboratorio | ¿Qué secciones de Química, Física, Redacción, etc. usan realmente laboratorio de cómputo? | #48 |
-| Origen de los datos | ¿De qué fuente se corrigen `202SW0302` y `202SW0303`? | #47 |
-| Periodos | ¿Hay ciclo de verano (`AAAA-0`)? ¿Cuáles son las fechas de inicio y fin de cada semestre? | #49, 9.2 |
+Respuestas registradas el 25/11/2026 (issue 6.15, #439).
+
+| Tema | Pregunta | Respuesta | Relacionado |
+|---|---|---|---|
+| Reparto en varias aulas | ¿Se acepta que una sección use varias salas a la vez con un solo docente? | **Sí.** Se acepta que un docente dicte en las aulas contiguas que hagan falta; el motor sigue juntando hasta 4 espacios contiguos. No se crea un issue de restricción | #8 |
+| Reorganización al inicio del ciclo | ¿Cuántas semanas se permiten cambios de aula masivos? | **2 semanas** desde la fecha de inicio del periodo. Es el valor por defecto de `REORGANIZACION_SEMANAS` (2.26, #448) | #9 |
+| Verificación de accesibilidad | ¿Quién aprueba las declaraciones: Coordinación o Bienestar? | **Coordinación Académica**, como quedó implementado (3.60, #447) | #12 |
+| Plan B de accesibilidad | Sin piso 1 disponible, ¿asignar el piso más accesible con alerta o escalar siempre? | **Se deja como está:** se asigna el piso más accesible y se registra la alerta de accesibilidad (3.59) | #10 |
+| Teoría como laboratorio | ¿Lo decide el docente con aprobación, o solo Coordinación? | Por defecto la teoría **recibe un aula normal**; el docente puede **solicitar** dictarla solo en laboratorio (7.17) | #22 |
+| Catálogo de software | ¿Quién aprueba el catálogo y el software de cada curso propuestos en el Anexo B? | **El propio equipo** (decisión #41, 24/11/2026) | #41 |
+| Laboratorios especializados | ¿Qué laboratorios son de bases de datos, redes, hardware o datos e IA? | Se define al revisar y aprobar el Anexo B en **6.14 (#438)**, que incluye esa pregunta | #41 |
+| Cursos generales con laboratorio | ¿Qué secciones de Química, Física, Redacción, etc. usan realmente laboratorio de cómputo? | **Se mantienen los dos tipos por defecto:** las secciones de teoría y de laboratorio quedan como vienen en los datos, sin corregirlas. El docente solicita si necesita un solo tipo de salón (7.17) | #48 |
+| Origen de los datos | ¿De qué fuente se corrigen `202SW0302` y `202SW0303`? | La clarifica **andremelzc** en **1.21 (#454)**, que desbloquea 1.20 (#432) | #47 |
+| Periodos | ¿Hay ciclo de verano (`AAAA-0`)? ¿Cuáles son las fechas de inicio y fin de cada semestre? | **Por ahora no se implementa el ciclo de verano.** Las fechas de cada semestre las registra Coordinación en la pantalla Periodos (4.64) | #49, 9.2 |
