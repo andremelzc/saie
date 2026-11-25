@@ -6,7 +6,9 @@ import {
   DIAS_LECTIVOS,
   ETIQUETA_DIA,
   PALETA_CURSOS,
+  agruparClases,
   estadoDeClase,
+  etiquetaTipoClase,
   formatearHora,
   progresoClase,
   sesionesDeDia,
@@ -42,7 +44,8 @@ function etiquetaBotonDia(dia: DiaSemana, esHoy: boolean, cantidad: number): str
 
 /**
  * Vista diaria: tira de días (lunes a sábado) y clases del día elegido en orden cronológico,
- * con la hora exacta, el docente y la ubicación (Guía de diseño 2.3).
+ * con la hora exacta, el docente y la ubicación (Guía de diseño 2.3). Issue 3.62: la teoría y el
+ * laboratorio de un mismo curso y grupo van juntos, cada clase rotulada con su tipo.
  */
 export const HorarioDia: React.FC<HorarioDiaProps> = ({
   horario,
@@ -55,10 +58,10 @@ export const HorarioDia: React.FC<HorarioDiaProps> = ({
 }) => {
   const sesiones = sesionesDeDia(horario, dia);
   const esDiaActual = dia === hoy;
-  // La clase en curso, o la próxima si ninguna ha empezado, se resalta (solo para hoy).
-  const indiceDestacada = esDiaActual
-    ? sesiones.findIndex((s) => estadoDeClase(s, ahoraEnMinutos) !== 'FINALIZADA')
-    : -1;
+  // El curso con la clase en curso, o la próxima si ninguna ha empezado, se resalta (solo hoy).
+  const destacada = esDiaActual
+    ? sesiones.find((s) => estadoDeClase(s, ahoraEnMinutos) !== 'FINALIZADA')
+    : undefined;
 
   return (
     <div className={`flex flex-col gap-4 ${className}`}>
@@ -114,45 +117,69 @@ export const HorarioDia: React.FC<HorarioDiaProps> = ({
         />
       ) : (
         <ol key={dia} className="saie-stagger m-0 flex list-none flex-col gap-3 p-0">
-          {sesiones.map((sesion, indice) => {
-            const color = colores[sesion.codigoCurso] ?? PALETA_CURSOS[0];
-            const estadoClase = esDiaActual ? estadoDeClase(sesion, ahoraEnMinutos) : null;
+          {agruparClases(sesiones).map((grupo) => {
+            const color = colores[grupo.codigoCurso] ?? PALETA_CURSOS[0];
+            const destacadaEnGrupo = destacada !== undefined && grupo.clases.includes(destacada);
             return (
               <li
-                key={`${sesion.seccionId}-${sesion.horaInicio}`}
-                className={`flex gap-3 rounded-xl border border-saie-divider bg-white p-4 ${
-                  indice === indiceDestacada ? 'ring-2 ring-saie-primary' : ''
-                } ${estadoClase === 'EN_CURSO' ? 'saie-respira' : ''}`}
+                key={`${grupo.codigoCurso}-${grupo.grupo}`}
+                className={`flex flex-col gap-3 rounded-xl border border-saie-divider bg-white p-4 ${
+                  destacadaEnGrupo ? 'ring-2 ring-saie-primary' : ''
+                }`}
               >
-                <div className="w-14 shrink-0 text-center">
-                  <p className="m-0 text-base font-bold text-saie-text">
-                    {formatearHora(sesion.horaInicio)}
-                  </p>
-                  <p className="m-0 text-sm text-saie-muted">{formatearHora(sesion.horaFin)}</p>
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h4 className="m-0 flex items-center gap-2 text-base font-bold text-saie-text">
-                      <span
-                        aria-hidden="true"
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: color.borde }}
-                      />
-                      {sesion.nombreCurso}
-                    </h4>
-                    {estadoClase && <BadgeEstadoClase estado={estadoClase} />}
-                  </div>
+                <div className="flex flex-col gap-0.5">
+                  <h4 className="m-0 flex items-center gap-2 text-base font-bold text-saie-text">
+                    <span
+                      aria-hidden="true"
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: color.borde }}
+                    />
+                    {grupo.nombreCurso}
+                  </h4>
                   <p className="m-0 text-sm text-saie-muted">
-                    {`${sesion.codigoCurso} · Sección ${sesion.codigoSeccion}`}
+                    {`${grupo.codigoCurso} · Grupo ${grupo.grupo}`}
                   </p>
-                  <p className="m-0 text-sm text-saie-text">
-                    {`Docente: ${sesion.docenteNombre ?? 'Por asignar'}`}
-                  </p>
-                  <UbicacionEspacios espacios={sesion.espacios} estado={sesion.estadoAsignacion} />
-                  {estadoClase === 'EN_CURSO' && (
-                    <BarraProgresoClase valor={progresoClase(sesion, ahoraEnMinutos)} />
-                  )}
                 </div>
+                <ul className="m-0 flex list-none flex-col gap-3 p-0">
+                  {grupo.clases.map((sesion) => {
+                    const estadoClase = esDiaActual ? estadoDeClase(sesion, ahoraEnMinutos) : null;
+                    return (
+                      <li
+                        key={`${sesion.seccionId}-${sesion.horaInicio}`}
+                        className={`flex gap-3 rounded-lg bg-saie-canvas p-3 ${
+                          estadoClase === 'EN_CURSO' ? 'saie-respira' : ''
+                        }`}
+                      >
+                        <div className="w-14 shrink-0 text-center">
+                          <p className="m-0 text-base font-bold text-saie-text">
+                            {formatearHora(sesion.horaInicio)}
+                          </p>
+                          <p className="m-0 text-sm text-saie-muted">
+                            {formatearHora(sesion.horaFin)}
+                          </p>
+                        </div>
+                        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h5 className="m-0 text-sm font-bold text-saie-text">
+                              {etiquetaTipoClase(sesion.tipoEspacioRequerido)}
+                            </h5>
+                            {estadoClase && <BadgeEstadoClase estado={estadoClase} />}
+                          </div>
+                          <p className="m-0 text-sm text-saie-text">
+                            {`Docente: ${sesion.docenteNombre ?? 'Por asignar'}`}
+                          </p>
+                          <UbicacionEspacios
+                            espacios={sesion.espacios}
+                            estado={sesion.estadoAsignacion}
+                          />
+                          {estadoClase === 'EN_CURSO' && (
+                            <BarraProgresoClase valor={progresoClase(sesion, ahoraEnMinutos)} />
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
               </li>
             );
           })}

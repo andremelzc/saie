@@ -25,6 +25,7 @@ const sesion = (o: Partial<SesionDTO>): SesionDTO => ({
   codigoCurso: 'IS101',
   nombreCurso: 'Algoritmos',
   codigoSeccion: '1',
+  tipoEspacioRequerido: 'AULA_TEORICA',
   docenteNombre: 'Dra. García',
   diaSemana: 'LUNES',
   horaInicio: '08:00',
