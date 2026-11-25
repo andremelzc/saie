@@ -188,6 +188,25 @@ describe('Validación previa de importaciones (Issue 1.16, riesgos R34 y R36)', 
     });
   });
 
+  describe('caracteres dañados (Issue 1.18, riesgo R38)', () => {
+    it('rechaza las filas con el carácter de reemplazo y no deja pasar ninguna', async () => {
+      const docente = (codigo: string, nombre: string) => ({
+        codigoDocente: codigo,
+        nombre,
+        correoInstitucional: `${codigo}@unmsm.edu.pe`,
+        departamento: 'Software',
+      });
+      const r = await validarImportacion(
+        'docentes',
+        [docente('D1', 'Muñoz'), docente('D2', 'Mu�oz')],
+        crearDb(),
+      );
+      expect(r.errores).toEqual([
+        'Fila 2: El archivo tiene caracteres dañados: guárdalo como CSV UTF-8 en Excel',
+      ]);
+    });
+  });
+
   describe('docentes', () => {
     it('rechaza docentes repetidos', async () => {
       const docente = {
