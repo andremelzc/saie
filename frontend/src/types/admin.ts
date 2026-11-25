@@ -211,6 +211,25 @@ export interface ResultadoReubicacionDTO {
 }
 
 /** Respuesta de POST /v1/asignaciones/batch y /seccion/:id (Issue 2.15). */
+/** GET /v1/asignaciones/reorganizacion (Issue 2.26): ventana al inicio del ciclo y simulación. */
+export interface VistaPreviaReorganizacionDTO {
+  disponible: boolean;
+  /** Por qué no está disponible; `null` si lo está. */
+  motivo: string | null;
+  periodo: string | null;
+  semanas: number;
+  /** AAAA-MM-DD. */
+  desde: string | null;
+  hasta: string | null;
+  /** Solo si está disponible: qué cambiaría al reorganizar. */
+  simulacion: {
+    totalEscaladas: number;
+    escaladasConAula: number;
+    cambianDeAula: number;
+    pierdenAula: number;
+  } | null;
+}
+
 export interface ResumenAsignacionDTO {
   modo: 'seccion' | 'periodo';
   periodo: string | null;

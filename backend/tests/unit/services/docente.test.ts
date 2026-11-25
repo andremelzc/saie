@@ -4,6 +4,7 @@ import {
   explorarEspacios,
   generarIdentificadorSeguimiento,
   listarMisIncidencias,
+  cambiosDeAulaDocente,
   obtenerHorarioDocente,
   obtenerEstadoLaboratorioDocente,
   registrarIncidencia,
@@ -29,6 +30,103 @@ function espacio(
     pcsMalogradas: pcs,
   };
 }
+
+describe('Cambios de aula del docente (Issue 7.18)', () => {
+  const AHORA = new Date('2026-11-24T15:00:00.000Z');
+  const hace = (dias: number) => new Date(AHORA.getTime() - dias * 24 * 60 * 60 * 1000);
+  const lugar = (identificador: string) => ({
+    espacio: { identificador, tipo: 'LABORATORIO', pabellon: 'Nuevo', piso: 2 },
+  });
+  const asignacion = (id: string, seccionId: string, fecha: Date, aulas: string[]) => ({
+    id,
+    seccionId,
+    fechaAsignacion: fecha,
+    espacios: aulas.map(lugar),
+  });
+  const secciones = [
+    {
+      id: 'sec-lab',
+      codigoSeccion: '2-LAB',
+      tipoEspacioRequerido: 'LABORATORIO',
+      curso: { codigo: '202SW0805', nombre: 'Gestión de la Configuración' },
+    },
+  ] as any;
+  const prismaCon = (asignaciones: unknown[]) =>
+    ({ asignacion: { findMany: jest.fn().mockResolvedValue(asignaciones) } }) as any;
+
+  it('avisa si la asignación reciente tiene otra aula que la anterior', async () => {
+    const prisma = prismaCon([
+      asignacion('a2', 'sec-lab', hace(1), ['L-03']),
+      asignacion('a1', 'sec-lab', hace(20), ['L-01']),
+    ]);
+    const cambios = await cambiosDeAulaDocente(secciones, prisma, AHORA);
+
+    expect(cambios).toEqual([
+      expect.objectContaining({
+        id: 'a2',
+        codigoCurso: '202SW0805',
+        codigoSeccion: '2-LAB',
+        tipoEspacioRequerido: 'LABORATORIO',
+        espaciosAnteriores: [expect.objectContaining({ identificador: 'L-01' })],
+        espaciosNuevos: [expect.objectContaining({ identificador: 'L-03' })],
+      }),
+    ]);
+    expect(prisma.asignacion.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { seccionId: { in: ['sec-lab'] } } }),
+    );
+  });
+
+  it('avisa si la sección se quedó sin aula (escalada)', async () => {
+    const cambios = await cambiosDeAulaDocente(
+      secciones,
+      prismaCon([
+        asignacion('a2', 'sec-lab', hace(1), []),
+        asignacion('a1', 'sec-lab', hace(9), ['L-01']),
+      ]),
+      AHORA,
+    );
+    expect(cambios[0].espaciosNuevos).toEqual([]);
+  });
+
+  it('compara con la última asignación que tuvo aula, aunque haya escalados en medio', async () => {
+    const cambios = await cambiosDeAulaDocente(
+      secciones,
+      prismaCon([
+        asignacion('a3', 'sec-lab', hace(1), ['L-01']),
+        asignacion('a2', 'sec-lab', hace(2), []),
+        asignacion('a1', 'sec-lab', hace(30), ['L-01']),
+      ]),
+      AHORA,
+    );
+    expect(cambios).toEqual([]);
+  });
+
+  it('no avisa la primera asignación, ni un cambio de hace más de 7 días', async () => {
+    expect(
+      await cambiosDeAulaDocente(
+        secciones,
+        prismaCon([asignacion('a1', 'sec-lab', hace(1), ['L-01'])]),
+        AHORA,
+      ),
+    ).toEqual([]);
+    expect(
+      await cambiosDeAulaDocente(
+        secciones,
+        prismaCon([
+          asignacion('a2', 'sec-lab', hace(8), ['L-03']),
+          asignacion('a1', 'sec-lab', hace(30), ['L-01']),
+        ]),
+        AHORA,
+      ),
+    ).toEqual([]);
+  });
+
+  it('no consulta nada si el docente no tiene secciones', async () => {
+    const prisma = prismaCon([]);
+    expect(await cambiosDeAulaDocente([], prisma, AHORA)).toEqual([]);
+    expect(prisma.asignacion.findMany).not.toHaveBeenCalled();
+  });
+});
 
 describe('Horario y asignaciones activas del docente (Issue 7.2)', () => {
   function seccionDocente(codigo: string, estado: 'VIGENTE' | 'ESCALADA' | null, alumnos: number) {
@@ -67,6 +165,7 @@ describe('Horario y asignaciones activas del docente (Issue 7.2)', () => {
       docente: { findUnique: jest.fn().mockResolvedValue(docente) },
       seccion: { findMany: jest.fn().mockResolvedValue(secciones) },
       periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-1' }) },
+      asignacion: { findMany: jest.fn().mockResolvedValue([]) },
     } as any;
   }
 
