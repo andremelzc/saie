@@ -30,6 +30,7 @@ import type {
   ResultadoEdicionEspacioDTO,
   ResultadoEdicionSeccionDTO,
   ResultadoImportacionDTO,
+  VistaPreviaReorganizacionDTO,
   ResumenAsignacionDTO,
   SeccionesEscaladasDTO,
   TipoEspacio,
@@ -98,6 +99,25 @@ export async function obtenerEscaladas(): Promise<SeccionesEscaladasDTO> {
 }
 
 /** POST /v1/asignaciones/batch - corrida del periodo vigente (Issue 2.15). */
+/** GET /v1/asignaciones/reorganizacion (Issue 2.26): si se puede reorganizar y qué cambiaría. */
+export async function obtenerReorganizacion(): Promise<VistaPreviaReorganizacionDTO> {
+  const { data } = await api.get<Respuesta<VistaPreviaReorganizacionDTO>>(
+    '/v1/asignaciones/reorganizacion',
+    { timeout: 60000 },
+  );
+  return data.data;
+}
+
+/** POST /v1/asignaciones/reorganizacion (Issue 2.26): escaladas primero; 409 fuera de la ventana. */
+export async function ejecutarReorganizacion(): Promise<ResumenAsignacionDTO> {
+  const { data } = await api.post<Respuesta<ResumenAsignacionDTO>>(
+    '/v1/asignaciones/reorganizacion',
+    {},
+    { timeout: 60000 },
+  );
+  return data.data;
+}
+
 export async function ejecutarCorrida(): Promise<ResumenAsignacionDTO> {
   const { data } = await api.post<Respuesta<ResumenAsignacionDTO>>(
     '/v1/asignaciones/batch',
