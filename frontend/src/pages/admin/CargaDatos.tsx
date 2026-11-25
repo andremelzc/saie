@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { RUTAS } from '../../config/rutas';
 import LayoutAdmin from '../../components/admin/LayoutAdmin';
 import { VeredictoVerificacion } from '../../components/admin/VeredictoVerificacion';
 import { SelectorSegmentado } from '../../components/ui/SelectorSegmentado';
@@ -666,28 +667,28 @@ const GuiaCarga: React.FC = () => (
       <section>
         <h3 className="m-0 text-base font-bold text-saie-text">2. El periodo académico</h3>
         <p className="m-0 mt-2">
-          Cada fila lleva su <strong>periodo</strong> (por ejemplo, 2026-2). Un mismo curso puede
-          existir en varios periodos a la vez: el periodo no se borra, se agrega.
+          Cada fila lleva su <strong>periodo</strong> (por ejemplo, 2026-2; también se acepta
+          2026-II). Solo se puede cargar en un periodo <strong>registrado</strong> en la pantalla{' '}
+          <Link to={RUTAS.periodosAdmin}>Periodos</Link> que no esté cerrado.
         </p>
         <p className="m-0 mt-3">
-          El <strong>periodo actual</strong> es el semestre que el sistema está asignando.
-          Normalmente es el más reciente que hayas cargado; si tu institución lo fija manualmente,
-          se usa el valor que haya configurado la persona administradora.
+          El <strong>periodo vigente</strong> es el semestre que el sistema asigna y que ven alumnos
+          y docentes. Cargar datos nunca lo cambia: solo cambia al activar otro periodo en Periodos.
         </p>
         <ul className="m-0 mt-3 pl-5">
           <li>
-            <strong>Volver a subir el semestre en curso:</strong> usa los mismos archivos y el mismo
-            periodo. Las secciones, horarios y matrículas se actualizan en el sitio y las
-            asignaciones que siguen siendo válidas se conservan.
+            <strong>Volver a subir el semestre en curso:</strong> usa el mismo periodo. Para cada
+            sección incluida en el archivo, sus matrículas y horarios pasan a ser exactamente los
+            del archivo: los alumnos que ya no figuran quedan retirados. Las asignaciones que siguen
+            siendo válidas se conservan.
           </li>
           <li>
-            <strong>Abrir un semestre nuevo:</strong> sube los archivos con el nuevo periodo (por
-            ejemplo, 2027-1). Se agregan las secciones nuevas y los datos del semestre anterior
-            quedan intactos. Como el nuevo periodo es el más reciente, pasa a ser el actual.
+            <strong>Preparar un semestre nuevo:</strong> registra primero el periodo (por ejemplo,
+            2027-1) en Periodos y luego sube sus archivos. Queda en preparación: nadie lo ve hasta
+            que lo actives.
           </li>
           <li>
-            <strong>Asignar un semestre anterior:</strong> pídele a la persona administradora que
-            indique el periodo actual; no lo cambies desde la carga.
+            <strong>Semestres cerrados:</strong> son de solo consulta; la carga los rechaza.
           </li>
         </ul>
       </section>
@@ -698,7 +699,7 @@ const GuiaCarga: React.FC = () => (
         </h3>
         <p className="m-0 mt-2">
           Si la carga termina sin filas con problemas, el sistema{' '}
-          <strong>asigna las aulas del periodo actual</strong>. La asignación solo se hace si ese
+          <strong>asigna las aulas del periodo vigente</strong>. La asignación solo se hace si ese
           periodo ya tiene secciones, horarios y matrículas cargados; si falta algo, el resultado lo
           explica.
         </p>

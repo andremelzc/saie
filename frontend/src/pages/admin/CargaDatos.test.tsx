@@ -294,6 +294,12 @@ describe('Carga de datos maestros (Issue 1.9)', () => {
     expect(within(dialogo).getByText('¿Cómo funciona la carga?')).toBeInTheDocument();
     expect(within(dialogo).getByText('1. Orden de carga')).toBeInTheDocument();
     expect(within(dialogo).getByText('2. El periodo académico')).toBeInTheDocument();
+    // Issue 4.64: el periodo vigente solo cambia desde la pantalla Periodos.
+    expect(within(dialogo).getByRole('link', { name: 'Periodos' })).toHaveAttribute(
+      'href',
+      '/admin/periodos',
+    );
+    expect(within(dialogo).getByText(/Cargar datos nunca lo cambia/)).toBeInTheDocument();
 
     fireEvent.click(within(dialogo).getByRole('tab', { name: 'Plantillas' }));
     expect(
