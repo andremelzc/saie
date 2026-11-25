@@ -1,4 +1,4 @@
-import { DiaSemana } from '@prisma/client';
+import { DiaSemana, TipoEspacio } from '@prisma/client';
 import { ClienteTelegram, ErrorTelegram } from '../../../src/telegram/cliente';
 import { ColaEnvios } from '../../../src/telegram/cola';
 import {
@@ -28,7 +28,8 @@ describe('fechaEnLima y formatearResumenDiario (Issue 3.27)', () => {
         codigoCurso: 'CS202',
         nombreCurso: 'Base de Datos',
         codigoSeccion: '02',
-        espacios: ['Lab 102'],
+        tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
+        espacios: ['Aula 102'],
       },
       {
         horaInicio: '08:00',
@@ -36,6 +37,7 @@ describe('fechaEnLima y formatearResumenDiario (Issue 3.27)', () => {
         codigoCurso: 'CS101',
         nombreCurso: 'Algoritmos',
         codigoSeccion: '01',
+        tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
         espacios: ['Aula 201'],
       },
     ];
@@ -44,9 +46,42 @@ describe('fechaEnLima y formatearResumenDiario (Issue 3.27)', () => {
 
     expect(texto).toContain('Tus clases de hoy, Lunes 23/03');
     // Algoritmos (08:00) debe aparecer antes que Base de Datos (14:00)
-    const posAlgo = texto.indexOf('08:00-10:00  CS101');
-    const posBd = texto.indexOf('14:00-16:00  CS202');
+    const posAlgo = texto.indexOf('CS101 - Algoritmos (Grupo 01)');
+    const posBd = texto.indexOf('CS202 - Base de Datos (Grupo 02)');
+    expect(posAlgo).toBeGreaterThan(-1);
     expect(posAlgo).toBeLessThan(posBd);
+  });
+
+  it('agrupa teoría y laboratorio del mismo grupo y rotula el tipo de clase (Issue 3.62)', () => {
+    const clases: ClaseDelDia[] = [
+      {
+        horaInicio: '20:00',
+        horaFin: '22:00',
+        codigoCurso: '202SW0805',
+        nombreCurso: 'Gestión de la Configuración',
+        codigoSeccion: '2-LAB',
+        tipoEspacioRequerido: TipoEspacio.LABORATORIO,
+        espacios: ['Laboratorio 01'],
+      },
+      {
+        horaInicio: '18:00',
+        horaFin: '20:00',
+        codigoCurso: '202SW0805',
+        nombreCurso: 'Gestión de la Configuración',
+        codigoSeccion: '2',
+        tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
+        espacios: ['Aula 105'],
+      },
+    ];
+
+    const texto = formatearResumenDiario(DiaSemana.JUEVES, '2026-03-26', clases);
+
+    expect(texto.match(/202SW0805/g)).toHaveLength(1);
+    expect(texto).toContain('202SW0805 - Gestión de la Configuración (Grupo 2)');
+    expect(texto).toContain('Teoría: 18:00-20:00  Aula 105');
+    expect(texto).toContain('Laboratorio: 20:00-22:00  Laboratorio 01');
+    expect(texto.indexOf('Teoría')).toBeLessThan(texto.indexOf('Laboratorio:'));
+    expect(texto).not.toContain('2-LAB');
   });
 
   it('muestra "aula por confirmar" cuando la clase no tiene espacios asignados', () => {
@@ -57,6 +92,7 @@ describe('fechaEnLima y formatearResumenDiario (Issue 3.27)', () => {
         codigoCurso: 'CS301',
         nombreCurso: 'Redes',
         codigoSeccion: '01',
+        tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
         espacios: [],
       },
     ];
@@ -73,6 +109,7 @@ describe('fechaEnLima y formatearResumenDiario (Issue 3.27)', () => {
         codigoCurso: 'CS101',
         nombreCurso: 'Algoritmos',
         codigoSeccion: '01',
+        tipoEspacioRequerido: TipoEspacio.AULA_TEORICA,
         espacios: ['Aula 101'],
       },
     ];

@@ -113,6 +113,7 @@ export function construirSesiones(secciones: SeccionConAsignacion[]): SesionDTO[
       codigoCurso: seccion.curso.codigo,
       nombreCurso: seccion.curso.nombre,
       codigoSeccion: seccion.codigoSeccion,
+      tipoEspacioRequerido: seccion.tipoEspacioRequerido,
       docenteNombre: seccion.docente ? seccion.docente.nombre : null,
       diaSemana: h.diaSemana,
       horaInicio: h.horaInicio,

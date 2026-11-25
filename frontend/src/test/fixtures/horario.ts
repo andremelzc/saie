@@ -158,6 +158,7 @@ function aSesiones(seccion: SeccionEjemplo): SesionDTO[] {
     codigoCurso: seccion.codigoCurso,
     nombreCurso: seccion.nombreCurso,
     codigoSeccion: seccion.codigoSeccion,
+    tipoEspacioRequerido: 'AULA_TEORICA',
     docenteNombre: seccion.docenteNombre,
     diaSemana: bloque.dia,
     horaInicio: bloque.inicio,
