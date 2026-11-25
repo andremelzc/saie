@@ -1,5 +1,5 @@
 import type { DiaSemana, EspacioAsignadoDTO, HorarioConsultaDTO, TipoEspacio } from './consulta';
-import type { HorarioSemanalDTO } from './horario';
+import type { HorarioSemanalDTO, SesionDTO } from './horario';
 import type { ComparacionVersion, SoftwareResumenDTO } from './admin';
 
 /**
@@ -18,27 +18,21 @@ export interface AsignacionActivaDocenteDTO {
   numeroAlumnos: number;
 }
 
-/** Issue 7.18: aula de una sección en el aviso de cambio. */
-export interface EspacioCambioAulaDTO {
-  identificador: string;
-  tipo: TipoEspacio;
-  pabellon: string;
-  piso: number;
-}
+/** Issue 7.18: espacios del aviso de cambio de aula (antes y ahora; vacío = sin aula). */
+type EspaciosCambio = Record<
+  'espaciosAnteriores' | 'espaciosNuevos',
+  Omit<EspacioAsignadoDTO, 'id'>[]
+>;
 
-/** Issue 7.18: una sección del docente cambió de aula hace poco (`id` = la asignación nueva). */
-export interface CambioAulaDocenteDTO {
-  id: string;
-  seccionId: string;
-  codigoCurso: string;
-  nombreCurso: string;
-  codigoSeccion: string;
-  tipoEspacioRequerido: TipoEspacio;
-  fecha: string;
-  espaciosAnteriores: EspacioCambioAulaDTO[];
-  /** Vacío si la sección se quedó sin aula. */
-  espaciosNuevos: EspacioCambioAulaDTO[];
-}
+/** Issue 7.18: una sección del docente cambió de aula (`id` = la asignación nueva, `fecha` ISO). */
+export type CambioAulaDocenteDTO = { id: string; fecha: string } & Pick<
+  SesionDTO,
+  'seccionId' | 'codigoCurso' | 'nombreCurso' | 'codigoSeccion' | 'tipoEspacioRequerido'
+> &
+  EspaciosCambio;
+
+/** Un espacio del aviso de cambio de aula. */
+export type EspacioCambioAulaDTO = CambioAulaDocenteDTO['espaciosNuevos'][number];
 
 export interface HorarioDocenteDTO extends HorarioSemanalDTO {
   asignacionesActivas: AsignacionActivaDocenteDTO[];

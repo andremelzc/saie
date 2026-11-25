@@ -92,29 +92,24 @@ export interface AsignacionActivaDocenteDTO {
   numeroAlumnos: number;
 }
 
-/** Aula de una sección, tal como se muestra en el aviso de cambio. */
-export interface EspacioCambioAulaDTO {
-  identificador: string;
-  tipo: TipoEspacio;
-  pabellon: string;
-  piso: number;
-}
+/** Aula de una sección en el aviso de cambio (Issue 7.18). */
+export type EspacioCambioAulaDTO = Pick<
+  EspacioAsignadoDTO,
+  'identificador' | 'tipo' | 'pabellon' | 'piso'
+>;
 
 /**
- * Issue 7.18 (riesgo R24): una sección del docente cambió de aula hace poco. El aviso es la
- * asignación más reciente (su `id`), así el portal puede recordar cuáles ya se leyeron.
+ * Issue 7.18 (riesgo R24): una sección del docente cambió de aula hace poco. `id` es la
+ * asignación más reciente, así el portal puede recordar qué avisos ya se leyeron; `fecha` es
+ * ISO 8601 y `espaciosNuevos` vacío significa que la sección se quedó sin aula.
  */
-export interface CambioAulaDocenteDTO {
+export interface CambioAulaDocenteDTO extends Pick<
+  SesionDTO,
+  'seccionId' | 'codigoCurso' | 'nombreCurso' | 'codigoSeccion' | 'tipoEspacioRequerido'
+> {
   id: string;
-  seccionId: string;
-  codigoCurso: string;
-  nombreCurso: string;
-  codigoSeccion: string;
-  tipoEspacioRequerido: TipoEspacio;
-  /** Momento del cambio (ISO 8601). */
   fecha: string;
   espaciosAnteriores: EspacioCambioAulaDTO[];
-  /** Vacío si la sección se quedó sin aula (escalada a revisión). */
   espaciosNuevos: EspacioCambioAulaDTO[];
 }
 
