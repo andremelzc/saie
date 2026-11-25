@@ -5,9 +5,15 @@ const prismaMock: any = {
   espacio: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
   espacioResponsable: { findUnique: jest.fn(), findMany: jest.fn() },
   espacioContiguo: { findMany: jest.fn(), deleteMany: jest.fn(), createMany: jest.fn() },
-  asignacion: { findUnique: jest.fn(), findMany: jest.fn() },
+  asignacion: { findUnique: jest.fn(), findMany: jest.fn(), updateMany: jest.fn() },
   seccion: { findMany: jest.fn() },
-  periodo: { findMany: jest.fn(), findFirst: jest.fn() },
+  periodo: {
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
   importacion: { findFirst: jest.fn() },
   alerta: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
   incidencia: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
@@ -314,6 +320,104 @@ describe('Endpoints Sprint 4 (Issue #267)', () => {
           .set('Authorization', bearer(rol));
         expect(res.status).toBe(403);
       }
+    });
+
+    describe('gestión (Issue 4.64)', () => {
+      const coordinacion = bearer(RolCuenta.COORDINACION_ACADEMICA);
+      const fila = (codigo: string, estado: string) => ({
+        id: `id-${codigo}`,
+        codigo,
+        estado,
+        fechaInicio: null,
+        fechaFin: null,
+      });
+
+      it('POST registra un periodo en preparación y normaliza 2027-I', async () => {
+        prismaMock.periodo.findUnique.mockResolvedValue(null);
+        prismaMock.periodo.create.mockImplementation(async ({ data }: any) => ({
+          id: 'n',
+          fechaInicio: null,
+          fechaFin: null,
+          ...data,
+        }));
+
+        const res = await request(app)
+          .post('/api/v1/admin/periodos')
+          .set('Authorization', coordinacion)
+          .send({ codigo: '2027-I' });
+
+        expect(res.status).toBe(201);
+        expect(res.body.data).toMatchObject({ codigo: '2027-1', estado: 'EN_PREPARACION' });
+      });
+
+      it('POST rechaza un código inválido con 400 sin crear nada', async () => {
+        const res = await request(app)
+          .post('/api/v1/admin/periodos')
+          .set('Authorization', coordinacion)
+          .send({ codigo: '2027-9' });
+
+        expect(res.status).toBe(400);
+        expect(prismaMock.periodo.create).not.toHaveBeenCalled();
+      });
+
+      it('activar cierra el vigente y activa el indicado', async () => {
+        const anterior = fila('2026-2', 'VIGENTE');
+        const nuevo = fila('2027-1', 'EN_PREPARACION');
+        prismaMock.periodo.findUnique.mockResolvedValue(nuevo);
+        prismaMock.periodo.findFirst.mockResolvedValue(anterior);
+        prismaMock.periodo.update.mockImplementation(async ({ where, data }: any) => ({
+          ...(where.id === nuevo.id ? nuevo : anterior),
+          ...data,
+        }));
+        prismaMock.asignacion.updateMany.mockResolvedValue({ count: 2 });
+
+        const res = await request(app)
+          .post('/api/v1/admin/periodos/2027-I/activar')
+          .set('Authorization', coordinacion);
+
+        expect(res.status).toBe(200);
+        expect(res.body.data).toMatchObject({ codigo: '2027-1', estado: 'VIGENTE' });
+        expect(prismaMock.asignacion.updateMany).toHaveBeenCalledTimes(1);
+      });
+
+      it('cerrar deja el periodo en solo consulta', async () => {
+        const vigente = fila('2026-2', 'VIGENTE');
+        prismaMock.periodo.findUnique.mockResolvedValue(vigente);
+        prismaMock.periodo.update.mockImplementation(async ({ data }: any) => ({
+          ...vigente,
+          ...data,
+        }));
+        prismaMock.asignacion.updateMany.mockResolvedValue({ count: 0 });
+
+        const res = await request(app)
+          .post('/api/v1/admin/periodos/2026-2/cerrar')
+          .set('Authorization', coordinacion);
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.estado).toBe('CERRADO');
+      });
+
+      it('activar un periodo cerrado responde 409', async () => {
+        prismaMock.periodo.findUnique.mockResolvedValue(fila('2026-1', 'CERRADO'));
+        const res = await request(app)
+          .post('/api/v1/admin/periodos/2026-1/activar')
+          .set('Authorization', coordinacion);
+        expect(res.status).toBe(409);
+      });
+
+      it('Jefatura, alumno y docente no pueden gestionar periodos (403) ni sin token (401)', async () => {
+        expect((await request(app).post('/api/v1/admin/periodos').send({})).status).toBe(401);
+        for (const rol of [RolCuenta.JEFATURA_LABORATORIOS, RolCuenta.ALUMNO, RolCuenta.DOCENTE]) {
+          for (const ruta of [
+            '/api/v1/admin/periodos',
+            '/api/v1/admin/periodos/2026-2/activar',
+            '/api/v1/admin/periodos/2026-2/cerrar',
+          ]) {
+            const res = await request(app).post(ruta).set('Authorization', bearer(rol)).send({});
+            expect(res.status).toBe(403);
+          }
+        }
+      });
     });
 
     it('sin periodos registrados responde lista vacía y vigente null', async () => {
