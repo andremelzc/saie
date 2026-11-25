@@ -229,6 +229,9 @@ model Seccion {
   softwareRequerido SeccionSoftware[]
   // Solicitudes de software que apuntan a esta sección (Issue 4.29).
   solicitudesSoftware SolicitudSoftware[]
+  // Issue 7.17: solicitudes de «dictar todo en laboratorio» (la de teoría y su laboratorio).
+  fusionesComoTeoria      SolicitudFusionLaboratorio[] @relation("FusionTeoria")
+  fusionesComoLaboratorio SolicitudFusionLaboratorio[] @relation("FusionLaboratorio")
 
   @@unique([cursoId, codigoSeccion, periodo])
   @@map("secciones")
@@ -315,6 +318,7 @@ model Docente {
   secciones           Seccion[]
   incidencias         Incidencia[]
   solicitudesSoftware SolicitudSoftware[]
+  solicitudesFusion   SolicitudFusionLaboratorio[]
 
   @@map("docentes")
 }
@@ -336,6 +340,7 @@ model Cuenta {
   softwareRegistrado   EspacioSoftware[]
   solicitudesResueltas SolicitudSoftware[]
   accesibilidadResuelta SolicitudAccesibilidad[]
+  fusionesResueltas     SolicitudFusionLaboratorio[]
 
   @@map("cuentas")
 }
@@ -654,4 +659,33 @@ model SolicitudAccesibilidad {
   @@index([estado])
   @@index([alumnoId])
   @@map("solicitudes_accesibilidad")
+}
+
+// Issue 7.17 (riesgo R22): el docente pide «dictar todo en laboratorio» para su sección de teoría
+// (p. ej. `2`) y Coordinación Académica la aprueba o rechaza con motivo. Al aprobarla, las franjas
+// de la teoría pasan a su laboratorio (`2-LAB`), la teoría se retira (`activa = false`, conserva
+// su historial) y el laboratorio se reasigna: una sola sección, un mismo laboratorio en todas sus
+// franjas.
+model SolicitudFusionLaboratorio {
+  id                   String          @id @default(uuid())
+  docenteId            String          @map("docente_id")
+  seccionTeoriaId      String          @map("seccion_teoria_id")
+  seccionLaboratorioId String          @map("seccion_laboratorio_id")
+  justificacion        String
+  estado               EstadoSolicitud @default(PENDIENTE)
+  fechaSolicitud       DateTime        @default(now()) @map("fecha_solicitud")
+  resueltaPorId        String?         @map("resuelta_por_id")
+  fechaResolucion      DateTime?       @map("fecha_resolucion")
+  motivoRechazo        String?         @map("motivo_rechazo") // Obligatorio si estado = RECHAZADA
+  // Al aprobarla: dónde quedó la sección fusionada tras reasignarla.
+  resultado            String?
+
+  docente            Docente  @relation(fields: [docenteId], references: [id], onDelete: Cascade)
+  seccionTeoria      Seccion  @relation("FusionTeoria", fields: [seccionTeoriaId], references: [id], onDelete: Cascade)
+  seccionLaboratorio Seccion  @relation("FusionLaboratorio", fields: [seccionLaboratorioId], references: [id], onDelete: Cascade)
+  resueltaPor        Cuenta?  @relation(fields: [resueltaPorId], references: [id], onDelete: SetNull)
+
+  @@index([estado])
+  @@index([docenteId])
+  @@map("solicitudes_fusion_laboratorio")
 }

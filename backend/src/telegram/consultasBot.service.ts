@@ -69,7 +69,7 @@ async function obtenerSesionesAlumno(chatId: string, prisma: PrismaClient) {
   }
 
   const matriculas = await prisma.matricula.findMany({
-    where: { alumnoId: vinculacion.alumnoId, seccion: { periodo } },
+    where: { alumnoId: vinculacion.alumnoId, seccion: { periodo, activa: true } },
     include: { seccion: { include: INCLUIR_SECCION_CON_ASIGNACION } },
   });
 

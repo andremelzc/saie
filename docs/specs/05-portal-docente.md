@@ -33,6 +33,10 @@ Asimismo, incluye el panel de revisión y resolución de incidencias para la **J
   * `pcsOperativas` es la capacidad real (Issue 2.1). `cursos` compara el stack que exige cada curso del docente con lo instalado (`validarSoftwareLaboratorio`). El historial trae los últimos 20 cambios, del más reciente al más antiguo.
 * `GET /api/v1/docente/espacios/explorador`
   * Explorador de aulas y laboratorios para consultar disponibilidad de espacios libres.
+* `POST /api/v1/docente/solicitudes-laboratorio` y `GET /api/v1/docente/solicitudes-laboratorio` (Issue 7.17, riesgo R22)
+  * «Dictar todo en laboratorio»: el docente lo pide para una de sus secciones de teoría con `{ seccionTeoriaId, justificacion }` (justificación de 10 a 500 caracteres) y lista las suyas con su estado, el motivo si se rechazó y el resultado si se aprobó.
+  * 404 si la sección no es suya, 422 si no es de teoría o su grupo no tiene laboratorio (`2` → `2-LAB`), 409 si ya hay una pendiente para esa sección, si la sección no está activa o si el periodo está cerrado.
+  * En el portal es la pestaña «Laboratorio» de «Mi horario»: solo ofrece las secciones de teoría con laboratorio en su grupo y muestra cómo quedaría el horario. Coordinación la resuelve ([Spec 04](04-panel-alertas-y-admin.md) §2.9).
 
 ### 2.2 Reporte de Incidencias por Docente (#7.10)
 * `POST /api/v1/docente/incidencias` (Issue 7.5)

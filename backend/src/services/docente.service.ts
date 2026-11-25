@@ -148,7 +148,8 @@ export async function obtenerHorarioDocente(
 
   const secciones = periodo
     ? await prisma.seccion.findMany({
-        where: { docenteId: docente.id, periodo },
+        // Una sección retirada (Issues 1.17 y 7.17) ya no tiene clases.
+        where: { docenteId: docente.id, periodo, activa: true },
         include: {
           ...INCLUIR_SECCION_CON_ASIGNACION,
           _count: { select: { matriculas: true } },

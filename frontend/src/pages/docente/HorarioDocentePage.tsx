@@ -3,6 +3,7 @@ import PaginaDocente from '../../components/docente/PaginaDocente';
 import AvisosCambioAula from '../../components/docente/AvisosCambioAula';
 import GridHorarioSemanal from '../../components/estudiante/GridHorarioSemanal';
 import HorarioDia from '../../components/estudiante/HorarioDia';
+import DictarEnLaboratorio from '../../components/docente/DictarEnLaboratorio';
 import SelectorSegmentado from '../../components/ui/SelectorSegmentado';
 import type { OpcionSegmentada } from '../../components/ui/SelectorSegmentado';
 import { EsqueletoCarga, EstadoVacio } from '../../components/estudiante/ElementosHorario';
@@ -27,12 +28,20 @@ import {
 } from '../../utils/horario';
 import { plural } from '../../utils/texto';
 
-type SeccionPantalla = 'horario' | 'asignaciones';
+type SeccionPantalla = 'horario' | 'asignaciones' | 'laboratorio';
 
 const OPCIONES_SECCION: OpcionSegmentada<SeccionPantalla>[] = [
   { valor: 'horario', etiqueta: 'Horario' },
   { valor: 'asignaciones', etiqueta: 'Asignaciones' },
+  // Issue 7.17: pedir dictar todo en laboratorio.
+  { valor: 'laboratorio', etiqueta: 'Laboratorio' },
 ];
+
+const TITULO_SECCION: Record<SeccionPantalla, string> = {
+  horario: 'Mi horario',
+  asignaciones: 'Mis asignaciones',
+  laboratorio: 'Dictar en laboratorio',
+};
 
 const OPCIONES_VISTA: OpcionSegmentada<VistaHorario>[] = [
   { valor: 'dia', etiqueta: 'Día' },
@@ -128,6 +137,8 @@ export const HorarioDocentePage: React.FC<{ ahora?: Date }> = ({ ahora }) => {
     }
     if (!datos) return null;
 
+    if (seccion === 'laboratorio') return <DictarEnLaboratorio horario={datos} />;
+
     if (seccion === 'asignaciones') {
       return datos.asignacionesActivas.length === 0 ? (
         <EstadoVacio
@@ -197,7 +208,7 @@ export const HorarioDocentePage: React.FC<{ ahora?: Date }> = ({ ahora }) => {
         id={idPanelPestana('horario-docente', seccion)}
         aria-labelledby={idPestana('horario-docente', seccion)}
       >
-        <h2 className="sr-only">{seccion === 'horario' ? 'Mi horario' : 'Mis asignaciones'}</h2>
+        <h2 className="sr-only">{TITULO_SECCION[seccion]}</h2>
         {renderCuerpo()}
       </section>
     </PaginaDocente>

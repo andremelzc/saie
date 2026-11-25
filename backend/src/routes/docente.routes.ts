@@ -16,6 +16,10 @@ import {
   subirImagenIncidencia,
   verImagenIncidenciaDocente,
 } from '../controllers/imagenIncidencia.controller';
+import {
+  crearSolicitudLaboratorio,
+  listarMisSolicitudesLaboratorio,
+} from '../controllers/fusionLaboratorio.controller';
 import { authGuard, roleGuard } from '../middlewares/auth.middleware';
 
 const router = Router();
@@ -35,5 +39,9 @@ router.get('/incidencias/:id/imagen', verImagenIncidenciaDocente);
 // Solicitudes de software del docente (Issue 4.29): crea y lista solo las propias.
 router.post('/solicitudes-software', crearSolicitudSoftware);
 router.get('/solicitudes-software', listarMisSolicitudesSoftware);
+
+// «Dictar todo en laboratorio» (Issue 7.17): el docente lo pide para su sección de teoría.
+router.post('/solicitudes-laboratorio', crearSolicitudLaboratorio);
+router.get('/solicitudes-laboratorio', listarMisSolicitudesLaboratorio);
 
 export default router;

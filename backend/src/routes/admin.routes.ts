@@ -44,6 +44,10 @@ import {
   rechazarSolicitudSoftware,
 } from '../controllers/solicitudSoftware.controller';
 import {
+  listarSolicitudesLaboratorioAdmin,
+  resolverSolicitudLaboratorioAdmin,
+} from '../controllers/fusionLaboratorio.controller';
+import {
   listarAccesibilidadAdmin,
   resolverAccesibilidadAdmin,
 } from '../controllers/accesibilidad.controller';
@@ -107,6 +111,14 @@ router.patch('/software/:id/estado', soloCoordinacion, cambiarEstadoCatalogo);
 // Declaraciones de accesibilidad de los alumnos (Issue 3.60): solo Coordinación.
 router.get('/accesibilidad', soloCoordinacion, listarAccesibilidadAdmin);
 router.patch('/accesibilidad/:id/resolver', soloCoordinacion, resolverAccesibilidadAdmin);
+
+// «Dictar todo en laboratorio» (Issue 7.17): Coordinación aprueba o rechaza lo que piden los docentes.
+router.get('/solicitudes-laboratorio', soloCoordinacion, listarSolicitudesLaboratorioAdmin);
+router.patch(
+  '/solicitudes-laboratorio/:id/resolver',
+  soloCoordinacion,
+  resolverSolicitudLaboratorioAdmin,
+);
 
 // Solicitudes de software (Issue 4.29): Coordinación las revisa, aprueba o rechaza.
 router.get('/solicitudes-software', listarSolicitudesSoftware);

@@ -187,6 +187,18 @@ La declaración «no puedo subir a pisos superiores» que el alumno marca en su 
   * 400 si falta el motivo del rechazo, 404 si la solicitud no existe, 409 si ya fue resuelta.
 * Pantalla `/admin/accesibilidad` (pestaña «Accesibilidad», solo Coordinación): pendientes con «Aprobar» y «Rechazar» (motivo obligatorio) y aprobadas con el piso de cada clase, resaltando las que quedaron fuera del piso 1 o sin aula.
 
+### 2.9 «Dictar todo en laboratorio» (Issue 7.17, riesgo R22)
+
+Cada grupo de un curso son dos secciones: la de teoría (`2`) y su laboratorio (`2-LAB`). Si el docente dicta todas las horas en laboratorio, lo pide desde su portal ([Spec 05](05-portal-docente.md) §2.1) y Coordinación lo aprueba o rechaza. Modelo `SolicitudFusionLaboratorio` (tabla `solicitudes_fusion_laboratorio`, migración `20261129000000_solicitudes_fusion_laboratorio`, con Row Level Security): `docenteId`, `seccionTeoriaId`, `seccionLaboratorioId`, `justificacion`, `estado` (`EstadoSolicitud`), `fechaSolicitud`, `resueltaPorId`, `fechaResolucion`, `motivoRechazo` y `resultado`.
+
+* `GET /api/v1/admin/solicitudes-laboratorio` (solo Coordinación): `{ pendientes, resueltas }` (las 30 últimas resueltas). Cada una: `{ id, estado, justificacion, fechaSolicitud, fechaResolucion, motivoRechazo, resultado, periodo, curso: { codigo, nombre }, grupo, docente: { codigoDocente, nombre }, seccionTeoria, seccionLaboratorio }`, cada sección con `{ id, codigoSeccion, horarios }`.
+* `PATCH /api/v1/admin/solicitudes-laboratorio/:id/resolver` (solo Coordinación), cuerpo `{ decision: 'APROBAR' }` o `{ decision: 'RECHAZAR', motivo }` (motivo de 5 a 500 caracteres):
+  * **Aprobar:** en una transacción copia las franjas de la teoría al laboratorio, matricula en el laboratorio a los alumnos de la teoría que no lo estaban (con su movilidad reducida), retira la teoría (`Seccion.activa = false`, conserva su historial) y deja su asignación como `HISTORICA` (libera el aula), y registra en la auditoría el cambio de horario del laboratorio y el retiro de la teoría. Después reasigna el laboratorio: como el motor busca un espacio libre en todas las franjas de una sección, le toca el mismo laboratorio en todas. Guarda en `resultado` dónde quedó («L-01 en todas sus franjas», «quedó en revisión: …» o que falta reasignarla si había una corrida en curso) y emite `seccion.fusionada`, que avisa por Telegram a los alumnos de ambas secciones.
+  * **Rechazar:** guarda el motivo, que el docente ve en su portal.
+  * 400 si el cuerpo es inválido, 404 si no existe, 409 si ya se resolvió, si alguna sección ya no está activa, si la teoría y el laboratorio se cruzan o si el periodo está cerrado (Issue 4.64).
+* Las secciones retiradas (`activa = false`, Issues 1.17 y 7.17) ya no aparecen en el horario del alumno ni del docente, en la consulta pública ni en Telegram.
+* Pantalla `/admin/dictar-en-laboratorio` (pestaña «Dictar en laboratorio», solo Coordinación): pendientes con las franjas de la teoría y cómo quedaría el laboratorio, «Aprobar» y «Rechazar» (motivo obligatorio), y las resueltas con su resultado o motivo.
+
 ## 2.1. Gestión de periodos (Issue 4.64)
 * `GET /api/v1/admin/periodos` → `{ vigente, periodos[], registrados[{ codigo, fechaInicio, fechaFin, estado }] }` (Coordinación y Jefatura).
 * `POST /api/v1/admin/periodos` (solo Coordinación): registra un periodo `EN_PREPARACION`. El código se normaliza («2027-II» → «2027-2»).

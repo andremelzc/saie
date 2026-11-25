@@ -196,7 +196,7 @@ describe('Horario y asignaciones activas del docente (Issue 7.2)', () => {
     await obtenerHorarioDocente('cuenta-d', undefined, prisma);
     expect(prisma.docente.findUnique).toHaveBeenCalledWith({ where: { cuentaId: 'cuenta-d' } });
     expect(prisma.seccion.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { docenteId: 'doc-1', periodo: '2026-1' } }),
+      expect.objectContaining({ where: { docenteId: 'doc-1', periodo: '2026-1', activa: true } }),
     );
   });
 
