@@ -186,7 +186,7 @@ export const TarjetaAlerta: React.FC<TarjetaAlertaProps> = ({
                 />
               </>
             )}
-            {onReubicar && cursos.length > 0 && (
+            {onReubicar && cursos.length > 0 && alerta.tipo !== 'ACCESIBILIDAD' && (
               <>
                 <Boton
                   variante="primario"

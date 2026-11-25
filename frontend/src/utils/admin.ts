@@ -148,10 +148,12 @@ export function etiquetaRol(rol?: RolCuenta): string {
 /** Resumen del resultado de reubicar: cuántas secciones cambiaron de espacio y cuántas escalaron. */
 export function resumirReubicacion(r: ResultadoReubicacionDTO): string {
   const enRevision = r.secciones.filter((s) => s.estado === 'ESCALADA').length;
-  const reubicadas = r.secciones.length - enRevision;
+  const sinCambios = r.secciones.filter((s) => s.estado !== 'ESCALADA' && s.conservada).length;
+  const reubicadas = r.secciones.length - enRevision - sinCambios;
   const partes = [
     `${reubicadas} ${reubicadas === 1 ? 'sección reubicada' : 'secciones reubicadas'}`,
   ];
+  if (sinCambios > 0) partes.push(`${sinCambios} sin cambios (su aula sigue sirviendo)`);
   if (enRevision > 0) partes.push(`${enRevision} en revisión en el inicio`);
   return `Alerta resuelta: ${partes.join(', ')}.`;
 }
