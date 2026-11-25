@@ -40,10 +40,8 @@ function resultado(seccionId: string, estado: string, extra: Record<string, unkn
 
 function prismaMock(seccion: unknown = { id: 's1', periodo: '2026-1' }, periodo = '2026-1') {
   return {
-    seccion: {
-      findUnique: jest.fn().mockResolvedValue(seccion),
-      findFirst: jest.fn().mockResolvedValue(periodo ? { periodo } : null),
-    },
+    seccion: { findUnique: jest.fn().mockResolvedValue(seccion) },
+    periodo: { findFirst: jest.fn().mockResolvedValue(periodo ? { codigo: periodo } : null) },
   } as any;
 }
 

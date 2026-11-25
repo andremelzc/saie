@@ -1,5 +1,6 @@
 const prismaMock: any = {
-  seccion: { findFirst: jest.fn(), findUnique: jest.fn() },
+  seccion: { findUnique: jest.fn() },
+  periodo: { findFirst: jest.fn() },
 };
 
 jest.mock('../../src/lib/prisma', () => ({
@@ -32,7 +33,7 @@ const app = createApp();
 beforeEach(() => {
   jest.clearAllMocks();
   process.env.ASIGNACION_PROGRAMADA_TOKEN = TOKEN;
-  prismaMock.seccion.findFirst.mockResolvedValue({ periodo: '2026-1' });
+  prismaMock.periodo.findFirst.mockResolvedValue({ codigo: '2026-1' });
 
   (procesarCorridaBatchPeriodo as jest.Mock).mockResolvedValue({
     corridaId: 'corrida-prog',

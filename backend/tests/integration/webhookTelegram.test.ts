@@ -1,5 +1,5 @@
 const prismaMock: any = {
-  seccion: { findFirst: jest.fn().mockResolvedValue({ periodo: '2026-1' }) },
+  periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-1' }) },
   vinculacionTelegram: {
     findMany: jest.fn().mockResolvedValue([]),
     findUnique: jest.fn().mockResolvedValue(null),

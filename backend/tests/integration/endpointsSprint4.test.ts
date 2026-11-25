@@ -6,7 +6,8 @@ const prismaMock: any = {
   espacioResponsable: { findUnique: jest.fn(), findMany: jest.fn() },
   espacioContiguo: { findMany: jest.fn(), deleteMany: jest.fn(), createMany: jest.fn() },
   asignacion: { findUnique: jest.fn(), findMany: jest.fn() },
-  seccion: { findMany: jest.fn(), findFirst: jest.fn() },
+  seccion: { findMany: jest.fn() },
+  periodo: { findMany: jest.fn(), findFirst: jest.fn() },
   importacion: { findFirst: jest.fn() },
   alerta: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
   incidencia: { findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
@@ -280,17 +281,11 @@ describe('Endpoints Sprint 4 (Issue #267)', () => {
   });
 
   describe('Periodos (GET /admin/periodos, Issue 4.42)', () => {
-    const originalEnv = process.env.PERIODO_VIGENTE;
-    beforeEach(() => {
-      delete process.env.PERIODO_VIGENTE;
-    });
-    afterAll(() => {
-      if (originalEnv !== undefined) process.env.PERIODO_VIGENTE = originalEnv;
-    });
-
     it('responde 200 con vigente y la lista de periodos para Coordinación y Jefatura', async () => {
-      prismaMock.seccion.findMany.mockResolvedValue([{ periodo: '2026-2' }, { periodo: '2026-1' }]);
-      prismaMock.seccion.findFirst.mockResolvedValue({ periodo: '2026-2' });
+      prismaMock.periodo.findMany.mockResolvedValue([
+        { codigo: '2026-2', fechaInicio: null, fechaFin: null, estado: 'VIGENTE' },
+        { codigo: '2026-1', fechaInicio: null, fechaFin: null, estado: 'CERRADO' },
+      ]);
 
       for (const rol of [RolCuenta.COORDINACION_ACADEMICA, RolCuenta.JEFATURA_LABORATORIOS]) {
         const res = await request(app)
@@ -299,7 +294,14 @@ describe('Endpoints Sprint 4 (Issue #267)', () => {
         expect(res.status).toBe(200);
         expect(res.body).toEqual({
           success: true,
-          data: { vigente: '2026-2', periodos: ['2026-2', '2026-1'] },
+          data: {
+            vigente: '2026-2',
+            periodos: ['2026-2', '2026-1'],
+            registrados: [
+              { codigo: '2026-2', fechaInicio: null, fechaFin: null, estado: 'VIGENTE' },
+              { codigo: '2026-1', fechaInicio: null, fechaFin: null, estado: 'CERRADO' },
+            ],
+          },
         });
       }
     });
@@ -314,16 +316,15 @@ describe('Endpoints Sprint 4 (Issue #267)', () => {
       }
     });
 
-    it('sin secciones responde periodos vacío y vigente null', async () => {
-      prismaMock.seccion.findMany.mockResolvedValue([]);
-      prismaMock.seccion.findFirst.mockResolvedValue(null);
+    it('sin periodos registrados responde lista vacía y vigente null', async () => {
+      prismaMock.periodo.findMany.mockResolvedValue([]);
 
       const res = await request(app)
         .get('/api/v1/admin/periodos')
         .set('Authorization', bearer(RolCuenta.COORDINACION_ACADEMICA));
 
       expect(res.status).toBe(200);
-      expect(res.body.data).toEqual({ vigente: null, periodos: [] });
+      expect(res.body.data).toEqual({ vigente: null, periodos: [], registrados: [] });
     });
   });
 

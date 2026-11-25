@@ -65,10 +65,8 @@ describe('Horario y asignaciones activas del docente (Issue 7.2)', () => {
   function prismaMock(secciones: any[], docente: any = { id: 'doc-1' }) {
     return {
       docente: { findUnique: jest.fn().mockResolvedValue(docente) },
-      seccion: {
-        findFirst: jest.fn().mockResolvedValue({ periodo: '2026-1' }),
-        findMany: jest.fn().mockResolvedValue(secciones),
-      },
+      seccion: { findMany: jest.fn().mockResolvedValue(secciones) },
+      periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-1' }) },
     } as any;
   }
 

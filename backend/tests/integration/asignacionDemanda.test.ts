@@ -1,5 +1,6 @@
 const prismaMock: any = {
-  seccion: { findUnique: jest.fn(), findFirst: jest.fn() },
+  seccion: { findUnique: jest.fn() },
+  periodo: { findFirst: jest.fn() },
 };
 
 jest.mock('../../src/lib/prisma', () => ({
@@ -39,7 +40,7 @@ const coordinacion = bearer(RolCuenta.COORDINACION_ACADEMICA);
 
 beforeEach(() => {
   jest.clearAllMocks();
-  prismaMock.seccion.findFirst.mockResolvedValue({ periodo: '2026-1' });
+  prismaMock.periodo.findFirst.mockResolvedValue({ codigo: '2026-1' });
   (verificarCorridaPeriodo as jest.Mock).mockResolvedValue({
     conforme: true,
     totalRevisadas: 0,

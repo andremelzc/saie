@@ -66,9 +66,9 @@ function dbMock(secciones: unknown[] = [], total = secciones.length) {
       count: jest.fn().mockResolvedValue(total),
       findMany: jest.fn().mockResolvedValue(secciones),
       findUnique: jest.fn().mockResolvedValue(secciones[0] ?? null),
-      findFirst: jest.fn().mockResolvedValue({ periodo: '2026-2' }),
       update: jest.fn().mockResolvedValue(seccion()),
     },
+    periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-2' }) },
   } as any;
 }
 

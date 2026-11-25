@@ -1,5 +1,6 @@
 const prismaMock: any = {
-  seccion: { count: jest.fn(), findFirst: jest.fn() },
+  seccion: { count: jest.fn() },
+  periodo: { findFirst: jest.fn() },
   horario: { count: jest.fn() },
   matricula: { count: jest.fn() },
   importacion: { create: jest.fn() },
@@ -58,7 +59,7 @@ const resumen = {
 };
 
 function periodoCon(secciones: number, horarios: number, matriculas: number) {
-  prismaMock.seccion.findFirst.mockResolvedValue({ periodo: '2026-2' });
+  prismaMock.periodo.findFirst.mockResolvedValue({ codigo: '2026-2' });
   prismaMock.seccion.count.mockResolvedValue(secciones);
   prismaMock.horario.count.mockResolvedValue(horarios);
   prismaMock.matricula.count.mockResolvedValue(matriculas);
@@ -236,7 +237,7 @@ describe('extraerFilas (Issue 1.6)', () => {
 
 describe('dispararAsignacionSiPeriodoCompleto (Issue 1.6)', () => {
   it('no dispara si no hay periodo vigente', async () => {
-    prismaMock.seccion.findFirst.mockResolvedValue(null);
+    prismaMock.periodo.findFirst.mockResolvedValue(null);
 
     const r = await dispararAsignacionSiPeriodoCompleto(prismaMock);
 

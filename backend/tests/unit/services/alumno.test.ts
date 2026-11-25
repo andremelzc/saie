@@ -56,7 +56,7 @@ function prismaMock(secciones: any[] = [], alumno: any = { id: 'alu-1' }) {
       findUnique: jest.fn().mockResolvedValue(alumno),
       update: jest.fn(),
     },
-    seccion: { findFirst: jest.fn().mockResolvedValue({ periodo: '2026-1' }) },
+    periodo: { findFirst: jest.fn().mockResolvedValue({ codigo: '2026-1' }) },
     matricula: {
       findMany: jest.fn().mockResolvedValue(secciones.map((s) => ({ seccion: s }))),
     },
@@ -195,7 +195,7 @@ describe('Cursos matriculados del alumno (Issue 3.11)', () => {
 
   it('sin periodo vigente devuelve lista vacía', async () => {
     const prisma = prismaMock(secciones);
-    prisma.seccion.findFirst.mockResolvedValue(null);
+    prisma.periodo.findFirst.mockResolvedValue(null);
     const res = await listarCursosAlumno('cuenta-1', prisma);
     expect(res).toEqual({ periodo: null, cursos: [] });
   });
