@@ -49,6 +49,13 @@ El **Portal del Estudiante** es la interfaz web/móvil responsiva donde los alum
     está pendiente, aprobada o no aprobada con su motivo; la casilla se ve marcada si está
     pendiente o aprobada. Si el alumno tiene Telegram vinculado, recibe un aviso al resolverse,
     sin el motivo ni datos de su condición.
+  * **Condición temporal (Issue 3.61, riesgo R16):** junto con la casilla, el alumno puede indicar
+    `condicionAccesibleHasta` (`AAAA-MM-DD`, opcional, no puede ser un día que ya pasó): el último
+    día en que rige. Se guarda en la solicitud (`fechaFin`) y, al aprobarla, en
+    `FichaMedica.condicionAccesibleHasta`. Al vencer, la corrida programada (Issue 2.18) quita la
+    marca de la ficha y de las matrículas antes de ejecutarse, y así reasigna sus secciones. Sin
+    fecha, la condición no vence. Una condición ya aprobada conserva su fecha: para cambiarla se
+    desmarca y se vuelve a declarar. El perfil muestra «hasta el …» o «No vence».
   * El dato nunca sale de la ficha del propio alumno (RNF-09) y **nunca llega a Telegram** (RNF-11).
   * `FichaMedica.condicionAccesible` (columna `condicion_accesible`, migración
     `20261021000000_ficha_accesible`) es la fuente de verdad de la declaración.

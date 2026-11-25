@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { responderError } from '../lib/http';
+import { vencerCondicionesAccesibles } from '../services/accesibilidadDocente.service';
 import { ejecutarAsignacionADemanda } from '../services/asignacionDemanda.service';
 import {
   reorganizarConPrioridad,
@@ -61,6 +62,9 @@ export async function ejecutarSeccion(req: Request, res: Response): Promise<void
  */
 export async function ejecutarProgramada(_req: Request, res: Response): Promise<void> {
   try {
+    // Issue 3.61 (R16): antes de la corrida se quitan las condiciones de accesibilidad vencidas;
+    // la corrida reasigna así las secciones que dejaron de necesitar el piso 1.
+    await vencerCondicionesAccesibles(prisma);
     const data = await ejecutarAsignacionADemanda(undefined, prisma, 'TIEMPO');
     res.status(200).json({ success: true, data });
   } catch (error: unknown) {

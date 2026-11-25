@@ -407,6 +407,8 @@ describe('Portal docente: solo rol DOCENTE (Issues 7.2, 7.3, 7.5, 7.14)', () => 
     ['get', '/api/v1/docente/espacios/explorador'],
     ['post', '/api/v1/docente/incidencias'],
     ['get', '/api/v1/docente/incidencias'],
+    // Issue 3.61: declaración de accesibilidad del docente.
+    ['get', '/api/v1/docente/accesibilidad'],
     // Issue 7.17: «dictar todo en laboratorio».
     ['post', '/api/v1/docente/solicitudes-laboratorio'],
     ['get', '/api/v1/docente/solicitudes-laboratorio'],

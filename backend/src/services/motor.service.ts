@@ -66,6 +66,20 @@ export async function cargarContextoEspacios(prisma: PrismaClient): Promise<{
 }
 
 /**
+ * La sección pide el piso 1 si algún alumno matriculado tiene movilidad reducida o si su docente
+ * tiene la condición aprobada (Issue 3.61, R15).
+ */
+export function requierePiso1(seccion: {
+  matriculas: { movilidadReducida: boolean }[];
+  docente?: { condicionAccesible: boolean } | null;
+}): boolean {
+  return (
+    seccion.matriculas.some((m) => m.movilidadReducida === true) ||
+    seccion.docente?.condicionAccesible === true
+  );
+}
+
+/**
  * Carga los datos de una sección con sus matrículas, horarios y requerimientos.
  */
 export async function cargarSeccionInputPorId(
@@ -78,6 +92,8 @@ export async function cargarSeccionInputPorId(
       curso: true,
       horarios: true,
       matriculas: true,
+      // Issue 3.61 (R15): un docente con la condición aprobada también pide el piso 1.
+      docente: { select: { condicionAccesible: true } },
       softwareRequerido: { include: { software: true } },
     },
   });
@@ -93,7 +109,7 @@ export async function cargarSeccionInputPorId(
     );
   }
 
-  const tieneMovilidad = seccion.matriculas.some((m) => m.movilidadReducida === true);
+  const tieneMovilidad = requierePiso1(seccion);
 
   return {
     id: seccion.id,
@@ -285,6 +301,7 @@ export async function cargarEntradaCorridaPeriodo(periodo: string, prisma: Prism
       curso: true,
       horarios: true,
       matriculas: true,
+      docente: { select: { condicionAccesible: true } },
       softwareRequerido: { include: { software: true } },
     },
   });
@@ -299,7 +316,7 @@ export async function cargarEntradaCorridaPeriodo(periodo: string, prisma: Prism
     tipoEspacioRequerido: s.tipoEspacioRequerido,
     softwareRequerido: mapearSoftwareRequerido(s.softwareRequerido),
     alumnosMatriculados: s.matriculas.length,
-    movilidadReducida: s.matriculas.some((m) => m.movilidadReducida === true),
+    movilidadReducida: requierePiso1(s),
     horarios: s.horarios.map((h) => ({
       diaSemana: h.diaSemana,
       horaInicio: h.horaInicio,

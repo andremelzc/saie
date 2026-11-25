@@ -29,6 +29,13 @@ vi.mock('../../services/docente', () => ({
   reportarIncidencia: vi.fn(),
   obtenerMisIncidencias: vi.fn(),
 }));
+// Issue 3.61: el inicio también muestra la declaración de accesibilidad del docente.
+vi.mock('../../services/accesibilidad', () => ({
+  obtenerAccesibilidadDocente: vi
+    .fn()
+    .mockResolvedValue({ aprobada: false, vigenteHasta: null, solicitud: null }),
+  declararAccesibilidadDocente: vi.fn(),
+}));
 
 const horario = vi.mocked(obtenerHorarioDocente);
 const explorar = vi.mocked(explorarEspacios);
