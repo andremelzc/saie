@@ -33,6 +33,9 @@ vi.mock('../../services/admin', () => ({
   obtenerAlertas: vi.fn(),
   obtenerEscaladas: vi.fn(),
   obtenerIncidencias: vi.fn().mockResolvedValue([]),
+  // Issue 2.26: fuera de la ventana el botón de reorganizar no aparece.
+  obtenerReorganizacion: vi.fn().mockResolvedValue({ disponible: false, simulacion: null }),
+  ejecutarReorganizacion: vi.fn(),
   ejecutarCorrida: vi.fn(),
   reintentarSeccion: vi.fn(),
 }));

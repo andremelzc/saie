@@ -92,6 +92,54 @@ describe('Inicio del docente (Issue 7.8)', () => {
   });
 });
 
+describe('Aviso de cambio de aula (Issue 7.18)', () => {
+  const cambio = {
+    id: 'asg-nueva',
+    seccionId: 'sec-1',
+    codigoCurso: 'IS101',
+    nombreCurso: 'Algoritmos',
+    codigoSeccion: '1-LAB',
+    tipoEspacioRequerido: 'LABORATORIO' as const,
+    fecha: '2026-11-08T15:00:00.000Z',
+    espaciosAnteriores: [
+      { identificador: 'L-204', tipo: 'LABORATORIO' as const, pabellon: 'L', piso: 2 },
+    ],
+    espaciosNuevos: [
+      { identificador: 'L-301', tipo: 'LABORATORIO' as const, pabellon: 'L', piso: 3 },
+    ],
+  };
+
+  beforeEach(() => window.localStorage.clear());
+
+  it('muestra el aula anterior y la nueva, y se cierra con «Entendido»', async () => {
+    horario.mockResolvedValue(horarioDocente({ cambiosDeAula: [cambio] }));
+    montar(<InicioDocentePage ahora={LUNES_930} />);
+
+    const aviso = await screen.findByRole('region', { name: 'Cambio de aula' });
+    expect(within(aviso).getByText(/IS101 · Grupo 1 · Laboratorio/)).toBeInTheDocument();
+    expect(within(aviso).getByText(/Laboratorio L-204 \(L, piso 2\)/)).toBeInTheDocument();
+    expect(within(aviso).getByText(/Laboratorio L-301 \(L, piso 3\)/)).toBeInTheDocument();
+
+    fireEvent.click(within(aviso).getByRole('button', { name: /Entendido/ }));
+    expect(screen.queryByRole('region', { name: 'Cambio de aula' })).toBeNull();
+  });
+
+  it('no vuelve a mostrar un aviso ya leído', async () => {
+    window.localStorage.setItem('saie:docente:cambiosAulaVistos', JSON.stringify(['asg-nueva']));
+    horario.mockResolvedValue(horarioDocente({ cambiosDeAula: [cambio] }));
+    montar(<HorarioDocentePage ahora={LUNES_930} />);
+
+    await screen.findByRole('heading', { name: 'Mi horario' });
+    expect(screen.queryByRole('region', { name: 'Cambio de aula' })).toBeNull();
+  });
+
+  it('sin cambios no muestra nada', async () => {
+    montar(<InicioDocentePage ahora={LUNES_930} />);
+    await screen.findByRole('region', { name: 'Próxima clase' });
+    expect(screen.queryByRole('region', { name: /Cambios? de aula/ })).toBeNull();
+  });
+});
+
 describe('Horario y asignaciones del docente (Issue 7.8)', () => {
   it('alterna entre la vista de día y la de semana', async () => {
     montar(<HorarioDocentePage ahora={LUNES_930} />);

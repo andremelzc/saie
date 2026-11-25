@@ -27,6 +27,12 @@ export interface CorridaBatchInput {
   asignacionesPrevias?: AsignacionExistenteContexto[];
   corridaId?: string;
   maxEspaciosPorBloque?: number;
+  /**
+   * Issue 2.26 (riesgo R9): «Reorganizar con prioridad» al inicio del ciclo. Las secciones que
+   * estaban ESCALADAS se procesan primero y ninguna asignación se conserva por idempotencia, así
+   * las escaladas pueden ocupar aulas que tenían otras secciones (que se reubican después).
+   */
+  priorizarEscaladas?: boolean;
 }
 
 /**
@@ -53,6 +59,7 @@ export function ejecutarCorridaBatch(input: CorridaBatchInput): ResultadoCorrida
     asignacionesPrevias = [],
     corridaId = crypto.randomUUID(),
     maxEspaciosPorBloque = 4,
+    priorizarEscaladas = false,
   } = input;
 
   const mapaEspaciosPorId = new Map<string, EspacioConexo>();
@@ -71,7 +78,15 @@ export function ejecutarCorridaBatch(input: CorridaBatchInput): ResultadoCorrida
   // 2. Luego por mayor número de alumnos (mayor aforo primero)
   // 3. Laboratorios antes que aulas (mayor restricción por software)
   // 4. Desempate por ID de sección
+  // Issue 2.26: al reorganizar con prioridad, antes que todo van las que estaban escaladas.
+  const estabaEscalada = (id: string) =>
+    priorizarEscaladas && mapaPrevias.get(id)?.estado === EstadoAsignacion.ESCALADA ? 1 : 0;
   const seccionesOrdenadas = [...secciones].sort((a, b) => {
+    const escaladaPrimero = estabaEscalada(b.id) - estabaEscalada(a.id);
+    if (escaladaPrimero !== 0) {
+      return escaladaPrimero;
+    }
+
     const aMov = a.movilidadReducida ? 1 : 0;
     const bMov = b.movilidadReducida ? 1 : 0;
     if (bMov !== aMov) {
@@ -129,8 +144,10 @@ export function ejecutarCorridaBatch(input: CorridaBatchInput): ResultadoCorrida
   // idempotencia se reservan ANTES de recorrer el lote. Si se reservaran al llegar a su sección,
   // una sección que cambió y se procesa antes vería libre el espacio y lo tomaría: doble reserva.
   // Issue 2.22 (riesgo R3): solo se conserva si sus espacios siguen sirviendo a la sección.
+  // Issue 2.26: al reorganizar con prioridad no se conserva ninguna, para que las escaladas
+  // puedan tomar las aulas que tenían otras secciones.
   const idsConservadas = new Set<string>();
-  for (const seccion of secciones) {
+  for (const seccion of priorizarEscaladas ? [] : secciones) {
     const previa = mapaPrevias.get(seccion.id);
     if (
       puedeConservarse(seccion, previa, todosLosEspacios) &&

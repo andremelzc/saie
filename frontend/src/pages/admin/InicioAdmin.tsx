@@ -39,6 +39,7 @@ import { fraseDeMotivoAlerta } from '../../utils/textoMotor';
 import { ICONOS } from '../../components/ui/iconos';
 import { TEXTOS_ASIGNACION } from '../../config/textos';
 import { Metrica, TiraMetricas } from '../../components/admin/Metrica';
+import ReorganizacionPrioridad from '../../components/admin/ReorganizacionPrioridad';
 
 /**
  * Issue 4.20 — inicio de Coordinación Académica.
@@ -746,6 +747,14 @@ const InicioCoordinacion: React.FC = () => {
               >
                 Secciones que requieren revisión
               </h2>
+              {/* Issue 2.26: solo aparece en las primeras semanas del ciclo. */}
+              <ReorganizacionPrioridad
+                deshabilitado={corriendo || otraCorrida}
+                onTerminar={() => {
+                  escaladas.recargar();
+                  alertas.recargar();
+                }}
+              />
             </div>
             {escaladas.error && (
               <AvisoError mensaje={escaladas.error} onReintentar={escaladas.recargar} />

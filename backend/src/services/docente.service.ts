@@ -31,6 +31,8 @@ import { obtenerPeriodoVigente } from './periodo.service';
 import { IncidenciaDocenteDTO } from '../types/incidencias';
 import {
   AsignacionActivaDocenteDTO,
+  CambioAulaDocenteDTO,
+  EspacioCambioAulaDTO,
   EstadoLaboratorioDocenteDTO,
   EspacioExploradorDTO,
   ExploradorEspaciosDTO,
@@ -49,9 +51,92 @@ export async function obtenerDocenteDeCuenta(
   return docente;
 }
 
+/** Días durante los que el portal muestra un cambio de aula (Issue 7.18). */
+export const DIAS_AVISO_CAMBIO_AULA = 7;
+const MS_DIA = 24 * 60 * 60 * 1000;
+
+interface SeccionParaAviso {
+  id: string;
+  codigoSeccion: string;
+  tipoEspacioRequerido: TipoEspacio;
+  curso: { codigo: string; nombre: string };
+}
+
+function mismosEspacios(a: EspacioCambioAulaDTO[], b: EspacioCambioAulaDTO[]): boolean {
+  const clave = (l: EspacioCambioAulaDTO[]) =>
+    l
+      .map((e) => e.identificador)
+      .sort((x, y) => x.localeCompare(y))
+      .join('|');
+  return clave(a) === clave(b);
+}
+
+/**
+ * Issue 7.18 (riesgo R24): el aviso de cambio de aula por Telegram solo llega a los alumnos; el
+ * docente podía llegar al aula anterior. Aquí se detectan los cambios recientes de sus secciones
+ * para mostrarlos en su portal.
+ *
+ * Hay cambio cuando la asignación más reciente de la sección es de los últimos
+ * `DIAS_AVISO_CAMBIO_AULA` días y sus espacios difieren de los de la última asignación anterior
+ * que tuvo aula. La primera asignación de una sección no es un cambio: no había aula antes.
+ */
+export async function cambiosDeAulaDocente(
+  secciones: SeccionParaAviso[],
+  prisma: Pick<PrismaClient, 'asignacion'>,
+  ahora: Date = new Date(),
+): Promise<CambioAulaDocenteDTO[]> {
+  if (secciones.length === 0) return [];
+
+  const asignaciones = await prisma.asignacion.findMany({
+    where: { seccionId: { in: secciones.map((s) => s.id) } },
+    orderBy: { fechaAsignacion: 'desc' },
+    select: {
+      id: true,
+      seccionId: true,
+      fechaAsignacion: true,
+      espacios: {
+        select: {
+          espacio: { select: { identificador: true, tipo: true, pabellon: true, piso: true } },
+        },
+      },
+    },
+  });
+
+  const desde = ahora.getTime() - DIAS_AVISO_CAMBIO_AULA * MS_DIA;
+  const cambios: CambioAulaDocenteDTO[] = [];
+
+  for (const seccion of secciones) {
+    const historial = asignaciones.filter((a) => a.seccionId === seccion.id);
+    const [ultima, ...anteriores] = historial;
+    if (!ultima || ultima.fechaAsignacion.getTime() < desde) continue;
+
+    const previa = anteriores.find((a) => a.espacios.length > 0);
+    if (!previa) continue;
+
+    const espaciosNuevos = ultima.espacios.map((e) => e.espacio);
+    const espaciosAnteriores = previa.espacios.map((e) => e.espacio);
+    if (mismosEspacios(espaciosNuevos, espaciosAnteriores)) continue;
+
+    cambios.push({
+      id: ultima.id,
+      seccionId: seccion.id,
+      codigoCurso: seccion.curso.codigo,
+      nombreCurso: seccion.curso.nombre,
+      codigoSeccion: seccion.codigoSeccion,
+      tipoEspacioRequerido: seccion.tipoEspacioRequerido,
+      fecha: ultima.fechaAsignacion.toISOString(),
+      espaciosAnteriores,
+      espaciosNuevos,
+    });
+  }
+
+  return cambios.sort((a, b) => b.fecha.localeCompare(a.fecha));
+}
+
 /**
  * Issue 7.2: horario del docente autenticado (por día o semana completa) y la lista de sus
- * asignaciones activas del periodo vigente, con número de alumnos matriculados.
+ * asignaciones activas del periodo vigente, con número de alumnos matriculados. Issue 7.18:
+ * también los cambios de aula recientes de sus secciones.
  */
 export async function obtenerHorarioDocente(
   cuentaId: string,
@@ -98,6 +183,7 @@ export async function obtenerHorarioDocente(
     vista: dia ? 'dia' : 'semana',
     dias: agruparPorDia(construirSesiones(secciones), dia),
     asignacionesActivas,
+    cambiosDeAula: await cambiosDeAulaDocente(secciones, prisma),
   };
 }
 

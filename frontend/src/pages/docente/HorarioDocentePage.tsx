@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import PaginaDocente from '../../components/docente/PaginaDocente';
+import AvisosCambioAula from '../../components/docente/AvisosCambioAula';
 import GridHorarioSemanal from '../../components/estudiante/GridHorarioSemanal';
 import HorarioDia from '../../components/estudiante/HorarioDia';
 import SelectorSegmentado from '../../components/ui/SelectorSegmentado';
@@ -182,6 +183,7 @@ export const HorarioDocentePage: React.FC<{ ahora?: Date }> = ({ ahora }) => {
       titulo="Mi horario y asignaciones"
       descripcion={datos?.periodo ? `Periodo ${datos.periodo}` : undefined}
     >
+      {datos && <AvisosCambioAula cambios={datos.cambiosDeAula ?? []} />}
       <SelectorSegmentado
         opciones={OPCIONES_SECCION}
         valor={seccion}
