@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: Descargar el código del repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Node.js (según .nvmrc)
         uses: actions/setup-node@v4
@@ -94,7 +94,7 @@ jobs:
 
     steps:
       - name: Descargar el código del repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Node.js (según .nvmrc)
         uses: actions/setup-node@v4
@@ -135,7 +135,7 @@ jobs:
 
     steps:
       - name: Descargar el código del repositorio
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configurar Node.js (según .nvmrc)
         uses: actions/setup-node@v4
