@@ -48,7 +48,7 @@ async function cargarSeccionesMatriculadas(
   prisma: Pick<PrismaClient, 'matricula'>,
 ) {
   const matriculas = await prisma.matricula.findMany({
-    where: { alumnoId, seccion: { periodo } },
+    where: { alumnoId, seccion: { periodo, activa: true } },
     include: { seccion: { include: INCLUIR_SECCION_CON_ASIGNACION } },
   });
   return matriculas.map((m) => m.seccion);

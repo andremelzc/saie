@@ -51,6 +51,9 @@ const SolicitudesSoftwareAdminPage = lazy(
 );
 const IncidenciasAdminPage = lazy(() => import('./pages/admin/IncidenciasAdminPage'));
 const AccesibilidadAdminPage = lazy(() => import('./pages/admin/AccesibilidadAdminPage'));
+const SolicitudesLaboratorioAdminPage = lazy(
+  () => import('./pages/admin/SolicitudesLaboratorioAdminPage'),
+);
 
 /** Mientras llega el código de una pantalla se muestra el esqueleto de carga habitual. */
 const CargandoPantalla: React.FC = () => (
@@ -355,6 +358,18 @@ export const AppRoutes: React.FC = () => {
                 rutaLogin={RUTAS.loginAdmin}
               >
                 <SolicitudesSoftwareAdminPage />
+              </RutaProtegida>
+            }
+          />
+          {/* Issue 7.17: Coordinación resuelve «dictar todo en laboratorio». */}
+          <Route
+            path={RUTAS.solicitudesLaboratorioAdmin}
+            element={
+              <RutaProtegida
+                rolesPermitidos={['COORDINACION_ACADEMICA']}
+                rutaLogin={RUTAS.loginAdmin}
+              >
+                <SolicitudesLaboratorioAdminPage />
               </RutaProtegida>
             }
           />

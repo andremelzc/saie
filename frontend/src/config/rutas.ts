@@ -40,6 +40,7 @@ export const RUTAS = {
   solicitudesSoftwareAdmin: '/admin/solicitudes-software',
   incidenciasAdmin: '/admin/incidencias',
   accesibilidadAdmin: '/admin/accesibilidad',
+  solicitudesLaboratorioAdmin: '/admin/dictar-en-laboratorio',
 } as const;
 
 export const ROLES_ADMIN: RolCuenta[] = ['COORDINACION_ACADEMICA', 'JEFATURA_LABORATORIOS'];

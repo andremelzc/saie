@@ -105,7 +105,7 @@ export async function enviarResumenesDiarios(
   const { dia } = diaYMinutosEnLima(ahora);
   const fecha = fechaEnLima(ahora);
   const hoy = new Date(`${fecha}T00:00:00.000Z`);
-  const conClasesHoy = { periodo, horarios: { some: { diaSemana: dia } } };
+  const conClasesHoy = { periodo, activa: true, horarios: { some: { diaSemana: dia } } };
 
   const vinculaciones = await prisma.vinculacionTelegram.findMany({
     where: {
